@@ -1,0 +1,70 @@
+# UTM System Microservices
+
+Backend microservices built with **Spring Boot 4** (Java 21), **PostgreSQL 16**, **Nginx API Gateway**, fully containerized with **Docker Compose**.
+
+## Tech Stack
+
+| | Technology |
+|---|---|
+| **Framework** | Spring Boot 4.0.2, Spring Cloud 2025.1.1 |
+| **Database** | PostgreSQL 16, Liquibase (migration) |
+| **Security** | Spring Security OAuth2 Resource Server |
+| **API Docs** | SpringDoc OpenAPI 3 / Swagger UI |
+| **Gateway** | Nginx 1.27.2 (reverse proxy) |
+| **Build** | Maven multi-module, Docker multi-stage build |
+
+## Architecture
+
+```
+Client ──► Nginx :8081 ──┬──► User Service :8085 ──► PostgreSQL :5432
+                         └──► Swagger UI :8080
+```
+
+- **Nginx** routes `/user/*` → User Service, `/swagger-ui/*` → Swagger UI
+- **Liquibase** handles DB migrations on startup
+- **common-library** module shares base entities, exception handling, security config across services
+
+## Quick Start
+
+1. Create the environment file:
+```bash
+cp .env.example .env
+```
+
+2. Build and start services:
+```bash
+docker compose up -d --build
+```
+
+## Access
+
+| Service | URL |
+|---|---|
+| API Gateway | http://localhost:8081/user/ |
+| Swagger UI | http://localhost:8081/swagger-ui/ |
+| pgAdmin | http://localhost:5050 |
+| PostgreSQL | `localhost:54320` |
+
+**pgAdmin login:** `admin@utm.com` / `admin`
+
+**PostgreSQL connection (inside pgAdmin):**
+
+| Field | Value |
+|---|---|
+| Host | `postgres` |
+| Port | `5432` |
+| Database | `utm` |
+| Username / Password | `admin` / `admin` |
+
+## Local Development
+
+Run only infrastructure, then start the service on your machine:
+
+```bash
+docker compose up -d postgres pgadmin nginx swagger-ui
+./mvnw -pl user spring-boot:run
+```
+
+## License
+
+[MIT](LICENSE)

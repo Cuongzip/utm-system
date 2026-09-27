@@ -1,0 +1,22 @@
+server {
+  server_name api.utm.local localhost;
+
+  # Docker DNS
+  resolver 127.0.0.11;
+
+  location /user/ {
+    proxy_pass http://user:8085/user/;
+  }
+
+
+  location /swagger-ui/ {
+    proxy_pass http://swagger-ui:8080;
+  }
+}
+
+server {
+  server_name pgadmin.utm.local;
+  location / {
+    proxy_pass http://pgadmin;
+  }
+}

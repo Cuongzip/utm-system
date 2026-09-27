@@ -1,0 +1,77 @@
+services:
+  nginx:
+    image: nginx:1.27.2
+    restart: unless-stopped
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates
+      - ./nginx/configuration/custom_proxy_settings.conf:/etc/nginx/conf.d/custom_proxy_settings.conf
+    ports:
+      - "${NGINX_PORT:-8081}:80"
+    depends_on:
+      - user
+      - swagger-ui
+    networks:
+      - utm-network
+
+  user:
+    build:
+      context: .
+      dockerfile: ./user/Dockerfile
+    image: user:latest
+    ports:
+      - "8085:8085"
+    environment:
+      - SERVER_PORT=8085
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+    depends_on:
+      - postgres
+    networks:
+      - utm-network
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    ports:
+      - "8088:8080"
+    environment:
+      - BASE_URL=/swagger-ui
+      - "URLS=[{ url: 'http://localhost:8085/user/v3/api-docs', name: 'User Service' }]"
+    networks:
+      - utm-network
+
+  postgres:
+    image: postgres:16-alpine
+    hostname: ${POSTGRES_HOST:-postgres}
+    ports:
+      - "${POSTGRES_LOCAL_PORT:-54320}:5432"
+    volumes:
+      - ./postgres_init.sql:/docker-entrypoint-initdb.d/postgres_init.sql
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+    networks:
+      - utm-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@utm.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - utm-network
+
+networks:
+  utm-network:
+    driver: bridge
+    name: utm-network
+
+volumes:
+  postgres_data:
+  pgadmin_data:
