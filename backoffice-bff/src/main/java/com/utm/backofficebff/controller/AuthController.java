@@ -113,6 +113,10 @@ public class AuthController {
             return ResponseEntity.ok(new UserSummaryVm(userId, username, email, firstName, lastName, roles));
         }
 
-        return ResponseEntity.ok(new UserSummaryVm(authentication.getName(), authentication.getName(), null, null, null, Collections.emptyList()));
+        if (authentication != null) {
+            return ResponseEntity.ok(new UserSummaryVm(authentication.getName(), authentication.getName(), null, null, null, Collections.emptyList()));
+        }
+
+        return ResponseEntity.ok(new UserSummaryVm(null, "anonymous", null, null, null, Collections.emptyList()));
     }
 }

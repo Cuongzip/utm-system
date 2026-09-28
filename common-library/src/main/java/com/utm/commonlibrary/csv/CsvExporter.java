@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -86,8 +87,11 @@ public class CsvExporter {
             Method getter = data.getClass().getMethod(getterName);
             Object value = getter.invoke(data);
 
-            if (!Objects.isNull(value) && value instanceof List) {
-                return ("[" + String.join("|", (List<String>) value) + "]");
+            if (value instanceof List<?> list) {
+                String joined = list.stream()
+                        .map(item -> item != null ? item.toString() : "")
+                        .collect(Collectors.joining("|"));
+                return "[" + joined + "]";
             }
 
             return value != null ? value.toString() : StringUtils.EMPTY;
