@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-drone-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: drone
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: registration_number
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: model
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: manufacturer
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_speed_mps
+                  type: numeric(8, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_flight_time_min
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_payload_kg
+                  type: numeric(8, 2)
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "available"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: current_hub_id
+                  type: varchar(100)
+              - column:
+                  name: notes
+                  type: text
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)

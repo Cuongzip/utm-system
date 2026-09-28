@@ -8,7 +8,7 @@ services:
     ports:
       - "${NGINX_PORT:-8081}:80"
     depends_on:
-      - user
+      - drone
       - backoffice-bff
       - swagger-ui
       - identity
@@ -25,24 +25,25 @@ services:
     environment:
       - SERVER_PORT=8082
       - KEYCLOAK_URL=http://identity
-      - USER_SERVICE_URL=http://user:8085
+      - DRONE_SERVICE_URL=http://drone:8085
     depends_on:
       - identity
-      - user
+      - drone
     networks:
       - utm-network
 
-  user:
+  drone:
     build:
       context: .
-      dockerfile: ./user/Dockerfile
-    image: user:latest
+      dockerfile: ./drone/Dockerfile
+    image: drone:latest
     ports:
       - "8085:8085"
     environment:
       - SERVER_PORT=8085
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      - POSTGRES_DB=utm_drone
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
     depends_on:
@@ -56,7 +57,7 @@ services:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/user/v3/api-docs', name: 'User Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
+      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
     networks:
       - utm-network
 

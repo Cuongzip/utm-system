@@ -7,9 +7,14 @@ import com.utm.backofficebff.viewmodel.TokenResponseVm;
 import com.utm.backofficebff.viewmodel.UserSummaryVm;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -26,7 +31,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
-@Tag(name = "Authentication", description = "Endpoints for authenticating and exchanging tokens")
+@Tag(name = "Authentication", description = "Endpoints for user authentication and JWT token issuance")
 public class AuthController {
 
     private final AuthService authService;
@@ -36,14 +41,37 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login and obtain Access Token", description = "Sends credentials to Keycloak to obtain JWT Access Token, ID Token and Refresh Token")
+    @Operation(summary = "Login and obtain Access Token", description = "Submit user credentials (username/password) to Keycloak to obtain Access Token, Refresh Token, and ID Token.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Login successful",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = TokenResponseVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid username or password", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
+    })
     public ResponseEntity<TokenResponseVm> login(@Valid @RequestBody LoginRequestVm loginRequestVm) {
         TokenResponseVm tokenResponse = authService.login(loginRequestVm);
         return ResponseEntity.ok(tokenResponse);
     }
 
     @PostMapping("/refresh-token")
-    @Operation(summary = "Refresh Access Token", description = "Exchange a valid refresh token for a new access token")
+    @Operation(summary = "Refresh Access Token", description = "Submit a valid Refresh Token to obtain a new Access Token upon expiration.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token refreshed successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = TokenResponseVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired refresh token", content = @Content)
+    })
     public ResponseEntity<TokenResponseVm> refreshToken(@Valid @RequestBody RefreshTokenRequestVm refreshTokenRequestVm) {
         TokenResponseVm tokenResponse = authService.refreshToken(refreshTokenRequestVm);
         return ResponseEntity.ok(tokenResponse);
@@ -51,10 +79,21 @@ public class AuthController {
 
     @GetMapping("/me")
     @Operation(
-            summary = "Get current authenticated user info",
-            description = "Extracts user information from the JWT Bearer Token",
+            summary = "Get current authenticated user profile",
+            description = "Extract authenticated user details and realm roles from the JWT Bearer token",
             security = @SecurityRequirement(name = "Bearer Authentication")
     )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "User profile retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = UserSummaryVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+    })
     public ResponseEntity<UserSummaryVm> getCurrentUser() {
         Authentication authentication = AuthenticationUtils.getAuthentication();
         if (authentication instanceof JwtAuthenticationToken jwtAuth) {

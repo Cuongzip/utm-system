@@ -17,11 +17,11 @@ Backend microservices built with **Spring Boot 4** (Java 21), **PostgreSQL 16**,
 
 ```
 Client ──► Nginx :8081 ──┬──► Backoffice BFF :8082 ──► Keycloak :8080 (Auth / Token)
-                         ├──► User Service :8085 ──► PostgreSQL :5432
+                         ├──► Drone Service :8085 ──► PostgreSQL :5432
                          └──► Swagger UI :8080
 ```
 
-- **Nginx** routes `/backoffice-bff/*` → Backoffice BFF, `/user/*` → User Service, `/swagger-ui/*` → Swagger UI
+- **Nginx** routes `/backoffice-bff/*` → Backoffice BFF, `/drone/*` (and `/api/v1/drones/*`) → Drone Service, `/swagger-ui/*` → Swagger UI
 - **Liquibase** handles DB migrations on startup
 - **common-library** module shares base entities, exception handling, security config across services
 
@@ -43,7 +43,7 @@ docker compose up -d --build
 |---|---|
 | Swagger UI (qua Nginx) | http://localhost:8081/swagger-ui/ |
 | Backoffice BFF API (qua Nginx) | http://localhost:8081/backoffice-bff/auth/login |
-| User API (qua Nginx) | http://localhost:8081/user/backoffice/users |
+| Drone API (qua Nginx) | http://localhost:8081/drone/api/v1/drones |
 | Keycloak Admin Console | http://localhost:8080/admin/ |
 | pgAdmin | http://localhost:5050 |
 | PostgreSQL | `localhost:54320` |
@@ -56,7 +56,7 @@ docker compose up -d --build
 |---|---|
 | Host | `postgres` |
 | Port | `5432` |
-| Database | `utm` |
+| Database | `utm_drone` |
 | Username / Password | `admin` / `admin` |
 
 ## Local Development
@@ -65,7 +65,7 @@ Run only infrastructure, then start the service on your machine:
 
 ```bash
 docker compose up -d postgres pgadmin nginx swagger-ui
-./mvnw -pl user spring-boot:run
+./mvnw -pl drone spring-boot:run
 ```
 
 ## License

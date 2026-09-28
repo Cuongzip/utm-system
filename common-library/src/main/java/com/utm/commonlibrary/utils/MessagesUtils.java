@@ -7,17 +7,29 @@ import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
 public class MessagesUtils {
-    private static final ResourceBundle messageBundle = ResourceBundle.getBundle("messages.messages",
-        Locale.getDefault());
+    private static final String BUNDLE_NAME = "messages.messages";
 
     private MessagesUtils() {
-        //Add constructor
+        // Private constructor
+    }
+
+    private static ResourceBundle getResourceBundle() {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = MessagesUtils.class.getClassLoader();
+        }
+        try {
+            return ResourceBundle.getBundle(BUNDLE_NAME, Locale.getDefault(), classLoader);
+        } catch (MissingResourceException e) {
+            return ResourceBundle.getBundle(BUNDLE_NAME, Locale.ROOT, classLoader);
+        }
     }
 
     public static String getMessage(String errorCode, Object... var2) {
         String message;
         try {
-            message = messageBundle.getString(errorCode);
+            ResourceBundle bundle = getResourceBundle();
+            message = bundle.getString(errorCode);
         } catch (MissingResourceException ex) {
             // case message_code is not defined.
             message = errorCode;

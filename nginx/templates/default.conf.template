@@ -15,8 +15,12 @@ server {
     return 302 /swagger-ui/;
   }
 
-  location /user/ {
-    proxy_pass http://user:8085/user/;
+  location /drone/ {
+    proxy_pass http://drone:8085/drone/;
+  }
+
+  location /api/v1/drones {
+    proxy_pass http://drone:8085/drone/api/v1/drones;
   }
 
   location /backoffice-bff/ {

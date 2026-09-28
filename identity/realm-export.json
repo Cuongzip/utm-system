@@ -6,7 +6,7 @@
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
-  "accessTokenLifespan": 300,
+  "accessTokenLifespan": 600,
   "accessTokenLifespanForImplicitFlow": 900,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,
@@ -91,6 +91,38 @@
       {
         "id": "eadee165-c7b4-4508-bf60-937580c5d987",
         "name": "ADMIN",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "UTM",
+        "attributes": {}
+      },
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "admin",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "UTM",
+        "attributes": {}
+      },
+      {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "name": "hub_operator",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "UTM",
+        "attributes": {}
+      },
+      {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "name": "pilot",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "UTM",
+        "attributes": {}
+      },
+      {
+        "id": "44444444-4444-4444-4444-444444444444",
+        "name": "viewer",
         "composite": false,
         "clientRole": false,
         "containerId": "UTM",
@@ -314,19 +346,8 @@
           "attributes": {}
         }
       ],
-      "backoffice-bff": [],
       "security-admin-console": [],
       "admin-cli": [],
-      "storefront-bff": [
-        {
-          "id": "4e71f89c-cffc-4a7a-8bf3-51524e6db708",
-          "name": "uma_protection",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "4f64c142-0545-44bb-9446-2a18b9c9effd",
-          "attributes": {}
-        }
-      ],
       "account-console": [],
       "broker": [],
       "account": [
@@ -413,17 +434,14 @@
       "email": "admin@utm.com",
       "credentials": [
         {
-          "id": "0bed1acd-4585-450d-9fca-0cd02fb57140",
           "type": "password",
-          "userLabel": "My password",
-          "createdDate": 1678346530213,
-          "secretData": "{\"value\":\"u6oZH6INLj3cGGIJNxhhVUAhJQhYpFmsr3yLLQyVNqs=\",\"salt\":\"WmnWNNQ1hvyeXj0NlcVugA==\",\"additionalParameters\":{}}",
-          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+          "value": "admin",
+          "temporary": false
         }
       ],
       "disableableCredentialTypes": [],
       "requiredActions": [],
-      "realmRoles": ["default-roles-utm", "ADMIN"],
+      "realmRoles": ["default-roles-utm", "ADMIN", "admin", "hub_operator", "pilot"],
       "notBefore": 0,
       "groups": []
     },

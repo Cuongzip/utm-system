@@ -2,7 +2,7 @@ FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 COPY pom.xml ./
 COPY common-library ./common-library
-COPY user ./user
+COPY drone ./drone
 COPY backoffice-bff ./backoffice-bff
 RUN mvn clean package -pl backoffice-bff -am -DskipTests
 

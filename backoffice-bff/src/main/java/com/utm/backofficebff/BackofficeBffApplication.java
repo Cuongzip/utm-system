@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.utm.backofficebff", "com.utm.commonlibrary"})
 @ConfigurationPropertiesScan("com.utm.backofficebff.config")
 public class BackofficeBffApplication {
 
