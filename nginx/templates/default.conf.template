@@ -4,13 +4,34 @@ server {
   # Docker DNS
   resolver 127.0.0.11;
 
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Host $http_host;
+  proxy_set_header X-Forwarded-Port $server_port;
+
+  location = / {
+    return 302 /swagger-ui/;
+  }
+
   location /user/ {
     proxy_pass http://user:8085/user/;
   }
 
+  location /backoffice-bff/ {
+    proxy_pass http://backoffice-bff:8082/backoffice-bff/;
+  }
 
   location /swagger-ui/ {
     proxy_pass http://swagger-ui:8080;
+  }
+}
+
+server {
+  server_name identity.utm.local identity;
+  location / {
+    proxy_pass http://identity:80;
   }
 }
 

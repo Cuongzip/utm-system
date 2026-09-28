@@ -16,11 +16,12 @@ Backend microservices built with **Spring Boot 4** (Java 21), **PostgreSQL 16**,
 ## Architecture
 
 ```
-Client ──► Nginx :8081 ──┬──► User Service :8085 ──► PostgreSQL :5432
+Client ──► Nginx :8081 ──┬──► Backoffice BFF :8082 ──► Keycloak :8080 (Auth / Token)
+                         ├──► User Service :8085 ──► PostgreSQL :5432
                          └──► Swagger UI :8080
 ```
 
-- **Nginx** routes `/user/*` → User Service, `/swagger-ui/*` → Swagger UI
+- **Nginx** routes `/backoffice-bff/*` → Backoffice BFF, `/user/*` → User Service, `/swagger-ui/*` → Swagger UI
 - **Liquibase** handles DB migrations on startup
 - **common-library** module shares base entities, exception handling, security config across services
 
@@ -40,8 +41,10 @@ docker compose up -d --build
 
 | Service | URL |
 |---|---|
-| API Gateway | http://localhost:8081/user/ |
-| Swagger UI | http://localhost:8081/swagger-ui/ |
+| Swagger UI (qua Nginx) | http://localhost:8081/swagger-ui/ |
+| Backoffice BFF API (qua Nginx) | http://localhost:8081/backoffice-bff/auth/login |
+| User API (qua Nginx) | http://localhost:8081/user/backoffice/users |
+| Keycloak Admin Console | http://localhost:8080/admin/ |
 | pgAdmin | http://localhost:5050 |
 | PostgreSQL | `localhost:54320` |
 
