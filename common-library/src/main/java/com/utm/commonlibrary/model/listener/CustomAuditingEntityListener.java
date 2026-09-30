@@ -3,43 +3,70 @@ package com.utm.commonlibrary.model.listener;
 import com.utm.commonlibrary.model.AbstractAuditEntity;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
-import org.springframework.beans.factory.ObjectFactory;
-import org.springframework.beans.factory.annotation.Configurable;
-import org.springframework.data.auditing.AuditingHandler;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.util.Optional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
-@Configurable
-public class CustomAuditingEntityListener extends AuditingEntityListener {
+public class CustomAuditingEntityListener {
 
-    public CustomAuditingEntityListener() {
-        super();
-    }
-
-    public CustomAuditingEntityListener(ObjectFactory<AuditingHandler> handler) {
-        super.setAuditingHandler(handler);
-    }
-
-    @Override
     @PrePersist
     public void touchForCreate(Object target) {
         if (target instanceof AbstractAuditEntity entity) {
+            String currentUserId = getCurrentUserId();
             if (entity.getCreatedBy() == null) {
-                super.touchForCreate(target);
-            } else {
-                if (entity.getLastModifiedBy() == null) {
-                    entity.setLastModifiedBy(entity.getCreatedBy());
-                }
+                entity.setCreatedBy(currentUserId);
+            }
+            if (entity.getLastModifiedBy() == null) {
+                entity.setLastModifiedBy(currentUserId);
             }
         }
     }
 
-    @Override
     @PreUpdate
     public void touchForUpdate(Object target) {
         if (target instanceof AbstractAuditEntity entity) {
-            if (entity.getLastModifiedBy() == null) {
-                super.touchForUpdate(target);
-            }
+            entity.setLastModifiedBy(getCurrentUserId());
         }
+    }
+
+    private String getCurrentUserId() {
+        return resolveUserId().orElse("system");
+    }
+
+    private Optional<String> resolveUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return Optional.empty();
+        }
+
+
+        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
+            String userId = jwtAuth.getToken().getSubject();
+            if (userId != null && !userId.isBlank()) {
+                return Optional.of(userId);
+            }
+            return Optional.ofNullable(jwtAuth.getName());
+        }
+
+
+        if (authentication.getPrincipal() instanceof Jwt jwt) {
+            String userId = jwt.getSubject();
+            if (userId != null && !userId.isBlank()) {
+                return Optional.of(userId);
+            }
+            return Optional.ofNullable(jwt.getClaimAsString("sub"));
+        }
+
+
+        String name = authentication.getName();
+        if (name != null && !name.isBlank() && !"anonymousUser".equals(name)) {
+            return Optional.of(name);
+        }
+
+        return Optional.empty();
     }
 }
