@@ -1,0 +1,21 @@
+package com.utm.flight.repository;
+
+import com.utm.flight.model.Flight;
+import com.utm.flight.model.enumeration.FlightStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface FlightRepository extends JpaRepository<Flight, String>, JpaSpecificationExecutor<Flight> {
+
+    boolean existsByFlightNumber(String flightNumber);
+
+    List<FlightStatus> findByStatus(FlightStatus status);
+
+    List<Flight> findByDroneId(String droneId);
+
+    List<Flight> findByPilotId(String pilotId);
+}

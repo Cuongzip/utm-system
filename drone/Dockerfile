@@ -5,6 +5,7 @@ COPY common-library ./common-library
 COPY backoffice-bff ./backoffice-bff
 COPY drone ./drone
 COPY hub ./hub
+COPY flight ./flight
 RUN mvn clean package -pl drone -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine

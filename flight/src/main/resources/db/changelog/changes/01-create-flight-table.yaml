@@ -1,0 +1,96 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-flight-table
+      author: drops-utm
+      changes:
+        - createTable:
+            tableName: flight
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: flight_number
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: drone_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: departure_hub_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: arrival_hub_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pilot_id
+                  type: varchar(100)
+              - column:
+                  name: scheduled_departure
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_arrival
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actual_departure
+                  type: timestamp with time zone
+              - column:
+                  name: actual_arrival
+                  type: timestamp with time zone
+              - column:
+                  name: cruising_altitude_m
+                  type: double precision
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "PLANNED"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: text
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_drone_id
+            columns:
+              - column:
+                  name: drone_id
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_pilot_id
+            columns:
+              - column:
+                  name: pilot_id

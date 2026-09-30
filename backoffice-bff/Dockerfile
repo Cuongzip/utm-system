@@ -4,6 +4,7 @@ COPY pom.xml ./
 COPY common-library ./common-library
 COPY drone ./drone
 COPY hub ./hub
+COPY flight ./flight
 COPY backoffice-bff ./backoffice-bff
 RUN mvn clean package -pl backoffice-bff -am -DskipTests
 

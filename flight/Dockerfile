@@ -6,10 +6,10 @@ COPY backoffice-bff ./backoffice-bff
 COPY drone ./drone
 COPY hub ./hub
 COPY flight ./flight
-RUN mvn clean package -pl hub -am -DskipTests
+RUN mvn clean package -pl flight -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /build/hub/target/hub*.jar app.jar
-EXPOSE 8084
+COPY --from=builder /build/flight/target/flight*.jar app.jar
+EXPOSE 8086
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -18,6 +18,7 @@
         <module>common-library</module>
         <module>drone</module>
         <module>hub</module>
+        <module>flight</module>
         <module>backoffice-bff</module>
     </modules>
 
