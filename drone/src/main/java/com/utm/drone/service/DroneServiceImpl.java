@@ -3,6 +3,7 @@ package com.utm.drone.service;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.drone.mapper.DroneMapper;
 import com.utm.drone.model.Drone;
 import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.repository.DroneRepository;
@@ -23,12 +24,13 @@ import java.util.UUID;
 public class DroneServiceImpl implements DroneService {
 
     private final DroneRepository droneRepository;
+    private final DroneMapper droneMapper;
 
     @Override
     @Transactional(readOnly = true)
     public List<DroneVm> getAllDrones() {
         return droneRepository.findAll().stream()
-                .map(DroneVm::fromEntity)
+                .map(droneMapper::toVm)
                 .toList();
     }
 
@@ -37,35 +39,24 @@ public class DroneServiceImpl implements DroneService {
     public DroneVm getDroneById(String id) {
         Drone drone = droneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, id));
-        return DroneVm.fromEntity(drone);
+        return droneMapper.toVm(drone);
     }
 
     @Override
     @Transactional
     public DroneVm createDrone(DronePostVm dronePostVm) {
-        if (droneRepository.existsByRegistrationNumber(dronePostVm.registrationNumber())) {
+        String trimmedRegNumber = dronePostVm.registrationNumber() != null ? dronePostVm.registrationNumber().trim() : "";
+        if (droneRepository.existsByRegistrationNumber(trimmedRegNumber)) {
             throw new DuplicatedException(
                     MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
                     dronePostVm.registrationNumber());
         }
 
-        Drone drone = Drone.builder()
-                .id(UUID.randomUUID().toString())
-                .registrationNumber(dronePostVm.registrationNumber().trim())
-                .model(dronePostVm.model().trim())
-                .manufacturer(dronePostVm.manufacturer().trim())
-                .maxSpeedMps(dronePostVm.maxSpeedMps())
-                .maxFlightTimeMin(dronePostVm.maxFlightTimeMin())
-                .maxPayloadKg(dronePostVm.maxPayloadKg())
-                .status(DroneStatus.AVAILABLE)
-                .currentHubId(dronePostVm.currentHubId())
-                .notes(dronePostVm.notes())
-                .build();
-
+        Drone drone = droneMapper.toEntity(dronePostVm);
         Drone savedDrone = droneRepository.save(drone);
         log.info("Created new drone with ID: {} and registration number: {}", savedDrone.getId(),
                 savedDrone.getRegistrationNumber());
-        return DroneVm.fromEntity(savedDrone);
+        return droneMapper.toVm(savedDrone);
     }
 
     @Override
@@ -74,28 +65,11 @@ public class DroneServiceImpl implements DroneService {
         Drone drone = droneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, id));
 
-        if (dronePutVm.status() != null) {
-            drone.setStatus(dronePutVm.status());
-        }
-        if (dronePutVm.currentHubId() != null) {
-            drone.setCurrentHubId(dronePutVm.currentHubId());
-        }
-        if (dronePutVm.notes() != null) {
-            drone.setNotes(dronePutVm.notes());
-        }
-        if (dronePutVm.maxSpeedMps() != null) {
-            drone.setMaxSpeedMps(dronePutVm.maxSpeedMps());
-        }
-        if (dronePutVm.maxFlightTimeMin() != null) {
-            drone.setMaxFlightTimeMin(dronePutVm.maxFlightTimeMin());
-        }
-        if (dronePutVm.maxPayloadKg() != null) {
-            drone.setMaxPayloadKg(dronePutVm.maxPayloadKg());
-        }
+        droneMapper.updateEntityFromPutVm(drone, dronePutVm);
 
         Drone updatedDrone = droneRepository.save(drone);
         log.info("Updated drone with ID: {}", id);
-        return DroneVm.fromEntity(updatedDrone);
+        return droneMapper.toVm(updatedDrone);
     }
 
     @Override
