@@ -5,10 +5,10 @@ COPY common-library ./common-library
 COPY backoffice-bff ./backoffice-bff
 COPY drone ./drone
 COPY hub ./hub
-RUN mvn clean package -pl drone -am -DskipTests
+RUN mvn clean package -pl hub -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /build/drone/target/drone*.jar app.jar
-EXPOSE 8085
+COPY --from=builder /build/hub/target/hub*.jar app.jar
+EXPOSE 8084
 ENTRYPOINT ["java", "-jar", "app.jar"]

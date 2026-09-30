@@ -1,14 +1,14 @@
-package com.utm.drone;
+package com.utm.hub;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@SpringBootApplication(scanBasePackages = {"com.utm.drone", "com.utm.commonlibrary"})
+@SpringBootApplication(scanBasePackages = {"com.utm.hub", "com.utm.commonlibrary"})
 @EnableJpaAuditing
-public class DroneApplication {
+public class HubApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(DroneApplication.class, args);
+        SpringApplication.run(HubApplication.class, args);
     }
 }

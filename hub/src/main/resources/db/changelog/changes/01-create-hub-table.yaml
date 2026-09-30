@@ -1,0 +1,66 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-hub-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: hub
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: latitude
+                  type: numeric(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: longitude
+                  type: numeric(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: altitude
+                  type: numeric(8, 2)
+              - column:
+                  name: capacity
+                  type: int
+                  defaultValue: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: charging_pads
+                  type: int
+                  defaultValue: 0
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "active"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)

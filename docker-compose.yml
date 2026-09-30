@@ -9,6 +9,7 @@ services:
       - "${NGINX_PORT:-8081}:80"
     depends_on:
       - drone
+      - hub
       - backoffice-bff
       - swagger-ui
       - identity
@@ -26,9 +27,11 @@ services:
       - SERVER_PORT=8082
       - KEYCLOAK_URL=http://identity
       - DRONE_SERVICE_URL=http://drone:8085
+      - HUB_SERVICE_URL=http://hub:8084
     depends_on:
       - identity
       - drone
+      - hub
     networks:
       - utm-network
 
@@ -46,6 +49,29 @@ services:
       - POSTGRES_DB=utm_drone
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KEYCLOAK_URL=http://identity
+      - HUB_SERVICE_URL=http://hub:8084
+    depends_on:
+      - postgres
+      - hub
+    networks:
+      - utm-network
+
+  hub:
+    build:
+      context: .
+      dockerfile: ./hub/Dockerfile
+    image: hub:latest
+    ports:
+      - "8084:8084"
+    environment:
+      - SERVER_PORT=8084
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=utm_hub
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KEYCLOAK_URL=http://identity
     depends_on:
       - postgres
     networks:
@@ -57,7 +83,7 @@ services:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
+      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
     networks:
       - utm-network
 

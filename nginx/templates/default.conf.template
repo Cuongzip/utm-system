@@ -23,6 +23,14 @@ server {
     proxy_pass http://drone:8085/drone/api/v1/drones;
   }
 
+  location /hub/ {
+    proxy_pass http://hub:8084/hub/;
+  }
+
+  location /api/v1/hubs {
+    proxy_pass http://hub:8084/hub/api/v1/hubs;
+  }
+
   location /backoffice-bff/ {
     proxy_pass http://backoffice-bff:8082/backoffice-bff/;
   }
