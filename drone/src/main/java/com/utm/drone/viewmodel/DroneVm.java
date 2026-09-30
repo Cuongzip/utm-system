@@ -2,7 +2,6 @@ package com.utm.drone.viewmodel;
 
 import java.time.ZonedDateTime;
 
-import com.utm.drone.model.Drone;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Detailed profile and specifications of a Drone / UAS")
@@ -43,23 +42,4 @@ public record DroneVm(
         @Schema(description = "Last modification timestamp", example = "2026-09-28T10:30:00Z")
         ZonedDateTime lastModifiedOn
 ) {
-
-    public static DroneVm fromEntity(Drone drone) {
-        if (drone == null) {
-            return null;
-        }
-        return new DroneVm(
-                drone.getId(),
-                drone.getRegistrationNumber(),
-                drone.getModel(),
-                drone.getManufacturer(),
-                drone.getMaxSpeedMps(),
-                drone.getMaxFlightTimeMin(),
-                drone.getMaxPayloadKg(),
-                drone.getStatus() != null ? drone.getStatus().getValue() : null,
-                drone.getCurrentHubId(),
-                drone.getNotes(),
-                drone.getCreatedOn(),
-                drone.getLastModifiedOn());
-    }
 }

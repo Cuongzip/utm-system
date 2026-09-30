@@ -1,6 +1,5 @@
 package com.utm.hub.viewmodel;
 
-import com.utm.hub.model.Hub;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -40,23 +39,4 @@ public record HubVm(
         @Schema(description = "Last modification timestamp", example = "2026-09-28T10:30:00Z")
         ZonedDateTime lastModifiedOn
 ) {
-
-    public static HubVm fromEntity(Hub hub) {
-        if (hub == null) {
-            return null;
-        }
-        return new HubVm(
-                hub.getId(),
-                hub.getName(),
-                hub.getCode(),
-                hub.getLatitude(),
-                hub.getLongitude(),
-                hub.getAltitude(),
-                hub.getCapacity(),
-                hub.getChargingPads(),
-                hub.getStatus() != null ? hub.getStatus().getValue() : null,
-                hub.getCreatedOn(),
-                hub.getLastModifiedOn()
-        );
-    }
 }
