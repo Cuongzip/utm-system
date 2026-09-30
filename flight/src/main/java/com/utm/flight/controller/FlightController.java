@@ -6,12 +6,17 @@ import com.utm.flight.viewmodel.FlightPostVm;
 import com.utm.flight.viewmodel.FlightPutVm;
 import com.utm.flight.viewmodel.FlightVm;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,11 +41,22 @@ public class FlightController {
     @GetMapping
     @Operation(summary = "Get all flight plans", description = "Get list of flights filtered by status, pilotId or droneId")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flights retrieved successfully")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flights retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = FlightVm.class))
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
     public ResponseEntity<List<FlightVm>> getAllFlights(
+            @Parameter(description = "Filter by flight status (e.g. planned, authorized, active, completed, aborted)")
             @RequestParam(required = false) String status,
+            @Parameter(description = "Filter by pilot ID")
             @RequestParam(required = false) String pilotId,
+            @Parameter(description = "Filter by drone UUID identifier")
             @RequestParam(required = false) String droneId
     ) {
         return ResponseEntity.ok(flightService.getAllFlights(status, pilotId, droneId));
@@ -49,10 +65,18 @@ public class FlightController {
     @PostMapping
     @Operation(summary = "Create a new flight plan", description = "Register a new flight plan with planned status")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Flight plan created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid request payload"),
-            @ApiResponse(responseCode = "404", description = "Drone or Hub not found"),
-            @ApiResponse(responseCode = "409", description = "Flight number already exists")
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Flight plan created successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Drone or Hub not found", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Flight number already exists", content = @Content)
     })
     public ResponseEntity<FlightVm> createFlight(@Valid @RequestBody FlightPostVm flightPostVm) {
         FlightVm createdFlight = flightService.createFlight(flightPostVm);
@@ -62,21 +86,41 @@ public class FlightController {
     @GetMapping("/{id}")
     @Operation(summary = "Get flight by ID", description = "Get detailed information of a specific flight")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flight retrieved successfully"),
-            @ApiResponse(responseCode = "404", description = "Flight not found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
-    public ResponseEntity<FlightVm> getFlightById(@PathVariable String id) {
+    public ResponseEntity<FlightVm> getFlightById(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable String id
+    ) {
         return ResponseEntity.ok(flightService.getFlightById(id));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update flight plan", description = "Update flight plan before takeoff")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flight plan updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid flight state or request payload"),
-            @ApiResponse(responseCode = "404", description = "Flight not found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight plan updated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid flight state or request payload", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightVm> updateFlight(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String id,
             @Valid @RequestBody FlightPutVm flightPutVm
     ) {
@@ -86,33 +130,66 @@ public class FlightController {
     @PostMapping("/{id}/authorize")
     @Operation(summary = "Request UTM authorization", description = "Authorize flight plan to move from planned to authorized")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flight authorized successfully"),
-            @ApiResponse(responseCode = "400", description = "Flight is not in planned state"),
-            @ApiResponse(responseCode = "404", description = "Flight not found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight authorized successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Flight is not in planned state", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
-    public ResponseEntity<FlightVm> authorizeFlight(@PathVariable String id) {
+    public ResponseEntity<FlightVm> authorizeFlight(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable String id
+    ) {
         return ResponseEntity.ok(flightService.authorizeFlight(id));
     }
 
     @PostMapping("/{id}/start")
     @Operation(summary = "Start flight", description = "Takeoff drone and mark flight as active")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flight started successfully"),
-            @ApiResponse(responseCode = "400", description = "Flight is not in authorized state"),
-            @ApiResponse(responseCode = "404", description = "Flight not found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight started successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Flight is not in authorized state", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
-    public ResponseEntity<FlightVm> startFlight(@PathVariable String id) {
+    public ResponseEntity<FlightVm> startFlight(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable String id
+    ) {
         return ResponseEntity.ok(flightService.startFlight(id));
     }
 
     @PostMapping("/{id}/complete")
     @Operation(summary = "Complete flight", description = "Land drone safely and mark flight as completed")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flight completed successfully"),
-            @ApiResponse(responseCode = "400", description = "Flight is not in active state"),
-            @ApiResponse(responseCode = "404", description = "Flight not found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight completed successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Flight is not in active state", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
-    public ResponseEntity<FlightVm> completeFlight(@PathVariable String id) {
+    public ResponseEntity<FlightVm> completeFlight(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable String id
+    ) {
         return ResponseEntity.ok(flightService.completeFlight(id));
     }
 
@@ -120,12 +197,21 @@ public class FlightController {
     @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
     @Operation(summary = "Abort flight", description = "Emergency abort or cancel flight")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Flight aborted successfully"),
-            @ApiResponse(responseCode = "400", description = "Flight cannot be aborted"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
-            @ApiResponse(responseCode = "404", description = "Flight not found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight aborted successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Flight cannot be aborted", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightVm> abortFlight(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String id,
             @RequestBody(required = false) FlightAbortVm abortVm
     ) {
