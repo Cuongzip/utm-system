@@ -39,6 +39,14 @@ server {
     proxy_pass http://flight:8086/flight/api/v1/flights;
   }
 
+  location /airspace/ {
+    proxy_pass http://airspace:8087/airspace/;
+  }
+
+  location /api/v1/airspace {
+    proxy_pass http://airspace:8087/airspace/api/v1/airspace;
+  }
+
   location /backoffice-bff/ {
     proxy_pass http://backoffice-bff:8082/backoffice-bff/;
   }

@@ -7,10 +7,10 @@ COPY drone ./drone
 COPY hub ./hub
 COPY flight ./flight
 COPY airspace ./airspace
-RUN mvn clean package -pl drone -am -DskipTests
+RUN mvn clean package -pl airspace -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /build/drone/target/drone*.jar app.jar
-EXPOSE 8085
+COPY --from=builder /build/airspace/target/airspace*.jar app.jar
+EXPOSE 8087
 ENTRYPOINT ["java", "-jar", "app.jar"]
