@@ -13,6 +13,10 @@ public final class MessageCode {
     public static final String INVALID_FLIGHT_STATE = "INVALID_FLIGHT_STATE";
     public static final String AIRSPACE_ZONE_NOT_FOUND = "AIRSPACE_ZONE_NOT_FOUND";
     public static final String AIRSPACE_ZONE_NAME_ALREADY_EXISTED = "AIRSPACE_ZONE_NAME_ALREADY_EXISTED";
+    public static final String TELEMETRY_NOT_FOUND = "TELEMETRY_NOT_FOUND";
+    public static final String SIMULATION_ALREADY_ACTIVE = "SIMULATION_ALREADY_ACTIVE";
+    public static final String SIMULATION_NOT_FOUND = "SIMULATION_NOT_FOUND";
+    public static final String INVALID_SIMULATION_WAYPOINTS = "INVALID_SIMULATION_WAYPOINTS";
 
     private MessageCode() {
         // Add constructor

@@ -12,6 +12,7 @@ services:
       - hub
       - flight
       - airspace
+      - telemetry
       - backoffice-bff
       - swagger-ui
       - identity
@@ -131,13 +132,33 @@ services:
     networks:
       - utm-network
 
+  telemetry:
+    build:
+      context: .
+      dockerfile: ./telemetry/Dockerfile
+    image: telemetry:latest
+    ports:
+      - "8089:8089"
+    environment:
+      - SERVER_PORT=8089
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=utm_telemetry
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KEYCLOAK_URL=http://identity
+    depends_on:
+      - postgres
+    networks:
+      - utm-network
+
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.17.14
     ports:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
+      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
     networks:
       - utm-network
 

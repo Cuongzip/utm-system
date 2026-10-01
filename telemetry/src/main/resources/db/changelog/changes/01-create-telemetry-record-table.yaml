@@ -1,0 +1,99 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-telemetry-record-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: telemetry_record
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: drone_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: latitude
+                  type: DECIMAL(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: longitude
+                  type: DECIMAL(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: altitude
+                  type: DECIMAL(8, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: speed
+                  type: DECIMAL(6, 2)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: heading
+                  type: DECIMAL(6, 2)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: pitch
+                  type: DECIMAL(6, 2)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: roll
+                  type: DECIMAL(6, 2)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: yaw
+                  type: DECIMAL(6, 2)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: battery_percentage
+                  type: DECIMAL(5, 2)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: created_on
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_on
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+        - createIndex:
+            indexName: idx_telemetry_drone_created
+            tableName: telemetry_record
+            columns:
+              - column:
+                  name: drone_id
+              - column:
+                  name: created_on
+        - createIndex:
+            indexName: idx_telemetry_flight_created
+            tableName: telemetry_record
+            columns:
+              - column:
+                  name: flight_id
+              - column:
+                  name: created_on

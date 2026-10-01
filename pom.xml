@@ -20,6 +20,7 @@
         <module>hub</module>
         <module>flight</module>
         <module>airspace</module>
+        <module>telemetry</module>
         <module>backoffice-bff</module>
     </modules>
 
