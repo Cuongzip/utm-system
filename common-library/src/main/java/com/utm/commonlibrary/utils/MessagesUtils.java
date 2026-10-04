@@ -10,7 +10,6 @@ public class MessagesUtils {
     private static final String BUNDLE_NAME = "messages.messages";
 
     private MessagesUtils() {
-        // Private constructor
     }
 
     private static ResourceBundle getResourceBundle() {
@@ -31,7 +30,6 @@ public class MessagesUtils {
             ResourceBundle bundle = getResourceBundle();
             message = bundle.getString(errorCode);
         } catch (MissingResourceException ex) {
-            // case message_code is not defined.
             message = errorCode;
         }
         FormattingTuple formattingTuple = MessageFormatter.arrayFormat(message, var2);

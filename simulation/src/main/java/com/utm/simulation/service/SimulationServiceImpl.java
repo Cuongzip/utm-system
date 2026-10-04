@@ -11,6 +11,7 @@ import com.utm.simulation.model.enumeration.EmergencyScenarioType;
 import com.utm.simulation.model.enumeration.SimulationStatus;
 import com.utm.simulation.repository.SimulationEventRepository;
 import com.utm.simulation.repository.SimulationSessionRepository;
+import com.utm.simulation.viewmodel.FlightDetailVm;
 import com.utm.simulation.viewmodel.InjectScenarioResultVm;
 import com.utm.simulation.viewmodel.InjectScenarioVm;
 import com.utm.simulation.viewmodel.ScenarioCatalogVm;
@@ -48,6 +49,7 @@ public class SimulationServiceImpl implements SimulationService {
     private final SimulationEventRepository eventRepository;
     private final SimulationMapper simulationMapper;
     private final TelemetryClientService telemetryClientService;
+    private final FlightClientService flightClientService;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8, Thread.ofVirtual().factory());
     private final Map<String, SimulationSessionRuntime> activeRuntimes = new ConcurrentHashMap<>();
@@ -55,15 +57,27 @@ public class SimulationServiceImpl implements SimulationService {
     @Override
     @Transactional
     public SimulationSessionVm createSession(SimulationSessionCreateVm createVm, String bearerToken) {
-        String droneId = createVm.droneId().trim();
+        String flightId = createVm.flightId();
+        if (flightId == null || flightId.isBlank()) {
+            throw new BadRequestException(MessageCode.FLIGHT_NOT_FOUND, "null");
+        }
 
-        // Ensure no active running session for the same drone
+        FlightDetailVm flight = flightClientService.getFlightDetail(flightId.trim(), bearerToken);
+        if (flight == null) {
+            throw new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId);
+        }
+
+        String droneId = flight.droneId();
+        if (droneId == null || droneId.isBlank()) {
+            throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, flightId);
+        }
+
         sessionRepository.findFirstByDroneIdAndStatus(droneId, SimulationStatus.RUNNING)
                 .ifPresent(existing -> {
                     throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
                 });
 
-        List<WaypointVm> waypoints = resolveWaypoints(createVm);
+        List<WaypointVm> waypoints = resolveWaypoints(flight);
         double totalDist = calculateTotalDistance(waypoints);
         if (totalDist < 10.0) {
             throw new BadRequestException(MessageCode.INVALID_SIMULATION_WAYPOINTS);
@@ -77,9 +91,9 @@ public class SimulationServiceImpl implements SimulationService {
         SimulationSession entity = SimulationSession.builder()
                 .id(sessionId)
                 .droneId(droneId)
-                .missionId(createVm.missionId())
-                .departureHubId(createVm.departureHubId().trim())
-                .arrivalHubId(createVm.arrivalHubId())
+                .missionId(flight.id() != null ? flight.id() : flightId)
+                .departureHubId(flight.departureHubId() != null ? flight.departureHubId() : "hub-default")
+                .arrivalHubId(flight.arrivalHubId())
                 .status(SimulationStatus.RUNNING)
                 .speed(createVm.speed())
                 .timeScale(createVm.timeScale())
@@ -98,11 +112,9 @@ public class SimulationServiceImpl implements SimulationService {
 
         SimulationSession saved = sessionRepository.saveAndFlush(entity);
 
-        // Initialize in-memory runtime engine
         SimulationSessionRuntime runtime = new SimulationSessionRuntime(saved, waypoints, bearerToken);
         activeRuntimes.put(sessionId, runtime);
 
-        // Schedule periodic 1-second simulation tick
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
                 () -> runSimulationTick(runtime),
                 0,
@@ -111,8 +123,8 @@ public class SimulationServiceImpl implements SimulationService {
         );
         runtime.scheduledFuture = future;
 
-        log.info("Initialized virtual flight simulation session '{}' for drone '{}' at speed {} m/s (scale {}x)",
-                sessionId, droneId, createVm.speed(), createVm.timeScale());
+        log.info("Initialized virtual flight simulation session '{}' for drone '{}' from flight '{}' at speed {} m/s (scale {}x)",
+                sessionId, droneId, flightId, createVm.speed(), createVm.timeScale());
 
         return simulationMapper.toVm(saved);
     }
@@ -289,14 +301,12 @@ public class SimulationServiceImpl implements SimulationService {
                     return;
                 }
 
-                // If c2_lost is active, telemetry link is severed
                 boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario);
 
                 if (sendTelemetry) {
                     double effectiveLat = runtime.currentLat;
                     double effectiveLon = runtime.currentLon;
 
-                    // Apply GPS failure drift if active
                     if ("gps_failure".equalsIgnoreCase(runtime.activeScenario)) {
                         effectiveLat += (Math.random() - 0.5) * 0.005;
                         effectiveLon += (Math.random() - 0.5) * 0.005;
@@ -310,9 +320,9 @@ public class SimulationServiceImpl implements SimulationService {
                             Math.round(runtime.currentAlt * 10.0) / 10.0,
                             runtime.speed,
                             Math.round(runtime.currentHeading * 10.0) / 10.0,
-                            0.0, // pitch
-                            0.0, // roll
-                            runtime.currentHeading, // yaw
+                            0.0,
+                            0.0,
+                            runtime.currentHeading,
                             Math.round(runtime.currentBattery * 10.0) / 10.0
                     );
 
@@ -331,17 +341,14 @@ public class SimulationServiceImpl implements SimulationService {
                     return;
                 }
 
-                // Advance simulation with time-scale factor
                 double timeStepSeconds = 1.0 * runtime.timeScale;
                 double stepDist = runtime.speed * timeStepSeconds;
 
-                // Handle motor failure (altitude drops, speed degrades)
                 if ("motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
                     runtime.speed = Math.max(3.0, runtime.speed * 0.8);
                     runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (5.0 * timeStepSeconds));
                 }
 
-                // Handle rapid battery drain
                 if ("battery_drain".equalsIgnoreCase(runtime.activeScenario)) {
                     runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (5.0 * timeStepSeconds));
                 } else {
@@ -415,12 +422,12 @@ public class SimulationServiceImpl implements SimulationService {
         return eventRepository.save(event);
     }
 
-    private List<WaypointVm> resolveWaypoints(SimulationSessionCreateVm createVm) {
-        if (createVm.waypoints() != null && createVm.waypoints().size() >= 2) {
-            return createVm.waypoints();
+    private List<WaypointVm> resolveWaypoints(FlightDetailVm flight) {
+        if (flight != null && flight.waypoints() != null && flight.waypoints().size() >= 2) {
+            log.info("Resolved {} trajectory waypoints from Flight Plan '{}'", flight.waypoints().size(), flight.id());
+            return flight.waypoints();
         }
 
-        // Generate standard test trajectory
         return List.of(
                 new WaypointVm(10.7769, 106.7009, 50.0),
                 new WaypointVm(10.7820, 106.7050, 80.0),

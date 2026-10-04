@@ -47,8 +47,7 @@ public class SimulationMapper {
                 session.getTotalWaypoints(),
                 session.getActiveScenario(),
                 session.getCreatedOn(),
-                session.getLastModifiedOn()
-        );
+                session.getLastModifiedOn());
     }
 
     public SimulationEventVm toVm(SimulationEvent event) {
@@ -59,8 +58,7 @@ public class SimulationMapper {
                 event.getEventType(),
                 event.getScenario(),
                 event.getMessage(),
-                event.getSeverity()
-        );
+                event.getSeverity());
     }
 
     public String serializeWaypoints(List<WaypointVm> waypoints) {
@@ -77,7 +75,8 @@ public class SimulationMapper {
             return Collections.emptyList();
         }
         try {
-            return objectMapper.readValue(waypointsJson, new TypeReference<List<WaypointVm>>() {});
+            return objectMapper.readValue(waypointsJson, new TypeReference<List<WaypointVm>>() {
+            });
         } catch (Exception e) {
             log.error("Failed to deserialize waypoints: {}", e.getMessage());
             return Collections.emptyList();

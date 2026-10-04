@@ -67,6 +67,14 @@ public class Flight extends AbstractAuditEntity {
     @Builder.Default
     private FlightStatus status = FlightStatus.PLANNED;
 
+    @Column(name = "total_waypoints")
+    @Builder.Default
+    private Integer totalWaypoints = 0;
+
+    @Column(name = "waypoints_json", columnDefinition = "TEXT")
+    private String waypointsJson;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 }
+

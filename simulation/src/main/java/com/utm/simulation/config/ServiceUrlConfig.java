@@ -5,8 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "service")
 public record ServiceUrlConfig(
         TelemetryUrlConfig telemetry,
-        HubUrlConfig hub
+        FlightUrlConfig flight
 ) {
     public record TelemetryUrlConfig(String url) {}
-    public record HubUrlConfig(String url) {}
+    public record FlightUrlConfig(String url) {}
 }
+

@@ -169,10 +169,11 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
-      - HUB_SERVICE_URL=http://hub:8084
+      - FLIGHT_SERVICE_URL=http://flight:8086
     depends_on:
       - postgres
       - telemetry
+      - flight
     networks:
       - utm-network
 

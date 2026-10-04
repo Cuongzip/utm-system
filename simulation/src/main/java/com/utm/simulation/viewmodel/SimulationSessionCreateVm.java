@@ -1,46 +1,27 @@
 package com.utm.simulation.viewmodel;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
-
-@Schema(
-        description = "Payload to launch a new virtual flight simulation session",
-        example = """
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Schema(description = "Payload to launch a new virtual flight simulation session for an existing flight plan", example = """
         {
-          "droneId": "drone-sim-01",
-          "missionId": "mission-01",
-          "departureHubId": "hub-01",
-          "arrivalHubId": "hub-02",
+          "flightId": "550e8400-e29b-41d4-a716-446655440000",
           "speed": 15.0,
           "timeScale": 1.0,
-          "startBattery": 100.0,
-          "waypoints": [
-            { "lat": 10.7769, "lon": 106.7009, "alt": 50.0 },
-            { "lat": 10.7820, "lon": 106.7050, "alt": 80.0 },
-            { "lat": 10.7890, "lon": 106.7120, "alt": 60.0 }
-          ]
+          "startBattery": 100.0
         }
-        """
-)
+        """)
 public record SimulationSessionCreateVm(
-        @Schema(description = "ID of the drone participating in simulation", example = "drone-sim-01")
-        @NotNull(message = "Drone ID is required")
-        String droneId,
+        @Schema(description = "Associated flight plan UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000")
+        @NotNull(message = "Flight ID is required")
+        String flightId,
 
-        @Schema(description = "Associated flight mission ID", example = "mission-01")
+        @Schema(description = "Associated flight mission ID (alias for flightId)", hidden = true)
         String missionId,
-
-        @Schema(description = "Departure vertiport / hub ID", example = "hub-01")
-        @NotNull(message = "Departure hub ID is required")
-        String departureHubId,
-
-        @Schema(description = "Arrival vertiport / hub ID", example = "hub-02")
-        String arrivalHubId,
 
         @Schema(description = "Simulated cruising speed in m/s (default 15.0)", example = "15.0", defaultValue = "15.0")
         Double speed,
@@ -51,11 +32,16 @@ public record SimulationSessionCreateVm(
         Double timeScale,
 
         @Schema(description = "Initial battery percentage at takeoff (0 - 100%)", example = "100.0", defaultValue = "100.0")
-        Double startBattery,
+        Double startBattery) {
 
-        @Schema(description = "Optional custom list of 3D trajectory waypoints. If omitted, will be derived from departure and arrival hubs")
-        List<@Valid WaypointVm> waypoints
-) {
+    public String flightId() {
+        return (flightId != null && !flightId.isBlank()) ? flightId : missionId;
+    }
+
+    public String missionId() {
+        return flightId();
+    }
+
     public Double speed() {
         return (speed != null && speed > 0) ? speed : 15.0;
     }

@@ -1,11 +1,13 @@
 package com.utm.flight.service;
 
 import com.utm.flight.config.ServiceUrlConfig;
+import com.utm.flight.viewmodel.HubVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,25 +19,26 @@ public class HubClientServiceImpl implements HubClientService {
 
     @Override
     public boolean checkHubExists(String hubId) {
+        return getHubById(hubId).isPresent();
+    }
+
+    @Override
+    public Optional<HubVm> getHubById(String hubId) {
         if (hubId == null || hubId.isBlank()) {
-            return false;
+            return Optional.empty();
         }
 
         String hubUrl = serviceUrlConfig.hub();
         String basePath = hubUrl.endsWith("/hub") ? "" : "/hub";
         try {
-            return Boolean.TRUE.equals(restClient.get()
+            HubVm hub = restClient.get()
                     .uri(hubUrl + basePath + "/api/v1/hubs/{id}", hubId.trim())
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        log.warn("Hub {} verification returned status {}", hubId, response.getStatusCode());
-                    })
-                    .toBodilessEntity()
-                    .getStatusCode()
-                    .is2xxSuccessful());
+                    .body(HubVm.class);
+            return Optional.ofNullable(hub);
         } catch (Exception e) {
-            log.error("Failed to verify hub ID {} at url {}: {}", hubId, hubUrl, e.getMessage());
-            return false;
+            log.error("Failed to fetch hub ID {} at url {}: {}", hubId, hubUrl, e.getMessage());
+            return Optional.empty();
         }
     }
 }

@@ -19,6 +19,5 @@ public final class MessageCode {
     public static final String INVALID_SIMULATION_WAYPOINTS = "INVALID_SIMULATION_WAYPOINTS";
 
     private MessageCode() {
-        // Add constructor
     }
 }

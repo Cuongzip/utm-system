@@ -5,16 +5,14 @@ import jakarta.validation.constraints.NotNull;
 
 @Schema(description = "3D coordinate waypoint for flight trajectory simulation")
 public record WaypointVm(
-        @Schema(description = "Latitude in degrees", example = "10.7769")
-        @NotNull(message = "Latitude is required")
-        Double lat,
+    @Schema(description = "Latitude in degrees", example = "10.7769") @NotNull(message = "Latitude is required") Double lat,
 
-        @Schema(description = "Longitude in degrees", example = "106.7009")
-        @NotNull(message = "Longitude is required")
-        Double lon,
+    @Schema(description = "Longitude in degrees", example = "106.7009") @NotNull(message = "Longitude is required") Double lon,
 
-        @Schema(description = "Altitude in meters above ground/sea level", example = "50.0")
-        @NotNull(message = "Altitude is required")
-        Double alt
-) {
+    @Schema(description = "Altitude in meters above ground/sea level", example = "50.0") @NotNull(message = "Altitude is required") Double alt,
+
+    @Schema(description = "Target cruising speed at this waypoint in m/s (optional)", example = "15.0") Double speed) {
+  public WaypointVm(Double lat, Double lon, Double alt) {
+    this(lat, lon, alt, null);
+  }
 }
