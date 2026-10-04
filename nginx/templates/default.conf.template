@@ -55,6 +55,14 @@ server {
     proxy_pass http://telemetry:8089/telemetry/api/v1/telemetry;
   }
 
+  location /simulation/ {
+    proxy_pass http://simulation:8090/simulation/;
+  }
+
+  location /api/v1/simulation {
+    proxy_pass http://simulation:8090/simulation/api/v1/simulation;
+  }
+
   location /backoffice-bff/ {
     proxy_pass http://backoffice-bff:8082/backoffice-bff/;
   }

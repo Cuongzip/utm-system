@@ -1,4 +1,4 @@
-package com.utm.telemetry.config;
+package com.utm.simulation.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

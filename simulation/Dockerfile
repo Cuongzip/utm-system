@@ -9,10 +9,10 @@ COPY flight ./flight
 COPY airspace ./airspace
 COPY telemetry ./telemetry
 COPY simulation ./simulation
-RUN mvn clean package -pl hub -am -DskipTests
+RUN mvn clean package -pl simulation -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /build/hub/target/hub*.jar app.jar
-EXPOSE 8084
+COPY --from=builder /build/simulation/target/simulation*.jar app.jar
+EXPOSE 8090
 ENTRYPOINT ["java", "-jar", "app.jar"]
