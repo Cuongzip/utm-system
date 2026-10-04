@@ -105,6 +105,7 @@ public class SimulationController {
         @Operation(summary = "Pause simulation session", description = "Pauses active telemetry generation for the specified session.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation session paused", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
                         @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
         })
         public ResponseEntity<SimulationSessionVm> pauseSession(
@@ -116,6 +117,7 @@ public class SimulationController {
         @Operation(summary = "Resume simulation session", description = "Resumes a paused simulation session.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation session resumed", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
                         @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
         })
         public ResponseEntity<SimulationSessionVm> resumeSession(
@@ -127,7 +129,7 @@ public class SimulationController {
         @Operation(summary = "Update simulation time-scale", description = "Dynamically adjust simulation speed acceleration factor (0.1x to 20x).")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation time-scale updated", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid timeScale parameter", content = @Content),
+                        @ApiResponse(responseCode = "400", description = "Invalid timeScale parameter or simulation state", content = @Content),
                         @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
         })
         public ResponseEntity<SimulationSessionVm> updateTimeScale(
@@ -140,7 +142,7 @@ public class SimulationController {
         @Operation(summary = "Inject emergency simulation scenario", description = "Inject abnormal events such as GPS failure, battery drain, C2 lost, motor failure, or geofence breach.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Emergency scenario injected successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = InjectScenarioResultVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid scenario configuration", content = @Content),
+                        @ApiResponse(responseCode = "400", description = "Invalid scenario configuration or simulation state", content = @Content),
                         @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
         })
         public ResponseEntity<InjectScenarioResultVm> injectScenario(
@@ -153,6 +155,7 @@ public class SimulationController {
         @Operation(summary = "Stop simulation session", description = "Stops the simulation while retaining session statistics and telemetry history.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation session stopped", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
                         @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
         })
         public ResponseEntity<SimulationSessionVm> stopSession(

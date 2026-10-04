@@ -72,10 +72,11 @@ public class SimulationServiceImpl implements SimulationService {
             throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, flightId);
         }
 
-        sessionRepository.findFirstByDroneIdAndStatus(droneId, SimulationStatus.RUNNING)
-                .ifPresent(existing -> {
-                    throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
-                });
+        boolean alreadyActive = sessionRepository.findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
+                .anyMatch(s -> s.getDroneId().equals(droneId));
+        if (alreadyActive) {
+            throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
+        }
 
         List<WaypointVm> waypoints = resolveWaypoints(flight);
         double totalDist = calculateTotalDistance(waypoints);
@@ -141,7 +142,7 @@ public class SimulationServiceImpl implements SimulationService {
     @Override
     @Transactional(readOnly = true)
     public List<SimulationSessionVm> getActiveSessions() {
-        return sessionRepository.findByStatus(SimulationStatus.RUNNING).stream()
+        return sessionRepository.findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
                 .map(this::syncWithRuntime)
                 .map(simulationMapper::toVm)
                 .toList();
@@ -177,6 +178,14 @@ public class SimulationServiceImpl implements SimulationService {
         SimulationSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
 
+        if (session.getStatus() == SimulationStatus.PAUSED) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Simulation session is already paused");
+        }
+        if (session.getStatus() != SimulationStatus.RUNNING) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Cannot pause a " + session.getStatus().getValue() + " simulation session. Only running sessions can be paused.");
+        }
+
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
         if (runtime != null) {
             synchronized (runtime) {
@@ -198,11 +207,22 @@ public class SimulationServiceImpl implements SimulationService {
         SimulationSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
 
+        if (session.getStatus() == SimulationStatus.RUNNING) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Simulation session is already running");
+        }
+        if (session.getStatus() != SimulationStatus.PAUSED) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Cannot resume a " + session.getStatus().getValue() + " simulation session. Only paused sessions can be resumed.");
+        }
+
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
-        if (runtime != null) {
-            synchronized (runtime) {
-                runtime.status = SimulationStatus.RUNNING;
-            }
+        if (runtime == null) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "No active in-memory runtime found for simulation session: " + id);
+        }
+
+        synchronized (runtime) {
+            runtime.status = SimulationStatus.RUNNING;
         }
 
         session.setStatus(SimulationStatus.RUNNING);
@@ -218,6 +238,11 @@ public class SimulationServiceImpl implements SimulationService {
     public SimulationSessionVm updateTimeScale(String id, Double timeScale) {
         SimulationSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+
+        if (session.getStatus() != SimulationStatus.RUNNING && session.getStatus() != SimulationStatus.PAUSED) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Cannot update time scale on a " + session.getStatus().getValue() + " simulation session");
+        }
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
         if (runtime != null) {
@@ -239,6 +264,11 @@ public class SimulationServiceImpl implements SimulationService {
     public InjectScenarioResultVm injectScenario(String id, InjectScenarioVm injectVm) {
         SimulationSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+
+        if (session.getStatus() != SimulationStatus.RUNNING && session.getStatus() != SimulationStatus.PAUSED) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Cannot inject scenario into a " + session.getStatus().getValue() + " simulation session");
+        }
 
         EmergencyScenarioType scenario = injectVm.scenario();
         String scenarioCode = scenario.getValue();
@@ -266,6 +296,13 @@ public class SimulationServiceImpl implements SimulationService {
     public SimulationSessionVm stopSession(String id) {
         SimulationSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+
+        if (session.getStatus() == SimulationStatus.STOPPED) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Simulation session is already stopped");
+        }
+        if (session.getStatus() == SimulationStatus.COMPLETED) {
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Cannot stop an already completed simulation session");
+        }
 
         SimulationSessionRuntime runtime = activeRuntimes.remove(id);
         if (runtime != null && runtime.scheduledFuture != null) {

@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum EmergencyScenarioType {
-    GPS_FAILURE("gps_failure", "Mất tín hiệu GPS", "Mất tín hiệu định vị GPS đột ngột, tọa độ bị sai lệch hoặc mất tín hiệu hoàn toàn.", "HIGH"),
-    BATTERY_DRAIN("battery_drain", "Tụt pin khẩn cấp", "Mức pin sụt giảm nhanh chóng do lỗi cell hoặc quá tải nhiệt.", "CRITICAL"),
-    C2_LOST("c2_lost", "Mất liên lạc C2", "Mất liên lạc Command & Control giữa drone và trạm mặt đất GCS.", "HIGH"),
-    MOTOR_FAILURE("motor_failure", "Hỏng động cơ", "Hỏng hóc động cơ/cánh quạt khiến drone mất kiểm soát lực nâng và độ cao.", "CRITICAL"),
-    GEOFENCE_BREACH("geofence_breach", "Vi phạm không phận", "Drone bay lệch khỏi hành lang an toàn và xâm nhập vùng cấm bay Geofence.", "HIGH");
+    GPS_FAILURE("gps_failure", "GPS Signal Failure", "Sudden loss or degradation of GPS positioning signal, resulting in coordinate drift or complete signal loss.", "HIGH"),
+    BATTERY_DRAIN("battery_drain", "Critical Battery Drain", "Rapid depletion of battery capacity due to cell malfunction or thermal overload.", "CRITICAL"),
+    C2_LOST("c2_lost", "Command & Control Link Lost", "Loss of Command & Control (C2) communication link between the drone and Ground Control Station (GCS).", "HIGH"),
+    MOTOR_FAILURE("motor_failure", "Motor Failure", "Propulsion or rotor malfunction causing loss of lift control and altitude drop.", "CRITICAL"),
+    GEOFENCE_BREACH("geofence_breach", "Geofence Breach", "Drone deviates from authorized flight corridor and encroaches into restricted or prohibited airspace.", "HIGH");
 
     private final String value;
     private final String displayName;

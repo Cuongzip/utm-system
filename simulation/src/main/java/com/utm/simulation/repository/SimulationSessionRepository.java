@@ -6,12 +6,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SimulationSessionRepository extends JpaRepository<SimulationSession, String>, JpaSpecificationExecutor<SimulationSession> {
     List<SimulationSession> findByStatus(SimulationStatus status);
+    List<SimulationSession> findByStatusIn(Collection<SimulationStatus> statuses);
     Optional<SimulationSession> findFirstByDroneIdAndStatus(String droneId, SimulationStatus status);
     List<SimulationSession> findByDroneIdOrderByCreatedOnDesc(String droneId);
 }
