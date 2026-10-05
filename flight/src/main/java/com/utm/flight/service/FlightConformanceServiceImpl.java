@@ -297,9 +297,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (waypoints.size() == 1) {
             FlightWaypoint w = waypoints.getFirst();
             double dist = calculateHaversineDistance(w.getLatitude(), w.getLongitude(), pLat, pLon);
-            double nominalAlt = (w.getAltitude() != null)
-                    ? w.getAltitude().doubleValue()
-                    : (cruisingAltitude != null ? cruisingAltitude.doubleValue() : pAlt);
+            double nominalAlt = resolveAltitude(w.getAltitude(), cruisingAltitude, pAlt);
             double vError = Math.abs(pAlt - nominalAlt);
             return new CrossTrackResult(dist, vError);
         }
@@ -345,18 +343,24 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
             if (distanceToSegment < minDistance) {
                 minDistance = distanceToSegment;
-                double nominalAlt1 = (w1.getAltitude() != null)
-                        ? w1.getAltitude().doubleValue()
-                        : (cruisingAltitude != null ? cruisingAltitude.doubleValue() : 50.0);
-                double nominalAlt2 = (w2.getAltitude() != null)
-                        ? w2.getAltitude().doubleValue()
-                        : (cruisingAltitude != null ? cruisingAltitude.doubleValue() : 50.0);
+                double nominalAlt1 = resolveAltitude(w1.getAltitude(), cruisingAltitude, 50.0);
+                double nominalAlt2 = resolveAltitude(w2.getAltitude(), cruisingAltitude, 50.0);
                 double expectedAlt = nominalAlt1 + fractionOnSegment * (nominalAlt2 - nominalAlt1);
                 correspondingVerticalError = Math.abs(pAlt - expectedAlt);
             }
         }
 
         return new CrossTrackResult(minDistance, correspondingVerticalError);
+    }
+
+    private static double resolveAltitude(Double waypointAlt, Double cruisingAlt, double defaultAlt) {
+        if (waypointAlt != null) {
+            return waypointAlt;
+        }
+        if (cruisingAlt != null) {
+            return cruisingAlt;
+        }
+        return defaultAlt;
     }
 
     private record CrossTrackResult(double crossTrackDistanceM, double verticalErrorM) {}
