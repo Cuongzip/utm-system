@@ -82,9 +82,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (!flightRepository.existsById(flightId)) {
             throw new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId);
         }
-        return alertRepository.findByFlightIdOrderByCreatedOnDesc(flightId).stream()
-                .map(conformanceMapper::toVm)
-                .toList();
+        return conformanceMapper.toAlertVmList(alertRepository.findByFlightIdOrderByCreatedOnDesc(flightId));
     }
 
     @Override
@@ -135,12 +133,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         }
 
         TelemetryRecordVm telemetry = telemetryOpt.get();
-        conformance.setCurrentLatitude(telemetry.latitude());
-        conformance.setCurrentLongitude(telemetry.longitude());
-        conformance.setCurrentAltitude(telemetry.altitude());
-        conformance.setCurrentSpeed(telemetry.speed());
-        conformance.setCurrentHeading(telemetry.heading());
-        conformance.setLastTelemetryTime(telemetry.getEffectiveTimestamp());
+        conformanceMapper.updateFromTelemetry(conformance, telemetry);
 
         long ageSeconds = Math.max(0, Duration.between(telemetry.getEffectiveTimestamp(), now).getSeconds());
         if (ageSeconds > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
