@@ -1,0 +1,126 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-conflict-table
+      author: drops-utm
+      changes:
+        - createTable:
+            tableName: conflict
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: conflict_type
+                  type: varchar(50)
+                  defaultValue: "separation_minimum"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: severity
+                  type: varchar(20)
+                  defaultValue: "MEDIUM"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "detected"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: primary_flight_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: secondary_flight_id
+                  type: varchar(36)
+              - column:
+                  name: hub_id
+                  type: varchar(36)
+              - column:
+                  name: detected_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: detection_method
+                  type: varchar(50)
+              - column:
+                  name: location_lat
+                  type: double precision
+              - column:
+                  name: location_lon
+                  type: double precision
+              - column:
+                  name: altitude
+                  type: double precision
+              - column:
+                  name: separation_distance
+                  type: double precision
+              - column:
+                  name: vertical_separation
+                  type: double precision
+              - column:
+                  name: time_to_conflict_sec
+                  type: integer
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: resolution_strategy
+                  type: varchar(50)
+              - column:
+                  name: resolution_actions
+                  type: text
+              - column:
+                  name: resolved_at
+                  type: timestamp with time zone
+              - column:
+                  name: resolved_by
+                  type: varchar(100)
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: conflict
+            indexName: idx_conflict_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: conflict
+            indexName: idx_conflict_primary_flight
+            columns:
+              - column:
+                  name: primary_flight_id
+        - createIndex:
+            tableName: conflict
+            indexName: idx_conflict_secondary_flight
+            columns:
+              - column:
+                  name: secondary_flight_id
+        - createIndex:
+            tableName: conflict
+            indexName: idx_conflict_severity
+            columns:
+              - column:
+                  name: severity
+        - createIndex:
+            tableName: conflict
+            indexName: idx_conflict_detected_at
+            columns:
+              - column:
+                  name: detected_at

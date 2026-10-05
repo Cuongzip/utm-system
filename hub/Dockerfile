@@ -9,6 +9,7 @@ COPY flight ./flight
 COPY airspace ./airspace
 COPY telemetry ./telemetry
 COPY simulation ./simulation
+COPY conflict ./conflict
 RUN mvn clean package -pl hub -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine

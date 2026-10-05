@@ -22,6 +22,7 @@
         <module>airspace</module>
         <module>telemetry</module>
         <module>simulation</module>
+        <module>conflict</module>
         <module>backoffice-bff</module>
     </modules>
 

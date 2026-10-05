@@ -8,6 +8,7 @@ COPY flight ./flight
 COPY airspace ./airspace
 COPY telemetry ./telemetry
 COPY simulation ./simulation
+COPY conflict ./conflict
 COPY backoffice-bff ./backoffice-bff
 RUN mvn clean package -pl backoffice-bff -am -DskipTests
 

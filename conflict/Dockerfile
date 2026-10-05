@@ -10,10 +10,10 @@ COPY airspace ./airspace
 COPY telemetry ./telemetry
 COPY simulation ./simulation
 COPY conflict ./conflict
-RUN mvn clean package -pl simulation -am -DskipTests
+RUN mvn clean package -pl conflict -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /build/simulation/target/simulation*.jar app.jar
-EXPOSE 8090
+COPY --from=builder /build/conflict/target/conflict*.jar app.jar
+EXPOSE 8092
 ENTRYPOINT ["java", "-jar", "app.jar"]
