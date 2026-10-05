@@ -16,4 +16,8 @@ public interface SimulationSessionRepository extends JpaRepository<SimulationSes
     List<SimulationSession> findByStatusIn(Collection<SimulationStatus> statuses);
     Optional<SimulationSession> findFirstByDroneIdAndStatus(String droneId, SimulationStatus status);
     List<SimulationSession> findByDroneIdOrderByCreatedOnDesc(String droneId);
+    boolean existsByDroneIdAndStatusIn(String droneId, Collection<SimulationStatus> statuses);
+    boolean existsByFlightIdAndStatusIn(String flightId, Collection<SimulationStatus> statuses);
+    Optional<SimulationSession> findFirstByFlightIdAndStatus(String flightId, SimulationStatus status);
+    List<SimulationSession> findByFlightId(String flightId);
 }

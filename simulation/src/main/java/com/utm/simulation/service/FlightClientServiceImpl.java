@@ -20,7 +20,7 @@ public class FlightClientServiceImpl implements FlightClientService {
     private final ServiceUrlConfig serviceUrlConfig;
 
     @Override
-    public FlightDetailVm getFlightDetail(String flightId, String bearerToken) {
+    public FlightDetailVm getFlightDetail(String flightId) {
         if (flightId == null || flightId.isBlank()) {
             return null;
         }
@@ -36,14 +36,10 @@ public class FlightClientServiceImpl implements FlightClientService {
         String endpoint = baseUrl + basePath + "/api/v1/flights/" + flightId.trim();
 
         try {
-            var request = restClient.get()
-                    .uri(endpoint);
-
-            if (bearerToken != null && !bearerToken.isBlank()) {
-                request.header("Authorization", "Bearer " + bearerToken.replace("Bearer ", "").trim());
-            }
-
-            return request.retrieve().body(FlightDetailVm.class);
+            return restClient.get()
+                    .uri(endpoint)
+                    .retrieve()
+                    .body(FlightDetailVm.class);
         } catch (Exception ex) {
             log.warn("Could not retrieve flight details for flight ID '{}' from flight service: {}", flightId,
                     ex.getMessage());
@@ -52,8 +48,8 @@ public class FlightClientServiceImpl implements FlightClientService {
     }
 
     @Override
-    public List<WaypointVm> getFlightWaypoints(String flightId, String bearerToken) {
-        FlightDetailVm detail = getFlightDetail(flightId, bearerToken);
+    public List<WaypointVm> getFlightWaypoints(String flightId) {
+        FlightDetailVm detail = getFlightDetail(flightId);
         if (detail != null && detail.waypoints() != null) {
             return detail.waypoints();
         }

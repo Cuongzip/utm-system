@@ -1,85 +1,66 @@
 package com.utm.simulation.mapper;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.simulation.model.SimulationEvent;
 import com.utm.simulation.model.SimulationSession;
+import com.utm.simulation.model.enumeration.SimulationStatus;
 import com.utm.simulation.viewmodel.SimulationEventVm;
+import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
 import com.utm.simulation.viewmodel.SimulationSessionVm;
-import com.utm.simulation.viewmodel.WaypointVm;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
-import java.util.Collections;
-import java.util.List;
+@Mapper(
+        componentModel = "spring",
+        builder = @org.mapstruct.Builder(disableBuilder = true)
+)
+public interface SimulationMapper {
 
-@Component
-@RequiredArgsConstructor
-@Slf4j
-public class SimulationMapper {
+    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
+    @Mapping(target = "currentLat", source = "currentLat", qualifiedByName = "roundCoord")
+    @Mapping(target = "currentLon", source = "currentLon", qualifiedByName = "roundCoord")
+    @Mapping(target = "currentAlt", source = "currentAlt", qualifiedByName = "roundOneDecimal")
+    @Mapping(target = "currentHeading", source = "currentHeading", qualifiedByName = "roundOneDecimal")
+    @Mapping(target = "currentBattery", source = "currentBattery", qualifiedByName = "roundOneDecimal")
+    @Mapping(target = "totalDistance", source = "totalDistance", qualifiedByName = "roundOneDecimal")
+    @Mapping(target = "traveledDistance", source = "traveledDistance", qualifiedByName = "roundOneDecimal")
+    SimulationSessionVm toVm(SimulationSession session);
 
-    private final ObjectMapper objectMapper;
+    @Mapping(target = "type", source = "eventType")
+    SimulationEventVm toVm(SimulationEvent event);
 
-    public SimulationSessionVm toVm(SimulationSession session) {
-        if (session == null) {
-            return null;
-        }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "flightId", source = "flightId")
+    @Mapping(target = "droneId", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "currentLat", ignore = true)
+    @Mapping(target = "currentLon", ignore = true)
+    @Mapping(target = "currentAlt", ignore = true)
+    @Mapping(target = "currentHeading", ignore = true)
+    @Mapping(target = "currentBattery", source = "startBattery")
+    @Mapping(target = "progress", constant = "0.0")
+    @Mapping(target = "totalDistance", ignore = true)
+    @Mapping(target = "traveledDistance", constant = "0.0")
+    @Mapping(target = "currentSegment", constant = "0")
+    @Mapping(target = "activeScenario", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    SimulationSession toEntity(SimulationSessionCreateVm createVm);
 
-        return new SimulationSessionVm(
-                session.getId(),
-                session.getDroneId(),
-                session.getMissionId(),
-                session.getDepartureHubId(),
-                session.getArrivalHubId(),
-                session.getStatus() != null ? session.getStatus().getValue() : null,
-                session.getSpeed(),
-                session.getTimeScale(),
-                session.getCurrentLat() != null ? Math.round(session.getCurrentLat() * 1e6) / 1e6 : null,
-                session.getCurrentLon() != null ? Math.round(session.getCurrentLon() * 1e6) / 1e6 : null,
-                session.getCurrentAlt() != null ? Math.round(session.getCurrentAlt() * 10.0) / 10.0 : null,
-                session.getCurrentHeading() != null ? Math.round(session.getCurrentHeading() * 10.0) / 10.0 : null,
-                session.getCurrentBattery() != null ? Math.round(session.getCurrentBattery() * 10.0) / 10.0 : null,
-                session.getProgress(),
-                session.getTotalDistance() != null ? Math.round(session.getTotalDistance() * 10.0) / 10.0 : null,
-                session.getTraveledDistance() != null ? Math.round(session.getTraveledDistance() * 10.0) / 10.0 : null,
-                session.getCurrentSegment(),
-                session.getTotalWaypoints(),
-                session.getActiveScenario(),
-                session.getCreatedOn(),
-                session.getLastModifiedOn());
+    @Named("mapStatusToString")
+    default String mapStatusToString(SimulationStatus status) {
+        return status != null ? status.getValue() : null;
     }
 
-    public SimulationEventVm toVm(SimulationEvent event) {
-        if (event == null) {
-            return null;
-        }
-        return new SimulationEventVm(
-                event.getEventType(),
-                event.getScenario(),
-                event.getMessage(),
-                event.getSeverity());
+    @Named("roundCoord")
+    default Double roundCoord(Double val) {
+        return val != null ? Math.round(val * 1e6) / 1e6 : null;
     }
 
-    public String serializeWaypoints(List<WaypointVm> waypoints) {
-        try {
-            return objectMapper.writeValueAsString(waypoints);
-        } catch (Exception e) {
-            log.error("Failed to serialize waypoints: {}", e.getMessage());
-            return "[]";
-        }
-    }
-
-    public List<WaypointVm> deserializeWaypoints(String waypointsJson) {
-        if (waypointsJson == null || waypointsJson.isBlank()) {
-            return Collections.emptyList();
-        }
-        try {
-            return objectMapper.readValue(waypointsJson, new TypeReference<List<WaypointVm>>() {
-            });
-        } catch (Exception e) {
-            log.error("Failed to deserialize waypoints: {}", e.getMessage());
-            return Collections.emptyList();
-        }
+    @Named("roundOneDecimal")
+    default Double roundOneDecimal(Double val) {
+        return val != null ? Math.round(val * 10.0) / 10.0 : null;
     }
 }

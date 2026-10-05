@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -50,13 +48,8 @@ public class SimulationController {
                         @ApiResponse(responseCode = "409", description = "Drone already has an active simulation", content = @Content)
         })
         public ResponseEntity<SimulationSessionVm> createSession(
-                        @Valid @RequestBody SimulationSessionCreateVm createVm,
-                        @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
-                String token = null;
-                if (authHeader != null && authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
-                        token = authHeader.substring(7).trim();
-                }
-                SimulationSessionVm session = simulationService.createSession(createVm, token);
+                        @Valid @RequestBody SimulationSessionCreateVm createVm) {
+                SimulationSessionVm session = simulationService.createSession(createVm);
                 return ResponseEntity.status(HttpStatus.CREATED).body(session);
         }
 

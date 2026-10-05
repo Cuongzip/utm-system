@@ -20,9 +20,6 @@ public record SimulationSessionCreateVm(
         @NotNull(message = "Flight ID is required")
         String flightId,
 
-        @Schema(description = "Associated flight mission ID (alias for flightId)", hidden = true)
-        String missionId,
-
         @Schema(description = "Simulated cruising speed in m/s (default 15.0)", example = "15.0", defaultValue = "15.0")
         Double speed,
 
@@ -35,22 +32,27 @@ public record SimulationSessionCreateVm(
         Double startBattery) {
 
     public String flightId() {
-        return (flightId != null && !flightId.isBlank()) ? flightId : missionId;
-    }
-
-    public String missionId() {
-        return flightId();
+        return (flightId != null) ? flightId.trim() : null;
     }
 
     public Double speed() {
-        return (speed != null && speed > 0) ? speed : 15.0;
+        if (speed != null && speed > 0) {
+            return speed;
+        }
+        return 15.0;
     }
 
     public Double timeScale() {
-        return (timeScale != null && timeScale >= 0.1 && timeScale <= 20.0) ? timeScale : 1.0;
+        if (timeScale != null && timeScale >= 0.1 && timeScale <= 20.0) {
+            return timeScale;
+        }
+        return 1.0;
     }
 
     public Double startBattery() {
-        return (startBattery != null && startBattery > 0 && startBattery <= 100.0) ? startBattery : 100.0;
+        if (startBattery != null && startBattery >= 0.0 && startBattery <= 100.0) {
+            return startBattery;
+        }
+        return 100.0;
     }
 }

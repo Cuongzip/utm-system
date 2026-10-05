@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface SimulationService {
 
-    SimulationSessionVm createSession(SimulationSessionCreateVm createVm, String bearerToken);
+    SimulationSessionVm createSession(SimulationSessionCreateVm createVm);
 
     List<SimulationSessionVm> getAllSessions();
 

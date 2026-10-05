@@ -1,17 +1,17 @@
 package com.utm.simulation.service;
 
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,13 +58,13 @@ public class SimulationServiceImpl implements SimulationService {
 
     @Override
     @Transactional
-    public SimulationSessionVm createSession(SimulationSessionCreateVm createVm, String bearerToken) {
+    public SimulationSessionVm createSession(SimulationSessionCreateVm createVm) {
         String flightId = createVm.flightId();
         if (flightId == null || flightId.isBlank()) {
             throw new BadRequestException(MessageCode.FLIGHT_NOT_FOUND, "null");
         }
 
-        FlightDetailVm flight = flightClientService.getFlightDetail(flightId.trim(), bearerToken);
+        FlightDetailVm flight = flightClientService.getFlightDetail(flightId.trim());
         if (flight == null) {
             throw new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId);
         }
@@ -74,11 +74,11 @@ public class SimulationServiceImpl implements SimulationService {
             throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, flightId);
         }
 
-        boolean alreadyActive = sessionRepository
-                .findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
-                .anyMatch(s -> s.getDroneId().equals(droneId));
-        if (alreadyActive) {
+        if (sessionRepository.existsByDroneIdAndStatusIn(droneId, List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
             throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
+        }
+        if (sessionRepository.existsByFlightIdAndStatusIn(flightId, List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
+            throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, flightId);
         }
 
         List<WaypointVm> waypoints = resolveWaypoints(flight);
@@ -87,37 +87,30 @@ public class SimulationServiceImpl implements SimulationService {
             throw new BadRequestException(MessageCode.INVALID_SIMULATION_WAYPOINTS);
         }
 
-        String sessionId = UUID.randomUUID().toString();
         WaypointVm first = waypoints.getFirst();
         WaypointVm second = waypoints.get(1);
         double initialHeading = calculateBearing(first.lat(), first.lon(), second.lat(), second.lon());
 
-        SimulationSession entity = SimulationSession.builder()
-                .id(sessionId)
-                .droneId(droneId)
-                .missionId(flight.id() != null ? flight.id() : flightId)
-                .departureHubId(flight.departureHubId() != null ? flight.departureHubId() : "hub-default")
-                .arrivalHubId(flight.arrivalHubId())
-                .status(SimulationStatus.RUNNING)
-                .speed(createVm.speed())
-                .timeScale(createVm.timeScale())
-                .currentLat(first.lat())
-                .currentLon(first.lon())
-                .currentAlt(first.alt())
-                .currentHeading(initialHeading)
-                .currentBattery(createVm.startBattery())
-                .progress(0.0)
-                .totalDistance(totalDist)
-                .traveledDistance(0.0)
-                .currentSegment(0)
-                .totalWaypoints(waypoints.size())
-                .waypointsJson(simulationMapper.serializeWaypoints(waypoints))
-                .build();
+        SimulationSession entity = simulationMapper.toEntity(createVm);
+        entity.setDroneId(droneId);
+        entity.setFlightId(flight.id() != null ? flight.id() : flightId);
+        entity.setStatus(SimulationStatus.RUNNING);
+        entity.setCurrentLat(first.lat());
+        entity.setCurrentLon(first.lon());
+        entity.setCurrentAlt(first.alt());
+        entity.setCurrentHeading(initialHeading);
+        entity.setTotalDistance(totalDist);
 
         SimulationSession saved = sessionRepository.saveAndFlush(entity);
 
+        String bearerToken = null;
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
+            bearerToken = jwtAuth.getToken().getTokenValue();
+        }
+
         SimulationSessionRuntime runtime = new SimulationSessionRuntime(saved, waypoints, bearerToken);
-        activeRuntimes.put(sessionId, runtime);
+        activeRuntimes.put(saved.getId(), runtime);
 
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
                 () -> runSimulationTick(runtime),
@@ -128,7 +121,7 @@ public class SimulationServiceImpl implements SimulationService {
 
         log.info(
                 "Initialized virtual flight simulation session '{}' for drone '{}' from flight '{}' at speed {} m/s (scale {}x)",
-                sessionId, droneId, flightId, createVm.speed(), createVm.timeScale());
+                saved.getId(), droneId, flightId, createVm.speed(), createVm.timeScale());
 
         return simulationMapper.toVm(saved);
     }
@@ -361,7 +354,7 @@ public class SimulationServiceImpl implements SimulationService {
 
                     TelemetryPushVm telemetryPush = new TelemetryPushVm(
                             runtime.droneId,
-                            runtime.missionId,
+                            runtime.flightId,
                             Math.round(effectiveLat * 1e7) / 1e7,
                             Math.round(effectiveLon * 1e7) / 1e7,
                             Math.round(runtime.currentAlt * 10.0) / 10.0,
@@ -458,14 +451,12 @@ public class SimulationServiceImpl implements SimulationService {
     private SimulationEvent recordEvent(String sessionId, String eventType, String scenario, String message,
             String severity, String configJson) {
         SimulationEvent event = SimulationEvent.builder()
-                .id(UUID.randomUUID().toString())
                 .sessionId(sessionId)
                 .eventType(eventType)
                 .scenario(scenario)
                 .message(message)
                 .severity(severity != null ? severity : "LOW")
                 .configJson(configJson)
-                .createdOn(ZonedDateTime.now())
                 .build();
         return eventRepository.save(event);
     }
@@ -533,7 +524,7 @@ public class SimulationServiceImpl implements SimulationService {
     private static class SimulationSessionRuntime {
         final String sessionId;
         final String droneId;
-        final String missionId;
+        final String flightId;
         final List<WaypointVm> waypoints;
         final double totalDistance;
         final List<Double> segmentDistances;
@@ -557,7 +548,7 @@ public class SimulationServiceImpl implements SimulationService {
         SimulationSessionRuntime(SimulationSession session, List<WaypointVm> waypoints, String bearerToken) {
             this.sessionId = session.getId();
             this.droneId = session.getDroneId();
-            this.missionId = session.getMissionId();
+            this.flightId = session.getFlightId();
             this.waypoints = new ArrayList<>(waypoints);
             this.status = session.getStatus();
             this.speed = session.getSpeed();

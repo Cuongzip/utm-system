@@ -6,6 +6,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -24,20 +26,15 @@ import lombok.Setter;
 public class SimulationSession extends AbstractAuditEntity {
 
     @Id
-    @Column(name = "id", length = 36, nullable = false)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
+
+    @Column(name = "flight_id", length = 36, nullable = false)
+    private String flightId;
 
     @Column(name = "drone_id", length = 50, nullable = false)
     private String droneId;
-
-    @Column(name = "mission_id", length = 50)
-    private String missionId;
-
-    @Column(name = "departure_hub_id", length = 50, nullable = false)
-    private String departureHubId;
-
-    @Column(name = "arrival_hub_id", length = 50)
-    private String arrivalHubId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 30, nullable = false)
@@ -75,12 +72,6 @@ public class SimulationSession extends AbstractAuditEntity {
 
     @Column(name = "current_segment")
     private Integer currentSegment;
-
-    @Column(name = "total_waypoints")
-    private Integer totalWaypoints;
-
-    @Column(name = "waypoints_json", columnDefinition = "TEXT")
-    private String waypointsJson;
 
     @Column(name = "active_scenario", length = 50)
     private String activeScenario;

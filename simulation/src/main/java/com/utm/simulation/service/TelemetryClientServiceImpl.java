@@ -17,6 +17,11 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
     private final ServiceUrlConfig serviceUrlConfig;
 
     @Override
+    public void pushTelemetry(TelemetryPushVm telemetry) {
+        pushTelemetry(telemetry, null);
+    }
+
+    @Override
     public void pushTelemetry(TelemetryPushVm telemetry, String bearerToken) {
         if (telemetry == null) {
             return;
