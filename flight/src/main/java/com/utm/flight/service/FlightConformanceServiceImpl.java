@@ -297,7 +297,10 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (waypoints.size() == 1) {
             FlightWaypoint w = waypoints.getFirst();
             double dist = calculateHaversineDistance(w.getLatitude(), w.getLongitude(), pLat, pLon);
-            double vError = Math.abs(pAlt - (w.getAltitude() != null ? w.getAltitude() : (cruisingAltitude != null ? cruisingAltitude : pAlt)));
+            double nominalAlt = (w.getAltitude() != null)
+                    ? w.getAltitude().doubleValue()
+                    : (cruisingAltitude != null ? cruisingAltitude.doubleValue() : pAlt);
+            double vError = Math.abs(pAlt - nominalAlt);
             return new CrossTrackResult(dist, vError);
         }
 
@@ -328,7 +331,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             double dat = Math.acos(cosDat) * EARTH_RADIUS_M;
 
             double distanceToSegment;
-            double fractionOnSegment = 0.0;
+            double fractionOnSegment;
             if (dat < 0) {
                 distanceToSegment = d13;
                 fractionOnSegment = 0.0;
@@ -342,8 +345,12 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
             if (distanceToSegment < minDistance) {
                 minDistance = distanceToSegment;
-                double nominalAlt1 = w1.getAltitude() != null ? w1.getAltitude() : (cruisingAltitude != null ? cruisingAltitude : 50.0);
-                double nominalAlt2 = w2.getAltitude() != null ? w2.getAltitude() : (cruisingAltitude != null ? cruisingAltitude : 50.0);
+                double nominalAlt1 = (w1.getAltitude() != null)
+                        ? w1.getAltitude().doubleValue()
+                        : (cruisingAltitude != null ? cruisingAltitude.doubleValue() : 50.0);
+                double nominalAlt2 = (w2.getAltitude() != null)
+                        ? w2.getAltitude().doubleValue()
+                        : (cruisingAltitude != null ? cruisingAltitude.doubleValue() : 50.0);
                 double expectedAlt = nominalAlt1 + fractionOnSegment * (nominalAlt2 - nominalAlt1);
                 correspondingVerticalError = Math.abs(pAlt - expectedAlt);
             }
