@@ -19,6 +19,8 @@ public final class MessageCode {
     public static final String INVALID_SIMULATION_WAYPOINTS = "INVALID_SIMULATION_WAYPOINTS";
     public static final String INVALID_SIMULATION_STATE = "INVALID_SIMULATION_STATE";
     public static final String WAYPOINT_NOT_FOUND = "WAYPOINT_NOT_FOUND";
+    public static final String CONFORMANCE_NOT_FOUND = "CONFORMANCE_NOT_FOUND";
+    public static final String CONFORMANCE_ALERT_NOT_FOUND = "CONFORMANCE_ALERT_NOT_FOUND";
 
     private MessageCode() {
     }

@@ -1,0 +1,155 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-create-flight-conformance-tables
+      author: cuong
+      changes:
+        - createTable:
+            tableName: flight_conformance
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_flight_conformance_flight
+                    references: flight(id)
+                    deleteCascade: true
+              - column:
+                  name: status
+                  type: varchar(30)
+                  defaultValue: "UNKNOWN"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cross_track_error_m
+                  type: double precision
+              - column:
+                  name: vertical_error_m
+                  type: double precision
+              - column:
+                  name: corridor_radius_m
+                  type: double precision
+                  defaultValueNumeric: 15.0
+              - column:
+                  name: altitude_buffer_m
+                  type: double precision
+                  defaultValueNumeric: 10.0
+              - column:
+                  name: current_latitude
+                  type: double precision
+              - column:
+                  name: current_longitude
+                  type: double precision
+              - column:
+                  name: current_altitude
+                  type: double precision
+              - column:
+                  name: current_speed
+                  type: double precision
+              - column:
+                  name: current_heading
+                  type: double precision
+              - column:
+                  name: last_telemetry_time
+                  type: timestamp with time zone
+              - column:
+                  name: last_evaluated_at
+                  type: timestamp with time zone
+              - column:
+                  name: violations_json
+                  type: text
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+
+        - createIndex:
+            tableName: flight_conformance
+            indexName: idx_flight_conformance_flight_id
+            columns:
+              - column:
+                  name: flight_id
+
+        - createIndex:
+            tableName: flight_conformance
+            indexName: idx_flight_conformance_status
+            columns:
+              - column:
+                  name: status
+
+        - createTable:
+            tableName: flight_conformance_alert
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_conformance_alert_flight
+                    references: flight(id)
+                    deleteCascade: true
+              - column:
+                  name: alert_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: severity
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: details_json
+                  type: text
+              - column:
+                  name: acknowledged
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+
+        - createIndex:
+            tableName: flight_conformance_alert
+            indexName: idx_conformance_alert_flight_id
+            columns:
+              - column:
+                  name: flight_id
+
+        - createIndex:
+            tableName: flight_conformance_alert
+            indexName: idx_conformance_alert_created_on
+            columns:
+              - column:
+                  name: created_on
