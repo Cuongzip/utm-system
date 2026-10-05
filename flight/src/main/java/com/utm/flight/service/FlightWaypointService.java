@@ -1,12 +1,11 @@
 package com.utm.flight.service;
 
-import com.utm.flight.viewmodel.WaypointOrderItemVm;
+import java.util.List;
+
 import com.utm.flight.viewmodel.WaypointPostVm;
 import com.utm.flight.viewmodel.WaypointPutVm;
 import com.utm.flight.viewmodel.WaypointReorderVm;
 import com.utm.flight.viewmodel.WaypointVm;
-
-import java.util.List;
 
 public interface FlightWaypointService {
 

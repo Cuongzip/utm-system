@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +58,7 @@ public class FlightServiceImpl implements FlightService {
             if (droneId != null && !droneId.isBlank()) {
                 predicates.add(cb.equal(root.get("droneId"), droneId.trim()));
             }
-            return cb.and(predicates.toArray(new Predicate[0]));
+            return cb.and(predicates.toArray(Predicate[]::new));
         };
 
         return flightRepository.findAll(spec).stream()
@@ -151,10 +152,10 @@ public class FlightServiceImpl implements FlightService {
             if (!existingWaypoints.isEmpty()) {
                 List<WaypointVm> reAnchored = new ArrayList<>(existingWaypoints);
                 if (flightPutVm.departureHubId() != null && !reAnchored.isEmpty()) {
-                    reAnchored.set(0, new WaypointVm(depHub.latitude(), depHub.longitude(), depHub.altitude() != null ? depHub.altitude() : 0.0, 0.0));
+                    reAnchored.set(0, new WaypointVm(depHub.latitude(), depHub.longitude(), Objects.requireNonNullElse(depHub.altitude(), 0.0), 0.0));
                 }
                 if (flightPutVm.arrivalHubId() != null && !reAnchored.isEmpty()) {
-                    reAnchored.set(reAnchored.size() - 1, new WaypointVm(arrHub.latitude(), arrHub.longitude(), arrHub.altitude() != null ? arrHub.altitude() : 0.0, 0.0));
+                    reAnchored.set(reAnchored.size() - 1, new WaypointVm(arrHub.latitude(), arrHub.longitude(), Objects.requireNonNullElse(arrHub.altitude(), 0.0), 0.0));
                 }
                 flight.setWaypoints(mapToWaypointEntities(reAnchored));
             }
@@ -263,13 +264,13 @@ public class FlightServiceImpl implements FlightService {
         WaypointVm depPoint = new WaypointVm(
                 depHub.latitude(),
                 depHub.longitude(),
-                depHub.altitude() != null ? depHub.altitude() : 0.0,
+                Objects.requireNonNullElse(depHub.altitude(), 0.0),
                 0.0);
 
         WaypointVm arrPoint = new WaypointVm(
                 arrHub.latitude(),
                 arrHub.longitude(),
-                arrHub.altitude() != null ? arrHub.altitude() : 0.0,
+                Objects.requireNonNullElse(arrHub.altitude(), 0.0),
                 0.0);
 
         if (inputWaypoints == null || inputWaypoints.isEmpty()) {
