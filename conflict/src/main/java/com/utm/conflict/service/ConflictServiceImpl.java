@@ -65,14 +65,12 @@ public class ConflictServiceImpl implements ConflictService {
         Conflict conflict = conflictRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, id));
 
-        String actionsJson = null;
-        if (resolveVm.actions() != null) {
-            try {
-                actionsJson = objectMapper.writeValueAsString(resolveVm.actions());
-            } catch (JsonProcessingException e) {
-                log.warn("Failed to serialize resolution actions for conflict {}: {}", id, e.getMessage());
-                actionsJson = resolveVm.actions().toString();
-            }
+        String actionsJson;
+        try {
+            actionsJson = objectMapper.writeValueAsString(resolveVm.actions());
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize resolution actions for conflict {}: {}", id, e.getMessage());
+            actionsJson = String.valueOf(resolveVm.actions());
         }
 
         conflict.setStatus(ConflictStatus.RESOLVED);

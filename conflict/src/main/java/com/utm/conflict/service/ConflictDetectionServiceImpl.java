@@ -260,18 +260,23 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     }
 
     private double calculateTcpa(TelemetryRecordClientVm t1, TelemetryRecordClientVm t2) {
-        double speed1 = t1.speed() != null ? t1.speed() : 0.0;
-        double speed2 = t2.speed() != null ? t2.speed() : 0.0;
-        double heading1 = t1.heading() != null ? t1.heading() : 0.0;
-        double heading2 = t2.heading() != null ? t2.heading() : 0.0;
+        double speed1 = resolveDouble(t1.speed(), 0.0);
+        double speed2 = resolveDouble(t2.speed(), 0.0);
+        double heading1 = resolveDouble(t1.heading(), 0.0);
+        double heading2 = resolveDouble(t2.heading(), 0.0);
 
         if (speed1 < 0.1 && speed2 < 0.1) {
             return 0.0;
         }
 
-        double latRad = Math.toRadians((t1.latitude() + t2.latitude()) / 2.0);
-        double dx = Math.toRadians(t2.longitude() - t1.longitude()) * EARTH_RADIUS_M * Math.cos(latRad);
-        double dy = Math.toRadians(t2.latitude() - t1.latitude()) * EARTH_RADIUS_M;
+        double lat1 = resolveDouble(t1.latitude(), 0.0);
+        double lat2 = resolveDouble(t2.latitude(), 0.0);
+        double lon1 = resolveDouble(t1.longitude(), 0.0);
+        double lon2 = resolveDouble(t2.longitude(), 0.0);
+
+        double latRad = Math.toRadians((lat1 + lat2) / 2.0);
+        double dx = Math.toRadians(lon2 - lon1) * EARTH_RADIUS_M * Math.cos(latRad);
+        double dy = Math.toRadians(lat2 - lat1) * EARTH_RADIUS_M;
 
         double vx1 = speed1 * Math.sin(Math.toRadians(heading1));
         double vy1 = speed1 * Math.cos(Math.toRadians(heading1));
@@ -288,6 +293,13 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
         double tcpa = -(dx * dvx + dy * dvy) / vrelSq;
         return tcpa > 0.0 ? tcpa : 0.0;
+    }
+
+    private static double resolveDouble(Double value, double defaultValue) {
+        if (value != null) {
+            return value;
+        }
+        return defaultValue;
     }
 
     private record FlightWithTelemetry(FlightClientVm flight, TelemetryRecordClientVm telemetry) {}
