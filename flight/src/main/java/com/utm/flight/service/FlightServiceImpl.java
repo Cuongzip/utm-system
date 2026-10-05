@@ -5,7 +5,9 @@ import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.flight.mapper.FlightMapper;
+import com.utm.flight.mapper.WaypointMapper;
 import com.utm.flight.model.Flight;
+import com.utm.flight.model.FlightWaypoint;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.repository.FlightRepository;
 import com.utm.flight.viewmodel.FlightAbortVm;
@@ -32,6 +34,7 @@ public class FlightServiceImpl implements FlightService {
 
     private final FlightRepository flightRepository;
     private final FlightMapper flightMapper;
+    private final WaypointMapper waypointMapper;
     private final DroneClientService droneClientService;
     private final HubClientService hubClientService;
 
@@ -97,11 +100,11 @@ public class FlightServiceImpl implements FlightService {
 
         Flight flight = flightMapper.toEntity(flightPostVm);
         flight.setStatus(FlightStatus.PLANNED);
-        flight.setTotalWaypoints(anchoredWaypoints.size());
-        flight.setWaypointsJson(flightMapper.serializeWaypoints(anchoredWaypoints));
+        flight.setWaypoints(mapToWaypointEntities(anchoredWaypoints));
 
         Flight savedFlight = flightRepository.saveAndFlush(flight);
-        log.info("Created new Flight plan with ID: {} and flight number: {} (total {} waypoints anchored)",
+
+        log.info("Created new Flight plan with ID: {} and flight number: {} (total {} waypoints anchored & persisted)",
                 savedFlight.getId(), savedFlight.getFlightNumber(), anchoredWaypoints.size());
         return flightMapper.toVm(savedFlight);
     }
@@ -113,7 +116,8 @@ public class FlightServiceImpl implements FlightService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
         if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Cannot edit an active or completed flight");
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Cannot edit an active or completed flight");
         }
 
         if (flightPutVm.droneId() != null && !flightPutVm.droneId().isBlank()) {
@@ -141,18 +145,44 @@ public class FlightServiceImpl implements FlightService {
 
         if (flightPutVm.waypoints() != null) {
             List<WaypointVm> anchored = resolveAndAnchorWaypoints(flightPutVm.waypoints(), depHub, arrHub);
-            flight.setTotalWaypoints(anchored.size());
-            flight.setWaypointsJson(flightMapper.serializeWaypoints(anchored));
+            flight.setWaypoints(mapToWaypointEntities(anchored));
         } else if (flightPutVm.departureHubId() != null || flightPutVm.arrivalHubId() != null) {
-            List<WaypointVm> existingWaypoints = flightMapper.deserializeWaypoints(flight.getWaypointsJson());
-            List<WaypointVm> reAnchored = resolveAndAnchorWaypoints(existingWaypoints, depHub, arrHub);
-            flight.setTotalWaypoints(reAnchored.size());
-            flight.setWaypointsJson(flightMapper.serializeWaypoints(reAnchored));
+            List<WaypointVm> existingWaypoints = waypointMapper.toVmList(flight.getWaypoints());
+            if (!existingWaypoints.isEmpty()) {
+                List<WaypointVm> reAnchored = new ArrayList<>(existingWaypoints);
+                if (flightPutVm.departureHubId() != null && !reAnchored.isEmpty()) {
+                    reAnchored.set(0, new WaypointVm(depHub.latitude(), depHub.longitude(), depHub.altitude() != null ? depHub.altitude() : 0.0, 0.0));
+                }
+                if (flightPutVm.arrivalHubId() != null && !reAnchored.isEmpty()) {
+                    reAnchored.set(reAnchored.size() - 1, new WaypointVm(arrHub.latitude(), arrHub.longitude(), arrHub.altitude() != null ? arrHub.altitude() : 0.0, 0.0));
+                }
+                flight.setWaypoints(mapToWaypointEntities(reAnchored));
+            }
         }
 
         Flight updatedFlight = flightRepository.saveAndFlush(flight);
         log.info("Updated Flight plan with ID: {}", id);
         return flightMapper.toVm(updatedFlight);
+    }
+
+    private List<FlightWaypoint> mapToWaypointEntities(List<WaypointVm> waypoints) {
+        List<FlightWaypoint> waypointEntities = new ArrayList<>();
+        for (int i = 0; i < waypoints.size(); i++) {
+            WaypointVm w = waypoints.get(i);
+            FlightWaypoint wp = waypointMapper.toEntity(w);
+            wp.setSequence(i + 1);
+            if (wp.getName() == null || wp.getName().isBlank()) {
+                if (i == 0) {
+                    wp.setName(waypoints.size() == 1 ? "Departure / Arrival Hub" : "Departure Hub");
+                } else if (i == waypoints.size() - 1) {
+                    wp.setName("Arrival Hub");
+                } else {
+                    wp.setName("Waypoint " + (i + 1));
+                }
+            }
+            waypointEntities.add(wp);
+        }
+        return waypointEntities;
     }
 
     @Override
@@ -219,7 +249,8 @@ public class FlightServiceImpl implements FlightService {
 
         flight.setStatus(FlightStatus.CANCELLED);
         if (abortVm != null && abortVm.reason() != null && !abortVm.reason().isBlank()) {
-            String updatedNotes = (flight.getNotes() != null ? flight.getNotes() + "\n" : "") + "Aborted reason: " + abortVm.reason().trim();
+            String updatedNotes = (flight.getNotes() != null ? flight.getNotes() + "\n" : "") + "Aborted reason: "
+                    + abortVm.reason().trim();
             flight.setNotes(updatedNotes);
         }
 
@@ -233,15 +264,13 @@ public class FlightServiceImpl implements FlightService {
                 depHub.latitude(),
                 depHub.longitude(),
                 depHub.altitude() != null ? depHub.altitude() : 0.0,
-                0.0
-        );
+                0.0);
 
         WaypointVm arrPoint = new WaypointVm(
                 arrHub.latitude(),
                 arrHub.longitude(),
                 arrHub.altitude() != null ? arrHub.altitude() : 0.0,
-                0.0
-        );
+                0.0);
 
         if (inputWaypoints == null || inputWaypoints.isEmpty()) {
             return List.of(depPoint, arrPoint);
@@ -250,12 +279,14 @@ public class FlightServiceImpl implements FlightService {
         List<WaypointVm> anchored = new ArrayList<>(inputWaypoints);
 
         WaypointVm first = anchored.getFirst();
-        if (first.lat() == null || first.lon() == null || calculateDistance(first.lat(), first.lon(), depPoint.lat(), depPoint.lon()) > 30.0) {
+        if (first.lat() == null || first.lon() == null
+                || calculateDistance(first.lat(), first.lon(), depPoint.lat(), depPoint.lon()) > 30.0) {
             anchored.add(0, depPoint);
         }
 
         WaypointVm last = anchored.getLast();
-        if (last.lat() == null || last.lon() == null || calculateDistance(last.lat(), last.lon(), arrPoint.lat(), arrPoint.lon()) > 30.0) {
+        if (last.lat() == null || last.lon() == null
+                || calculateDistance(last.lat(), last.lon(), arrPoint.lat(), arrPoint.lon()) > 30.0) {
             anchored.add(arrPoint);
         }
 
@@ -268,7 +299,7 @@ public class FlightServiceImpl implements FlightService {
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }

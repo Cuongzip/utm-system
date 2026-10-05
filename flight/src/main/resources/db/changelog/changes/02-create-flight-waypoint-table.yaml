@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-create-flight-waypoint-table
+      author: drops-utm
+      changes:
+        - createTable:
+            tableName: flight_waypoint
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_flight_waypoint_flight
+                    references: flight(id)
+                    deleteCascade: true
+              - column:
+                  name: sequence
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+              - column:
+                  name: latitude
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: longitude
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: altitude
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: speed_to_waypoint
+                  type: double precision
+              - column:
+                  name: hover_duration
+                  type: integer
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: flight_waypoint
+            indexName: idx_flight_waypoint_flight_id
+            columns:
+              - column:
+                  name: flight_id
+        - createIndex:
+            tableName: flight_waypoint
+            indexName: idx_flight_waypoint_flight_seq
+            columns:
+              - column:
+                  name: flight_id
+              - column:
+                  name: sequence

@@ -1,22 +1,29 @@
 package com.utm.flight.model;
 
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.utm.commonlibrary.model.AbstractAuditEntity;
 import com.utm.flight.model.enumeration.FlightStatus;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.ZonedDateTime;
 
 @Entity
 @Table(name = "flight")
@@ -67,14 +74,42 @@ public class Flight extends AbstractAuditEntity {
     @Builder.Default
     private FlightStatus status = FlightStatus.PLANNED;
 
-    @Column(name = "total_waypoints")
+    @OneToMany(mappedBy = "flight", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("sequence ASC")
     @Builder.Default
-    private Integer totalWaypoints = 0;
-
-    @Column(name = "waypoints_json", columnDefinition = "TEXT")
-    private String waypointsJson;
+    private List<FlightWaypoint> waypoints = new ArrayList<>();
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    public void setWaypoints(List<FlightWaypoint> newWaypoints) {
+        if (this.waypoints == null) {
+            this.waypoints = new ArrayList<>();
+        } else {
+            this.waypoints.clear();
+        }
+        if (newWaypoints != null) {
+            for (FlightWaypoint wp : newWaypoints) {
+                addWaypoint(wp);
+            }
+        }
+    }
+
+    public void addWaypoint(FlightWaypoint waypoint) {
+        if (waypoint != null) {
+            if (this.waypoints == null) {
+                this.waypoints = new ArrayList<>();
+            }
+            this.waypoints.add(waypoint);
+            waypoint.setFlight(this);
+        }
+    }
+
+    public void removeWaypoint(FlightWaypoint waypoint) {
+        if (waypoint != null && this.waypoints != null) {
+            this.waypoints.remove(waypoint);
+            waypoint.setFlight(null);
+        }
+    }
 }
 

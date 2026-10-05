@@ -1,37 +1,24 @@
 package com.utm.flight.viewmodel;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 @Schema(
-        description = "3D coordinate waypoint for flight trajectory",
+        description = "Request payload for adding a new Waypoint to a Flight trajectory",
         example = """
         {
-          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          "flightId": "550e8400-e29b-41d4-a716-446655440000",
           "sequence": 1,
           "name": "Takeoff Point Alpha",
           "latitude": 10.7769,
           "longitude": 106.7009,
           "altitude": 50.0,
           "speedToWaypoint": 15.0,
-          "hoverDuration": 5,
-          "lat": 10.7769,
-          "lon": 106.7009,
-          "alt": 50.0,
-          "speed": 15.0
+          "hoverDuration": 5
         }
         """
 )
-public record WaypointVm(
-        @Schema(description = "Unique UUID identifier of the waypoint", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-        String id,
-
-        @Schema(description = "Parent Flight UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000")
-        String flightId,
-
+public record WaypointPostVm(
         @Schema(description = "Sequence order of this waypoint along the trajectory (1, 2, 3...)", example = "1")
         Integer sequence,
 
@@ -57,7 +44,7 @@ public record WaypointVm(
         @JsonAlias({"speed", "speedToWaypoint"})
         Double speedToWaypoint,
 
-        @Schema(description = "Hover duration at this waypoint in seconds (optional)", example = "0")
+        @Schema(description = "Hover duration at this waypoint in seconds (optional)", example = "5")
         Integer hoverDuration
 ) {
     public Double lat() {
@@ -75,33 +62,4 @@ public record WaypointVm(
     public Double speed() {
         return speedToWaypoint;
     }
-
-    @JsonProperty("lat")
-    public Double getLat() {
-        return latitude;
-    }
-
-    @JsonProperty("lon")
-    public Double getLon() {
-        return longitude;
-    }
-
-    @JsonProperty("alt")
-    public Double getAlt() {
-        return altitude;
-    }
-
-    @JsonProperty("speed")
-    public Double getSpeed() {
-        return speedToWaypoint;
-    }
-
-    public WaypointVm(Double lat, Double lon, Double alt, Double speed) {
-        this(null, null, null, null, lat, lon, alt, speed, null);
-    }
-
-    public WaypointVm(Double lat, Double lon, Double alt) {
-        this(lat, lon, alt, null);
-    }
 }
-

@@ -25,3 +25,4 @@ public interface FlightService {
 
     FlightVm abortFlight(String id, FlightAbortVm abortVm);
 }
+

@@ -1,37 +1,27 @@
 package com.utm.flight.mapper;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.Flight;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.viewmodel.FlightPostVm;
 import com.utm.flight.viewmodel.FlightPutVm;
 import com.utm.flight.viewmodel.FlightVm;
-import com.utm.flight.viewmodel.WaypointVm;
-import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.Collections;
-import java.util.List;
 
 @Mapper(
         componentModel = "spring",
+        uses = {WaypointMapper.class},
         builder = @org.mapstruct.Builder(disableBuilder = true)
 )
-@Slf4j
 public abstract class FlightMapper {
 
-    @Autowired
-    protected ObjectMapper objectMapper;
-
     @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
-    @Mapping(target = "waypoints", source = "waypointsJson", qualifiedByName = "deserializeWaypoints")
+    @Mapping(target = "totalWaypoints", source = "flight", qualifiedByName = "mapTotalWaypoints")
+    @Mapping(target = "waypoints", source = "waypoints")
     public abstract FlightVm toVm(Flight flight);
 
     @Mapping(target = "id", ignore = true)
@@ -43,8 +33,7 @@ public abstract class FlightMapper {
     @Mapping(target = "departureHubId", qualifiedByName = "trimString")
     @Mapping(target = "arrivalHubId", qualifiedByName = "trimString")
     @Mapping(target = "pilotId", qualifiedByName = "trimString")
-    @Mapping(target = "waypointsJson", source = "waypoints", qualifiedByName = "serializeWaypoints")
-    @Mapping(target = "totalWaypoints", source = "waypoints", qualifiedByName = "countWaypoints")
+    @Mapping(target = "waypoints", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -61,8 +50,7 @@ public abstract class FlightMapper {
     @Mapping(target = "departureHubId", qualifiedByName = "trimString")
     @Mapping(target = "arrivalHubId", qualifiedByName = "trimString")
     @Mapping(target = "pilotId", qualifiedByName = "trimString")
-    @Mapping(target = "waypointsJson", source = "waypoints", qualifiedByName = "serializeWaypoints")
-    @Mapping(target = "totalWaypoints", source = "waypoints", qualifiedByName = "countWaypoints")
+    @Mapping(target = "waypoints", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -79,34 +67,11 @@ public abstract class FlightMapper {
         return value != null ? value.trim() : null;
     }
 
-    @Named("serializeWaypoints")
-    public String serializeWaypoints(List<WaypointVm> waypoints) {
-        if (waypoints == null) {
-            return null;
+    @Named("mapTotalWaypoints")
+    public Integer mapTotalWaypoints(Flight flight) {
+        if (flight == null || flight.getWaypoints() == null) {
+            return 0;
         }
-        try {
-            return objectMapper.writeValueAsString(waypoints);
-        } catch (Exception e) {
-            log.error("Failed to serialize waypoints: {}", e.getMessage());
-            return "[]";
-        }
-    }
-
-    @Named("deserializeWaypoints")
-    public List<WaypointVm> deserializeWaypoints(String waypointsJson) {
-        if (waypointsJson == null || waypointsJson.isBlank()) {
-            return Collections.emptyList();
-        }
-        try {
-            return objectMapper.readValue(waypointsJson, new TypeReference<List<WaypointVm>>() {});
-        } catch (Exception e) {
-            log.error("Failed to deserialize waypoints: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
-
-    @Named("countWaypoints")
-    public Integer countWaypoints(List<WaypointVm> waypoints) {
-        return waypoints != null ? waypoints.size() : null;
+        return flight.getWaypoints().size();
     }
 }

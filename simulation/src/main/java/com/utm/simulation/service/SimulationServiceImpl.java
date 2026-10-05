@@ -1,5 +1,20 @@
 package com.utm.simulation.service;
 
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
@@ -15,28 +30,14 @@ import com.utm.simulation.viewmodel.FlightDetailVm;
 import com.utm.simulation.viewmodel.InjectScenarioResultVm;
 import com.utm.simulation.viewmodel.InjectScenarioVm;
 import com.utm.simulation.viewmodel.ScenarioCatalogVm;
-import com.utm.simulation.viewmodel.SimulationEventVm;
 import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
 import com.utm.simulation.viewmodel.SimulationSessionVm;
 import com.utm.simulation.viewmodel.TelemetryPushVm;
 import com.utm.simulation.viewmodel.WaypointVm;
+
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -51,7 +52,8 @@ public class SimulationServiceImpl implements SimulationService {
     private final TelemetryClientService telemetryClientService;
     private final FlightClientService flightClientService;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8, Thread.ofVirtual().factory());
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8,
+            Thread.ofVirtual().factory());
     private final Map<String, SimulationSessionRuntime> activeRuntimes = new ConcurrentHashMap<>();
 
     @Override
@@ -72,7 +74,8 @@ public class SimulationServiceImpl implements SimulationService {
             throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, flightId);
         }
 
-        boolean alreadyActive = sessionRepository.findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
+        boolean alreadyActive = sessionRepository
+                .findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
                 .anyMatch(s -> s.getDroneId().equals(droneId));
         if (alreadyActive) {
             throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
@@ -120,11 +123,11 @@ public class SimulationServiceImpl implements SimulationService {
                 () -> runSimulationTick(runtime),
                 0,
                 1000,
-                TimeUnit.MILLISECONDS
-        );
+                TimeUnit.MILLISECONDS);
         runtime.scheduledFuture = future;
 
-        log.info("Initialized virtual flight simulation session '{}' for drone '{}' from flight '{}' at speed {} m/s (scale {}x)",
+        log.info(
+                "Initialized virtual flight simulation session '{}' for drone '{}' from flight '{}' at speed {} m/s (scale {}x)",
                 sessionId, droneId, flightId, createVm.speed(), createVm.timeScale());
 
         return simulationMapper.toVm(saved);
@@ -183,7 +186,8 @@ public class SimulationServiceImpl implements SimulationService {
         }
         if (session.getStatus() != SimulationStatus.RUNNING) {
             throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
-                    "Cannot pause a " + session.getStatus().getValue() + " simulation session. Only running sessions can be paused.");
+                    "Cannot pause a " + session.getStatus().getValue()
+                            + " simulation session. Only running sessions can be paused.");
         }
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
@@ -208,11 +212,13 @@ public class SimulationServiceImpl implements SimulationService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
 
         if (session.getStatus() == SimulationStatus.RUNNING) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Simulation session is already running");
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Simulation session is already running");
         }
         if (session.getStatus() != SimulationStatus.PAUSED) {
             throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
-                    "Cannot resume a " + session.getStatus().getValue() + " simulation session. Only paused sessions can be resumed.");
+                    "Cannot resume a " + session.getStatus().getValue()
+                            + " simulation session. Only paused sessions can be resumed.");
         }
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
@@ -283,10 +289,13 @@ public class SimulationServiceImpl implements SimulationService {
         session.setActiveScenario(scenarioCode);
         sessionRepository.save(session);
 
-        String message = String.format("Injected emergency scenario '%s' (%s)", scenario.getDisplayName(), scenario.getDescription());
-        SimulationEvent event = recordEvent(id, "SCENARIO_INJECTED", scenarioCode, message, scenario.getDefaultSeverity(), null);
+        String message = String.format("Injected emergency scenario '%s' (%s)", scenario.getDisplayName(),
+                scenario.getDescription());
+        SimulationEvent event = recordEvent(id, "SCENARIO_INJECTED", scenarioCode, message,
+                scenario.getDefaultSeverity(), null);
 
-        log.warn("Injected emergency scenario '{}' into session '{}' for drone '{}'", scenarioCode, id, session.getDroneId());
+        log.warn("Injected emergency scenario '{}' into session '{}' for drone '{}'", scenarioCode, id,
+                session.getDroneId());
 
         return new InjectScenarioResultVm(true, simulationMapper.toVm(event));
     }
@@ -298,10 +307,12 @@ public class SimulationServiceImpl implements SimulationService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
 
         if (session.getStatus() == SimulationStatus.STOPPED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Simulation session is already stopped");
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Simulation session is already stopped");
         }
         if (session.getStatus() == SimulationStatus.COMPLETED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Cannot stop an already completed simulation session");
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+                    "Cannot stop an already completed simulation session");
         }
 
         SimulationSessionRuntime runtime = activeRuntimes.remove(id);
@@ -326,8 +337,7 @@ public class SimulationServiceImpl implements SimulationService {
                         type.getDisplayName(),
                         type.getDescription(),
                         type.getDefaultSeverity(),
-                        getScenarioParams(type)
-                ))
+                        getScenarioParams(type)))
                 .toList();
     }
 
@@ -360,8 +370,7 @@ public class SimulationServiceImpl implements SimulationService {
                             0.0,
                             0.0,
                             runtime.currentHeading,
-                            Math.round(runtime.currentBattery * 10.0) / 10.0
-                    );
+                            Math.round(runtime.currentBattery * 10.0) / 10.0);
 
                     telemetryClientService.pushTelemetry(telemetryPush, runtime.bearerToken);
                 }
@@ -373,7 +382,8 @@ public class SimulationServiceImpl implements SimulationService {
                     }
                     activeRuntimes.remove(runtime.sessionId);
                     persistRuntimeState(runtime);
-                    recordEvent(runtime.sessionId, "SESSION_COMPLETED", null, "Flight simulation completed at final waypoint", "LOW", null);
+                    recordEvent(runtime.sessionId, "SESSION_COMPLETED", null,
+                            "Flight simulation completed at final waypoint", "LOW", null);
                     log.info("Simulation session '{}' completed flight path successfully", runtime.sessionId);
                     return;
                 }
@@ -445,7 +455,8 @@ public class SimulationServiceImpl implements SimulationService {
         return session;
     }
 
-    private SimulationEvent recordEvent(String sessionId, String eventType, String scenario, String message, String severity, String configJson) {
+    private SimulationEvent recordEvent(String sessionId, String eventType, String scenario, String message,
+            String severity, String configJson) {
         SimulationEvent event = SimulationEvent.builder()
                 .id(UUID.randomUUID().toString())
                 .sessionId(sessionId)
@@ -468,8 +479,7 @@ public class SimulationServiceImpl implements SimulationService {
         return List.of(
                 new WaypointVm(10.7769, 106.7009, 50.0),
                 new WaypointVm(10.7820, 106.7050, 80.0),
-                new WaypointVm(10.7890, 106.7120, 60.0)
-        );
+                new WaypointVm(10.7890, 106.7120, 60.0));
     }
 
     private double calculateTotalDistance(List<WaypointVm> waypoints) {
@@ -477,8 +487,7 @@ public class SimulationServiceImpl implements SimulationService {
         for (int i = 0; i < waypoints.size() - 1; i++) {
             total += calculateHaversineDistance(
                     waypoints.get(i).lat(), waypoints.get(i).lon(),
-                    waypoints.get(i + 1).lat(), waypoints.get(i + 1).lon()
-            );
+                    waypoints.get(i + 1).lat(), waypoints.get(i + 1).lon());
         }
         return total;
     }
@@ -562,8 +571,7 @@ public class SimulationServiceImpl implements SimulationService {
             for (int i = 0; i < waypoints.size() - 1; i++) {
                 double d = calculateHaversineDistance(
                         waypoints.get(i).lat(), waypoints.get(i).lon(),
-                        waypoints.get(i + 1).lat(), waypoints.get(i + 1).lon()
-                );
+                        waypoints.get(i + 1).lat(), waypoints.get(i + 1).lon());
                 segmentDistances.add(d);
                 total += d;
             }
@@ -573,7 +581,8 @@ public class SimulationServiceImpl implements SimulationService {
             this.currentLat = first.lat();
             this.currentLon = first.lon();
             this.currentAlt = first.alt();
-            this.currentHeading = calculateBearing(first.lat(), first.lon(), waypoints.get(1).lat(), waypoints.get(1).lon());
+            this.currentHeading = calculateBearing(first.lat(), first.lon(), waypoints.get(1).lat(),
+                    waypoints.get(1).lon());
         }
 
         void advance(double stepDist) {
