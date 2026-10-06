@@ -2,9 +2,7 @@ package com.utm.hub.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
@@ -17,29 +15,30 @@ import java.util.List;
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${server.servlet.context-path:/hub}")
-    private String contextPath;
+        @Value("${server.servlet.context-path:/hub}")
+        private String contextPath;
 
-    @Bean
-    public OpenAPI hubOpenAPI() {
-        final String securitySchemeName = "BearerAuth";
-        return new OpenAPI()
-                .info(new Info()
-                        .title("Hub Service API")
-                        .version("1.0")
-                        .description("Documentation Hub / Vertiport Management API v1.0"))
-                .servers(List.of(
-                        new Server().url(contextPath).description("Current Context URL"),
-                        new Server().url("http://localhost:8084" + contextPath).description("Direct Local Server"),
-                        new Server().url("http://localhost:8081" + contextPath).description("Nginx Gateway Server")
-                ))
-                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-                .components(new Components()
-                        .addSecuritySchemes(securitySchemeName, new SecurityScheme()
-                                .name(securitySchemeName)
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                                .description("Enter Keycloak JWT Bearer token")));
-    }
+        @Bean
+        public OpenAPI hubOpenAPI() {
+                final String securitySchemeName = "BearerAuth";
+                return new OpenAPI()
+                                .info(new Info()
+                                                .title("Hub Service API")
+                                                .version("1.0")
+                                                .description("Documentation Hub / Vertiport Management API v1.0"))
+                                .servers(List.of(
+                                                new Server().url(contextPath).description("Current Context URL"),
+                                                new Server().url("http://localhost:8084" + contextPath)
+                                                                .description("Direct Local Server"),
+                                                new Server().url("http://localhost:8081" + contextPath)
+                                                                .description("Nginx Gateway Server")))
+                                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                                .components(new Components()
+                                                .addSecuritySchemes(securitySchemeName, new SecurityScheme()
+                                                                .name(securitySchemeName)
+                                                                .type(SecurityScheme.Type.HTTP)
+                                                                .scheme("bearer")
+                                                                .bearerFormat("JWT")
+                                                                .description("Enter Keycloak JWT Bearer token")));
+        }
 }
