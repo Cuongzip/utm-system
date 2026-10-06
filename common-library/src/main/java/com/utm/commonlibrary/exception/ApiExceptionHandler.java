@@ -118,10 +118,14 @@ public class ApiExceptionHandler {
         return buildErrorResponse(status, message, null, ex, request, 409);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorVm> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
+    @ExceptionHandler({
+        org.springframework.security.authorization.AuthorizationDeniedException.class,
+        org.springframework.security.access.AccessDeniedException.class,
+        com.utm.commonlibrary.exception.AccessDeniedException.class
+    })
+    public ResponseEntity<ErrorVm> handleAccessDeniedException(Exception ex, WebRequest request) {
         HttpStatus status = HttpStatus.FORBIDDEN;
-        String message = ex.getMessage();
+        String message = ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "Access Denied";
 
         return buildErrorResponse(status, message, null, ex, request, 403);
     }
@@ -175,9 +179,17 @@ public class ApiExceptionHandler {
             new ErrorVm(status.toString(), status.getReasonPhrase(), message, errors);
 
         if (request != null) {
-            log.error(ERROR_LOG_FORMAT, this.getServletPath(request), statusCode, message);
+            if (status.is5xxServerError()) {
+                log.error(ERROR_LOG_FORMAT, this.getServletPath(request), statusCode, message);
+            } else {
+                log.warn(ERROR_LOG_FORMAT, this.getServletPath(request), statusCode, message);
+            }
         }
-        log.error(message, ex);
+        if (status.is5xxServerError()) {
+            log.error(message, ex);
+        } else {
+            log.warn("{}: {}", message, ex != null ? ex.getMessage() : "");
+        }
         return ResponseEntity.status(status).body(errorVm);
     }
 }
