@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,6 +56,7 @@ public class DroneController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Register new Drone", description = "Register a new Unmanned Aircraft System into the DROPS-UTM platform.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Drone registration details",
@@ -120,6 +122,7 @@ public class DroneController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Update Drone information", description = "Update operational status, assigned hub station, or maintenance notes.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Drone update payload",
@@ -165,6 +168,7 @@ public class DroneController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('admin')")
     @Operation(summary = "Retire Drone", description = "Permanently retire an unmanned aircraft from operational service.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Drone retired successfully", content = @Content),

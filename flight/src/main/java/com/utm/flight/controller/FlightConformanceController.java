@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,10 +45,13 @@ public class FlightConformanceController {
     }
 
     @PostMapping("/evaluate")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
     @Operation(summary = "Trigger immediate conformance evaluation", description = "Query latest drone telemetry and perform an immediate 4D volume cross-track & vertical breach assessment.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Conformance evaluated successfully",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = FlightConformanceVm.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightConformanceVm> evaluateConformance(
@@ -68,9 +72,12 @@ public class FlightConformanceController {
     }
 
     @PatchMapping("/alerts/{alertId}/acknowledge")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(summary = "Acknowledge conformance alert", description = "Mark a conformance deviation alert as acknowledged by air traffic operator.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Alert acknowledged successfully", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Alert not found", content = @Content)
     })
     public ResponseEntity<Void> acknowledgeAlert(

@@ -47,14 +47,6 @@
   "roles": {
     "realm": [
       {
-        "id": "2006cd24-9bfb-417d-8e0b-81ef33fac6cf",
-        "name": "PILOT",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "UTM",
-        "attributes": {}
-      },
-      {
         "id": "a4b40d5f-75d9-47d4-9119-eaf7db5a6c25",
         "name": "uma_authorization",
         "description": "${role_uma_authorization}",
@@ -80,18 +72,9 @@
         "composites": {
           "realm": [
             "offline_access",
-            "PILOT",
             "uma_authorization"
           ]
         },
-        "clientRole": false,
-        "containerId": "UTM",
-        "attributes": {}
-      },
-      {
-        "id": "eadee165-c7b4-4508-bf60-937580c5d987",
-        "name": "ADMIN",
-        "composite": false,
         "clientRole": false,
         "containerId": "UTM",
         "attributes": {}
@@ -441,7 +424,7 @@
       ],
       "disableableCredentialTypes": [],
       "requiredActions": [],
-      "realmRoles": ["default-roles-utm", "ADMIN", "admin", "hub_operator", "pilot"],
+      "realmRoles": ["default-roles-utm", "admin", "hub_operator", "pilot"],
       "notBefore": 0,
       "groups": []
     },

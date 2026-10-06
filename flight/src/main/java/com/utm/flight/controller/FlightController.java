@@ -71,6 +71,7 @@ public class FlightController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Create a new flight plan", description = "Register a new flight plan with planned status")
     @ApiResponses(value = {
             @ApiResponse(
@@ -83,6 +84,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request payload", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Drone or Hub not found", content = @Content),
             @ApiResponse(responseCode = "409", description = "Flight number already exists", content = @Content)
     })
@@ -113,6 +115,7 @@ public class FlightController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Update flight plan", description = "Update flight plan before takeoff")
     @ApiResponses(value = {
             @ApiResponse(
@@ -125,6 +128,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid flight state or request payload", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightVm> updateFlight(
@@ -136,6 +140,7 @@ public class FlightController {
     }
 
     @PostMapping("/{id}/authorize")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(summary = "Request UTM authorization", description = "Authorize flight plan to move from planned to authorized")
     @ApiResponses(value = {
             @ApiResponse(
@@ -148,6 +153,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Flight is not in planned state", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightVm> authorizeFlight(
@@ -158,6 +164,7 @@ public class FlightController {
     }
 
     @PostMapping("/{id}/start")
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Start flight", description = "Takeoff drone and mark flight as active")
     @ApiResponses(value = {
             @ApiResponse(
@@ -170,6 +177,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Flight is not in authorized state", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightVm> startFlight(
@@ -180,6 +188,7 @@ public class FlightController {
     }
 
     @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
     @Operation(summary = "Complete flight", description = "Land drone safely and mark flight as completed")
     @ApiResponses(value = {
             @ApiResponse(
@@ -192,6 +201,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Flight is not in active state", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<FlightVm> completeFlight(
@@ -271,6 +281,7 @@ public class FlightController {
     }
 
     @PostMapping("/{id}/waypoints")
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Add waypoint to flight", description = "Add a new 3D coordinate waypoint into the flight trajectory")
     @ApiResponses(value = {
             @ApiResponse(
@@ -283,6 +294,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request payload or flight status", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
     })
     public ResponseEntity<WaypointVm> addWaypoint(
@@ -295,6 +307,7 @@ public class FlightController {
     }
 
     @PutMapping("/{id}/waypoints/{waypointId}")
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Update waypoint", description = "Modify coordinates, altitude, speed or hover time of a specific waypoint")
     @ApiResponses(value = {
             @ApiResponse(
@@ -307,6 +320,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request payload or flight status", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight or Waypoint not found", content = @Content)
     })
     public ResponseEntity<WaypointVm> updateWaypoint(
@@ -321,11 +335,13 @@ public class FlightController {
 
     @DeleteMapping("/{id}/waypoints/{waypointId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Delete waypoint", description = "Remove a waypoint from the flight trajectory")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Waypoint deleted successfully"),
             @ApiResponse(responseCode = "400", description = "Cannot modify active or completed flight", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight or Waypoint not found", content = @Content)
     })
     public ResponseEntity<Void> deleteWaypoint(
@@ -339,6 +355,7 @@ public class FlightController {
     }
 
     @PostMapping("/{id}/waypoints/reorder")
+    @PreAuthorize("hasAnyRole('pilot', 'admin')")
     @Operation(summary = "Reorder waypoints", description = "Reorder all waypoints along the flight path using new sequence numbers")
     @ApiResponses(value = {
             @ApiResponse(
@@ -351,6 +368,7 @@ public class FlightController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid sequence list or flight status", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Flight or Waypoint not found", content = @Content)
     })
     public ResponseEntity<List<WaypointVm>> reorderWaypoints(

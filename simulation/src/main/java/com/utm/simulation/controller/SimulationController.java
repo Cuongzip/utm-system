@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -40,6 +41,7 @@ public class SimulationController {
         private final SimulationService simulationService;
 
         @PostMapping("/sessions")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Create and launch simulation session", description = "Start virtual flight simulation for a flight plan. Drone ID, departure/arrival hubs, and route waypoints are automatically retrieved from the flight plan.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "201", description = "Simulation session created and started", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
@@ -83,6 +85,7 @@ public class SimulationController {
         }
 
         @DeleteMapping("/sessions/{id}")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Delete simulation session", description = "Stops active session if running and permanently deletes session record and events.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "204", description = "Simulation session deleted successfully", content = @Content),
@@ -95,6 +98,7 @@ public class SimulationController {
         }
 
         @PatchMapping("/sessions/{id}/pause")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Pause simulation session", description = "Pauses active telemetry generation for the specified session.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation session paused", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
@@ -107,6 +111,7 @@ public class SimulationController {
         }
 
         @PatchMapping("/sessions/{id}/resume")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Resume simulation session", description = "Resumes a paused simulation session.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation session resumed", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
@@ -119,6 +124,7 @@ public class SimulationController {
         }
 
         @PatchMapping("/sessions/{id}/time-scale")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Update simulation time-scale", description = "Dynamically adjust simulation speed acceleration factor (0.1x to 20x).")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation time-scale updated", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
@@ -132,6 +138,7 @@ public class SimulationController {
         }
 
         @PostMapping("/sessions/{id}/inject-scenario")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Inject emergency simulation scenario", description = "Inject abnormal events such as GPS failure, battery drain, C2 lost, motor failure, or geofence breach.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Emergency scenario injected successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = InjectScenarioResultVm.class))),
@@ -145,6 +152,7 @@ public class SimulationController {
         }
 
         @PostMapping("/sessions/{id}/stop")
+        @PreAuthorize("hasRole('admin')")
         @Operation(summary = "Stop simulation session", description = "Stops the simulation while retaining session statistics and telemetry history.")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Simulation session stopped", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),

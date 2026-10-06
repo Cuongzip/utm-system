@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -100,6 +101,7 @@ public class ConflictController {
     }
 
     @PostMapping("/{id}/resolve")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(summary = "Resolve conflict", description = "Apply resolution strategy (altitude_change, speed_adjustment, reroute, hold) and mark conflict as resolved")
     @ApiResponses(value = {
             @ApiResponse(
@@ -112,6 +114,7 @@ public class ConflictController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid resolution payload", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Conflict not found", content = @Content)
     })
     public ResponseEntity<ConflictVm> resolveConflict(
@@ -132,6 +135,7 @@ public class ConflictController {
     }
 
     @PostMapping("/evaluate")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(summary = "Trigger conflict detection evaluation", description = "Manually trigger an immediate conflict evaluation scan across all airborne flights")
     @ApiResponses(value = {
             @ApiResponse(
@@ -142,7 +146,8 @@ public class ConflictController {
                             schema = @Schema(implementation = ConflictScanResultVm.class)
                     )
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content)
     })
     public ResponseEntity<ConflictScanResultVm> evaluateConflicts() {
         return ResponseEntity.ok(conflictDetectionService.runConflictScan());
