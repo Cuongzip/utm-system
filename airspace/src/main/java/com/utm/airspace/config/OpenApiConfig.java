@@ -20,10 +20,9 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Airspace & Geofencing Management Service API")
+                        .title("Airspace Service API")
                         .version("1.0")
-                        .description("DROPS-UTM Airspace Zones, Geofences, No-Fly Zones, and Spatial 3D Path Validation API")
-                        .license(new License().name("Apache 2.0").url("https://springdoc.org")))
+                        .description("Documentation Airspace / Geofencing Management API v1.0"))
                 .servers(List.of(
                         new Server().url("/airspace").description("Default Server URL via Gateway/Context Path")
                 ))

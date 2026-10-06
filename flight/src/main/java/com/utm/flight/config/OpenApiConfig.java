@@ -22,8 +22,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Flight Service API")
                         .version("1.0")
-                        .description("DROPS-UTM Flight and Flight Plans Management Service API")
-                        .license(new License().name("Apache 2.0").url("https://springdoc.org")))
+                        .description("Documentation Flight / Flight Plans Management API v1.0"))
                 .servers(List.of(
                         new Server().url("/flight").description("Default Server URL via Gateway/Context Path")
                 ))

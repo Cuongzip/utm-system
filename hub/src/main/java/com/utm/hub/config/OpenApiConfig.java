@@ -25,15 +25,9 @@ public class OpenApiConfig {
         final String securitySchemeName = "BearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Hub / Vertiport Management API")
-                        .description("Microservice for managing Takeoff/Landing Hubs, Vertiports, WGS84 coordinates, capacity, and charging pads in the DROPS-UTM ecosystem.")
-                        .version("v0.1.0")
-                        .contact(new Contact()
-                                .name("DROPS-UTM Team")
-                                .email("engineering@drops-utm.com"))
-                        .license(new License()
-                                .name("Apache 2.0")
-                                .url("https://www.apache.org/licenses/LICENSE-2.0")))
+                        .title("Hub Service API")
+                        .version("1.0")
+                        .description("Documentation Hub / Vertiport Management API v1.0"))
                 .servers(List.of(
                         new Server().url(contextPath).description("Current Context URL"),
                         new Server().url("http://localhost:8084" + contextPath).description("Direct Local Server"),

@@ -20,10 +20,9 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Flight Simulation Engine API")
+                        .title("Simulation Service API")
                         .version("1.0")
-                        .description("DROPS-UTM Real-Time Flight Simulation, Time-Scale Acceleration & Emergency Scenario Injection API")
-                        .license(new License().name("Apache 2.0").url("https://springdoc.org")))
+                        .description("Documentation Flight Simulation Engine API v1.0"))
                 .servers(List.of(
                         new Server().url("/simulation").description("Default Server URL via Gateway/Context Path")
                 ))

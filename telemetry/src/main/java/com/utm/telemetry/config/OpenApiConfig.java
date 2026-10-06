@@ -22,8 +22,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Telemetry Service API")
                         .version("1.0")
-                        .description("DROPS-UTM Telemetry Data Ingestion and Real-Time Tracking API")
-                        .license(new License().name("Apache 2.0").url("https://springdoc.org")))
+                        .description("Documentation Telemetry Ingestion & Tracking API v1.0"))
                 .servers(List.of(
                         new Server().url("/telemetry").description("Default Server URL via Gateway/Context Path")
                 ))

@@ -20,10 +20,9 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Conflict Detection & Resolution Service API")
+                        .title("Conflict Service API")
                         .version("1.0")
-                        .description("DROPS-UTM Conflict Detection & Resolution (Module 13) Microservice API")
-                        .license(new License().name("Apache 2.0").url("https://springdoc.org")))
+                        .description("Documentation Conflict Detection & Resolution API v1.0"))
                 .servers(List.of(
                         new Server().url("/conflict").description("Default Server URL via Gateway/Context Path")
                 ))
