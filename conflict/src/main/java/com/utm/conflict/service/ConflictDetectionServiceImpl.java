@@ -197,7 +197,9 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
     private List<FlightClientVm> fetchActiveFlights() {
         try {
-            String url = serviceUrlConfig.flight() + "/api/v1/flights?status=active";
+            String baseUrl = serviceUrlConfig.flight();
+            String basePath = (baseUrl != null && baseUrl.endsWith("/flight")) ? "" : "/flight";
+            String url = baseUrl + basePath + "/api/v1/flights?status=active";
             List<FlightClientVm> flights = restClient.get()
                     .uri(url)
                     .retrieve()
@@ -211,7 +213,9 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
     private TelemetryRecordClientVm fetchLatestTelemetry(String flightId) {
         try {
-            String url = serviceUrlConfig.telemetry() + "/api/v1/telemetry/flight/" + flightId + "/latest";
+            String baseUrl = serviceUrlConfig.telemetry();
+            String basePath = (baseUrl != null && baseUrl.endsWith("/telemetry")) ? "" : "/telemetry";
+            String url = baseUrl + basePath + "/api/v1/telemetry/flight/" + flightId + "/latest";
             return restClient.get()
                     .uri(url)
                     .retrieve()
