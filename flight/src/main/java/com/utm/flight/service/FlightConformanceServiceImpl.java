@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,7 +53,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                             .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId));
                     return FlightConformance.builder()
                             .flight(flight)
-                            .status(flight.getStatus() == FlightStatus.ACTIVE ? ConformanceStatus.UNKNOWN : ConformanceStatus.CONFORMANT)
+                            .status(flight.getStatus() == FlightStatus.ACTIVE ? ConformanceStatus.UNKNOWN
+                                    : ConformanceStatus.CONFORMANT)
                             .corridorRadiusM(15.0)
                             .altitudeBufferM(10.0)
                             .lastEvaluatedAt(ZonedDateTime.now())
@@ -118,14 +118,16 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (ageSeconds > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
             transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, "C2_LINK_LOST_CONTINGENT", "CRITICAL",
                     String.format("Telemetry connection lost for %d seconds (exceeded %ds emergency threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC), Map.of("telemetryAgeSeconds", ageSeconds));
+                            ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC),
+                    Map.of("telemetryAgeSeconds", ageSeconds));
             return conformanceRepository.save(conformance);
         }
 
         if (ageSeconds > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING, "C2_LINK_LOST", "HIGH",
                     String.format("Telemetry connection lost for %d seconds (exceeded %ds warning threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC), Map.of("telemetryAgeSeconds", ageSeconds));
+                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC),
+                    Map.of("telemetryAgeSeconds", ageSeconds));
             return conformanceRepository.save(conformance);
         }
 
@@ -137,8 +139,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                 telemetry.longitude(),
                 telemetry.altitude(),
                 waypoints,
-                cruisingAltitude
-        );
+                cruisingAltitude);
 
         conformance.setCrossTrackErrorM(Math.round(result.crossTrackDistanceM() * 10.0) / 10.0);
         conformance.setVerticalErrorM(Math.round(result.verticalErrorM() * 10.0) / 10.0);
@@ -168,13 +169,14 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                             "crossTrackErrorM", result.crossTrackDistanceM(),
                             "verticalErrorM", result.verticalErrorM(),
                             "corridorRadiusM", conformance.getCorridorRadiusM(),
-                            "altitudeBufferM", conformance.getAltitudeBufferM()
-                    ));
+                            "altitudeBufferM", conformance.getAltitudeBufferM()));
         } else {
-            if (conformance.getStatus() == ConformanceStatus.NON_CONFORMING || conformance.getStatus() == ConformanceStatus.CONTINGENT) {
+            if (conformance.getStatus() == ConformanceStatus.NON_CONFORMING
+                    || conformance.getStatus() == ConformanceStatus.CONTINGENT) {
                 transitionStatus(flight, conformance, ConformanceStatus.CONFORMANT, "RECOVERY_CONFORMANT", "LOW",
                         "Drone position recovered and returned into designated 4D flight volume",
-                        Map.of("crossTrackErrorM", result.crossTrackDistanceM(), "verticalErrorM", result.verticalErrorM()));
+                        Map.of("crossTrackErrorM", result.crossTrackDistanceM(), "verticalErrorM",
+                                result.verticalErrorM()));
             } else {
                 conformance.setStatus(ConformanceStatus.CONFORMANT);
             }
@@ -185,14 +187,37 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     private void handleMissingTelemetry(Flight flight, FlightConformance conformance, ZonedDateTime now) {
         if (flight.getStatus() == FlightStatus.ACTIVE) {
-            ZonedDateTime departureTime = flight.getActualDeparture() != null
-                    ? flight.getActualDeparture()
-                    : (flight.getScheduledDeparture() != null ? flight.getScheduledDeparture() : now);
-            long flightDurationSec = Math.max(0, Duration.between(departureTime, now).getSeconds());
+            ZonedDateTime referenceTime;
+            String alertTypeWarning;
+            String alertTypeCritical;
+            String description;
 
-            if (flightDurationSec > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
-                transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING, "NO_TELEMETRY_STREAM", "HIGH",
-                        "Flight is marked ACTIVE but no telemetry packets have been received", Collections.emptyMap());
+            if (conformance.getLastTelemetryTime() != null) {
+                referenceTime = conformance.getLastTelemetryTime();
+                alertTypeWarning = "C2_LINK_LOST";
+                alertTypeCritical = "C2_LINK_LOST_CONTINGENT";
+                description = "Telemetry connection lost";
+            } else {
+                referenceTime = flight.getActualDeparture() != null
+                        ? flight.getActualDeparture()
+                        : (conformance.getCreatedOn() != null ? conformance.getCreatedOn() : now);
+                alertTypeWarning = "NO_TELEMETRY_STREAM";
+                alertTypeCritical = "C2_LINK_LOST_CONTINGENT";
+                description = "Flight is marked ACTIVE but no telemetry packets have been received";
+            }
+
+            long missingSec = Math.max(0, Duration.between(referenceTime, now).getSeconds());
+
+            if (missingSec > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
+                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, alertTypeCritical, "CRITICAL",
+                        String.format("%s for %d seconds (exceeded %ds emergency threshold)",
+                                description, missingSec, TELEMETRY_TIMEOUT_CONTINGENT_SEC),
+                        Map.of("telemetryAgeSeconds", missingSec));
+            } else if (missingSec > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
+                transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING, alertTypeWarning, "HIGH",
+                        String.format("%s for %d seconds (exceeded %ds warning threshold)",
+                                description, missingSec, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC),
+                        Map.of("telemetryAgeSeconds", missingSec));
             } else {
                 conformance.setStatus(ConformanceStatus.UNKNOWN);
             }
@@ -202,7 +227,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     }
 
     private void transitionStatus(Flight flight, FlightConformance conformance, ConformanceStatus newStatus,
-                                  String alertType, String severity, String message, Map<String, Object> details) {
+            String alertType, String severity, String message, Map<String, Object> details) {
         ConformanceStatus prevStatus = conformance.getStatus();
         conformance.setStatus(newStatus);
 
@@ -226,8 +251,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                     droneId,
                     hubId,
                     message,
-                    detailsJson
-            );
+                    detailsJson);
 
             alertClientService.createAlert(alertPostVm);
             log.warn("Conformance event [{}] for flight '{}' ({} -> {}): {}",
@@ -291,7 +315,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             FlightWaypoint w1 = waypoints.get(i);
             FlightWaypoint w2 = waypoints.get(i + 1);
 
-            double d12 = calculateHaversineDistance(w1.getLatitude(), w1.getLongitude(), w2.getLatitude(), w2.getLongitude());
+            double d12 = calculateHaversineDistance(w1.getLatitude(), w1.getLongitude(), w2.getLatitude(),
+                    w2.getLongitude());
             double d13 = calculateHaversineDistance(w1.getLatitude(), w1.getLongitude(), pLat, pLon);
 
             double brg12 = calculateBearing(w1.getLatitude(), w1.getLongitude(), w2.getLatitude(), w2.getLongitude());
@@ -345,5 +370,6 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         return defaultAlt;
     }
 
-    private record CrossTrackResult(double crossTrackDistanceM, double verticalErrorM) {}
+    private record CrossTrackResult(double crossTrackDistanceM, double verticalErrorM) {
+    }
 }
