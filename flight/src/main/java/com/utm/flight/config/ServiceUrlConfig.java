@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ServiceUrlConfig(
         String drone,
         String hub,
-        String telemetry
+        String telemetry,
+        String alert
 ) {
 }

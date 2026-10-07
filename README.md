@@ -40,6 +40,7 @@ A cloud-native, microservices-based platform designed for **Unmanned Aircraft Sy
 | **`telemetry`**      | `8089`    | `/telemetry`      | Real-time drone position telemetry ingestion (GPS coordinates, altitude, velocity, heading, battery).                                      |
 | **`simulation`**     | `8090`    | `/simulation`     | Autonomous flight simulation engine and virtual flight mission execution generating synthetic telemetry streams.                           |
 | **`conflict`**       | `8092`    | `/conflict`       | Tactical & strategic conflict detection watchdog, separation loss alerting, CPA/TCPA prediction, and resolution management.                |
+| **`alert`**          | `8093`    | `/alert`          | Centralized operational alerting & safety monitoring (DROPS-UTM Module 11), breach alerts, operator acknowledgment & resolution workflows. |
 
 ---
 
@@ -60,6 +61,7 @@ All APIs are exposed through the Nginx Gateway on port **`8081`**, but can also 
 | **Telemetry Service**  | `http://localhost:8081/telemetry/api/v1/telemetry`                                     | `http://localhost:8089/telemetry/`      | `/telemetry/v3/api-docs`              |
 | **Simulation Service** | `http://localhost:8081/simulation/api/v1/simulation`                                   | `http://localhost:8090/simulation/`     | `/simulation/v3/api-docs`             |
 | **Conflict Service**   | `http://localhost:8081/conflict/api/v1/conflicts`                                      | `http://localhost:8092/conflict/`       | `/conflict/v3/api-docs`               |
+| **Alert Service**      | `http://localhost:8081/alert/api/v1/alerts`                                            | `http://localhost:8093/alert/`          | `/alert/v3/api-docs`                  |
 
 ### Infrastructure Services
 
@@ -67,7 +69,7 @@ All APIs are exposed through the Nginx Gateway on port **`8081`**, but can also 
 | :----------------------------- | :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------- |
 | **Keycloak IAM Admin Console** | [http://localhost:8080/admin/](http://localhost:8080/admin/)          | Username: `admin` \| Password: `admin`<br/>Pre-configured Realm: `UTM`                                                 |
 | **pgAdmin 4**                  | [http://localhost:5050](http://localhost:5050)                        | Email: `admin@utm.com` \| Password: `admin`                                                                            |
-| **PostgreSQL Database**        | `localhost:54320` _(External)_ \| `postgres:5432` _(Docker internal)_ | Username: `admin` \| Password: `admin`<br/>Auto-initializes 8 service DBs via [`postgres_init.sql`](postgres_init.sql) |
+| **PostgreSQL Database**        | `localhost:54320` _(External)_ \| `postgres:5432` _(Docker internal)_ | Username: `admin` \| Password: `admin`<br/>Auto-initializes 9 service DBs via [`postgres_init.sql`](postgres_init.sql) |
 
 ---
 

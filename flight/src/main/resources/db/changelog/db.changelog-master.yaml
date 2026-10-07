@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/02-create-flight-waypoint-table.yaml
   - include:
       file: db/changelog/changes/03-create-flight-conformance-tables.yaml
+  - include:
+      file: db/changelog/changes/04-drop-flight-conformance-alert-table.yaml

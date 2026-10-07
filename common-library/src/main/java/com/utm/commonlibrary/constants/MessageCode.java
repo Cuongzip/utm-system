@@ -22,6 +22,7 @@ public final class MessageCode {
     public static final String CONFORMANCE_NOT_FOUND = "CONFORMANCE_NOT_FOUND";
     public static final String CONFORMANCE_ALERT_NOT_FOUND = "CONFORMANCE_ALERT_NOT_FOUND";
     public static final String CONFLICT_NOT_FOUND = "CONFLICT_NOT_FOUND";
+    public static final String ALERT_NOT_FOUND = "ALERT_NOT_FOUND";
 
     private MessageCode() {
     }

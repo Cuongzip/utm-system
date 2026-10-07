@@ -7,14 +7,12 @@ import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.flight.mapper.FlightConformanceMapper;
 import com.utm.flight.model.Flight;
 import com.utm.flight.model.FlightConformance;
-import com.utm.flight.model.FlightConformanceAlert;
 import com.utm.flight.model.FlightWaypoint;
 import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
-import com.utm.flight.repository.FlightConformanceAlertRepository;
 import com.utm.flight.repository.FlightConformanceRepository;
 import com.utm.flight.repository.FlightRepository;
-import com.utm.flight.viewmodel.FlightConformanceAlertVm;
+import com.utm.flight.viewmodel.AlertPostVm;
 import com.utm.flight.viewmodel.FlightConformanceVm;
 import com.utm.flight.viewmodel.TelemetryRecordVm;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +40,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     private final FlightRepository flightRepository;
     private final FlightConformanceRepository conformanceRepository;
-    private final FlightConformanceAlertRepository alertRepository;
+    private final AlertClientService alertClientService;
     private final TelemetryClientService telemetryClientService;
     private final FlightConformanceMapper conformanceMapper;
     private final ObjectMapper objectMapper;
@@ -74,25 +72,6 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
         FlightConformance evaluated = doEvaluateConformance(flight);
         return conformanceMapper.toVm(evaluated);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<FlightConformanceAlertVm> getAlerts(String flightId) {
-        if (!flightRepository.existsById(flightId)) {
-            throw new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId);
-        }
-        return conformanceMapper.toAlertVmList(alertRepository.findByFlightIdOrderByCreatedOnDesc(flightId));
-    }
-
-    @Override
-    @Transactional
-    public void acknowledgeAlert(String alertId) {
-        FlightConformanceAlert alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.CONFORMANCE_ALERT_NOT_FOUND, alertId));
-        alert.setAcknowledged(true);
-        alertRepository.save(alert);
-        log.info("Acknowledged conformance alert '{}' for flight '{}'", alertId, alert.getFlight().getId());
     }
 
     @Override
@@ -237,17 +216,20 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                 }
             }
 
-            FlightConformanceAlert alert = FlightConformanceAlert.builder()
-                    .flight(flight)
-                    .alertType(alertType)
-                    .severity(severity)
-                    .message(message)
-                    .detailsJson(detailsJson)
-                    .acknowledged(false)
-                    .createdBy("SYSTEM_WATCHDOG")
-                    .build();
+            String droneId = flight.getDroneId();
+            String hubId = flight.getDepartureHubId();
 
-            alertRepository.save(alert);
+            AlertPostVm alertPostVm = new AlertPostVm(
+                    alertType,
+                    severity,
+                    flight.getId(),
+                    droneId,
+                    hubId,
+                    message,
+                    detailsJson
+            );
+
+            alertClientService.createAlert(alertPostVm);
             log.warn("Conformance event [{}] for flight '{}' ({} -> {}): {}",
                     alertType, flight.getId(), prevStatus, newStatus, message);
         }

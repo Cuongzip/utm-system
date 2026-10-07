@@ -71,6 +71,14 @@ server {
     proxy_pass http://conflict:8092/conflict/api/v1/conflicts;
   }
 
+  location /alert/ {
+    proxy_pass http://alert:8093/alert/;
+  }
+
+  location /api/v1/alerts {
+    proxy_pass http://alert:8093/alert/api/v1/alerts;
+  }
+
   location /backoffice-bff/ {
     proxy_pass http://backoffice-bff:8082/backoffice-bff/;
   }

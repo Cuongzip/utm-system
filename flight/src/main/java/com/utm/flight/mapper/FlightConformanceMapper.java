@@ -1,9 +1,7 @@
 package com.utm.flight.mapper;
 
 import com.utm.flight.model.FlightConformance;
-import com.utm.flight.model.FlightConformanceAlert;
 import com.utm.flight.model.enumeration.ConformanceStatus;
-import com.utm.flight.viewmodel.FlightConformanceAlertVm;
 import com.utm.flight.viewmodel.FlightConformanceVm;
 import com.utm.flight.viewmodel.TelemetryRecordVm;
 import org.mapstruct.BeanMapping;
@@ -12,8 +10,6 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
-
-import java.util.List;
 
 @Mapper(
         componentModel = "spring",
@@ -24,11 +20,6 @@ public interface FlightConformanceMapper {
     @Mapping(target = "flightId", source = "flight.id")
     @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
     FlightConformanceVm toVm(FlightConformance entity);
-
-    @Mapping(target = "flightId", source = "flight.id")
-    FlightConformanceAlertVm toVm(FlightConformanceAlert entity);
-
-    List<FlightConformanceAlertVm> toAlertVmList(List<FlightConformanceAlert> entities);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "currentLatitude", source = "latitude")
