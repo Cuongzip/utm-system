@@ -29,6 +29,10 @@ public interface AirspaceZoneMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "geometry", source = "geometry", qualifiedByName = "geoJsonToString")
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     void updateEntityFromPutVm(AirspaceZonePutVm putVm, @MappingTarget AirspaceZone entity);
 
     @Named("geoJsonToString")

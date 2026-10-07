@@ -1,11 +1,11 @@
 package com.utm.conflict.service;
 
 import com.utm.conflict.config.ServiceUrlConfig;
+import com.utm.conflict.mapper.ConflictDetectionMapper;
 import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ConflictType;
-import com.utm.conflict.model.enumeration.ResolutionStrategy;
 import com.utm.conflict.repository.ConflictRepository;
 import com.utm.conflict.viewmodel.ConflictScanResultVm;
 import com.utm.conflict.viewmodel.FlightClientVm;
@@ -33,12 +33,12 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     private static final List<ConflictStatus> ACTIVE_STATUSES = List.of(
             ConflictStatus.DETECTED,
             ConflictStatus.NOTIFIED,
-            ConflictStatus.RESOLVING
-    );
+            ConflictStatus.RESOLVING);
 
     private final ConflictRepository conflictRepository;
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
+    private final ConflictDetectionMapper conflictDetectionMapper;
 
     @Value("${utm.conflict.watchdog.enabled:true}")
     private boolean watchdogEnabled;
@@ -72,20 +72,20 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     public ConflictScanResultVm runConflictScan() {
         List<FlightClientVm> activeFlights = fetchActiveFlights();
         if (activeFlights.isEmpty() || activeFlights.size() < 2) {
-            return new ConflictScanResultVm(
+            return conflictDetectionMapper.toScanResultVm(
                     activeFlights.size(),
                     0,
                     0,
                     0,
                     0,
-                    ZonedDateTime.now()
-            );
+                    ZonedDateTime.now());
         }
 
         List<FlightWithTelemetry> flightDataList = new ArrayList<>();
         for (FlightClientVm flight : activeFlights) {
             TelemetryRecordClientVm telemetry = fetchLatestTelemetry(flight.id());
-            if (telemetry != null && telemetry.latitude() != null && telemetry.longitude() != null && telemetry.altitude() != null) {
+            if (telemetry != null && telemetry.latitude() != null && telemetry.longitude() != null
+                    && telemetry.altitude() != null) {
                 flightDataList.add(new FlightWithTelemetry(flight, telemetry));
             }
         }
@@ -103,21 +103,21 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
                 double distHoriz = calculateHaversineDistance(
                         f1.telemetry().latitude(), f1.telemetry().longitude(),
-                        f2.telemetry().latitude(), f2.telemetry().longitude()
-                );
+                        f2.telemetry().latitude(), f2.telemetry().longitude());
                 double distVert = Math.abs(f1.telemetry().altitude() - f2.telemetry().altitude());
 
                 double tcpa = calculateTcpa(f1.telemetry(), f2.telemetry());
                 boolean isSeparationLoss = (distHoriz < horizontalThresholdM) && (distVert < verticalThresholdM);
-                boolean isPredictedLoss = (tcpa > 0.0 && tcpa < 120.0) && (distVert < verticalThresholdM) && (distHoriz < 250.0);
+                boolean isPredictedLoss = (tcpa > 0.0 && tcpa < 120.0) && (distVert < verticalThresholdM)
+                        && (distHoriz < 250.0);
 
                 List<Conflict> activeConflicts = conflictRepository.findActiveBetweenFlights(
-                        f1.flight().id(), f2.flight().id(), ACTIVE_STATUSES
-                );
+                        f1.flight().id(), f2.flight().id(), ACTIVE_STATUSES);
 
                 if (isSeparationLoss || isPredictedLoss) {
                     ConflictSeverity severity = determineSeverity(distHoriz, distVert);
-                    ConflictType conflictType = determineConflictType(f1.telemetry().heading(), f2.telemetry().heading());
+                    ConflictType conflictType = determineConflictType(f1.telemetry().heading(),
+                            f2.telemetry().heading());
                     double midLat = (f1.telemetry().latitude() + f2.telemetry().latitude()) / 2.0;
                     double midLon = (f1.telemetry().longitude() + f2.telemetry().longitude()) / 2.0;
                     double midAlt = (f1.telemetry().altitude() + f2.telemetry().altitude()) / 2.0;
@@ -125,13 +125,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
                     if (!activeConflicts.isEmpty()) {
                         for (Conflict existing : activeConflicts) {
-                            existing.setSeparationDistance(Math.min(existing.getSeparationDistance(), distHoriz));
-                            existing.setVerticalSeparation(distVert);
-                            existing.setLocationLat(midLat);
-                            existing.setLocationLon(midLon);
-                            existing.setAltitude(midAlt);
-                            existing.setTimeToConflictSec(timeToConflict);
-                            existing.setSeverity(severity);
+                            conflictDetectionMapper.updateSeparation(
+                                    existing, midLat, midLon, midAlt, distHoriz, distVert, timeToConflict, severity);
                             conflictRepository.save(existing);
                             existingConflictsUpdated++;
                         }
@@ -140,28 +135,23 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                                 ? f1.flight().departureHubId()
                                 : f2.flight().departureHubId();
 
-                        Conflict newConflict = Conflict.builder()
-                                .conflictType(conflictType)
-                                .severity(severity)
-                                .status(ConflictStatus.DETECTED)
-                                .primaryFlightId(f1.flight().id())
-                                .secondaryFlightId(f2.flight().id())
-                                .hubId(hubId)
-                                .detectedAt(ZonedDateTime.now())
-                                .detectionMethod("automated_telemetry")
-                                .locationLat(midLat)
-                                .locationLon(midLon)
-                                .altitude(midAlt)
-                                .separationDistance(distHoriz)
-                                .verticalSeparation(distVert)
-                                .timeToConflictSec(timeToConflict)
-                                .description(String.format("Loss of separation between flight %s and %s (horiz: %.1fm, vert: %.1fm)",
-                                        f1.flight().flightNumber(), f2.flight().flightNumber(), distHoriz, distVert))
-                                .build();
+                        Conflict newConflict = conflictDetectionMapper.toEntity(
+                                f1.flight(),
+                                f2.flight(),
+                                conflictType,
+                                severity,
+                                hubId,
+                                midLat,
+                                midLon,
+                                midAlt,
+                                distHoriz,
+                                distVert,
+                                timeToConflict);
 
                         conflictRepository.save(newConflict);
                         newConflictsDetected++;
-                        log.warn("CONFLICT DETECTED: [{} - {}] Between Flight {} ({}) and Flight {} ({}) - Dist: {}m, Vert: {}m",
+                        log.warn(
+                                "CONFLICT DETECTED: [{} - {}] Between Flight {} ({}) and Flight {} ({}) - Dist: {}m, Vert: {}m",
                                 conflictType.getValue(), severity.getValue(),
                                 f1.flight().flightNumber(), f1.flight().id(),
                                 f2.flight().flightNumber(), f2.flight().id(),
@@ -171,13 +161,11 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     // Safe buffer reached (horizontal > 200m or vertical > 40m)
                     if (distHoriz > (horizontalThresholdM + 50.0) || distVert > (verticalThresholdM + 10.0)) {
                         for (Conflict existing : activeConflicts) {
-                            existing.setStatus(ConflictStatus.RESOLVED);
-                            existing.setResolutionStrategy(ResolutionStrategy.AUTO_CLEARED);
-                            existing.setResolvedAt(ZonedDateTime.now());
-                            existing.setResolvedBy("SYSTEM_AUTO");
+                            conflictDetectionMapper.resolveConflictAuto(existing, "SYSTEM_AUTO");
                             conflictRepository.save(existing);
                             resolvedConflictsCount++;
-                            log.info("CONFLICT AUTO-RESOLVED: Conflict {} cleared safe separation buffer (dist: {}m, vert: {}m)",
+                            log.info(
+                                    "CONFLICT AUTO-RESOLVED: Conflict {} cleared safe separation buffer (dist: {}m, vert: {}m)",
                                     existing.getId(), Math.round(distHoriz), Math.round(distVert));
                         }
                     }
@@ -185,14 +173,13 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             }
         }
 
-        return new ConflictScanResultVm(
+        return conflictDetectionMapper.toScanResultVm(
                 flightDataList.size(),
                 evaluatedPairs,
                 newConflictsDetected,
                 existingConflictsUpdated,
                 resolvedConflictsCount,
-                ZonedDateTime.now()
-        );
+                ZonedDateTime.now());
     }
 
     private List<FlightClientVm> fetchActiveFlights() {
@@ -203,7 +190,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             List<FlightClientVm> flights = restClient.get()
                     .uri(url)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+                    .body(new ParameterizedTypeReference<>() {
+                    });
             return flights != null ? flights : Collections.emptyList();
         } catch (Exception ex) {
             log.debug("Failed to query active flights from flight service: {}", ex.getMessage());
@@ -258,7 +246,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2.0) * Math.sin(dLat / 2.0)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
+                        * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
         double c = 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
         return EARTH_RADIUS_M * c;
     }
@@ -306,5 +294,6 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         return defaultValue;
     }
 
-    private record FlightWithTelemetry(FlightClientVm flight, TelemetryRecordClientVm telemetry) {}
+    private record FlightWithTelemetry(FlightClientVm flight, TelemetryRecordClientVm telemetry) {
+    }
 }
