@@ -19,9 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import com.utm.commonlibrary.utils.AuthenticationUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -196,17 +194,12 @@ public class AlertServiceImpl implements AlertService {
             return explicitUser.trim();
         }
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth instanceof JwtAuthenticationToken jwtAuth) {
-                String preferredUsername = jwtAuth.getToken().getClaimAsString("preferred_username");
-                if (preferredUsername != null && !preferredUsername.isBlank()) {
-                    return preferredUsername;
-                }
-                return jwtAuth.getToken().getSubject();
-            } else if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
+            return AuthenticationUtils.extractUserId();
+        } catch (Exception ex) {
+            var auth = AuthenticationUtils.getAuthentication();
+            if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
                 return auth.getName();
             }
-        } catch (Exception ignored) {
         }
         return "SYSTEM";
     }
