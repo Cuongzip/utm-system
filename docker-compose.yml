@@ -45,6 +45,18 @@ services:
     networks:
       - utm-network
 
+  backoffice:
+    build:
+      context: ./backoffice
+      dockerfile: Dockerfile
+    image: backoffice:latest
+    ports:
+      - "${BACKOFFICE_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - utm-network
+
   drone:
     build:
       context: .
@@ -286,6 +298,16 @@ services:
     networks:
       - utm-network
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - utm-network
+
 networks:
   utm-network:
     driver: bridge
@@ -294,3 +316,4 @@ networks:
 volumes:
   postgres_data:
   pgadmin_data:
+  redis_data:
