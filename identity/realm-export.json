@@ -424,7 +424,12 @@
       ],
       "disableableCredentialTypes": [],
       "requiredActions": [],
-      "realmRoles": ["default-roles-utm", "admin", "hub_operator", "pilot"],
+      "realmRoles": [
+        "default-roles-utm",
+        "admin",
+        "hub_operator",
+        "pilot"
+      ],
       "notBefore": 0,
       "groups": []
     },
@@ -997,7 +1002,8 @@
         "http://localhost:8090",
         "http://localhost:8093",
         "http://localhost:8081",
-        "http://localhost:8092"
+        "http://localhost:8092",
+        "+"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -1035,7 +1041,8 @@
         "saml.authnstatement": "false",
         "display.on.consent.screen": "false",
         "token.response.type.bearer.lower-case": "false",
-        "saml.onetimeuse.condition": "false"
+        "saml.onetimeuse.condition": "false",
+        "pkce.code.challenge.method": "S256"
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,

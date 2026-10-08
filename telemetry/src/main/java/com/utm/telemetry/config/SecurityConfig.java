@@ -62,28 +62,4 @@ public class SecurityConfig {
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
         return jwtAuthenticationConverter;
     }
-
-    @Bean
-    public org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder(
-            @org.springframework.beans.factory.annotation.Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:http://identity/realms/UTM}") String issuerUri
-    ) {
-        String jwkSetUri = issuerUri + "/protocol/openid-connect/certs";
-        org.springframework.security.oauth2.jwt.NimbusJwtDecoder jwtDecoder =
-                org.springframework.security.oauth2.jwt.NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-
-        org.springframework.security.oauth2.core.OAuth2TokenValidator<Jwt> withTimestamp =
-                new org.springframework.security.oauth2.jwt.JwtTimestampValidator();
-        org.springframework.security.oauth2.core.OAuth2TokenValidator<Jwt> withIssuer = token -> {
-            String issuer = token.getIssuer() != null ? token.getIssuer().toString() : "";
-            if (issuer.endsWith("/realms/UTM")) {
-                return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success();
-            }
-            return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
-                    new org.springframework.security.oauth2.core.OAuth2Error("invalid_token", "Invalid issuer: " + issuer, null)
-            );
-        };
-
-        jwtDecoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(withTimestamp, withIssuer));
-        return jwtDecoder;
-    }
 }

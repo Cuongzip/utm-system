@@ -248,6 +248,8 @@ services:
     environment:
       - BASE_URL=/swagger-ui
       - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
+      - OAUTH_CLIENT_ID=swagger-ui
+      - OAUTH_USE_PKCE=true
     networks:
       - utm-network
 
