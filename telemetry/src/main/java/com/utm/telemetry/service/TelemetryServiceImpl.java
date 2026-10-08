@@ -9,6 +9,7 @@ import com.utm.telemetry.viewmodel.TelemetryIngestVm;
 import com.utm.telemetry.viewmodel.TelemetryRecordVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class TelemetryServiceImpl implements TelemetryService {
 
     private final TelemetryRecordRepository telemetryRecordRepository;
     private final TelemetryMapper telemetryMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private final Map<String, TelemetryRecordVm> latestDroneTelemetryCache = new ConcurrentHashMap<>();
     private final Map<String, TelemetryRecordVm> latestFlightTelemetryCache = new ConcurrentHashMap<>();
@@ -40,7 +42,21 @@ public class TelemetryServiceImpl implements TelemetryService {
             latestFlightTelemetryCache.put(vm.flightId(), vm);
         }
 
+        broadcastTelemetry(vm);
+
         return vm;
+    }
+
+    private void broadcastTelemetry(TelemetryRecordVm vm) {
+        try {
+            messagingTemplate.convertAndSend("/topic/telemetry/live", vm);
+            messagingTemplate.convertAndSend("/topic/telemetry/drone/" + vm.droneId(), vm);
+            if (vm.flightId() != null && !vm.flightId().isBlank()) {
+                messagingTemplate.convertAndSend("/topic/telemetry/flight/" + vm.flightId(), vm);
+            }
+        } catch (Exception ex) {
+            log.error("Failed to broadcast telemetry via WebSocket for drone '{}': {}", vm.droneId(), ex.getMessage());
+        }
     }
 
     @Override
