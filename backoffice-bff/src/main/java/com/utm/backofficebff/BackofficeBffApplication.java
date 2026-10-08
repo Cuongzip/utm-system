@@ -2,10 +2,10 @@ package com.utm.backofficebff;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 
-@SpringBootApplication(scanBasePackages = {"com.utm.backofficebff", "com.utm.commonlibrary"})
-@ConfigurationPropertiesScan("com.utm.backofficebff.config")
+@SpringBootApplication
+@EnableWebFluxSecurity
 public class BackofficeBffApplication {
 
     public static void main(String[] args) {

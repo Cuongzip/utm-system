@@ -31,17 +31,18 @@ services:
       - "8082:8082"
     environment:
       - SERVER_PORT=8082
-      - KEYCLOAK_URL=http://identity
-      - DRONE_SERVICE_URL=http://drone:8085
-      - HUB_SERVICE_URL=http://hub:8084
-      - FLIGHT_SERVICE_URL=http://flight:8086
-      - AIRSPACE_SERVICE_URL=http://airspace:8087
+      - KEYCLOAK_AUTH_URL=http://localhost:8080/realms/UTM/protocol/openid-connect/auth
+      - KEYCLOAK_TOKEN_URL=http://identity/realms/UTM/protocol/openid-connect/token
+      - KEYCLOAK_JWKS_URL=http://identity/realms/UTM/protocol/openid-connect/certs
+      - KEYCLOAK_USERINFO_URL=http://identity/realms/UTM/protocol/openid-connect/userinfo
+      - KEYCLOAK_CLIENT_SECRET=TVacLC0cQ8tiiEKiTVerTb2YvwQ1TRJF
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - API_GATEWAY_URL=http://nginx
+      - BACKOFFICE_UI_URL=http://backoffice:3000
     depends_on:
       - identity
-      - drone
-      - hub
-      - flight
-      - airspace
+      - redis
     networks:
       - utm-network
 
@@ -247,7 +248,7 @@ services:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/backoffice-bff/v3/api-docs', name: 'Backoffice BFF' }]"
+      - "URLS=[{ url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }]"
       - OAUTH_CLIENT_ID=swagger-ui
       - OAUTH_USE_PKCE=true
     networks:
@@ -264,6 +265,8 @@ services:
       KC_DB_USERNAME: ${POSTGRES_USER:-admin}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-admin}
       KC_HTTP_PORT: 80
+      KC_HOSTNAME: "http://localhost:8080"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "8080:80"
     volumes:

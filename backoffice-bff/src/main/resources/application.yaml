@@ -1,0 +1,54 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: backoffice-bff
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            authorization-uri: ${KEYCLOAK_AUTH_URL:http://localhost:8080/realms/UTM/protocol/openid-connect/auth}
+            token-uri: ${KEYCLOAK_TOKEN_URL:http://identity/realms/UTM/protocol/openid-connect/token}
+            jwk-set-uri: ${KEYCLOAK_JWKS_URL:http://identity/realms/UTM/protocol/openid-connect/certs}
+            user-info-uri: ${KEYCLOAK_USERINFO_URL:http://identity/realms/UTM/protocol/openid-connect/userinfo}
+            user-name-attribute: preferred_username
+        registration:
+          backoffice-bff:
+            provider: keycloak
+            client-id: backoffice-bff
+            client-name: Keycloak
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:TVacLC0cQ8tiiEKiTVerTb2YvwQ1TRJF}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile, email, roles
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  session:
+    store-type: redis
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - SaveSession
+          routes:
+            - id: api
+              uri: ${API_GATEWAY_URL:http://nginx}
+              predicates:
+                - Path=/api/**
+              filters:
+                - DedupeResponseHeader=Origin Access-Control-Request-Method Access-Control-Request-Headers
+                - TokenRelay=
+                - StripPrefix=1
+            - id: nextjs
+              uri: ${BACKOFFICE_UI_URL:http://backoffice:3000}
+              predicates:
+                - Path=/**
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: DEBUG
