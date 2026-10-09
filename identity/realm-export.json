@@ -34,6 +34,7 @@
   "verifyEmail": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
+  "passwordPolicy": "length(8) and upperCase(1) and digits(1) and specialChars(1)",
   "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
   "bruteForceProtected": false,
@@ -104,8 +105,8 @@
         "attributes": {}
       },
       {
-        "id": "44444444-4444-4444-4444-444444444444",
-        "name": "viewer",
+        "id": "55555555-5555-5555-5555-555555555555",
+        "name": "atc",
         "composite": false,
         "clientRole": false,
         "containerId": "UTM",
@@ -418,7 +419,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "Admin123@",
           "temporary": false
         }
       ],
@@ -426,10 +427,115 @@
       "requiredActions": [],
       "realmRoles": [
         "default-roles-utm",
-        "admin",
-        "hub_operator",
+        "admin"
+      ],
+      "attributes": {
+        "status": [
+          "active"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
+    },
+    {
+      "id": "7a111111-1111-1111-1111-111111111111",
+      "createdTimestamp": 1728540000000,
+      "username": "operator",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Operator",
+      "lastName": "Trạm SGN",
+      "email": "operator@droneexpress.vn",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Operator123@",
+          "temporary": false
+        }
+      ],
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-utm",
+        "hub_operator"
+      ],
+      "attributes": {
+        "organizationId": [
+          "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        ],
+        "status": [
+          "active"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
+    },
+    {
+      "id": "7a222222-2222-2222-2222-222222222222",
+      "createdTimestamp": 1728540000000,
+      "username": "pilot_nam",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Nam",
+      "lastName": "Nguyễn",
+      "email": "pilot.nam@droneexpress.vn",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pilot123@",
+          "temporary": false
+        }
+      ],
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-utm",
         "pilot"
       ],
+      "attributes": {
+        "organizationId": [
+          "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        ],
+        "pilotLicense": [
+          "PL-VN-2026-88"
+        ],
+        "status": [
+          "active"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
+    },
+    {
+      "id": "7a333333-3333-3333-3333-333333333333",
+      "createdTimestamp": 1728540000000,
+      "username": "atc_hanoi",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Kiểm Soát",
+      "lastName": "Hà Nội",
+      "email": "atc.hanoi@vatc.gov.vn",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "AtcHanoi123@",
+          "temporary": false
+        }
+      ],
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-utm",
+        "atc"
+      ],
+      "attributes": {
+        "status": [
+          "active"
+        ]
+      },
       "notBefore": 0,
       "groups": []
     },
@@ -1061,7 +1167,7 @@
       ]
     },
     {
-      "id": "26490047-2a91-4938-9324-371523ad1e14",
+      "id": "26490047-2a91-4938-9324-371523ad1bfe",
       "clientId": "backoffice-bff",
       "surrogateAuthRequired": false,
       "enabled": true,
@@ -1117,7 +1223,7 @@
       "nodeReRegistrationTimeout": -1,
       "protocolMappers": [
         {
-          "id": "bde88d27-ba50-4b7a-87b3-f610d7e93c2e",
+          "id": "bde88d27-ba50-4b7a-87b3-f610d7e93bfe",
           "name": "realm roles",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-realm-role-mapper",
@@ -1627,6 +1733,51 @@
             "claim.name": "profile",
             "jsonType.label": "String"
           }
+        },
+        {
+          "id": "e1111111-1111-1111-1111-111111111111",
+          "name": "organization id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "organizationId",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "orgId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "e2222222-2222-2222-2222-222222222222",
+          "name": "pilot license",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "pilotLicense",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "pilotLicense",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "e3333333-3333-3333-3333-333333333333",
+          "name": "user status",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "status",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "status",
+            "jsonType.label": "String"
+          }
         }
       ]
     },
@@ -1845,6 +1996,19 @@
           ],
           "algorithm": [
             "RSA-OAEP"
+          ]
+        }
+      }
+    ],
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "id": "e4444444-4444-4444-4444-444444444444",
+        "name": "declarative-user-profile",
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"organizationId\",\"displayName\":\"Organization ID\",\"validations\":{\"pattern\":{\"pattern\":\"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\",\"error-message\":\"Organization ID must be a valid UUID\"}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"pilotLicense\",\"displayName\":\"Pilot License\",\"validations\":{\"length\":{\"max\":100}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"status\",\"displayName\":\"Status\",\"validations\":{\"options\":{\"options\":[\"active\",\"inactive\",\"suspended\"]}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}}]}"
           ]
         }
       }
@@ -2521,6 +2685,7 @@
   "clientAuthenticationFlow": "clients",
   "dockerAuthenticationFlow": "docker auth",
   "attributes": {
+    "userProfileEnabled": "true",
     "cibaBackchannelTokenDeliveryMode": "poll",
     "cibaExpiresIn": "120",
     "cibaAuthRequestedUserHint": "login_hint",

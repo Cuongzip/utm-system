@@ -141,6 +141,7 @@ services:
       - AIRSPACE_SERVICE_URL=http://airspace:8087
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
       - ALERT_SERVICE_URL=http://alert:8093
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-Admin123@}
     depends_on:
       - postgres
       - drone
@@ -236,6 +237,7 @@ services:
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
       - DRONE_SERVICE_URL=http://drone:8085
       - HUB_SERVICE_URL=http://hub:8084
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-Admin123@}
     depends_on:
       - postgres
       - flight
