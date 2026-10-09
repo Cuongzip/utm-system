@@ -20,6 +20,14 @@ server {
     return 302 /swagger-ui/;
   }
 
+  location /organization/ {
+    proxy_pass http://organization:8083/organization/;
+  }
+
+  location /api/v1/organizations {
+    proxy_pass http://organization:8083/organization/api/v1/organizations;
+  }
+
   location /drone/ {
     proxy_pass http://drone:8085/drone/;
   }

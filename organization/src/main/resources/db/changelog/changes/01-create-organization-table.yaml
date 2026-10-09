@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-organization-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: organization
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: registration_number
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: contact_info
+                  type: text
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "active"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            indexName: idx_organization_type
+            tableName: organization
+            columns:
+              - column:
+                  name: type
+        - createIndex:
+            indexName: idx_organization_status
+            tableName: organization
+            columns:
+              - column:
+                  name: status
