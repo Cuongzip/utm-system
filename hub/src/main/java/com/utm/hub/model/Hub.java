@@ -3,6 +3,7 @@ package com.utm.hub.model;
 import com.utm.commonlibrary.model.AbstractAuditEntity;
 import com.utm.hub.model.enumeration.HubStatus;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -36,11 +37,8 @@ public class Hub extends AbstractAuditEntity {
     @Column(name = "name", length = 255, nullable = false)
     private String name;
 
-    @Column(name = "latitude", nullable = false)
-    private Double latitude;
-
-    @Column(name = "longitude", nullable = false)
-    private Double longitude;
+    @Embedded
+    private Location location;
 
     @Column(name = "altitude_msl", nullable = false)
     @Builder.Default

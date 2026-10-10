@@ -1,6 +1,7 @@
 package com.utm.hub.mapper;
 
 import com.utm.hub.model.Hub;
+import com.utm.hub.model.Location;
 import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
@@ -22,7 +23,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface HubMapper {
 
     @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
-    @Mapping(target = "location", expression = "java(new LocationVm(hub.getLatitude(), hub.getLongitude()))")
+    @Mapping(target = "location", source = "location")
     @Mapping(target = "availableDronesCount", ignore = true)
     @Mapping(target = "corridors", ignore = true)
     HubVm toVm(Hub hub);
@@ -31,8 +32,7 @@ public interface HubMapper {
     @Mapping(target = "status", constant = "ACTIVE")
     @Mapping(target = "name", qualifiedByName = "trimString")
     @Mapping(target = "code", qualifiedByName = "trimString")
-    @Mapping(target = "latitude", expression = "java(hubPostVm.location().lat())")
-    @Mapping(target = "longitude", expression = "java(hubPostVm.location().lng())")
+    @Mapping(target = "location", source = "location")
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -42,14 +42,21 @@ public interface HubMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "code", ignore = true)
-    @Mapping(target = "latitude", ignore = true)
-    @Mapping(target = "longitude", ignore = true)
+    @Mapping(target = "location", ignore = true)
     @Mapping(target = "name", qualifiedByName = "trimString")
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     void updateEntityFromPutVm(@MappingTarget Hub hub, HubPutVm hubPutVm);
+
+    @Mapping(target = "lat", source = "latitude")
+    @Mapping(target = "lng", source = "longitude")
+    LocationVm toLocationVm(Location location);
+
+    @Mapping(target = "latitude", source = "lat")
+    @Mapping(target = "longitude", source = "lng")
+    Location toLocation(LocationVm locationVm);
 
     @BeforeMapping
     default void validatePostVm(HubPostVm postVm) {
