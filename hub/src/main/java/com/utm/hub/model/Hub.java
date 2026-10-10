@@ -30,11 +30,11 @@ public class Hub extends AbstractAuditEntity {
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
 
-    @Column(name = "name", length = 100, nullable = false)
-    private String name;
-
     @Column(name = "code", length = 50, nullable = false, unique = true)
     private String code;
+
+    @Column(name = "name", length = 255, nullable = false)
+    private String name;
 
     @Column(name = "latitude", nullable = false)
     private Double latitude;
@@ -42,16 +42,13 @@ public class Hub extends AbstractAuditEntity {
     @Column(name = "longitude", nullable = false)
     private Double longitude;
 
-    @Column(name = "altitude")
-    private Double altitude;
-
-    @Column(name = "capacity", nullable = false)
+    @Column(name = "altitude_msl", nullable = false)
     @Builder.Default
-    private Integer capacity = 1;
+    private Double altitudeMsl = 0.0;
 
-    @Column(name = "charging_pads")
+    @Column(name = "airspace_radius", nullable = false)
     @Builder.Default
-    private Integer chargingPads = 0;
+    private Double airspaceRadius = 1000.0;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)

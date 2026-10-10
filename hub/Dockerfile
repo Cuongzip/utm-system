@@ -11,6 +11,7 @@ COPY telemetry ./telemetry
 COPY simulation ./simulation
 COPY conflict ./conflict
 COPY alert ./alert
+COPY organization ./organization
 RUN mvn clean package -pl hub -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine

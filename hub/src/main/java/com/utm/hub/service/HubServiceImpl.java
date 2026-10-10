@@ -10,11 +10,14 @@ import com.utm.hub.repository.HubRepository;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
 import com.utm.hub.viewmodel.HubVm;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -27,8 +30,23 @@ public class HubServiceImpl implements HubService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HubVm> getAllHubs() {
-        return hubRepository.findAll().stream()
+    public List<HubVm> getHubs(String search, HubStatus status) {
+        Specification<Hub> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (search != null && !search.trim().isBlank()) {
+                String pattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(root.get("code")), pattern)
+                ));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return hubRepository.findAll(spec).stream()
                 .map(hubMapper::toVm)
                 .toList();
     }
@@ -75,8 +93,8 @@ public class HubServiceImpl implements HubService {
     public void deactivateHub(String id) {
         Hub hub = hubRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, id));
-        hub.setStatus(HubStatus.CLOSED);
+        hub.setStatus(HubStatus.INACTIVE);
         hubRepository.save(hub);
-        log.info("Deactivated/Closed Hub with ID: {}", id);
+        log.info("Deactivated Hub with ID: {}", id);
     }
 }

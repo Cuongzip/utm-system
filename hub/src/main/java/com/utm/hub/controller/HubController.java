@@ -1,5 +1,6 @@
 package com.utm.hub.controller;
 
+import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.service.HubService;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
@@ -26,22 +27,24 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/hubs")
 @RequiredArgsConstructor
-@Tag(name = "Hubs / Vertiports Management", description = "Management of Takeoff/Landing Hubs, Vertiports, WGS84 coordinates, and ground charging capacity")
+@Tag(name = "Hubs Management", description = "Takeoff/Landing Vertiport and Hub Station Management")
 public class HubController {
 
     private final HubService hubService;
 
     @GetMapping
     @Operation(
-            summary = "List all Hubs",
-            description = "Retrieve a list of all registered Takeoff/Landing Hubs / Vertiports across the DROPS-UTM system."
+            summary = "List Hubs",
+            description = "Retrieve a list of registered Takeoff/Landing Hubs / Vertiports filtered by search term and status."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -54,15 +57,44 @@ public class HubController {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
-    public ResponseEntity<List<HubVm>> getAllHubs() {
-        return ResponseEntity.ok(hubService.getAllHubs());
+    public ResponseEntity<List<HubVm>> getHubs(
+            @Parameter(description = "Search term for hub name or callsign code")
+            @RequestParam(required = false) String search,
+            @Parameter(description = "Filter by operational status (active, inactive, maintenance)")
+            @RequestParam(required = false) HubStatus status
+    ) {
+        return ResponseEntity.ok(hubService.getHubs(search, status));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(
+            summary = "Get Hub by ID",
+            description = "Retrieve complete technical profile, coordinates, available drones count, and corridors of a Hub."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Hub details retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = HubVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Hub not found with the specified ID", content = @Content)
+    })
+    public ResponseEntity<HubVm> getHubById(
+            @Parameter(description = "Unique UUID of the Hub", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
+            @PathVariable String id
+    ) {
+        return ResponseEntity.ok(hubService.getHubById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('admin')")
     @Operation(
             summary = "Create a new Hub",
-            description = "Register a new Takeoff/Landing Hub, Vertiport, or Ground Control Station. Requires admin role."
+            description = "Register a new Takeoff/Landing Hub or Vertiport. Requires admin role."
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Hub registration parameters",
@@ -71,16 +103,14 @@ public class HubController {
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = HubPostVm.class),
                     examples = @ExampleObject(
-                            name = "Athens Vertiport Alpha",
+                            name = "HubSample",
                             value = """
                                     {
-                                      "name": "Athens Central Vertiport Alpha",
-                                      "code": "HUB-ATH-01",
-                                      "latitude": 37.983810,
-                                      "longitude": 23.727539,
-                                      "altitude": 120.5,
-                                      "capacity": 10,
-                                      "chargingPads": 4
+                                      "code": "HUB-SGN-D1",
+                                      "name": "Trạm Trung Tâm Quận 1",
+                                      "location": { "lat": 10.7769, "lng": 106.7009 },
+                                      "altitudeMsl": 12.5,
+                                      "airspaceRadius": 1500
                                     }
                                     """
                     )
@@ -105,34 +135,11 @@ public class HubController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdHub);
     }
 
-    @GetMapping("/{id}")
-    @Operation(
-            summary = "Get Hub by ID",
-            description = "Retrieve complete technical profile, coordinates, and parking capacity of a Hub."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Hub details retrieved successfully",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = HubVm.class)
-                    )
-            ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Hub not found with the specified ID", content = @Content)
-    })
-    public ResponseEntity<HubVm> getHubById(
-            @Parameter(description = "Unique UUID of the Hub", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-            @PathVariable String id) {
-        return ResponseEntity.ok(hubService.getHubById(id));
-    }
-
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(
             summary = "Update Hub information",
-            description = "Update operational specifications, capacity, or maintenance status of an existing Hub. Requires admin or hub_operator role."
+            description = "Update operational specifications or maintenance status of an existing Hub. Requires admin or hub_operator role."
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Hub update parameters",
@@ -141,13 +148,13 @@ public class HubController {
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = HubPutVm.class),
                     examples = @ExampleObject(
-                            name = "Update Status to Maintenance",
+                            name = "MaintenanceUpdate",
                             value = """
                                     {
-                                      "name": "Athens Central Vertiport Alpha - Maintenance",
-                                      "capacity": 8,
-                                      "status": "maintenance",
-                                      "chargingPads": 3
+                                      "name": "Trạm Trung Tâm Quận 1 - Bảo Trì",
+                                      "altitudeMsl": 15.0,
+                                      "airspaceRadius": 1800,
+                                      "status": "maintenance"
                                     }
                                     """
                     )
@@ -168,28 +175,37 @@ public class HubController {
             @ApiResponse(responseCode = "404", description = "Hub not found", content = @Content)
     })
     public ResponseEntity<HubVm> updateHub(
-            @Parameter(description = "Unique UUID of the Hub", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+            @Parameter(description = "Unique UUID of the Hub", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
             @PathVariable String id,
-            @Valid @RequestBody HubPutVm hubPutVm) {
+            @Valid @RequestBody HubPutVm hubPutVm
+    ) {
         return ResponseEntity.ok(hubService.updateHub(id, hubPutVm));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('admin')")
     @Operation(
-            summary = "Deactivate / Close a Hub",
-            description = "Deactivate a Hub, changing its status to closed. Requires admin role."
+            summary = "Deactivate Hub",
+            description = "Deactivate a Hub by switching its status to inactive. Requires admin role."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Hub deactivated successfully", content = @Content),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Hub deactivated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(value = "{\"message\": \"Hub deactivated successfully\"}")
+                    )
+            ),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required", content = @Content),
             @ApiResponse(responseCode = "404", description = "Hub not found", content = @Content)
     })
-    public ResponseEntity<Void> deleteHub(
-            @Parameter(description = "Unique UUID of the Hub", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-            @PathVariable String id) {
+    public ResponseEntity<Map<String, String>> deleteHub(
+            @Parameter(description = "Unique UUID of the Hub", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
+            @PathVariable String id
+    ) {
         hubService.deactivateHub(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "Hub deactivated successfully"));
     }
 }

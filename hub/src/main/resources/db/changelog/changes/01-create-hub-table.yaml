@@ -13,16 +13,16 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: name
-                  type: varchar(100)
-                  constraints:
-                    nullable: false
-              - column:
                   name: code
                   type: varchar(50)
                   constraints:
                     nullable: false
                     unique: true
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
               - column:
                   name: latitude
                   type: numeric(10, 7)
@@ -34,22 +34,21 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: altitude
+                  name: altitude_msl
                   type: numeric(8, 2)
-              - column:
-                  name: capacity
-                  type: int
-                  defaultValue: 1
+                  defaultValueNumeric: 0.0
                   constraints:
                     nullable: false
               - column:
-                  name: charging_pads
-                  type: int
-                  defaultValue: 0
+                  name: airspace_radius
+                  type: numeric(8, 2)
+                  defaultValueNumeric: 1000.0
+                  constraints:
+                    nullable: false
               - column:
                   name: status
                   type: varchar(50)
-                  defaultValue: "active"
+                  defaultValue: "ACTIVE"
                   constraints:
                     nullable: false
               - column:
@@ -64,3 +63,9 @@ databaseChangeLog:
               - column:
                   name: last_modified_by
                   type: varchar(100)
+        - createIndex:
+            indexName: idx_hub_status
+            tableName: hub
+            columns:
+              - column:
+                  name: status
