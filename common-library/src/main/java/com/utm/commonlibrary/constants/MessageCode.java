@@ -24,6 +24,10 @@ public final class MessageCode {
     public static final String CONFLICT_NOT_FOUND = "CONFLICT_NOT_FOUND";
     public static final String ALERT_NOT_FOUND = "ALERT_NOT_FOUND";
     public static final String ORGANIZATION_NOT_FOUND = "ORGANIZATION_NOT_FOUND";
+    public static final String DEVICE_REGISTRATION_NOT_FOUND = "DEVICE_REGISTRATION_NOT_FOUND";
+    public static final String DEVICE_IDENTIFIER_ALREADY_EXISTED = "DEVICE_IDENTIFIER_ALREADY_EXISTED";
+    public static final String DRONE_ALREADY_HAS_DEVICE_REGISTRATION = "DRONE_ALREADY_HAS_DEVICE_REGISTRATION";
+    public static final String DRONE_IN_FLIGHT_CANNOT_REVOKE = "DRONE_IN_FLIGHT_CANNOT_REVOKE";
 
     private MessageCode() {
     }

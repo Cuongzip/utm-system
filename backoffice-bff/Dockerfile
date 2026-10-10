@@ -10,6 +10,7 @@ COPY telemetry ./telemetry
 COPY simulation ./simulation
 COPY conflict ./conflict
 COPY alert ./alert
+COPY connectivity ./connectivity
 COPY backoffice-bff ./backoffice-bff
 RUN mvn clean package -pl backoffice-bff -am -DskipTests
 

@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-device-registration-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: device_registrations
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: drone_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: device_identifier
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: connection_status
+                  type: varchar(50)
+                  defaultValue: "OFFLINE"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: socket_id
+                  type: varchar(100)
+              - column:
+                  name: certificate_fingerprint
+                  type: varchar(128)
+              - column:
+                  name: last_seen_at
+                  type: timestamp with time zone
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: device_registrations
+            indexName: idx_device_reg_connection_status
+            columns:
+              - column:
+                  name: connection_status

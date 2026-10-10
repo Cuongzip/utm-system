@@ -13,10 +13,10 @@ COPY conflict ./conflict
 COPY alert ./alert
 COPY connectivity ./connectivity
 COPY organization ./organization
-RUN mvn clean package -pl airspace -am -DskipTests
+RUN mvn clean package -pl connectivity -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /build/airspace/target/airspace*.jar app.jar
-EXPOSE 8087
+COPY --from=builder /build/connectivity/target/connectivity*.jar app.jar
+EXPOSE 8094
 ENTRYPOINT ["java", "-jar", "app.jar"]

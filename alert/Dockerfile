@@ -11,6 +11,7 @@ COPY telemetry ./telemetry
 COPY simulation ./simulation
 COPY conflict ./conflict
 COPY alert ./alert
+COPY connectivity ./connectivity
 COPY organization ./organization
 RUN mvn clean package -pl alert -am -DskipTests
 

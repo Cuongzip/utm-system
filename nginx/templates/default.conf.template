@@ -97,6 +97,14 @@ server {
     proxy_pass http://alert:8093/alert/api/v1/alerts;
   }
 
+  location /connectivity/ {
+    proxy_pass http://connectivity:8094/connectivity/;
+  }
+
+  location /api/v1/connectivity {
+    proxy_pass http://connectivity:8094/connectivity/api/v1/connectivity;
+  }
+
   location /swagger-ui/ {
     proxy_pass http://swagger-ui:8080;
   }

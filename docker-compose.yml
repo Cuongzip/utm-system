@@ -17,6 +17,7 @@ services:
       - simulation
       - conflict
       - alert
+      - connectivity
       - backoffice-bff
       - swagger-ui
       - identity
@@ -265,13 +266,35 @@ services:
     networks:
       - utm-network
 
+  connectivity:
+    build:
+      context: .
+      dockerfile: ./connectivity/Dockerfile
+    image: connectivity:latest
+    ports:
+      - "8094:8094"
+    environment:
+      - SERVER_PORT=8094
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=utm_connectivity
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KEYCLOAK_URL=http://identity
+      - DRONE_SERVICE_URL=http://drone:8085
+    depends_on:
+      - postgres
+      - drone
+    networks:
+      - utm-network
+
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.17.14
     ports:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/organization/v3/api-docs', name: 'Organization Service' }, { url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }]"
+      - "URLS=[{ url: '/organization/v3/api-docs', name: 'Organization Service' }, { url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/connectivity/v3/api-docs', name: 'Connectivity Service' }]"
       - OAUTH_CLIENT_ID=swagger-ui
       - OAUTH_USE_PKCE=true
     networks:
@@ -302,6 +325,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    command: "postgres -c max_connections=300"
     hostname: ${POSTGRES_HOST:-postgres}
     ports:
       - "${POSTGRES_LOCAL_PORT:-54320}:5432"
