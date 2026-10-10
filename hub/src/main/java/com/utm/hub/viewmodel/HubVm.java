@@ -15,7 +15,7 @@ public record HubVm(
         @Schema(description = "Unique identification code / callsign of the Hub", example = "HUB-SGN-D1")
         String code,
 
-        @Schema(description = "Display name of the Hub / Vertiport", example = "Trạm Trung Tâm Quận 1")
+        @Schema(description = "Display name of the Hub / Vertiport", example = "Central Vertiport Hub D1")
         String name,
 
         @Schema(description = "GPS Location coordinates")

@@ -14,13 +14,20 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(componentModel = "spring")
+@Mapper(
+        componentModel = "spring",
+        builder = @org.mapstruct.Builder(disableBuilder = true)
+)
 public interface AirspaceZoneMapper {
 
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "geometry", source = "geometry", qualifiedByName = "geoJsonToString")
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     AirspaceZone toEntity(AirspaceZonePostVm postVm);
 
     @Mapping(target = "geometry", source = "geometry", qualifiedByName = "stringToGeoJson")

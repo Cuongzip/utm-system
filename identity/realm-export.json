@@ -445,7 +445,7 @@
       "totp": false,
       "emailVerified": true,
       "firstName": "Operator",
-      "lastName": "Trạm SGN",
+      "lastName": "Station SGN",
       "email": "operator@droneexpress.vn",
       "credentials": [
         {
@@ -479,7 +479,7 @@
       "totp": false,
       "emailVerified": true,
       "firstName": "Nam",
-      "lastName": "Nguyễn",
+      "lastName": "Nguyen",
       "email": "pilot.nam@droneexpress.vn",
       "credentials": [
         {
@@ -515,8 +515,8 @@
       "enabled": true,
       "totp": false,
       "emailVerified": true,
-      "firstName": "Kiểm Soát",
-      "lastName": "Hà Nội",
+      "firstName": "Hanoi",
+      "lastName": "ATC Controller",
       "email": "atc.hanoi@vatc.gov.vn",
       "credentials": [
         {

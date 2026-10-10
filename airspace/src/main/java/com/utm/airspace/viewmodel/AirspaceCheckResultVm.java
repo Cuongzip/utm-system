@@ -5,10 +5,10 @@ import java.util.List;
 
 @Schema(description = "Result of 3D point airspace compliance check")
 public record AirspaceCheckResultVm(
-        @Schema(description = "True if flight operation is allowed at this coordinate without violating prohibited/restricted zones", example = "true")
-        boolean isAllowed,
+        @Schema(description = "True if coordinate point is safe and does not violate restricted or no-fly zones", example = "true")
+        boolean safe,
 
-        @Schema(description = "List of airspace zones intersected by this point")
-        List<AirspaceZoneVm> violatedZones
+        @Schema(description = "List of airspace violations detected")
+        List<AirspaceViolationVm> violations
 ) {
 }

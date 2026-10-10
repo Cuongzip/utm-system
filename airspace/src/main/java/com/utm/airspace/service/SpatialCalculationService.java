@@ -2,6 +2,7 @@ package com.utm.airspace.service;
 
 import com.utm.airspace.viewmodel.AirspaceCheckPointVm;
 import com.utm.airspace.viewmodel.GeoJsonPolygonVm;
+import com.utm.commonlibrary.exception.BadRequestException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -12,10 +13,36 @@ public class SpatialCalculationService {
 
     private static final double EARTH_RADIUS_METERS = 6371000.0;
 
-    public boolean isPointInZone(double lat, double lon, double alt, GeoJsonPolygonVm geometry, double floorAltitudeM, double ceilingAltitudeM) {
-        if (alt < floorAltitudeM || alt > ceilingAltitudeM) {
-            return false;
+    public void validatePolygon(GeoJsonPolygonVm geometry) {
+        if (geometry == null) {
+            throw new BadRequestException("Geometry cannot be null");
         }
+        if (!"Polygon".equalsIgnoreCase(geometry.type())) {
+            throw new BadRequestException("Geometry type must be 'Polygon'");
+        }
+        if (geometry.coordinates() == null || geometry.coordinates().isEmpty()) {
+            throw new BadRequestException("Polygon coordinates cannot be empty");
+        }
+
+        List<List<Double>> exteriorRing = geometry.coordinates().getFirst();
+        if (exteriorRing == null || exteriorRing.size() < 4) {
+            throw new BadRequestException("Polygon exterior ring must contain at least 4 coordinate pairs (closed ring)");
+        }
+
+        List<Double> first = exteriorRing.getFirst();
+        List<Double> last = exteriorRing.getLast();
+        if (first.size() < 2 || last.size() < 2) {
+            throw new BadRequestException("Coordinates must contain at least [longitude, latitude]");
+        }
+
+        double diffLon = Math.abs(first.get(0) - last.get(0));
+        double diffLat = Math.abs(first.get(1) - last.get(1));
+        if (diffLon > 1e-6 || diffLat > 1e-6) {
+            throw new BadRequestException("Polygon ring must be closed (first coordinate must match last coordinate)");
+        }
+    }
+
+    public boolean isPointInPolygon(double lat, double lon, GeoJsonPolygonVm geometry) {
         if (geometry == null || geometry.coordinates() == null || geometry.coordinates().isEmpty()) {
             return false;
         }
@@ -35,6 +62,14 @@ public class SpatialCalculationService {
         return true;
     }
 
+    public boolean isPointInZone(double lat, double lon, double alt, GeoJsonPolygonVm geometry, double altitudeCeiling) {
+        if (alt > altitudeCeiling) {
+            return false;
+        }
+        return isPointInPolygon(lat, lon, geometry);
+    }
+
+
     public boolean isPointInPolygonRing(double lat, double lon, List<List<Double>> ring) {
         if (ring == null || ring.size() < 3) {
             return false;
@@ -49,10 +84,10 @@ public class SpatialCalculationService {
                 continue;
             }
 
-            double xi = vi.get(0);
-            double yi = vi.get(1);
-            double xj = vj.get(0);
-            double yj = vj.get(1);
+            double xi = vi.get(0); // lon
+            double yi = vi.get(1); // lat
+            double xj = vj.get(0); // lon
+            double yj = vj.get(1); // lat
 
             boolean intersect = ((yi > lat) != (yj > lat))
                     && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
@@ -101,20 +136,15 @@ public class SpatialCalculationService {
 
                 sampledPoints.add(new SampledPoint(lat, lon, alt, i, currentDist));
             }
+
             cumulativeDistance += segDist;
         }
 
-        AirspaceCheckPointVm last = points.getLast();
-        sampledPoints.add(new SampledPoint(last.lat(), last.lon(), last.alt(), points.size() - 1, cumulativeDistance));
+        AirspaceCheckPointVm lastPoint = points.getLast();
+        sampledPoints.add(new SampledPoint(lastPoint.lat(), lastPoint.lon(), lastPoint.alt(), points.size() - 1, cumulativeDistance));
 
         return sampledPoints;
     }
 
-    public record SampledPoint(
-            double lat,
-            double lon,
-            double alt,
-            int segmentIndex,
-            double distanceFromStartM
-    ) {}
+    public record SampledPoint(double lat, double lon, double alt, int segmentIndex, double distanceFromStartM) {}
 }

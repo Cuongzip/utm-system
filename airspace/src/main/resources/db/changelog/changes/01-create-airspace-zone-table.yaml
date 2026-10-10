@@ -13,24 +13,17 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
+                  name: hub_id
+                  type: varchar(36)
+              - column:
                   name: name
                   type: varchar(255)
                   constraints:
                     nullable: false
                     unique: true
               - column:
-                  name: type
+                  name: zone_type
                   type: varchar(50)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: floor_altitude_m
-                  type: double precision
-                  constraints:
-                    nullable: false
-              - column:
-                  name: ceiling_altitude_m
-                  type: double precision
                   constraints:
                     nullable: false
               - column:
@@ -39,8 +32,11 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: hub_id
-                  type: varchar(36)
+                  name: altitude_ceiling
+                  type: double precision
+                  defaultValueNumeric: 120.0
+                  constraints:
+                    nullable: false
               - column:
                   name: status
                   type: varchar(50)
@@ -64,10 +60,10 @@ databaseChangeLog:
                   type: varchar(100)
         - createIndex:
             tableName: airspace_zone
-            indexName: idx_airspace_zone_type
+            indexName: idx_airspace_zone_zone_type
             columns:
               - column:
-                  name: type
+                  name: zone_type
         - createIndex:
             tableName: airspace_zone
             indexName: idx_airspace_zone_status

@@ -16,7 +16,7 @@ public interface AirspaceService {
 
     AirspaceCheckPathResultVm checkPath(AirspaceCheckPathVm checkPathVm);
 
-    List<AirspaceZoneVm> getAllZones(String hubId, String type, String status);
+    List<AirspaceZoneVm> getAllZones(String hubId, String zoneType, String status);
 
     AirspaceZoneVm getZoneById(String id);
 

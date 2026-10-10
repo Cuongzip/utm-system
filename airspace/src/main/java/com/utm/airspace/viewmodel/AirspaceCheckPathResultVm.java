@@ -5,11 +5,10 @@ import java.util.List;
 
 @Schema(description = "Result of flight route path airspace conflict check")
 public record AirspaceCheckPathResultVm(
-        @Schema(description = "True if entire trajectory path is allowed with no prohibited/restricted conflicts", example = "true")
-        boolean isAllowed,
+        @Schema(description = "True if entire trajectory path is allowed with no prohibited or restricted conflicts", example = "true")
+        boolean safe,
 
         @Schema(description = "List of airspace zones / conflicts detected along the trajectory")
-        List<AirspacePathConflictVm> violatedZones
+        List<AirspacePathConflictVm> violations
 ) {
 }
-

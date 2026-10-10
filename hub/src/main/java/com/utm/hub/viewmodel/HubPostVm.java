@@ -13,7 +13,7 @@ public record HubPostVm(
         @NotBlank(message = "Hub code is required")
         String code,
 
-        @Schema(description = "Name of the Hub / Vertiport", example = "Trạm Trung Tâm Quận 1")
+        @Schema(description = "Name of the Hub / Vertiport", example = "Central Vertiport Hub D1")
         @NotBlank(message = "Hub name is required")
         String name,
 

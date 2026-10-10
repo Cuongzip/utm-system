@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/airspace")
@@ -94,17 +95,17 @@ public class AirspaceController {
     public ResponseEntity<List<AirspaceZoneVm>> getAllZones(
             @Parameter(description = "Filter by associated Vertiport Hub ID")
             @RequestParam(required = false) String hubId,
-            @Parameter(description = "Filter by zone classification (restricted, prohibited, warning, corridor)")
-            @RequestParam(required = false) String type,
+            @Parameter(description = "Filter by zone classification (no_fly_zone, restricted, hub_corridor, warning)")
+            @RequestParam(required = false) String zoneType,
             @Parameter(description = "Filter by operational status (active, inactive)")
             @RequestParam(required = false) String status
     ) {
-        return ResponseEntity.ok(airspaceService.getAllZones(hubId, type, status));
+        return ResponseEntity.ok(airspaceService.getAllZones(hubId, zoneType, status));
     }
 
     @PostMapping("/zones")
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
-    @Operation(summary = "Create a new Airspace Zone / Geofence", description = "Establish a new 3D airspace restriction zone, buffer corridor, or temporary flight restriction (TFR). Requires admin or hub_operator role.")
+    @PreAuthorize("hasAnyRole('admin', 'atc')")
+    @Operation(summary = "Create a new Airspace Zone / Geofence", description = "Establish a new 3D airspace restriction zone, buffer corridor, or temporary flight restriction. Requires admin or atc role.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
@@ -116,7 +117,7 @@ public class AirspaceController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request payload or geometry error", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Requires admin or atc role", content = @Content),
             @ApiResponse(responseCode = "409", description = "Airspace zone name already exists", content = @Content)
     })
     public ResponseEntity<AirspaceZoneVm> createZone(@Valid @RequestBody AirspaceZonePostVm postVm) {
@@ -139,15 +140,15 @@ public class AirspaceController {
             @ApiResponse(responseCode = "404", description = "Airspace zone not found", content = @Content)
     })
     public ResponseEntity<AirspaceZoneVm> getZoneById(
-            @Parameter(description = "Unique UUID identifier of the airspace zone", example = "zone-ath-lgav-01")
+            @Parameter(description = "Unique UUID identifier of the airspace zone", example = "zone-sgn-palace-01")
             @PathVariable String id
     ) {
         return ResponseEntity.ok(airspaceService.getZoneById(id));
     }
 
     @PutMapping("/zones/{id}")
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
-    @Operation(summary = "Update Airspace Zone", description = "Update spatial boundary coordinates, altitude envelope, or status of an existing airspace zone. Requires admin or hub_operator role.")
+    @PreAuthorize("hasAnyRole('admin', 'atc')")
+    @Operation(summary = "Update Airspace Zone", description = "Update spatial boundary coordinates, altitude envelope, or status of an existing airspace zone. Requires admin or atc role.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -159,12 +160,12 @@ public class AirspaceController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request payload or geometry error", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Requires admin or atc role", content = @Content),
             @ApiResponse(responseCode = "404", description = "Airspace zone not found", content = @Content),
             @ApiResponse(responseCode = "409", description = "Airspace zone name already exists", content = @Content)
     })
     public ResponseEntity<AirspaceZoneVm> updateZone(
-            @Parameter(description = "Unique UUID identifier of the airspace zone", example = "zone-ath-lgav-01")
+            @Parameter(description = "Unique UUID identifier of the airspace zone", example = "zone-sgn-palace-01")
             @PathVariable String id,
             @Valid @RequestBody AirspaceZonePutVm putVm
     ) {
@@ -173,18 +174,18 @@ public class AirspaceController {
 
     @DeleteMapping("/zones/{id}")
     @PreAuthorize("hasRole('admin')")
-    @Operation(summary = "Delete Airspace Zone", description = "Decommission and permanently remove an airspace zone or geofence restriction. Requires admin role.")
+    @Operation(summary = "Deactivate Airspace Zone", description = "Soft delete an airspace zone or geofence restriction by marking its status as inactive. Requires admin role.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Airspace zone deleted successfully", content = @Content),
+            @ApiResponse(responseCode = "200", description = "Airspace zone deactivated successfully", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required", content = @Content),
             @ApiResponse(responseCode = "404", description = "Airspace zone not found", content = @Content)
     })
-    public ResponseEntity<Void> deleteZone(
-            @Parameter(description = "Unique UUID identifier of the airspace zone", example = "zone-ath-lgav-01")
+    public ResponseEntity<Map<String, String>> deleteZone(
+            @Parameter(description = "Unique UUID identifier of the airspace zone", example = "zone-sgn-palace-01")
             @PathVariable String id
     ) {
         airspaceService.deleteZone(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "Airspace zone deactivated successfully"));
     }
 }

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 @Schema(description = "Request payload for updating an existing Hub / Vertiport")
 public record HubPutVm(
-        @Schema(description = "Updated name of the Hub", example = "Trạm Trung Tâm Quận 1 - Mở Rộng")
+        @Schema(description = "Updated name of the Hub", example = "Central Vertiport Hub D1 - Expansion")
         String name,
 
         @Schema(description = "Updated altitude in meters above mean sea level", example = "15.0")
