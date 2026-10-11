@@ -1,6 +1,7 @@
 package com.utm.hub.service;
 
 import com.utm.hub.model.enumeration.HubStatus;
+import com.utm.hub.viewmodel.HubListVm;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
 import com.utm.hub.viewmodel.HubVm;
@@ -9,7 +10,7 @@ import java.util.List;
 
 public interface HubService {
 
-    List<HubVm> getHubs(String search, HubStatus status);
+    HubListVm getHubs(String search, HubStatus status, int limit, int offset);
 
     HubVm getHubById(String id);
 

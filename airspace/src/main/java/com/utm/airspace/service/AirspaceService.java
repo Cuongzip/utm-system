@@ -4,6 +4,7 @@ import com.utm.airspace.viewmodel.AirspaceCheckPathResultVm;
 import com.utm.airspace.viewmodel.AirspaceCheckPathVm;
 import com.utm.airspace.viewmodel.AirspaceCheckResultVm;
 import com.utm.airspace.viewmodel.AirspaceCheckVm;
+import com.utm.airspace.viewmodel.AirspaceZoneListVm;
 import com.utm.airspace.viewmodel.AirspaceZonePostVm;
 import com.utm.airspace.viewmodel.AirspaceZonePutVm;
 import com.utm.airspace.viewmodel.AirspaceZoneVm;
@@ -16,7 +17,7 @@ public interface AirspaceService {
 
     AirspaceCheckPathResultVm checkPath(AirspaceCheckPathVm checkPathVm);
 
-    List<AirspaceZoneVm> getAllZones(String hubId, String zoneType, String status);
+    AirspaceZoneListVm getAllZones(String hubId, String zoneType, String status, int limit, int offset);
 
     AirspaceZoneVm getZoneById(String id);
 

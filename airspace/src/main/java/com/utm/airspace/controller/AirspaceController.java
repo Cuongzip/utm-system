@@ -5,6 +5,7 @@ import com.utm.airspace.viewmodel.AirspaceCheckPathResultVm;
 import com.utm.airspace.viewmodel.AirspaceCheckPathVm;
 import com.utm.airspace.viewmodel.AirspaceCheckResultVm;
 import com.utm.airspace.viewmodel.AirspaceCheckVm;
+import com.utm.airspace.viewmodel.AirspaceZoneListVm;
 import com.utm.airspace.viewmodel.AirspaceZonePostVm;
 import com.utm.airspace.viewmodel.AirspaceZonePutVm;
 import com.utm.airspace.viewmodel.AirspaceZoneVm;
@@ -80,27 +81,31 @@ public class AirspaceController {
     }
 
     @GetMapping("/zones")
-    @Operation(summary = "List all Airspace Zones", description = "Retrieve a list of all active or configured airspace zones and geofences with optional filtering.")
+    @Operation(summary = "List all Airspace Zones", description = "Retrieve a paginated and filtered list of active or configured airspace zones and geofences.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
                     description = "Airspace zones retrieved successfully",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            array = @ArraySchema(schema = @Schema(implementation = AirspaceZoneVm.class))
+                            schema = @Schema(implementation = AirspaceZoneListVm.class)
                     )
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
-    public ResponseEntity<List<AirspaceZoneVm>> getAllZones(
+    public ResponseEntity<AirspaceZoneListVm> getAllZones(
             @Parameter(description = "Filter by associated Vertiport Hub ID")
             @RequestParam(required = false) String hubId,
             @Parameter(description = "Filter by zone classification (no_fly_zone, restricted, hub_corridor, warning)")
             @RequestParam(required = false) String zoneType,
             @Parameter(description = "Filter by operational status (active, inactive)")
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
+            @RequestParam(defaultValue = "20") int limit,
+            @Parameter(description = "Offset index (default: 0)")
+            @RequestParam(defaultValue = "0") int offset
     ) {
-        return ResponseEntity.ok(airspaceService.getAllZones(hubId, zoneType, status));
+        return ResponseEntity.ok(airspaceService.getAllZones(hubId, zoneType, status, limit, offset));
     }
 
     @PostMapping("/zones")

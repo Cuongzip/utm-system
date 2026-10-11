@@ -12,6 +12,7 @@ import com.utm.airspace.viewmodel.AirspaceCheckResultVm;
 import com.utm.airspace.viewmodel.AirspaceCheckVm;
 import com.utm.airspace.viewmodel.AirspacePathConflictVm;
 import com.utm.airspace.viewmodel.AirspaceViolationVm;
+import com.utm.airspace.viewmodel.AirspaceZoneListVm;
 import com.utm.airspace.viewmodel.AirspaceZonePostVm;
 import com.utm.airspace.viewmodel.AirspaceZonePutVm;
 import com.utm.airspace.viewmodel.AirspaceZoneVm;
@@ -20,6 +21,10 @@ import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -149,11 +154,25 @@ public class AirspaceServiceImpl implements AirspaceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AirspaceZoneVm> getAllZones(String hubId, String zoneType, String status) {
-        return airspaceZoneRepository.findAll(AirspaceZoneRepository.filterBy(hubId, zoneType, status))
-                .stream()
+    public AirspaceZoneListVm getAllZones(String hubId, String zoneType, String status, int limit, int offset) {
+        var spec = AirspaceZoneRepository.filterBy(hubId, zoneType, status);
+
+        if (limit <= 0) {
+            List<AirspaceZone> all = airspaceZoneRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
+            List<AirspaceZoneVm> items = all.stream().map(airspaceZoneMapper::toVm).toList();
+            return AirspaceZoneListVm.of(items, items.size());
+        }
+
+        int pageSize = limit;
+        int pageNumber = offset > 0 ? (offset / pageSize) : 0;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdOn"));
+
+        Page<AirspaceZone> page = airspaceZoneRepository.findAll(spec, pageable);
+        List<AirspaceZoneVm> items = page.getContent().stream()
                 .map(airspaceZoneMapper::toVm)
                 .toList();
+
+        return AirspaceZoneListVm.of(items, page.getTotalElements());
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.utm.hub.controller;
 
 import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.service.HubService;
+import com.utm.hub.viewmodel.HubListVm;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
 import com.utm.hub.viewmodel.HubVm;
@@ -44,7 +45,7 @@ public class HubController {
     @GetMapping
     @Operation(
             summary = "List Hubs",
-            description = "Retrieve a list of registered Takeoff/Landing Hubs / Vertiports filtered by search term and status."
+            description = "Retrieve a paginated and filtered list of registered Takeoff/Landing Hubs / Vertiports."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -52,18 +53,22 @@ public class HubController {
                     description = "Hubs retrieved successfully",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            array = @ArraySchema(schema = @Schema(implementation = HubVm.class))
+                            schema = @Schema(implementation = HubListVm.class)
                     )
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
-    public ResponseEntity<List<HubVm>> getHubs(
+    public ResponseEntity<HubListVm> getHubs(
             @Parameter(description = "Search term for hub name or callsign code")
             @RequestParam(required = false) String search,
             @Parameter(description = "Filter by operational status (active, inactive, maintenance)")
-            @RequestParam(required = false) HubStatus status
+            @RequestParam(required = false) HubStatus status,
+            @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
+            @RequestParam(defaultValue = "20") int limit,
+            @Parameter(description = "Offset index (default: 0)")
+            @RequestParam(defaultValue = "0") int offset
     ) {
-        return ResponseEntity.ok(hubService.getHubs(search, status));
+        return ResponseEntity.ok(hubService.getHubs(search, status, limit, offset));
     }
 
     @GetMapping("/{id}")

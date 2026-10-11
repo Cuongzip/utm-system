@@ -3,18 +3,16 @@ package com.utm.connectivity.controller;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.service.DeviceRegistrationService;
 import com.utm.connectivity.viewmodel.DeviceHeartbeatPostVm;
+import com.utm.connectivity.viewmodel.DeviceRegistrationListVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
 import com.utm.connectivity.viewmodel.HeartbeatResultVm;
 import com.utm.connectivity.viewmodel.RevokeResultVm;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,12 +47,18 @@ public class DeviceRegistrationController {
 
     @GetMapping("/devices")
     @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
-    @Operation(summary = "List registered devices", description = "Returns a paginated list of registered devices with optional connection status filter")
-    public ResponseEntity<Page<DeviceRegistrationVm>> getDevices(
+    @Operation(summary = "List registered devices", description = "Retrieve a paginated and filtered list of registered devices in the DROPS-UTM system.")
+    public ResponseEntity<DeviceRegistrationListVm> getDevices(
+            @Parameter(description = "Filter by device connection status (online, offline, connecting)")
             @RequestParam(name = "connectionStatus", required = false) DeviceConnectionStatus connectionStatus,
-            @PageableDefault(size = 20, sort = "createdOn", direction = Sort.Direction.DESC) Pageable pageable
+            @Parameter(description = "Search term for hardware device identifier or drone ID")
+            @RequestParam(name = "search", required = false) String search,
+            @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
+            @RequestParam(defaultValue = "20") int limit,
+            @Parameter(description = "Offset index (default: 0)")
+            @RequestParam(defaultValue = "0") int offset
     ) {
-        Page<DeviceRegistrationVm> result = deviceRegistrationService.getDevices(connectionStatus, pageable);
+        DeviceRegistrationListVm result = deviceRegistrationService.getDevices(connectionStatus, search, limit, offset);
         return ResponseEntity.ok(result);
     }
 

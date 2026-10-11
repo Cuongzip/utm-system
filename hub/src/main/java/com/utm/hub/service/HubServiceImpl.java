@@ -7,12 +7,17 @@ import com.utm.hub.mapper.HubMapper;
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.repository.HubRepository;
+import com.utm.hub.viewmodel.HubListVm;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
 import com.utm.hub.viewmodel.HubVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +35,7 @@ public class HubServiceImpl implements HubService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<HubVm> getHubs(String search, HubStatus status) {
+    public HubListVm getHubs(String search, HubStatus status, int limit, int offset) {
         Specification<Hub> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (search != null && !search.trim().isBlank()) {
@@ -46,9 +51,22 @@ public class HubServiceImpl implements HubService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return hubRepository.findAll(spec).stream()
+        if (limit <= 0) {
+            List<Hub> all = hubRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
+            List<HubVm> items = all.stream().map(hubMapper::toVm).toList();
+            return HubListVm.of(items, items.size());
+        }
+
+        int pageSize = limit;
+        int pageNumber = offset > 0 ? (offset / pageSize) : 0;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdOn"));
+
+        Page<Hub> page = hubRepository.findAll(spec, pageable);
+        List<HubVm> items = page.getContent().stream()
                 .map(hubMapper::toVm)
                 .toList();
+
+        return HubListVm.of(items, page.getTotalElements());
     }
 
     @Override

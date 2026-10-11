@@ -9,19 +9,25 @@ import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.repository.DeviceRegistrationRepository;
 import com.utm.connectivity.viewmodel.DeviceHeartbeatPostVm;
+import com.utm.connectivity.viewmodel.DeviceRegistrationListVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
 import com.utm.connectivity.viewmodel.DroneResponseVm;
 import com.utm.connectivity.viewmodel.HeartbeatResultVm;
 import com.utm.connectivity.viewmodel.RevokeResultVm;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,18 +61,42 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DeviceRegistrationVm> getDevices(DeviceConnectionStatus connectionStatus, Pageable pageable) {
-        Page<DeviceRegistration> page;
-        if (connectionStatus != null) {
-            page = deviceRegistrationRepository.findByConnectionStatus(connectionStatus, pageable);
-        } else {
-            page = deviceRegistrationRepository.findAll(pageable);
+    public DeviceRegistrationListVm getDevices(DeviceConnectionStatus connectionStatus, String search, int limit, int offset) {
+        Specification<DeviceRegistration> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (connectionStatus != null) {
+                predicates.add(cb.equal(root.get("connectionStatus"), connectionStatus));
+            }
+            if (search != null && !search.trim().isBlank()) {
+                String searchPattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("deviceIdentifier")), searchPattern),
+                        cb.like(cb.lower(root.get("droneId")), searchPattern)
+                ));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        if (limit <= 0) {
+            List<DeviceRegistration> all = deviceRegistrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
+            List<DeviceRegistrationVm> items = all.stream().map(reg -> {
+                Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
+                return mapper.toVm(reg, droneOpt.orElse(null));
+            }).toList();
+            return DeviceRegistrationListVm.of(items, items.size());
         }
 
-        return page.map(reg -> {
+        int pageSize = limit;
+        int pageNumber = offset > 0 ? (offset / pageSize) : 0;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdOn"));
+
+        Page<DeviceRegistration> page = deviceRegistrationRepository.findAll(spec, pageable);
+        List<DeviceRegistrationVm> items = page.getContent().stream().map(reg -> {
             Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
             return mapper.toVm(reg, droneOpt.orElse(null));
-        });
+        }).toList();
+
+        return DeviceRegistrationListVm.of(items, page.getTotalElements());
     }
 
     @Override

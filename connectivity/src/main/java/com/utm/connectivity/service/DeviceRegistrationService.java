@@ -2,12 +2,11 @@ package com.utm.connectivity.service;
 
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.viewmodel.DeviceHeartbeatPostVm;
+import com.utm.connectivity.viewmodel.DeviceRegistrationListVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
 import com.utm.connectivity.viewmodel.HeartbeatResultVm;
 import com.utm.connectivity.viewmodel.RevokeResultVm;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -15,7 +14,7 @@ public interface DeviceRegistrationService {
 
     DeviceRegistrationVm registerDevice(DeviceRegistrationPostVm postVm);
 
-    Page<DeviceRegistrationVm> getDevices(DeviceConnectionStatus connectionStatus, Pageable pageable);
+    DeviceRegistrationListVm getDevices(DeviceConnectionStatus connectionStatus, String search, int limit, int offset);
 
     List<DeviceRegistrationVm> getOnlineDevices();
 
