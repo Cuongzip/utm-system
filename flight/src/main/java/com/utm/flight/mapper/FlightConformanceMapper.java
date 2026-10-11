@@ -5,15 +5,17 @@ import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.viewmodel.FlightConformanceVm;
 import com.utm.flight.viewmodel.TelemetryRecordVm;
 import org.mapstruct.BeanMapping;
+import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        builder = @Builder(disableBuilder = true)
 )
 public interface FlightConformanceMapper {
 

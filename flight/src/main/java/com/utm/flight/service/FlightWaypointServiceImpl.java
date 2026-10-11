@@ -19,7 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -118,7 +122,15 @@ public class FlightWaypointServiceImpl implements FlightWaypointService {
         flight.removeWaypoint(waypoint);
         flightWaypointRepository.delete(waypoint);
         flightWaypointRepository.flush();
-        log.info("Deleted waypoint ID: {} from flight: {}", waypointId, flightId);
+
+        List<FlightWaypoint> remaining = flightWaypointRepository.findByFlightIdOrderBySequenceAsc(flightId);
+        int seq = 1;
+        for (FlightWaypoint w : remaining) {
+            w.setSequence(seq++);
+        }
+        flightWaypointRepository.saveAll(remaining);
+        flightWaypointRepository.flush();
+        log.info("Deleted waypoint ID: {} from flight: {} and re-indexed sequences", waypointId, flightId);
     }
 
     @Override
@@ -132,15 +144,28 @@ public class FlightWaypointServiceImpl implements FlightWaypointService {
                     "Cannot reorder waypoints of an active or completed flight");
         }
 
-        if (reorderVm != null && reorderVm.order() != null) {
-            for (WaypointOrderItemVm item : reorderVm.order()) {
-                FlightWaypoint wp = flightWaypointRepository.findByIdAndFlightId(item.waypointId(), flightId)
-                        .orElseThrow(() -> new NotFoundException(MessageCode.WAYPOINT_NOT_FOUND, item.waypointId()));
-                wp.setSequence(item.sequence());
-                flightWaypointRepository.save(wp);
-            }
-            flightWaypointRepository.flush();
+        List<FlightWaypoint> existingWaypoints = flightWaypointRepository.findByFlightIdOrderBySequenceAsc(flightId);
+        if (reorderVm == null || reorderVm.order() == null || reorderVm.order().size() != existingWaypoints.size()) {
+            throw new BadRequestException(MessageCode.WAYPOINT_REORDER_INVALID);
         }
+
+        Map<String, FlightWaypoint> waypointMap = existingWaypoints.stream()
+                .collect(Collectors.toMap(FlightWaypoint::getId, w -> w));
+
+        Set<Integer> assignedSequences = new HashSet<>();
+        for (WaypointOrderItemVm item : reorderVm.order()) {
+            if (!waypointMap.containsKey(item.waypointId()) || !assignedSequences.add(item.sequence())) {
+                throw new BadRequestException(MessageCode.WAYPOINT_REORDER_INVALID);
+            }
+        }
+
+        for (WaypointOrderItemVm item : reorderVm.order()) {
+            FlightWaypoint wp = waypointMap.get(item.waypointId());
+            wp.setSequence(item.sequence());
+        }
+
+        flightWaypointRepository.saveAll(existingWaypoints);
+        flightWaypointRepository.flush();
 
         log.info("Reordered waypoints for flight: {}", flightId);
         return waypointMapper.toVmList(flightWaypointRepository.findByFlightIdOrderBySequenceAsc(flightId));

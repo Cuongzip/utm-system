@@ -19,6 +19,8 @@ public interface FlightService {
 
     FlightVm authorizeFlight(String id);
 
+    FlightVm rejectFlight(String id, com.utm.flight.viewmodel.FlightRejectVm rejectVm);
+
     FlightVm startFlight(String id);
 
     FlightVm completeFlight(String id);

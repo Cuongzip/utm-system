@@ -69,7 +69,13 @@ public record FlightVm(
         @Schema(description = "Planned cruising altitude in meters (m)", example = "120.0")
         Double cruisingAltitudeM,
 
-        @Schema(description = "Current flight status (planned, authorized, active, completed, aborted)", example = "planned")
+        @Schema(description = "Associated mission execution UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000")
+        String executionId,
+
+        @Schema(description = "ATC authorization status (pending, approved, rejected)", example = "pending")
+        String authorizationStatus,
+
+        @Schema(description = "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)", example = "planned")
         String status,
 
         @Schema(description = "Flight remarks, route notes or weather considerations", example = "Medical parcel delivery route via Corridor Bravo")

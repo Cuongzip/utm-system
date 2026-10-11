@@ -63,6 +63,9 @@ public record FlightPostVm(
         @Schema(description = "Flight remarks, route notes or weather considerations", example = "Medical parcel delivery route via Corridor Bravo")
         String notes,
 
+        @Schema(description = "Associated mission execution UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000")
+        String executionId,
+
         @Schema(description = "Ordered list of 3D trajectory waypoints along the planned route")
         List<@Valid WaypointVm> waypoints
 ) {

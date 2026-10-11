@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-create-mission-execution-table
+      author: drops-utm
+      changes:
+        - createTable:
+            tableName: mission_execution
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: mission_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_mission_execution_mission_id
+                    references: mission(id)
+                    deleteCascade: true
+              - column:
+                  name: current_waypoint_index
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_waypoints
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_waypoints
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: started_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_at
+                  type: timestamp with time zone
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "IN_PROGRESS"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: mission_execution
+            indexName: idx_mission_execution_mission_id
+            columns:
+              - column:
+                  name: mission_id
+        - createIndex:
+            tableName: mission_execution
+            indexName: idx_mission_execution_status
+            columns:
+              - column:
+                  name: status

@@ -56,6 +56,15 @@ databaseChangeLog:
                   name: cruising_altitude_m
                   type: double precision
               - column:
+                  name: execution_id
+                  type: varchar(36)
+              - column:
+                  name: authorization_status
+                  type: varchar(50)
+                  defaultValue: "PENDING"
+                  constraints:
+                    nullable: false
+              - column:
                   name: status
                   type: varchar(50)
                   defaultValue: "PLANNED"
@@ -94,3 +103,15 @@ databaseChangeLog:
             columns:
               - column:
                   name: pilot_id
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_execution_id
+            columns:
+              - column:
+                  name: execution_id
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_authorization_status
+            columns:
+              - column:
+                  name: authorization_status

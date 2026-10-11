@@ -40,6 +40,10 @@ public final class MessageCode {
     public static final String INVALID_COORDINATES = "INVALID_COORDINATES";
     public static final String INVALID_ALTITUDE = "INVALID_ALTITUDE";
     public static final String WAYPOINT_REORDER_INVALID = "WAYPOINT_REORDER_INVALID";
+    public static final String MISSION_EXECUTION_NOT_FOUND = "MISSION_EXECUTION_NOT_FOUND";
+    public static final String MISSION_WAYPOINTS_LESS_THAN_TWO = "MISSION_WAYPOINTS_LESS_THAN_TWO";
+    public static final String DRONE_NOT_AVAILABLE = "DRONE_NOT_AVAILABLE";
+    public static final String FLIGHT_REJECTED = "FLIGHT_REJECTED";
 
     private MessageCode() {
     }

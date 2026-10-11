@@ -61,9 +61,7 @@ public class FlightServiceImpl implements FlightService {
             return cb.and(predicates.toArray(Predicate[]::new));
         };
 
-        return flightRepository.findAll(spec).stream()
-                .map(flightMapper::toVm)
-                .toList();
+        return flightMapper.toVmList(flightRepository.findAll(spec));
     }
 
     @Override
@@ -101,6 +99,10 @@ public class FlightServiceImpl implements FlightService {
 
         Flight flight = flightMapper.toEntity(flightPostVm);
         flight.setStatus(FlightStatus.PLANNED);
+        flight.setAuthorizationStatus(com.utm.flight.model.enumeration.FlightAuthorizationStatus.PENDING);
+        if (flightPostVm.executionId() != null && !flightPostVm.executionId().isBlank()) {
+            flight.setExecutionId(flightPostVm.executionId().trim());
+        }
         flight.setWaypoints(mapToWaypointEntities(anchoredWaypoints));
 
         Flight savedFlight = flightRepository.saveAndFlush(flight);
@@ -192,13 +194,37 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getStatus() != FlightStatus.PLANNED) {
+        if (flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED) {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only planned flights can be authorized");
         }
 
+        flight.setAuthorizationStatus(com.utm.flight.model.enumeration.FlightAuthorizationStatus.APPROVED);
         flight.setStatus(FlightStatus.AUTHORIZED);
         Flight savedFlight = flightRepository.saveAndFlush(flight);
         log.info("Flight ID: {} authorized by UTM", id);
+        return flightMapper.toVm(savedFlight);
+    }
+
+    @Override
+    @Transactional
+    public FlightVm rejectFlight(String id, com.utm.flight.viewmodel.FlightRejectVm rejectVm) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+
+        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Cannot reject an active or completed flight");
+        }
+
+        flight.setAuthorizationStatus(com.utm.flight.model.enumeration.FlightAuthorizationStatus.REJECTED);
+        flight.setStatus(FlightStatus.CANCELLED);
+        if (rejectVm != null && rejectVm.reason() != null && !rejectVm.reason().isBlank()) {
+            String updatedNotes = (flight.getNotes() != null ? flight.getNotes() + "\n" : "") + "Rejected reason: "
+                    + rejectVm.reason().trim();
+            flight.setNotes(updatedNotes);
+        }
+
+        Flight savedFlight = flightRepository.saveAndFlush(flight);
+        log.warn("Flight ID: {} was rejected by ATC", id);
         return flightMapper.toVm(savedFlight);
     }
 
@@ -208,8 +234,9 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getStatus() != FlightStatus.AUTHORIZED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only authorized flights can be started");
+        if (flight.getAuthorizationStatus() != com.utm.flight.model.enumeration.FlightAuthorizationStatus.APPROVED
+                && flight.getStatus() != FlightStatus.AUTHORIZED) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Flight must be approved by ATC before takeoff");
         }
 
         flight.setStatus(FlightStatus.ACTIVE);
@@ -261,40 +288,49 @@ public class FlightServiceImpl implements FlightService {
     }
 
     private List<WaypointVm> resolveAndAnchorWaypoints(List<WaypointVm> inputWaypoints, HubVm depHub, HubVm arrHub) {
-        WaypointVm depPoint = new WaypointVm(
-                depHub.latitude(),
-                depHub.longitude(),
-                Objects.requireNonNullElse(depHub.altitude(), 0.0),
-                0.0);
+        Double depLat = depHub != null ? depHub.latitude() : null;
+        Double depLon = depHub != null ? depHub.longitude() : null;
+        Double depAlt = depHub != null ? depHub.altitude() : 0.0;
 
-        WaypointVm arrPoint = new WaypointVm(
-                arrHub.latitude(),
-                arrHub.longitude(),
-                Objects.requireNonNullElse(arrHub.altitude(), 0.0),
-                0.0);
+        Double arrLat = arrHub != null ? arrHub.latitude() : null;
+        Double arrLon = arrHub != null ? arrHub.longitude() : null;
+        Double arrAlt = arrHub != null ? arrHub.altitude() : 0.0;
+
+        WaypointVm depPoint = (depLat != null && depLon != null) ? new WaypointVm(depLat, depLon, depAlt, 0.0) : null;
+        WaypointVm arrPoint = (arrLat != null && arrLon != null) ? new WaypointVm(arrLat, arrLon, arrAlt, 0.0) : null;
 
         if (inputWaypoints == null || inputWaypoints.isEmpty()) {
-            return List.of(depPoint, arrPoint);
+            List<WaypointVm> fallback = new ArrayList<>();
+            if (depPoint != null) fallback.add(depPoint);
+            if (arrPoint != null) fallback.add(arrPoint);
+            return fallback;
         }
 
         List<WaypointVm> anchored = new ArrayList<>(inputWaypoints);
 
-        WaypointVm first = anchored.getFirst();
-        if (first.lat() == null || first.lon() == null
-                || calculateDistance(first.lat(), first.lon(), depPoint.lat(), depPoint.lon()) > 30.0) {
-            anchored.add(0, depPoint);
+        if (depPoint != null) {
+            WaypointVm first = anchored.getFirst();
+            if (first.latitude() == null || first.longitude() == null
+                    || calculateDistance(first.latitude(), first.longitude(), depPoint.latitude(), depPoint.longitude()) > 30.0) {
+                anchored.add(0, depPoint);
+            }
         }
 
-        WaypointVm last = anchored.getLast();
-        if (last.lat() == null || last.lon() == null
-                || calculateDistance(last.lat(), last.lon(), arrPoint.lat(), arrPoint.lon()) > 30.0) {
-            anchored.add(arrPoint);
+        if (arrPoint != null) {
+            WaypointVm last = anchored.getLast();
+            if (last.latitude() == null || last.longitude() == null
+                    || calculateDistance(last.latitude(), last.longitude(), arrPoint.latitude(), arrPoint.longitude()) > 30.0) {
+                anchored.add(arrPoint);
+            }
         }
 
         return anchored;
     }
 
-    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    private double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+        if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
+            return Double.MAX_VALUE;
+        }
         final double R = 6371000.0;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);

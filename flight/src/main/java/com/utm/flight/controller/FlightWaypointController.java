@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/flights/{id}/waypoints")
+@RequestMapping("/api/v1/flights/{flightId}/waypoints")
 @RequiredArgsConstructor
 @Tag(name = "Flight Waypoints", description = "Endpoints for managing 3D trajectory waypoints along flight paths")
 public class FlightWaypointController {
@@ -55,9 +55,9 @@ public class FlightWaypointController {
     })
     public ResponseEntity<List<WaypointVm>> getFlightWaypoints(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id
+            @PathVariable String flightId
     ) {
-        return ResponseEntity.ok(flightWaypointService.getFlightWaypoints(id));
+        return ResponseEntity.ok(flightWaypointService.getFlightWaypoints(flightId));
     }
 
     @GetMapping("/{waypointId}")
@@ -76,15 +76,15 @@ public class FlightWaypointController {
     })
     public ResponseEntity<WaypointVm> getWaypointById(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id,
+            @PathVariable String flightId,
             @Parameter(description = "Unique UUID identifier of the waypoint", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
             @PathVariable String waypointId
     ) {
-        return ResponseEntity.ok(flightWaypointService.getWaypointById(id, waypointId));
+        return ResponseEntity.ok(flightWaypointService.getWaypointById(flightId, waypointId));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
     @Operation(summary = "Add waypoint to flight", description = "Add a new 3D coordinate waypoint into the flight trajectory")
     @ApiResponses(value = {
             @ApiResponse(
@@ -102,15 +102,15 @@ public class FlightWaypointController {
     })
     public ResponseEntity<WaypointVm> addWaypoint(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id,
+            @PathVariable String flightId,
             @Valid @RequestBody WaypointPostVm postVm
     ) {
-        WaypointVm created = flightWaypointService.addWaypoint(id, postVm);
+        WaypointVm created = flightWaypointService.addWaypoint(flightId, postVm);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{waypointId}")
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
     @Operation(summary = "Update waypoint", description = "Modify coordinates, altitude, speed or hover time of a specific waypoint")
     @ApiResponses(value = {
             @ApiResponse(
@@ -128,20 +128,20 @@ public class FlightWaypointController {
     })
     public ResponseEntity<WaypointVm> updateWaypoint(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id,
+            @PathVariable String flightId,
             @Parameter(description = "Unique UUID identifier of the waypoint", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
             @PathVariable String waypointId,
             @Valid @RequestBody WaypointPutVm putVm
     ) {
-        return ResponseEntity.ok(flightWaypointService.updateWaypoint(id, waypointId, putVm));
+        return ResponseEntity.ok(flightWaypointService.updateWaypoint(flightId, waypointId, putVm));
     }
 
     @DeleteMapping("/{waypointId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
-    @Operation(summary = "Delete waypoint", description = "Remove a waypoint from the flight trajectory")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
+    @Operation(summary = "Delete waypoint", description = "Remove a waypoint from the flight trajectory and re-index remaining sequence")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Waypoint deleted successfully"),
+            @ApiResponse(responseCode = "204", description = "Waypoint deleted successfully and sequence re-indexed"),
             @ApiResponse(responseCode = "400", description = "Cannot modify active or completed flight", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
@@ -149,16 +149,16 @@ public class FlightWaypointController {
     })
     public ResponseEntity<Void> deleteWaypoint(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id,
+            @PathVariable String flightId,
             @Parameter(description = "Unique UUID identifier of the waypoint", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
             @PathVariable String waypointId
     ) {
-        flightWaypointService.deleteWaypoint(id, waypointId);
+        flightWaypointService.deleteWaypoint(flightId, waypointId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/reorder")
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
     @Operation(summary = "Reorder waypoints", description = "Reorder all waypoints along the flight path using new sequence numbers")
     @ApiResponses(value = {
             @ApiResponse(
@@ -176,9 +176,9 @@ public class FlightWaypointController {
     })
     public ResponseEntity<List<WaypointVm>> reorderWaypoints(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id,
+            @PathVariable String flightId,
             @Valid @RequestBody WaypointReorderVm reorderVm
     ) {
-        return ResponseEntity.ok(flightWaypointService.reorderWaypoints(id, reorderVm));
+        return ResponseEntity.ok(flightWaypointService.reorderWaypoints(flightId, reorderVm));
     }
 }

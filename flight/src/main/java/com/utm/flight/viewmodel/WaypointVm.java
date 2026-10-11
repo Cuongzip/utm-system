@@ -3,7 +3,11 @@ package com.utm.flight.viewmodel;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 @Schema(
         description = "3D coordinate waypoint for flight trajectory",
@@ -17,11 +21,7 @@ import jakarta.validation.constraints.NotNull;
           "longitude": 106.7009,
           "altitude": 50.0,
           "speedToWaypoint": 15.0,
-          "hoverDuration": 5,
-          "lat": 10.7769,
-          "lon": 106.7009,
-          "alt": 50.0,
-          "speed": 15.0
+          "hoverDuration": 5
         }
         """
 )
@@ -36,24 +36,34 @@ public record WaypointVm(
         Integer sequence,
 
         @Schema(description = "Optional label or milestone name", example = "Takeoff Point Alpha")
+        @Size(max = 100, message = "Waypoint name must not exceed 100 characters")
         String name,
 
         @Schema(description = "Latitude in degrees (-90.0 to 90.0)", example = "10.7769")
         @NotNull(message = "Latitude is required")
+        @Min(value = -90, message = "Latitude must be between -90 and 90")
+        @Max(value = 90, message = "Latitude must be between -90 and 90")
+        @JsonProperty("latitude")
         @JsonAlias({"lat", "latitude"})
         Double latitude,
 
         @Schema(description = "Longitude in degrees (-180.0 to 180.0)", example = "106.7009")
         @NotNull(message = "Longitude is required")
-        @JsonAlias({"lon", "longitude"})
+        @Min(value = -180, message = "Longitude must be between -180 and 180")
+        @Max(value = 180, message = "Longitude must be between -180 and 180")
+        @JsonProperty("longitude")
+        @JsonAlias({"lon", "longitude", "lng"})
         Double longitude,
 
         @Schema(description = "Altitude in meters above ground/sea level", example = "50.0")
         @NotNull(message = "Altitude is required")
+        @DecimalMin(value = "0.0", message = "Altitude must be greater than or equal to 0")
+        @JsonProperty("altitude")
         @JsonAlias({"alt", "altitude"})
         Double altitude,
 
         @Schema(description = "Target cruising speed at this waypoint in m/s (optional)", example = "15.0")
+        @JsonProperty("speedToWaypoint")
         @JsonAlias({"speed", "speedToWaypoint"})
         Double speedToWaypoint,
 
@@ -76,22 +86,18 @@ public record WaypointVm(
         return speedToWaypoint;
     }
 
-    @JsonProperty("lat")
     public Double getLat() {
         return latitude;
     }
 
-    @JsonProperty("lon")
     public Double getLon() {
         return longitude;
     }
 
-    @JsonProperty("alt")
     public Double getAlt() {
         return altitude;
     }
 
-    @JsonProperty("speed")
     public Double getSpeed() {
         return speedToWaypoint;
     }
@@ -104,4 +110,3 @@ public record WaypointVm(
         this(lat, lon, alt, null);
     }
 }
-

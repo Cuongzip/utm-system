@@ -129,7 +129,7 @@ public class FlightController {
     }
 
     @PostMapping("/{id}/authorize")
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator')")
     @Operation(summary = "Request UTM authorization", description = "Authorize flight plan to move from planned to authorized")
     @ApiResponses(value = {
             @ApiResponse(
@@ -150,6 +150,31 @@ public class FlightController {
             @PathVariable String id
     ) {
         return ResponseEntity.ok(flightService.authorizeFlight(id));
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('admin', 'atc')")
+    @Operation(summary = "Reject flight authorization", description = "ATC rejects flight authorization with a reason")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Flight rejected successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = FlightVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid flight state", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight not found", content = @Content)
+    })
+    public ResponseEntity<FlightVm> rejectFlight(
+            @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable String id,
+            @RequestBody(required = false) com.utm.flight.viewmodel.FlightRejectVm rejectVm
+    ) {
+        return ResponseEntity.ok(flightService.rejectFlight(id, rejectVm));
     }
 
     @PostMapping("/{id}/start")

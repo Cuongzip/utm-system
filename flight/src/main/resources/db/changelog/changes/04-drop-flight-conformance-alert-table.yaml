@@ -1,8 +1,0 @@
-databaseChangeLog:
-  - changeSet:
-      id: 04-drop-flight-conformance-alert-table
-      author: drops-utm
-      changes:
-        - dropTable:
-            tableName: flight_conformance_alert
-            cascadeConstraints: true

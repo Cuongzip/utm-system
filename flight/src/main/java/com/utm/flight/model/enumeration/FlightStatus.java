@@ -7,10 +7,13 @@ import lombok.Getter;
 @Getter
 public enum FlightStatus {
     PLANNED("planned"),
+    SCHEDULED("scheduled"),
     AUTHORIZED("authorized"),
     ACTIVE("active"),
     COMPLETED("completed"),
-    CANCELLED("cancelled");
+    CANCELLED("cancelled"),
+    DIVERTED("diverted"),
+    EMERGENCY_LANDING("emergency_landing");
 
     private final String value;
 

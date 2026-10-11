@@ -69,6 +69,14 @@ public class Flight extends AbstractAuditEntity {
     @Column(name = "cruising_altitude_m")
     private Double cruisingAltitudeM;
 
+    @Column(name = "execution_id", length = 36)
+    private String executionId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "authorization_status", length = 50, nullable = false)
+    @Builder.Default
+    private com.utm.flight.model.enumeration.FlightAuthorizationStatus authorizationStatus = com.utm.flight.model.enumeration.FlightAuthorizationStatus.PENDING;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
     @Builder.Default
