@@ -105,6 +105,14 @@ server {
     proxy_pass http://connectivity:8094/connectivity/api/v1/connectivity;
   }
 
+  location /mission/ {
+    proxy_pass http://mission:8095/mission/;
+  }
+
+  location /api/v1/missions {
+    proxy_pass http://mission:8095/mission/api/v1/missions;
+  }
+
   location /swagger-ui/ {
     proxy_pass http://swagger-ui:8080;
   }

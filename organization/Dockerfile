@@ -13,6 +13,7 @@ COPY conflict ./conflict
 COPY alert ./alert
 COPY connectivity ./connectivity
 COPY organization ./organization
+COPY mission ./mission
 RUN mvn clean package -pl organization -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine

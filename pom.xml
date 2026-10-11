@@ -26,6 +26,7 @@
         <module>conflict</module>
         <module>alert</module>
         <module>connectivity</module>
+        <module>mission</module>
         <module>backoffice-bff</module>
     </modules>
 

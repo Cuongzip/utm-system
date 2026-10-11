@@ -30,6 +30,16 @@ public final class MessageCode {
     public static final String DRONE_IN_FLIGHT_CANNOT_REVOKE = "DRONE_IN_FLIGHT_CANNOT_REVOKE";
     public static final String DRONE_IN_FLIGHT_CANNOT_UPDATE = "DRONE_IN_FLIGHT_CANNOT_UPDATE";
     public static final String DRONE_IN_FLIGHT_CANNOT_DELETE = "DRONE_IN_FLIGHT_CANNOT_DELETE";
+    public static final String MISSION_NOT_FOUND = "MISSION_NOT_FOUND";
+    public static final String DEPARTURE_HUB_NOT_FOUND = "DEPARTURE_HUB_NOT_FOUND";
+    public static final String ARRIVAL_HUB_NOT_FOUND = "ARRIVAL_HUB_NOT_FOUND";
+    public static final String SCHEDULED_TIME_MUST_BE_FUTURE = "SCHEDULED_TIME_MUST_BE_FUTURE";
+    public static final String CANNOT_EDIT_EXECUTING_MISSION = "CANNOT_EDIT_EXECUTING_MISSION";
+    public static final String CANNOT_DELETE_EXECUTING_MISSION = "CANNOT_DELETE_EXECUTING_MISSION";
+    public static final String MISSION_NOT_IN_DRAFT_STATUS = "MISSION_NOT_IN_DRAFT_STATUS";
+    public static final String INVALID_COORDINATES = "INVALID_COORDINATES";
+    public static final String INVALID_ALTITUDE = "INVALID_ALTITUDE";
+    public static final String WAYPOINT_REORDER_INVALID = "WAYPOINT_REORDER_INVALID";
 
     private MessageCode() {
     }

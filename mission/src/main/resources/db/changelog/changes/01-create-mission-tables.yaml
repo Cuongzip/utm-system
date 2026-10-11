@@ -1,0 +1,158 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-mission-tables
+      author: cuong
+      changes:
+        - createTable:
+            tableName: mission
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: departure_hub_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: arrival_hub_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schedule_type
+                  type: varchar(50)
+                  defaultValue: "IMMEDIATE"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_at
+                  type: timestamp with time zone
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "DRAFT"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+
+        - createIndex:
+            tableName: mission
+            indexName: idx_mission_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: mission
+            indexName: idx_mission_departure_hub_id
+            columns:
+              - column:
+                  name: departure_hub_id
+        - createIndex:
+            tableName: mission
+            indexName: idx_mission_arrival_hub_id
+            columns:
+              - column:
+                  name: arrival_hub_id
+        - createIndex:
+            tableName: mission
+            indexName: idx_mission_created_by
+            columns:
+              - column:
+                  name: created_by
+
+        - createTable:
+            tableName: waypoint
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: mission_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_waypoint_mission
+                    references: mission(id)
+                    deleteCascade: true
+              - column:
+                  name: sequence
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+              - column:
+                  name: latitude
+                  type: numeric(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: longitude
+                  type: numeric(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: altitude
+                  type: numeric(8, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actions
+                  type: jsonb
+              - column:
+                  name: conditions
+                  type: jsonb
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+
+        - createIndex:
+            tableName: waypoint
+            indexName: idx_waypoint_mission_id
+            columns:
+              - column:
+                  name: mission_id
+        - createIndex:
+            tableName: waypoint
+            indexName: idx_waypoint_mission_seq
+            columns:
+              - column:
+                  name: mission_id
+              - column:
+                  name: sequence
