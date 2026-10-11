@@ -3,13 +3,14 @@ package com.utm.drone.repository;
 import com.utm.drone.model.Drone;
 import com.utm.drone.model.enumeration.DroneStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface DroneRepository extends JpaRepository<Drone, String> {
+public interface DroneRepository extends JpaRepository<Drone, String>, JpaSpecificationExecutor<Drone> {
 
     Optional<Drone> findByRegistrationNumber(String registrationNumber);
 
@@ -17,5 +18,7 @@ public interface DroneRepository extends JpaRepository<Drone, String> {
 
     List<Drone> findAllByStatus(DroneStatus status);
 
-    List<Drone> findAllByCurrentHubId(String currentHubId);
+    List<Drone> findAllByHomeHubId(String homeHubId);
+
+    List<Drone> findAllByOwnerId(String ownerId);
 }

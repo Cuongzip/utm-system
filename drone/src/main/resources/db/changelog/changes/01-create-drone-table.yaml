@@ -19,40 +19,37 @@ databaseChangeLog:
                     nullable: false
                     unique: true
               - column:
-                  name: model
-                  type: varchar(100)
-                  constraints:
-                    nullable: false
-              - column:
                   name: manufacturer
                   type: varchar(100)
                   constraints:
                     nullable: false
               - column:
-                  name: max_speed_mps
+                  name: model
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: owner_id
+                  type: varchar(36)
+              - column:
+                  name: home_hub_id
+                  type: varchar(36)
+              - column:
+                  name: battery_capacity_wh
                   type: numeric(8, 2)
                   constraints:
                     nullable: false
               - column:
-                  name: max_flight_time_min
-                  type: int
+                  name: max_payload
+                  type: numeric(8, 2)
                   constraints:
                     nullable: false
-              - column:
-                  name: max_payload_kg
-                  type: numeric(8, 2)
               - column:
                   name: status
                   type: varchar(50)
-                  defaultValue: "available"
+                  defaultValue: "AVAILABLE"
                   constraints:
                     nullable: false
-              - column:
-                  name: current_hub_id
-                  type: varchar(100)
-              - column:
-                  name: notes
-                  type: text
               - column:
                   name: created_on
                   type: timestamp with time zone
@@ -65,3 +62,21 @@ databaseChangeLog:
               - column:
                   name: last_modified_by
                   type: varchar(100)
+        - createIndex:
+            indexName: idx_drone_status
+            tableName: drone
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            indexName: idx_drone_owner_id
+            tableName: drone
+            columns:
+              - column:
+                  name: owner_id
+        - createIndex:
+            indexName: idx_drone_home_hub_id
+            tableName: drone
+            columns:
+              - column:
+                  name: home_hub_id

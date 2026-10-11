@@ -28,6 +28,8 @@ public final class MessageCode {
     public static final String DEVICE_IDENTIFIER_ALREADY_EXISTED = "DEVICE_IDENTIFIER_ALREADY_EXISTED";
     public static final String DRONE_ALREADY_HAS_DEVICE_REGISTRATION = "DRONE_ALREADY_HAS_DEVICE_REGISTRATION";
     public static final String DRONE_IN_FLIGHT_CANNOT_REVOKE = "DRONE_IN_FLIGHT_CANNOT_REVOKE";
+    public static final String DRONE_IN_FLIGHT_CANNOT_UPDATE = "DRONE_IN_FLIGHT_CANNOT_UPDATE";
+    public static final String DRONE_IN_FLIGHT_CANNOT_DELETE = "DRONE_IN_FLIGHT_CANNOT_DELETE";
 
     private MessageCode() {
     }

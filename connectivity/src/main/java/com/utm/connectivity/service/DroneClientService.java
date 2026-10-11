@@ -1,6 +1,6 @@
 package com.utm.connectivity.service;
 
-import com.utm.connectivity.viewmodel.DroneResponseVm;
+import com.utm.connectivity.viewmodel.DroneBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +20,7 @@ public class DroneClientService {
     @Value("${utm.services.drone:http://drone:8085}")
     private String droneServiceUrl;
 
-    public Optional<DroneResponseVm> getDroneById(String droneId) {
+    public Optional<DroneBriefVm> getDroneById(String droneId) {
         if (droneId == null || droneId.isBlank()) {
             return Optional.empty();
         }
@@ -28,10 +28,10 @@ public class DroneClientService {
         String basePath = cleanUrl.endsWith("/drone") ? "" : "/drone";
         String targetUrl = cleanUrl + basePath + "/api/v1/drones/{id}";
         try {
-            ResponseEntity<DroneResponseVm> response = restClient.get()
+            ResponseEntity<DroneBriefVm> response = restClient.get()
                     .uri(targetUrl, droneId.trim())
                     .retrieve()
-                    .toEntity(DroneResponseVm.class);
+                    .toEntity(DroneBriefVm.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().id() != null) {
                 return Optional.of(response.getBody());

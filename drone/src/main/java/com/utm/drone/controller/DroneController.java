@@ -1,12 +1,13 @@
 package com.utm.drone.controller;
 
+import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.service.DroneService;
+import com.utm.drone.viewmodel.DroneListVm;
 import com.utm.drone.viewmodel.DronePostVm;
 import com.utm.drone.viewmodel.DronePutVm;
 import com.utm.drone.viewmodel.DroneVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,37 +27,54 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/drones")
 @RequiredArgsConstructor
-@Tag(name = "Drones / UAS Management", description = "Management of Unmanned Aircraft Systems (Drones / UAS)")
+@Tag(name = "Drones / UAS Management", description = "Management of Unmanned Aircraft Systems (Drones / UAS), payloads, battery, and readiness status")
 public class DroneController {
 
     private final DroneService droneService;
 
     @GetMapping
-    @Operation(summary = "List all Drones", description = "Retrieve a list of all registered drones in the DROPS-UTM system along with their statuses.")
+    @Operation(
+            summary = "List all Drones",
+            description = "Retrieve a paginated and filtered list of registered drones in the DROPS-UTM system, including operational status and hardware connectivity."
+    )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
                     description = "Drones retrieved successfully",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            array = @ArraySchema(schema = @Schema(implementation = DroneVm.class))
+                            schema = @Schema(implementation = DroneListVm.class)
                     )
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
-    public ResponseEntity<List<DroneVm>> getAllDrones() {
-        return ResponseEntity.ok(droneService.getAllDrones());
+    public ResponseEntity<DroneListVm> getDrones(
+            @Parameter(description = "Filter by drone operational status (available, in_flight, maintenance, charging, offline)")
+            @RequestParam(required = false) DroneStatus status,
+            @Parameter(description = "Filter by base / home hub station ID")
+            @RequestParam(required = false) String homeHubId,
+            @Parameter(description = "Filter by owner organization ID")
+            @RequestParam(required = false) String ownerId,
+            @Parameter(description = "Search term for registration number, model, or manufacturer")
+            @RequestParam(required = false) String search,
+            @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
+            @RequestParam(defaultValue = "20") int limit,
+            @Parameter(description = "Offset index (default: 0)")
+            @RequestParam(defaultValue = "0") int offset
+    ) {
+        return ResponseEntity.ok(droneService.getDrones(status, homeHubId, ownerId, search, limit, offset));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
     @Operation(summary = "Register new Drone", description = "Register a new Unmanned Aircraft System into the DROPS-UTM platform.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Drone registration details",
@@ -68,14 +86,13 @@ public class DroneController {
                             name = "DronePostSample",
                             value = """
                                     {
-                                      "registrationNumber": "SX-UAS-001",
-                                      "model": "DJI Matrice 350 RTK",
+                                      "registrationNumber": "VN-UAV-001",
                                       "manufacturer": "DJI",
-                                      "maxSpeedMps": 23.0,
-                                      "maxFlightTimeMin": 55,
-                                      "maxPayloadKg": 2.7,
-                                      "currentHubId": "hub-hcm-01",
-                                      "notes": "Equipped with Zenmuse H20T thermal sensor"
+                                      "model": "Matrice 350 RTK",
+                                      "ownerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                                      "homeHubId": "96683f5a-769f-44aa-b4d3-16c72f2fe0a4",
+                                      "batteryCapacityWh": 588.0,
+                                      "maxPayload": 2.7
                                     }
                                     """
                     )
@@ -93,6 +110,7 @@ public class DroneController {
             @ApiResponse(responseCode = "400", description = "Invalid request payload or validation error", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Owner organization or Hub station not found", content = @Content),
             @ApiResponse(responseCode = "409", description = "Registration number already exists", content = @Content)
     })
     public ResponseEntity<DroneVm> createDrone(@Valid @RequestBody DronePostVm dronePostVm) {
@@ -101,7 +119,10 @@ public class DroneController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Drone by ID", description = "Retrieve complete technical profile, specifications, and current location of a drone.")
+    @Operation(
+            summary = "Get Drone by ID",
+            description = "Retrieve complete technical profile, specifications, owner organization, base hub, and device connectivity of a drone."
+    )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -122,8 +143,11 @@ public class DroneController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
-    @Operation(summary = "Update Drone information", description = "Update operational status, assigned hub station, or maintenance notes.")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @Operation(
+            summary = "Update Drone information",
+            description = "Update operational status, assigned hub station, battery capacity, or max payload. In-flight drones cannot change hub or switch to maintenance."
+    )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Drone update payload",
             required = true,
@@ -134,12 +158,10 @@ public class DroneController {
                             name = "DronePutSample",
                             value = """
                                     {
-                                      "status": "maintenance",
-                                      "currentHubId": "hub-hcm-02",
-                                      "notes": "Completed scheduled 100-hour flight maintenance",
-                                      "maxSpeedMps": 23.0,
-                                      "maxFlightTimeMin": 55,
-                                      "maxPayloadKg": 2.7
+                                      "homeHubId": "96683f5a-769f-44aa-b4d3-16c72f2fe0a4",
+                                      "batteryCapacityWh": 588.0,
+                                      "maxPayload": 2.7,
+                                      "status": "maintenance"
                                     }
                                     """
                     )
@@ -154,10 +176,10 @@ public class DroneController {
                             schema = @Schema(implementation = DroneVm.class)
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid request payload", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload or drone currently in flight", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Drone not found by ID", content = @Content)
+            @ApiResponse(responseCode = "404", description = "Drone or Hub not found", content = @Content)
     })
     public ResponseEntity<DroneVm> updateDrone(
             @Parameter(description = "Unique UUID identifier of the drone", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
@@ -169,18 +191,29 @@ public class DroneController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('admin')")
-    @Operation(summary = "Retire Drone", description = "Permanently retire an unmanned aircraft from operational service.")
+    @Operation(
+            summary = "Deactivate / Remove Drone",
+            description = "Safely deactivate an unmanned aircraft from operational service. In-flight drones cannot be removed."
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Drone retired successfully", content = @Content),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Drone removed / deactivated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(value = "{\"message\": \"Drone removed successfully\"}")
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Drone currently in flight cannot be deleted", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "404", description = "Drone not found by ID", content = @Content)
     })
-    public ResponseEntity<Void> retireDrone(
+    public ResponseEntity<Map<String, String>> deleteDrone(
             @Parameter(description = "Unique UUID identifier of the drone", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
             @PathVariable String id
     ) {
-        droneService.retireDrone(id);
-        return ResponseEntity.ok().build();
+        droneService.deleteDrone(id);
+        return ResponseEntity.ok(Map.of("message", "Drone removed successfully"));
     }
 }

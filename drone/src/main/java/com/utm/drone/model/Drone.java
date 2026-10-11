@@ -33,29 +33,26 @@ public class Drone extends AbstractAuditEntity {
     @Column(name = "registration_number", length = 100, nullable = false, unique = true)
     private String registrationNumber;
 
-    @Column(name = "model", length = 100, nullable = false)
-    private String model;
-
     @Column(name = "manufacturer", length = 100, nullable = false)
     private String manufacturer;
 
-    @Column(name = "max_speed_mps", nullable = false)
-    private Double maxSpeedMps;
+    @Column(name = "model", length = 100, nullable = false)
+    private String model;
 
-    @Column(name = "max_flight_time_min", nullable = false)
-    private Integer maxFlightTimeMin;
+    @Column(name = "owner_id", length = 36)
+    private String ownerId;
 
-    @Column(name = "max_payload_kg")
-    private Double maxPayloadKg;
+    @Column(name = "home_hub_id", length = 36)
+    private String homeHubId;
+
+    @Column(name = "battery_capacity_wh", nullable = false)
+    private Double batteryCapacityWh;
+
+    @Column(name = "max_payload", nullable = false)
+    private Double maxPayload;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
     @Builder.Default
     private DroneStatus status = DroneStatus.AVAILABLE;
-
-    @Column(name = "current_hub_id", length = 100)
-    private String currentHubId;
-
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
 }

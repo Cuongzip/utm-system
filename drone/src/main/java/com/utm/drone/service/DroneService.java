@@ -1,14 +1,14 @@
 package com.utm.drone.service;
 
+import com.utm.drone.model.enumeration.DroneStatus;
+import com.utm.drone.viewmodel.DroneListVm;
 import com.utm.drone.viewmodel.DronePostVm;
 import com.utm.drone.viewmodel.DronePutVm;
 import com.utm.drone.viewmodel.DroneVm;
 
-import java.util.List;
-
 public interface DroneService {
 
-    List<DroneVm> getAllDrones();
+    DroneListVm getDrones(DroneStatus status, String homeHubId, String ownerId, String search, int limit, int offset);
 
     DroneVm getDroneById(String id);
 
@@ -16,5 +16,5 @@ public interface DroneService {
 
     DroneVm updateDrone(String id, DronePutVm dronePutVm);
 
-    void retireDrone(String id);
+    void deleteDrone(String id);
 }

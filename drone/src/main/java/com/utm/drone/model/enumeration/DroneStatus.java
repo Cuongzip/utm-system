@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum DroneStatus {
     AVAILABLE("available"),
-    IN_MISSION("in_mission"),
+    IN_FLIGHT("in_flight"),
     MAINTENANCE("maintenance"),
-    RETIRED("retired");
+    CHARGING("charging"),
+    OFFLINE("offline");
 
     private final String value;
 
@@ -22,11 +23,12 @@ public enum DroneStatus {
 
     @JsonCreator
     public static DroneStatus fromValue(String value) {
-        if (value == null) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
+        String trimmed = value.trim();
         for (DroneStatus status : values()) {
-            if (status.value.equalsIgnoreCase(value) || status.name().equalsIgnoreCase(value)) {
+            if (status.value.equalsIgnoreCase(trimmed) || status.name().equalsIgnoreCase(trimmed)) {
                 return status;
             }
         }

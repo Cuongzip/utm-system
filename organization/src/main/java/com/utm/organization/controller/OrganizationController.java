@@ -3,7 +3,7 @@ package com.utm.organization.controller;
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
 import com.utm.organization.service.OrganizationService;
-import com.utm.organization.viewmodel.OrganizationListGetVm;
+import com.utm.organization.viewmodel.OrganizationListVm;
 import com.utm.organization.viewmodel.OrganizationPostVm;
 import com.utm.organization.viewmodel.OrganizationPutVm;
 import com.utm.organization.viewmodel.OrganizationVm;
@@ -50,12 +50,12 @@ public class OrganizationController {
                     description = "Organizations retrieved successfully",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = OrganizationListGetVm.class)
+                            schema = @Schema(implementation = OrganizationListVm.class)
                     )
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
-    public ResponseEntity<OrganizationListGetVm> getOrganizations(
+    public ResponseEntity<OrganizationListVm> getOrganizations(
             @Parameter(description = "Search term for company name or registration number")
             @RequestParam(required = false) String search,
             @Parameter(description = "Filter by organization type (operator, authority, enterprise)")

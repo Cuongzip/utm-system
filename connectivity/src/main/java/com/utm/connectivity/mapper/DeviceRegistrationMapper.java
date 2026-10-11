@@ -4,7 +4,7 @@ import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
-import com.utm.connectivity.viewmodel.DroneResponseVm;
+import com.utm.connectivity.viewmodel.DroneBriefVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -26,7 +26,7 @@ public interface DeviceRegistrationMapper {
     @Mapping(target = "lastSeenAt", source = "entity.lastSeenAt")
     @Mapping(target = "createdOn", source = "entity.createdOn")
     @Mapping(target = "lastModifiedOn", source = "entity.lastModifiedOn")
-    DeviceRegistrationVm toVm(DeviceRegistration entity, DroneResponseVm drone);
+    DeviceRegistrationVm toVm(DeviceRegistration entity, DroneBriefVm drone);
 
     default DeviceRegistrationVm toVm(DeviceRegistration entity) {
         return toVm(entity, null);

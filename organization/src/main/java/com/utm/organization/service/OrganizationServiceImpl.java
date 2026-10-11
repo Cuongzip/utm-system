@@ -8,7 +8,7 @@ import com.utm.organization.model.Organization;
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
 import com.utm.organization.repository.OrganizationRepository;
-import com.utm.organization.viewmodel.OrganizationListGetVm;
+import com.utm.organization.viewmodel.OrganizationListVm;
 import com.utm.organization.viewmodel.OrganizationPostVm;
 import com.utm.organization.viewmodel.OrganizationPutVm;
 import com.utm.organization.viewmodel.OrganizationVm;
@@ -36,7 +36,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     @Transactional(readOnly = true)
-    public OrganizationListGetVm getOrganizations(
+    public OrganizationListVm getOrganizations(
             String search,
             OrganizationType type,
             OrganizationStatus status,
@@ -72,7 +72,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .map(organizationMapper::toVm)
                 .toList();
 
-        return OrganizationListGetVm.of(items, page.getTotalElements());
+        return OrganizationListVm.of(items, page.getTotalElements());
     }
 
     @Override

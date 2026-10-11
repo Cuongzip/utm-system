@@ -12,7 +12,7 @@ import com.utm.connectivity.viewmodel.DeviceHeartbeatPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationListVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
-import com.utm.connectivity.viewmodel.DroneResponseVm;
+import com.utm.connectivity.viewmodel.DroneBriefVm;
 import com.utm.connectivity.viewmodel.HeartbeatResultVm;
 import com.utm.connectivity.viewmodel.RevokeResultVm;
 import jakarta.persistence.criteria.Predicate;
@@ -43,7 +43,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional
     public DeviceRegistrationVm registerDevice(DeviceRegistrationPostVm postVm) {
-        DroneResponseVm drone = droneClientService.getDroneById(postVm.droneId())
+        DroneBriefVm drone = droneClientService.getDroneById(postVm.droneId())
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, postVm.droneId()));
 
         if (deviceRegistrationRepository.findByDroneId(postVm.droneId()).isPresent()) {
@@ -80,7 +80,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         if (limit <= 0) {
             List<DeviceRegistration> all = deviceRegistrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
             List<DeviceRegistrationVm> items = all.stream().map(reg -> {
-                Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
+                Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
                 return mapper.toVm(reg, droneOpt.orElse(null));
             }).toList();
             return DeviceRegistrationListVm.of(items, items.size());
@@ -92,7 +92,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
 
         Page<DeviceRegistration> page = deviceRegistrationRepository.findAll(spec, pageable);
         List<DeviceRegistrationVm> items = page.getContent().stream().map(reg -> {
-            Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
+            Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
             return mapper.toVm(reg, droneOpt.orElse(null));
         }).toList();
 
@@ -115,7 +115,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         List<DeviceRegistration> currentOnline = deviceRegistrationRepository.findByConnectionStatus(DeviceConnectionStatus.ONLINE);
         return currentOnline.stream()
                 .map(reg -> {
-                    Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
+                    Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
                     return mapper.toVm(reg, droneOpt.orElse(null));
                 })
                 .toList();
@@ -127,7 +127,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         DeviceRegistration reg = deviceRegistrationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, id));
 
-        Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
+        Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
         return mapper.toVm(reg, droneOpt.orElse(null));
     }
 
@@ -153,7 +153,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         DeviceRegistration reg = deviceRegistrationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, id));
 
-        Optional<DroneResponseVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
+        Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
         if (droneOpt.isPresent()) {
             String status = droneOpt.get().status();
             if (status != null && (status.equalsIgnoreCase("in_flight") || status.equalsIgnoreCase("in_mission"))) {

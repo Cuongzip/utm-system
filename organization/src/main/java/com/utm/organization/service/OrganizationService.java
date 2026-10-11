@@ -2,14 +2,14 @@ package com.utm.organization.service;
 
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
-import com.utm.organization.viewmodel.OrganizationListGetVm;
+import com.utm.organization.viewmodel.OrganizationListVm;
 import com.utm.organization.viewmodel.OrganizationPostVm;
 import com.utm.organization.viewmodel.OrganizationPutVm;
 import com.utm.organization.viewmodel.OrganizationVm;
 
 public interface OrganizationService {
 
-    OrganizationListGetVm getOrganizations(
+    OrganizationListVm getOrganizations(
             String search,
             OrganizationType type,
             OrganizationStatus status,

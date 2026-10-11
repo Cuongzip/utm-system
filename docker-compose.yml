@@ -96,6 +96,8 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
       - HUB_SERVICE_URL=http://hub:8084
+      - ORGANIZATION_SERVICE_URL=http://organization:8083
+      - CONNECTIVITY_SERVICE_URL=http://connectivity:8094
     depends_on:
       - postgres
       - hub
