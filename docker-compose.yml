@@ -154,7 +154,6 @@ services:
       - airspace
       - telemetry
       - alert
-      - conflict
     networks:
       - utm-network
 

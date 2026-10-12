@@ -13,6 +13,8 @@ public record FlightDetailVm(
         String droneId,
         String departureHubId,
         String arrivalHubId,
+        Double cruisingAltitudeM,
+        GeoJsonLineStringVm plannedRoute,
         Integer totalWaypoints,
         List<WaypointVm> waypoints) {
 }

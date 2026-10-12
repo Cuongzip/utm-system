@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -162,6 +163,11 @@ public class SimulationServiceImpl implements SimulationService {
         SimulationSessionRuntime runtime = activeRuntimes.remove(id);
         if (runtime != null && runtime.scheduledFuture != null) {
             runtime.scheduledFuture.cancel(true);
+        }
+
+        List<SimulationEvent> events = eventRepository.findBySessionIdOrderByCreatedOnAsc(id);
+        if (!events.isEmpty()) {
+            eventRepository.deleteAll(events);
         }
 
         sessionRepository.delete(session);
@@ -346,10 +352,35 @@ public class SimulationServiceImpl implements SimulationService {
                 if (sendTelemetry) {
                     double effectiveLat = runtime.currentLat;
                     double effectiveLon = runtime.currentLon;
+                    double effectiveAlt = runtime.currentAlt;
+                    double effectiveHeading = runtime.currentHeading;
+                    double effectiveSpeed = runtime.speed;
 
+                    // Box-Muller Gaussian sensor noise
+                    double noiseDistMeters = ThreadLocalRandom.current().nextGaussian() * 0.5;
+                    double noiseLat = (noiseDistMeters / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
+                    double noiseLon = (noiseDistMeters / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(effectiveLat)))) * (180.0 / Math.PI);
+                    double noiseAlt = ThreadLocalRandom.current().nextGaussian() * 0.3;
+                    double noiseHeading = ThreadLocalRandom.current().nextGaussian() * 1.0;
+                    double noiseSpeed = ThreadLocalRandom.current().nextGaussian() * 0.1;
+
+                    effectiveLat += noiseLat;
+                    effectiveLon += noiseLon;
+                    effectiveAlt = Math.max(0.0, effectiveAlt + noiseAlt);
+                    effectiveHeading = (effectiveHeading + noiseHeading + 360.0) % 360.0;
+                    effectiveSpeed = Math.max(0.0, effectiveSpeed + noiseSpeed);
+
+                    // Scenario fault injection effects
                     if ("gps_failure".equalsIgnoreCase(runtime.activeScenario)) {
-                        effectiveLat += (Math.random() - 0.5) * 0.005;
-                        effectiveLon += (Math.random() - 0.5) * 0.005;
+                        // Large GPS deviation (up to ~50m)
+                        effectiveLat += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
+                        effectiveLon += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
+                    } else if ("geofence_breach".equalsIgnoreCase(runtime.activeScenario)) {
+                        // Drift sideways by ~25m to trigger geofence/corridor breach
+                        double perpHeading = Math.toRadians((runtime.currentHeading + 90.0) % 360.0);
+                        double driftDist = 25.0; // meters
+                        effectiveLat += (driftDist * Math.cos(perpHeading) / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
+                        effectiveLon += (driftDist * Math.sin(perpHeading) / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat)))) * (180.0 / Math.PI);
                     }
 
                     TelemetryPushVm telemetryPush = new TelemetryPushVm(
@@ -357,12 +388,12 @@ public class SimulationServiceImpl implements SimulationService {
                             runtime.flightId,
                             Math.round(effectiveLat * 1e7) / 1e7,
                             Math.round(effectiveLon * 1e7) / 1e7,
-                            Math.round(runtime.currentAlt * 10.0) / 10.0,
-                            runtime.speed,
-                            Math.round(runtime.currentHeading * 10.0) / 10.0,
+                            Math.round(effectiveAlt * 10.0) / 10.0,
+                            Math.round(effectiveSpeed * 10.0) / 10.0,
+                            Math.round(effectiveHeading * 10.0) / 10.0,
                             0.0,
                             0.0,
-                            runtime.currentHeading,
+                            Math.round(effectiveHeading * 10.0) / 10.0,
                             Math.round(runtime.currentBattery * 10.0) / 10.0);
 
                     telemetryClientService.pushTelemetry(telemetryPush, runtime.bearerToken);
@@ -387,12 +418,21 @@ public class SimulationServiceImpl implements SimulationService {
                 if ("motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
                     runtime.speed = Math.max(3.0, runtime.speed * 0.8);
                     runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (5.0 * timeStepSeconds));
+                    if (runtime.currentAlt <= 0.0) {
+                        runtime.speed = 0.0;
+                    }
                 }
 
                 if ("battery_drain".equalsIgnoreCase(runtime.activeScenario)) {
                     runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (5.0 * timeStepSeconds));
+                    if (runtime.currentBattery <= 5.0) {
+                        runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (3.0 * timeStepSeconds));
+                        if (runtime.currentAlt <= 0.0) {
+                            runtime.speed = 0.0;
+                        }
+                    }
                 } else {
-                    runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (0.04 * timeStepSeconds));
+                    runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (0.0333 * timeStepSeconds));
                 }
 
                 runtime.advance(stepDist);
@@ -462,15 +502,35 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     private List<WaypointVm> resolveWaypoints(FlightDetailVm flight) {
-        if (flight != null && flight.waypoints() != null && flight.waypoints().size() >= 2) {
-            log.info("Resolved {} trajectory waypoints from Flight Plan '{}'", flight.waypoints().size(), flight.id());
-            return flight.waypoints();
+        if (flight != null) {
+            if (flight.plannedRoute() != null && flight.plannedRoute().coordinates() != null
+                    && flight.plannedRoute().coordinates().size() >= 2) {
+                double defaultAlt = flight.cruisingAltitudeM() != null ? flight.cruisingAltitudeM() : 50.0;
+                List<WaypointVm> extracted = new ArrayList<>();
+                for (List<Double> coord : flight.plannedRoute().coordinates()) {
+                    if (coord != null && coord.size() >= 2) {
+                        double lon = coord.get(0);
+                        double lat = coord.get(1);
+                        double alt = coord.size() > 2 && coord.get(2) != null ? coord.get(2) : defaultAlt;
+                        extracted.add(new WaypointVm(lat, lon, alt));
+                    }
+                }
+                if (extracted.size() >= 2) {
+                    log.info("Resolved {} trajectory waypoints from Flight Plan '{}' GeoJSON planned_route",
+                            extracted.size(), flight.id());
+                    return extracted;
+                }
+            }
+
+            if (flight.waypoints() != null && flight.waypoints().size() >= 2) {
+                log.info("Resolved {} trajectory waypoints from Flight Plan '{}' waypoints list",
+                        flight.waypoints().size(), flight.id());
+                return flight.waypoints();
+            }
         }
 
-        return List.of(
-                new WaypointVm(10.7769, 106.7009, 50.0),
-                new WaypointVm(10.7820, 106.7050, 80.0),
-                new WaypointVm(10.7890, 106.7120, 60.0));
+        throw new BadRequestException(MessageCode.INVALID_SIMULATION_WAYPOINTS,
+                "Flight route has insufficient waypoints (min 2 required)");
     }
 
     private double calculateTotalDistance(List<WaypointVm> waypoints) {

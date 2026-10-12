@@ -50,10 +50,23 @@ public class FlightClientServiceImpl implements FlightClientService {
     @Override
     public List<WaypointVm> getFlightWaypoints(String flightId) {
         FlightDetailVm detail = getFlightDetail(flightId);
-        if (detail != null && detail.waypoints() != null) {
+        if (detail == null) {
+            return Collections.emptyList();
+        }
+        if (detail.plannedRoute() != null && detail.plannedRoute().coordinates() != null) {
+            double defaultAlt = detail.cruisingAltitudeM() != null ? detail.cruisingAltitudeM() : 50.0;
+            return detail.plannedRoute().coordinates().stream()
+                    .filter(c -> c != null && c.size() >= 2)
+                    .map(c -> new WaypointVm(
+                            c.get(1), // latitude
+                            c.get(0), // longitude
+                            c.size() > 2 && c.get(2) != null ? c.get(2) : defaultAlt
+                    ))
+                    .toList();
+        }
+        if (detail.waypoints() != null) {
             return detail.waypoints();
         }
         return Collections.emptyList();
     }
 }
-

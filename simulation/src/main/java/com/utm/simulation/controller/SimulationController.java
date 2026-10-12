@@ -35,141 +35,141 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/simulation")
 @RequiredArgsConstructor
-@Tag(name = "Flight Simulation Engine", description = "Endpoints for managing drone flight simulations, time-scale acceleration, and emergency scenario injection")
+@Tag(name = "Simulation", description = "Endpoints for managing virtual drone simulation, flight physics, and telemetry streaming (Module 11)")
 public class SimulationController {
 
-        private final SimulationService simulationService;
+    private final SimulationService simulationService;
 
-        @PostMapping("/sessions")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Create and launch simulation session", description = "Start virtual flight simulation for a flight plan. Drone ID, departure/arrival hubs, and route waypoints are automatically retrieved from the flight plan.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Simulation session created and started", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid request payload or insufficient flight waypoints", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Flight plan not found", content = @Content),
-                        @ApiResponse(responseCode = "409", description = "Drone already has an active simulation", content = @Content)
-        })
-        public ResponseEntity<SimulationSessionVm> createSession(
-                        @Valid @RequestBody SimulationSessionCreateVm createVm) {
-                SimulationSessionVm session = simulationService.createSession(createVm);
-                return ResponseEntity.status(HttpStatus.CREATED).body(session);
-        }
+    @PostMapping("/sessions")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @Operation(summary = "Create and launch simulation session", description = "Start virtual flight simulation for a flight plan. Drone ID and route waypoints are automatically retrieved from the flight plan.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Simulation session created and started", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload or insufficient flight waypoints", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Flight plan not found", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Drone or Flight already has an active simulation", content = @Content)
+    })
+    public ResponseEntity<SimulationSessionVm> createSession(
+            @Valid @RequestBody SimulationSessionCreateVm createVm) {
+        SimulationSessionVm session = simulationService.createSession(createVm);
+        return ResponseEntity.status(HttpStatus.CREATED).body(session);
+    }
 
-        @GetMapping("/sessions")
-        @Operation(summary = "List all simulation sessions", description = "Retrieve history of all simulation sessions.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "List of all simulation sessions", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = SimulationSessionVm.class))))
-        })
-        public ResponseEntity<List<SimulationSessionVm>> getAllSessions() {
-                return ResponseEntity.ok(simulationService.getAllSessions());
-        }
+    @GetMapping("/sessions")
+    @Operation(summary = "List all simulation sessions", description = "Retrieve history of all simulation sessions.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of all simulation sessions", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = SimulationSessionVm.class))))
+    })
+    public ResponseEntity<List<SimulationSessionVm>> getAllSessions() {
+        return ResponseEntity.ok(simulationService.getAllSessions());
+    }
 
-        @GetMapping("/sessions/active")
-        @Operation(summary = "List active simulation sessions", description = "Retrieve all currently running or paused simulation sessions.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "List of active simulation sessions", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = SimulationSessionVm.class))))
-        })
-        public ResponseEntity<List<SimulationSessionVm>> getActiveSessions() {
-                return ResponseEntity.ok(simulationService.getActiveSessions());
-        }
+    @GetMapping("/sessions/active")
+    @Operation(summary = "List active simulation sessions", description = "Retrieve all currently running or paused simulation sessions.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of active simulation sessions", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = SimulationSessionVm.class))))
+    })
+    public ResponseEntity<List<SimulationSessionVm>> getActiveSessions() {
+        return ResponseEntity.ok(simulationService.getActiveSessions());
+    }
 
-        @GetMapping("/sessions/{id}")
-        @Operation(summary = "Get simulation session by ID", description = "Retrieve status, progress, current position and metrics for a specific simulation session.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Simulation session details", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<SimulationSessionVm> getSessionById(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
-                return ResponseEntity.ok(simulationService.getSessionById(id));
-        }
+    @GetMapping("/sessions/{id}")
+    @Operation(summary = "Get simulation session by ID", description = "Retrieve status, progress, current position and metrics for a specific simulation session.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Simulation session details", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<SimulationSessionVm> getSessionById(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
+        return ResponseEntity.ok(simulationService.getSessionById(id));
+    }
 
-        @DeleteMapping("/sessions/{id}")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Delete simulation session", description = "Stops active session if running and permanently deletes session record and events.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "204", description = "Simulation session deleted successfully", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<Void> deleteSession(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
-                simulationService.deleteSession(id);
-                return ResponseEntity.noContent().build();
-        }
+    @DeleteMapping("/sessions/{id}")
+    @PreAuthorize("hasRole('admin')")
+    @Operation(summary = "Delete simulation session", description = "Stops active session if running and permanently deletes session record and events.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Simulation session deleted successfully", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<Void> deleteSession(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
+        simulationService.deleteSession(id);
+        return ResponseEntity.noContent().build();
+    }
 
-        @PatchMapping("/sessions/{id}/pause")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Pause simulation session", description = "Pauses active telemetry generation for the specified session.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Simulation session paused", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<SimulationSessionVm> pauseSession(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
-                return ResponseEntity.ok(simulationService.pauseSession(id));
-        }
+    @PatchMapping("/sessions/{id}/pause")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @Operation(summary = "Pause simulation session", description = "Pauses active telemetry generation for the specified session.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Simulation session paused", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<SimulationSessionVm> pauseSession(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
+        return ResponseEntity.ok(simulationService.pauseSession(id));
+    }
 
-        @PatchMapping("/sessions/{id}/resume")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Resume simulation session", description = "Resumes a paused simulation session.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Simulation session resumed", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<SimulationSessionVm> resumeSession(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
-                return ResponseEntity.ok(simulationService.resumeSession(id));
-        }
+    @PatchMapping("/sessions/{id}/resume")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @Operation(summary = "Resume simulation session", description = "Resumes a paused simulation session.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Simulation session resumed", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<SimulationSessionVm> resumeSession(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
+        return ResponseEntity.ok(simulationService.resumeSession(id));
+    }
 
-        @PatchMapping("/sessions/{id}/time-scale")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Update simulation time-scale", description = "Dynamically adjust simulation speed acceleration factor (0.1x to 20x).")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Simulation time-scale updated", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid timeScale parameter or simulation state", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<SimulationSessionVm> updateTimeScale(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id,
-                        @Valid @RequestBody TimeScaleUpdateVm updateVm) {
-                return ResponseEntity.ok(simulationService.updateTimeScale(id, updateVm.timeScale()));
-        }
+    @PatchMapping("/sessions/{id}/time-scale")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @Operation(summary = "Update simulation time-scale", description = "Dynamically adjust simulation speed acceleration factor (0.1x to 20x).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Simulation time-scale updated", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid timeScale parameter or simulation state", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<SimulationSessionVm> updateTimeScale(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id,
+            @Valid @RequestBody TimeScaleUpdateVm updateVm) {
+        return ResponseEntity.ok(simulationService.updateTimeScale(id, updateVm.timeScale()));
+    }
 
-        @PostMapping("/sessions/{id}/inject-scenario")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Inject emergency simulation scenario", description = "Inject abnormal events such as GPS failure, battery drain, C2 lost, motor failure, or geofence breach.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Emergency scenario injected successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = InjectScenarioResultVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid scenario configuration or simulation state", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<InjectScenarioResultVm> injectScenario(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id,
-                        @Valid @RequestBody InjectScenarioVm injectVm) {
-                return ResponseEntity.ok(simulationService.injectScenario(id, injectVm));
-        }
+    @PostMapping("/sessions/{id}/inject-scenario")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'pilot')")
+    @Operation(summary = "Inject emergency simulation scenario", description = "Inject abnormal events such as GPS failure, battery drain, C2 lost, motor failure, or geofence breach.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Emergency scenario injected successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = InjectScenarioResultVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid scenario configuration or simulation state", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<InjectScenarioResultVm> injectScenario(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id,
+            @Valid @RequestBody InjectScenarioVm injectVm) {
+        return ResponseEntity.ok(simulationService.injectScenario(id, injectVm));
+    }
 
-        @PostMapping("/sessions/{id}/stop")
-        @PreAuthorize("hasRole('admin')")
-        @Operation(summary = "Stop simulation session", description = "Stops the simulation while retaining session statistics and telemetry history.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Simulation session stopped", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
-        })
-        public ResponseEntity<SimulationSessionVm> stopSession(
-                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
-                return ResponseEntity.ok(simulationService.stopSession(id));
-        }
+    @PostMapping("/sessions/{id}/stop")
+    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @Operation(summary = "Stop simulation session", description = "Stops the simulation while retaining session statistics and telemetry history.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Simulation session stopped", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid simulation state transition", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+    })
+    public ResponseEntity<SimulationSessionVm> stopSession(
+            @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
+        return ResponseEntity.ok(simulationService.stopSession(id));
+    }
 
-        @GetMapping("/scenarios")
-        @Operation(summary = "Get scenario catalog", description = "Retrieve catalog of supported emergency scenarios and their descriptions.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "List of supported scenario types", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = ScenarioCatalogVm.class))))
-        })
-        public ResponseEntity<List<ScenarioCatalogVm>> getScenarioCatalog() {
-                return ResponseEntity.ok(simulationService.getScenarioCatalog());
-        }
+    @GetMapping("/scenarios")
+    @Operation(summary = "Get scenario catalog", description = "Retrieve catalog of supported emergency scenarios and their descriptions.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of supported scenario types", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = ScenarioCatalogVm.class))))
+    })
+    public ResponseEntity<List<ScenarioCatalogVm>> getScenarioCatalog() {
+        return ResponseEntity.ok(simulationService.getScenarioCatalog());
+    }
 }
