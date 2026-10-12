@@ -10,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 public enum ConflictStatus {
     DETECTED("detected"),
     NOTIFIED("notified"),
+    ACKNOWLEDGED("acknowledged"),
     RESOLVING("resolving"),
-    RESOLVED("resolved");
+    RESOLVED("resolved"),
+    DISMISSED("dismissed");
 
     private final String value;
 

@@ -8,10 +8,12 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ConflictSeverity {
-    LOW("LOW"),
-    MEDIUM("MEDIUM"),
-    HIGH("HIGH"),
-    CRITICAL("CRITICAL");
+    EMERGENCY("emergency"),
+    CRITICAL("critical"),
+    WARNING("warning"),
+    HIGH("high"),
+    MEDIUM("medium"),
+    LOW("low");
 
     private final String value;
 

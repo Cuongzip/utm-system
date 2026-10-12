@@ -7,6 +7,7 @@ public record ServiceUrlConfig(
         String drone,
         String hub,
         String telemetry,
-        String alert
+        String alert,
+        String conflict
 ) {
 }

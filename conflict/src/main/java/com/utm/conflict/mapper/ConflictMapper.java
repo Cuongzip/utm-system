@@ -37,6 +37,32 @@ public abstract class ConflictMapper {
 
     public abstract List<ConflictVm> toVmList(List<Conflict> entities);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
+    @Mapping(target = "conflictType", expression = "java(mapConflictTypeFromPost(postVm.conflictType()))")
+    @Mapping(target = "severity", expression = "java(mapSeverityFromPost(postVm.severity()))")
+    @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
+    @Mapping(target = "detectionMethod", constant = "automated_conformance")
+    @Mapping(target = "resolutionStrategy", ignore = true)
+    @Mapping(target = "resolutionActions", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
+    @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", source = "createdBy")
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    public abstract Conflict toEntity(com.utm.conflict.viewmodel.ConflictPostVm postVm, String createdBy);
+
+    protected ConflictType mapConflictTypeFromPost(String type) {
+        ConflictType parsed = ConflictType.fromValue(type);
+        return parsed != null ? parsed : ConflictType.GEOFENCE_VIOLATION;
+    }
+
+    protected ConflictSeverity mapSeverityFromPost(String severity) {
+        ConflictSeverity parsed = ConflictSeverity.fromValue(severity);
+        return parsed != null ? parsed : ConflictSeverity.CRITICAL;
+    }
+
     @Named("mapLocation")
     protected LocationVm mapLocation(Conflict entity) {
         if (entity == null || (entity.getLocationLat() == null && entity.getLocationLon() == null)) {

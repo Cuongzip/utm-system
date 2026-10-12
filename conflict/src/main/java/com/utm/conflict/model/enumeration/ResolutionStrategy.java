@@ -8,9 +8,12 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ResolutionStrategy {
-    ALTITUDE_CHANGE("altitude_change"),
-    SPEED_ADJUSTMENT("speed_adjustment"),
+    HOVER("hover"),
     REROUTE("reroute"),
+    DIVERT_ALTITUDE("divert_altitude"),
+    RETURN_TO_BASE("return_to_base"),
+    SPEED_ADJUSTMENT("speed_adjustment"),
+    ALTITUDE_CHANGE("altitude_change"),
     HOLD("hold"),
     AUTO_CLEARED("auto_cleared");
 

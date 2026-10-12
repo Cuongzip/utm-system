@@ -145,6 +145,7 @@ services:
       - AIRSPACE_SERVICE_URL=http://airspace:8087
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
       - ALERT_SERVICE_URL=http://alert:8093
+      - CONFLICT_SERVICE_URL=http://conflict:8092
       - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-Admin123@}
     depends_on:
       - postgres
@@ -153,6 +154,7 @@ services:
       - airspace
       - telemetry
       - alert
+      - conflict
     networks:
       - utm-network
 

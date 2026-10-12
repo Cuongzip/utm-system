@@ -3,6 +3,7 @@ package com.utm.conflict.controller;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
 import com.utm.conflict.service.ConflictDetectionService;
 import com.utm.conflict.service.ConflictService;
+import com.utm.conflict.viewmodel.ConflictPostVm;
 import com.utm.conflict.viewmodel.ConflictResolvePostVm;
 import com.utm.conflict.viewmodel.ConflictScanResultVm;
 import com.utm.conflict.viewmodel.ConflictVm;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,6 +41,7 @@ public class ConflictController {
     private final ConflictDetectionService conflictDetectionService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "List all conflicts", description = "Get list of all detected airspace conflicts with optional filters")
     @ApiResponses(value = {
             @ApiResponse(
@@ -52,9 +55,9 @@ public class ConflictController {
             @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
     })
     public ResponseEntity<List<ConflictVm>> getAllConflicts(
-            @Parameter(description = "Filter by conflict status (detected, notified, resolving, resolved)")
+            @Parameter(description = "Filter by conflict status (detected, notified, resolving, resolved, acknowledged, dismissed)")
             @RequestParam(required = false) String status,
-            @Parameter(description = "Filter by severity (LOW, MEDIUM, HIGH, CRITICAL)")
+            @Parameter(description = "Filter by severity (emergency, critical, high, warning, medium, low)")
             @RequestParam(required = false) String severity,
             @Parameter(description = "Filter by flight ID (primary or secondary)")
             @RequestParam(required = false) String flightId
@@ -63,6 +66,7 @@ public class ConflictController {
     }
 
     @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "Get active conflicts", description = "List currently active and unresolved conflicts requiring avoidance actions")
     @ApiResponses(value = {
             @ApiResponse(
@@ -80,6 +84,7 @@ public class ConflictController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "Get conflict details", description = "Retrieve detailed information of a specific airspace conflict including separation and CPA")
     @ApiResponses(value = {
             @ApiResponse(
@@ -100,8 +105,53 @@ public class ConflictController {
         return ResponseEntity.ok(conflictService.getConflictById(id));
     }
 
+    @PostMapping
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Report or create a conflict", description = "Report an airspace conflict or automated conformance breach")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Conflict recorded successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ConflictVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content)
+    })
+    public ResponseEntity<ConflictVm> createConflict(@Valid @RequestBody ConflictPostVm postVm) {
+        String createdBy = extractCurrentUserId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(conflictService.createConflict(postVm, createdBy));
+    }
+
+    @PostMapping("/{id}/acknowledge")
+    @PreAuthorize("hasAnyRole('atc', 'admin', 'hub_operator')")
+    @Operation(summary = "Acknowledge conflict", description = "ATC or operator acknowledges an active conflict alert")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Conflict acknowledged successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ConflictVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Conflict not found", content = @Content)
+    })
+    public ResponseEntity<ConflictVm> acknowledgeConflict(
+            @Parameter(description = "Unique UUID identifier of the conflict", required = true)
+            @PathVariable String id
+    ) {
+        String acknowledgedBy = extractCurrentUserId();
+        return ResponseEntity.ok(conflictService.acknowledgeConflict(id, acknowledgedBy));
+    }
+
     @PostMapping("/{id}/resolve")
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator')")
     @Operation(summary = "Resolve conflict", description = "Apply resolution strategy (altitude_change, speed_adjustment, reroute, hold) and mark conflict as resolved")
     @ApiResponses(value = {
             @ApiResponse(
@@ -122,20 +172,12 @@ public class ConflictController {
             @PathVariable String id,
             @Valid @RequestBody ConflictResolvePostVm resolveVm
     ) {
-        String resolvedBy = null;
-        try {
-            resolvedBy = AuthenticationUtils.extractUserId();
-        } catch (Exception ex) {
-            var auth = AuthenticationUtils.getAuthentication();
-            if (auth != null) {
-                resolvedBy = auth.getName();
-            }
-        }
+        String resolvedBy = extractCurrentUserId();
         return ResponseEntity.ok(conflictService.resolveConflict(id, resolveVm, resolvedBy));
     }
 
     @PostMapping("/evaluate")
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator')")
     @Operation(summary = "Trigger conflict detection evaluation", description = "Manually trigger an immediate conflict evaluation scan across all airborne flights")
     @ApiResponses(value = {
             @ApiResponse(
@@ -151,5 +193,17 @@ public class ConflictController {
     })
     public ResponseEntity<ConflictScanResultVm> evaluateConflicts() {
         return ResponseEntity.ok(conflictDetectionService.runConflictScan());
+    }
+
+    private String extractCurrentUserId() {
+        try {
+            return AuthenticationUtils.extractUserId();
+        } catch (Exception ex) {
+            var auth = AuthenticationUtils.getAuthentication();
+            if (auth != null) {
+                return auth.getName();
+            }
+            return "system";
+        }
     }
 }

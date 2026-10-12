@@ -38,6 +38,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     private final FlightRepository flightRepository;
     private final FlightConformanceRepository conformanceRepository;
     private final TelemetryClientService telemetryClientService;
+    private final ConflictClientService conflictClientService;
     private final FlightConformanceMapper conformanceMapper;
     private final ObjectMapper objectMapper;
 
@@ -104,7 +105,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (ageSeconds > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
             transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT,
                     String.format("Telemetry lost for %d seconds (exceeded %ds emergency threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC));
+                            ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC), telemetry);
             updateFlightStatusAndSave(flight, conformance);
             return conformanceRepository.save(conformance);
         }
@@ -112,7 +113,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (ageSeconds > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
                     String.format("Telemetry lost for %d seconds (exceeded %ds warning threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC));
+                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC), telemetry);
             updateFlightStatusAndSave(flight, conformance);
             return conformanceRepository.save(conformance);
         }
@@ -146,14 +147,14 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         conformance.setViolationsJson(serializeViolations(violations));
 
         if (result.crossTrackDistanceM() > 30.0 || (isLateralBreached && isVerticalBreached)) {
-            transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
-                    String.join("; ", violations));
-        } else if (isLateralBreached || isVerticalBreached) {
             transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT,
-                    String.join("; ", violations));
+                    String.join("; ", violations), telemetry);
+        } else if (isLateralBreached || isVerticalBreached) {
+            transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
+                    String.join("; ", violations), telemetry);
         } else {
             transitionStatus(flight, conformance, ConformanceStatus.CONFORMANT,
-                    "Drone on planned 4D corridor trajectory");
+                    "Drone on planned 4D corridor trajectory", telemetry);
         }
 
         updateFlightStatusAndSave(flight, conformance);
@@ -168,7 +169,13 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     }
 
     private void transitionStatus(Flight flight, FlightConformance conformance,
-                                 ConformanceStatus newStatus, String message) {
+                                  ConformanceStatus newStatus, String message) {
+        transitionStatus(flight, conformance, newStatus, message, null);
+    }
+
+    private void transitionStatus(Flight flight, FlightConformance conformance,
+                                  ConformanceStatus newStatus, String message,
+                                  TelemetryBriefVm telemetry) {
         ConformanceStatus prevStatus = conformance.getStatus();
         conformance.setStatus(newStatus);
 
@@ -176,9 +183,10 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             log.info("Flight '{}' conformance transitioned: {} -> {}. Message: {}",
                     flight.getId(), prevStatus, newStatus, message);
 
-            if (newStatus == ConformanceStatus.NON_CONFORMING) {
-                log.warn("NON_CONFORMING breach detected for Flight '{}' (Flight Number: {}). Flagging conflict event for ATC.",
-                        flight.getId(), flight.getFlightNumber());
+            if (newStatus == ConformanceStatus.NON_CONFORMING || newStatus == ConformanceStatus.CONTINGENT) {
+                log.warn("{} breach detected for Flight '{}' (Flight Number: {}). Reporting conflict to conflict service.",
+                        newStatus, flight.getId(), flight.getFlightNumber());
+                conflictClientService.reportConformanceConflict(flight, conformance, telemetry, message);
             }
         }
     }

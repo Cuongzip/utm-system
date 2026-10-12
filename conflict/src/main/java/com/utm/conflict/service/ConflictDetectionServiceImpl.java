@@ -8,12 +8,12 @@ import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ConflictType;
 import com.utm.conflict.repository.ConflictRepository;
 import com.utm.conflict.viewmodel.ConflictScanResultVm;
-import com.utm.conflict.viewmodel.FlightClientVm;
-import com.utm.conflict.viewmodel.TelemetryRecordClientVm;
+import com.utm.conflict.viewmodel.FlightBriefVm;
+import com.utm.conflict.viewmodel.FlightListBriefVm;
+import com.utm.conflict.viewmodel.TelemetryBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +33,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     private static final List<ConflictStatus> ACTIVE_STATUSES = List.of(
             ConflictStatus.DETECTED,
             ConflictStatus.NOTIFIED,
+            ConflictStatus.ACKNOWLEDGED,
             ConflictStatus.RESOLVING);
 
     private final ConflictRepository conflictRepository;
@@ -70,7 +71,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     @Override
     @Transactional
     public ConflictScanResultVm runConflictScan() {
-        List<FlightClientVm> activeFlights = fetchActiveFlights();
+        List<FlightBriefVm> activeFlights = fetchActiveFlights();
         if (activeFlights.isEmpty() || activeFlights.size() < 2) {
             return conflictDetectionMapper.toScanResultVm(
                     activeFlights.size(),
@@ -82,8 +83,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         }
 
         List<FlightWithTelemetry> flightDataList = new ArrayList<>();
-        for (FlightClientVm flight : activeFlights) {
-            TelemetryRecordClientVm telemetry = fetchLatestTelemetry(flight.id());
+        for (FlightBriefVm flight : activeFlights) {
+            TelemetryBriefVm telemetry = fetchLatestTelemetry(flight.id());
             if (telemetry != null && telemetry.latitude() != null && telemetry.longitude() != null
                     && telemetry.altitude() != null) {
                 flightDataList.add(new FlightWithTelemetry(flight, telemetry));
@@ -182,24 +183,23 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                 ZonedDateTime.now());
     }
 
-    private List<FlightClientVm> fetchActiveFlights() {
+    private List<FlightBriefVm> fetchActiveFlights() {
         try {
             String baseUrl = serviceUrlConfig.flight();
             String basePath = (baseUrl != null && baseUrl.endsWith("/flight")) ? "" : "/flight";
-            String url = baseUrl + basePath + "/api/v1/flights?status=active";
-            List<FlightClientVm> flights = restClient.get()
+            String url = baseUrl + basePath + "/api/v1/flights?status=active&limit=0";
+            FlightListBriefVm response = restClient.get()
                     .uri(url)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {
-                    });
-            return flights != null ? flights : Collections.emptyList();
+                    .body(FlightListBriefVm.class);
+            return response != null && response.items() != null ? response.items() : Collections.emptyList();
         } catch (Exception ex) {
             log.debug("Failed to query active flights from flight service: {}", ex.getMessage());
             return Collections.emptyList();
         }
     }
 
-    private TelemetryRecordClientVm fetchLatestTelemetry(String flightId) {
+    private TelemetryBriefVm fetchLatestTelemetry(String flightId) {
         try {
             String baseUrl = serviceUrlConfig.telemetry();
             String basePath = (baseUrl != null && baseUrl.endsWith("/telemetry")) ? "" : "/telemetry";
@@ -207,7 +207,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             return restClient.get()
                     .uri(url)
                     .retrieve()
-                    .body(TelemetryRecordClientVm.class);
+                    .body(TelemetryBriefVm.class);
         } catch (Exception ex) {
             log.debug("No latest telemetry record for flight {}: {}", flightId, ex.getMessage());
             return null;
@@ -251,7 +251,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         return EARTH_RADIUS_M * c;
     }
 
-    private double calculateTcpa(TelemetryRecordClientVm t1, TelemetryRecordClientVm t2) {
+    private double calculateTcpa(TelemetryBriefVm t1, TelemetryBriefVm t2) {
         double speed1 = resolveDouble(t1.speed(), 0.0);
         double speed2 = resolveDouble(t2.speed(), 0.0);
         double heading1 = resolveDouble(t1.heading(), 0.0);
@@ -294,6 +294,6 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         return defaultValue;
     }
 
-    private record FlightWithTelemetry(FlightClientVm flight, TelemetryRecordClientVm telemetry) {
+    private record FlightWithTelemetry(FlightBriefVm flight, TelemetryBriefVm telemetry) {
     }
 }

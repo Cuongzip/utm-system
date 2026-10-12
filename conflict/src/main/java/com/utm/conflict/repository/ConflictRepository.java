@@ -18,6 +18,24 @@ public interface ConflictRepository extends JpaRepository<Conflict, String> {
 
     List<Conflict> findByStatusInOrderByDetectedAtDesc(Collection<ConflictStatus> statuses);
 
+    List<Conflict> findByPrimaryFlightIdAndStatusIn(String primaryFlightId, Collection<ConflictStatus> statuses);
+
+    @Query("""
+        SELECT c FROM Conflict c
+        WHERE c.status IN :statuses
+        ORDER BY
+            CASE c.severity
+                WHEN com.utm.conflict.model.enumeration.ConflictSeverity.EMERGENCY THEN 1
+                WHEN com.utm.conflict.model.enumeration.ConflictSeverity.CRITICAL THEN 2
+                WHEN com.utm.conflict.model.enumeration.ConflictSeverity.HIGH THEN 3
+                WHEN com.utm.conflict.model.enumeration.ConflictSeverity.WARNING THEN 4
+                WHEN com.utm.conflict.model.enumeration.ConflictSeverity.MEDIUM THEN 5
+                ELSE 6
+            END ASC,
+            c.detectedAt DESC
+    """)
+    List<Conflict> findActivePrioritized(@Param("statuses") Collection<ConflictStatus> statuses);
+
     @Query("""
         SELECT c FROM Conflict c
         WHERE ((c.primaryFlightId = :flightA AND c.secondaryFlightId = :flightB)

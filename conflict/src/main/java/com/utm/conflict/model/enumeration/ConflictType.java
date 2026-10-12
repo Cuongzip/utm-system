@@ -8,10 +8,13 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ConflictType {
+    LOSS_OF_SEPARATION("loss_of_separation"),
+    GEOFENCE_VIOLATION("geofence_violation"),
+    AIRSPACE_BREACH("airspace_breach"),
+    TERRAIN_PROXIMITY("terrain_proximity"),
     SEPARATION_MINIMUM("separation_minimum"),
     HEAD_ON("head_on"),
-    CONVERGENCE("convergence"),
-    AIRSPACE_BREACH("airspace_breach");
+    CONVERGENCE("convergence");
 
     private final String value;
 

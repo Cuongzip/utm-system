@@ -4,7 +4,7 @@ import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictType;
 import com.utm.conflict.viewmodel.ConflictScanResultVm;
-import com.utm.conflict.viewmodel.FlightClientVm;
+import com.utm.conflict.viewmodel.FlightBriefVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -44,8 +44,8 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     Conflict toEntity(
-            FlightClientVm primaryFlight,
-            FlightClientVm secondaryFlight,
+            FlightBriefVm primaryFlight,
+            FlightBriefVm secondaryFlight,
             ConflictType conflictType,
             ConflictSeverity severity,
             String hubId,
