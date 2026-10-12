@@ -13,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
@@ -92,12 +93,40 @@ public class TelemetryServiceImpl implements TelemetryService {
     @Override
     @Transactional(readOnly = true)
     public List<TelemetryRecordVm> getFlightTrackHistory(String flightId, ZonedDateTime from, ZonedDateTime to) {
+        if (from != null && to == null) {
+            to = ZonedDateTime.now();
+        } else if (from == null && to != null) {
+            from = ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        }
+
         List<TelemetryRecord> records;
         if (from != null && to != null) {
             records = telemetryRecordRepository.findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(flightId, from, to);
         } else {
             records = telemetryRecordRepository.findByFlightIdOrderByCreatedOnAsc(flightId);
         }
+
+        return records.stream()
+                .map(telemetryMapper::toVm)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TelemetryRecordVm> getDroneTrackHistory(String droneId, ZonedDateTime from, ZonedDateTime to) {
+        if (from != null && to == null) {
+            to = ZonedDateTime.now();
+        } else if (from == null && to != null) {
+            from = ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        }
+
+        List<TelemetryRecord> records;
+        if (from != null && to != null) {
+            records = telemetryRecordRepository.findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(droneId, from, to);
+        } else {
+            records = telemetryRecordRepository.findByDroneIdOrderByCreatedOnAsc(droneId);
+        }
+
         return records.stream()
                 .map(telemetryMapper::toVm)
                 .toList();

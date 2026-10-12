@@ -15,4 +15,6 @@ public interface TelemetryService {
     TelemetryRecordVm getLatestByFlightId(String flightId);
 
     List<TelemetryRecordVm> getFlightTrackHistory(String flightId, ZonedDateTime from, ZonedDateTime to);
+
+    List<TelemetryRecordVm> getDroneTrackHistory(String droneId, ZonedDateTime from, ZonedDateTime to);
 }

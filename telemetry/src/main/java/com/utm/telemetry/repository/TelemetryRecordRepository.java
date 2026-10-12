@@ -19,4 +19,9 @@ public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord
     Optional<TelemetryRecord> findTopByFlightIdOrderByCreatedOnDesc(String flightId);
 
     Optional<TelemetryRecord> findTopByDroneIdOrderByCreatedOnDesc(String droneId);
+
+    List<TelemetryRecord> findByDroneIdOrderByCreatedOnAsc(String droneId);
+
+    List<TelemetryRecord> findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(
+            String droneId, ZonedDateTime from, ZonedDateTime to);
 }

@@ -8,25 +8,25 @@ public record TelemetryRecordVm(
         @Schema(description = "Unique ID of the telemetry record", example = "550e8400-e29b-41d4-a716-446655440000")
         String id,
 
-        @Schema(description = "Unique identifier of the reporting drone", example = "drone-01")
+        @Schema(description = "Unique identifier of the reporting drone", example = "550e8400-e29b-41d4-a716-446655440000")
         String droneId,
 
-        @Schema(description = "Associated flight operation ID", example = "flight-01")
+        @Schema(description = "Associated flight operation ID", example = "660e8400-e29b-41d4-a716-446655440001")
         String flightId,
 
-        @Schema(description = "Instantaneous WGS84 Latitude", example = "37.973")
+        @Schema(description = "Instantaneous WGS84 Latitude", example = "10.7780")
         Double latitude,
 
-        @Schema(description = "Instantaneous WGS84 Longitude", example = "23.733")
+        @Schema(description = "Instantaneous WGS84 Longitude", example = "106.7020")
         Double longitude,
 
-        @Schema(description = "Current altitude in meters (m)", example = "120.5")
+        @Schema(description = "Current altitude in meters (m)", example = "85.2")
         Double altitude,
 
-        @Schema(description = "Ground speed in meters per second (m/s)", example = "14.2")
+        @Schema(description = "Ground speed in meters per second (m/s)", example = "14.5")
         Double speed,
 
-        @Schema(description = "Compass heading angle in degrees (0-360°)", example = "85.0")
+        @Schema(description = "Compass heading angle in degrees (0-360°)", example = "45.0")
         Double heading,
 
         @Schema(description = "Pitch angle in degrees", example = "1.5")
@@ -35,10 +35,10 @@ public record TelemetryRecordVm(
         @Schema(description = "Roll angle in degrees", example = "-0.8")
         Double roll,
 
-        @Schema(description = "Yaw angle in degrees", example = "85.0")
+        @Schema(description = "Yaw angle in degrees", example = "45.0")
         Double yaw,
 
-        @Schema(description = "Remaining battery percentage (0-100%)", example = "88.5")
+        @Schema(description = "Remaining battery percentage (0-100%)", example = "82.5")
         Double batteryPercentage,
 
         @Schema(description = "Telemetry record timestamp")

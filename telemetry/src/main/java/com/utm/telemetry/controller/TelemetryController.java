@@ -32,13 +32,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/telemetry")
 @RequiredArgsConstructor
-@Tag(name = "Telemetry", description = "Endpoints for ingesting and querying real-time drone telemetry data")
+@Tag(name = "Telemetry", description = "Endpoints for ingesting and querying real-time drone telemetry data (Module 10)")
 public class TelemetryController {
 
     private final TelemetryService telemetryService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('pilot', 'admin')")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
     @Operation(summary = "Ingest drone telemetry data", description = "Push instantaneous telemetry packet (lat, lon, alt, speed, heading, battery) into system.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -59,6 +59,7 @@ public class TelemetryController {
     }
 
     @GetMapping("/flight/{flightId}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "Get telemetry history for a flight", description = "Retrieve historical trajectory breadcrumbs for a specific flight with optional time range.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -82,6 +83,7 @@ public class TelemetryController {
     }
 
     @GetMapping("/flight/{flightId}/latest")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "Get latest telemetry for a flight", description = "Retrieve the most recent instantaneous telemetry position and health metrics for a flight.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -99,7 +101,32 @@ public class TelemetryController {
         return ResponseEntity.ok(telemetryService.getLatestByFlightId(flightId));
     }
 
+    @GetMapping("/drone/{droneId}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Get telemetry history for a drone", description = "Retrieve historical trajectory breadcrumbs for a specific drone hardware unit.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Drone telemetry history retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = TelemetryRecordVm.class))
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+    })
+    public ResponseEntity<List<TelemetryRecordVm>> getDroneTelemetryHistory(
+            @PathVariable String droneId,
+            @Parameter(description = "Start timestamp (ISO-8601 UTC)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime from,
+            @Parameter(description = "End timestamp (ISO-8601 UTC)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime to
+    ) {
+        return ResponseEntity.ok(telemetryService.getDroneTrackHistory(droneId, from, to));
+    }
+
     @GetMapping("/drone/{droneId}/latest")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "Get latest telemetry for a drone", description = "Retrieve the most recent instantaneous telemetry position and health metrics for a drone hardware unit.")
     @ApiResponses(value = {
             @ApiResponse(
