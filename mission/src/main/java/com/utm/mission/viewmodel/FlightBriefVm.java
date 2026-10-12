@@ -1,7 +1,9 @@
 package com.utm.mission.viewmodel;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Brief profile of created flight plan")
 public record FlightBriefVm(
         @Schema(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")

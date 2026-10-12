@@ -1,7 +1,7 @@
 package com.utm.flight.service;
 
 import com.utm.flight.config.ServiceUrlConfig;
-import com.utm.flight.viewmodel.TelemetryRecordVm;
+import com.utm.flight.viewmodel.TelemetryBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
     private final ServiceUrlConfig serviceUrlConfig;
 
     @Override
-    public Optional<TelemetryRecordVm> getLatestFlightTelemetry(String flightId) {
+    public Optional<TelemetryBriefVm> getLatestFlightTelemetry(String flightId) {
         if (flightId == null || flightId.isBlank()) {
             return Optional.empty();
         }
@@ -33,10 +33,10 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
         String endpoint = baseUrl + basePath + "/api/v1/telemetry/flight/" + flightId.trim() + "/latest";
 
         try {
-            TelemetryRecordVm record = restClient.get()
+            TelemetryBriefVm record = restClient.get()
                     .uri(endpoint)
                     .retrieve()
-                    .body(TelemetryRecordVm.class);
+                    .body(TelemetryBriefVm.class);
             return Optional.ofNullable(record);
         } catch (Exception ex) {
             log.debug("Telemetry not found or unavailable for flight '{}': {}", flightId, ex.getMessage());

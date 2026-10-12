@@ -1,24 +1,31 @@
 package com.utm.flight.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.flight.mapper.FlightMapper;
-import com.utm.flight.mapper.WaypointMapper;
 import com.utm.flight.model.Flight;
-import com.utm.flight.model.FlightWaypoint;
+import com.utm.flight.model.enumeration.ConformanceStatus;
+import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.repository.FlightRepository;
 import com.utm.flight.viewmodel.FlightAbortVm;
+import com.utm.flight.viewmodel.FlightListVm;
 import com.utm.flight.viewmodel.FlightPostVm;
 import com.utm.flight.viewmodel.FlightPutVm;
+import com.utm.flight.viewmodel.FlightRejectVm;
 import com.utm.flight.viewmodel.FlightVm;
-import com.utm.flight.viewmodel.HubVm;
-import com.utm.flight.viewmodel.WaypointVm;
+import com.utm.flight.viewmodel.GeoJsonLineStringVm;
+import com.utm.flight.viewmodel.HubBriefVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,16 +40,38 @@ import java.util.Objects;
 @Slf4j
 public class FlightServiceImpl implements FlightService {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     private final FlightRepository flightRepository;
     private final FlightMapper flightMapper;
-    private final WaypointMapper waypointMapper;
     private final DroneClientService droneClientService;
     private final HubClientService hubClientService;
 
     @Override
     @Transactional(readOnly = true)
+    public FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId, int limit, int offset) {
+        Specification<Flight> spec = buildSpecification(status, authorizationStatus, pilotId, droneId);
+
+        if (limit <= 0) {
+            List<Flight> all = flightRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
+            return FlightListVm.of(flightMapper.toVmList(all), all.size());
+        }
+
+        int pageIndex = offset / limit;
+        PageRequest pageRequest = PageRequest.of(pageIndex, limit, Sort.by(Sort.Direction.DESC, "createdOn"));
+        Page<Flight> page = flightRepository.findAll(spec, pageRequest);
+        return FlightListVm.of(flightMapper.toVmList(page.getContent()), page.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<FlightVm> getAllFlights(String status, String pilotId, String droneId) {
-        Specification<Flight> spec = (root, query, cb) -> {
+        Specification<Flight> spec = buildSpecification(status, null, pilotId, droneId);
+        return flightMapper.toVmList(flightRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn")));
+    }
+
+    private Specification<Flight> buildSpecification(String status, String authorizationStatus, String pilotId, String droneId) {
+        return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (status != null && !status.isBlank()) {
                 try {
@@ -50,6 +79,14 @@ public class FlightServiceImpl implements FlightService {
                     predicates.add(cb.equal(root.get("status"), flightStatus));
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid flight status query parameter: {}", status);
+                }
+            }
+            if (authorizationStatus != null && !authorizationStatus.isBlank()) {
+                try {
+                    FlightAuthorizationStatus authStatus = FlightAuthorizationStatus.fromValue(authorizationStatus.trim());
+                    predicates.add(cb.equal(root.get("authorizationStatus"), authStatus));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid authorization status query parameter: {}", authorizationStatus);
                 }
             }
             if (pilotId != null && !pilotId.isBlank()) {
@@ -60,8 +97,6 @@ public class FlightServiceImpl implements FlightService {
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
-
-        return flightMapper.toVmList(flightRepository.findAll(spec));
     }
 
     @Override
@@ -88,27 +123,30 @@ public class FlightServiceImpl implements FlightService {
         }
 
         String depHubId = flightPostVm.departureHubId().trim();
-        HubVm depHub = hubClientService.getHubById(depHubId)
+        HubBriefVm depHub = hubClientService.getHubById(depHubId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, depHubId));
 
         String arrHubId = flightPostVm.arrivalHubId().trim();
-        HubVm arrHub = hubClientService.getHubById(arrHubId)
+        HubBriefVm arrHub = hubClientService.getHubById(arrHubId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, arrHubId));
 
-        List<WaypointVm> anchoredWaypoints = resolveAndAnchorWaypoints(flightPostVm.waypoints(), depHub, arrHub);
+        String plannedRouteJson = buildPlannedRouteJson(flightPostVm, depHub, arrHub);
 
         Flight flight = flightMapper.toEntity(flightPostVm);
-        flight.setStatus(FlightStatus.PLANNED);
-        flight.setAuthorizationStatus(com.utm.flight.model.enumeration.FlightAuthorizationStatus.PENDING);
+        flight.setPlannedRoute(plannedRouteJson);
+        flight.setActualRoute("{\"type\":\"LineString\",\"coordinates\":[]}");
+        flight.setStatus(FlightStatus.SCHEDULED);
+        flight.setAuthorizationStatus(FlightAuthorizationStatus.PENDING);
+        flight.setConformanceStatus(ConformanceStatus.CONFORMANT);
+
         if (flightPostVm.executionId() != null && !flightPostVm.executionId().isBlank()) {
             flight.setExecutionId(flightPostVm.executionId().trim());
         }
-        flight.setWaypoints(mapToWaypointEntities(anchoredWaypoints));
 
         Flight savedFlight = flightRepository.saveAndFlush(flight);
 
-        log.info("Created new Flight plan with ID: {} and flight number: {} (total {} waypoints anchored & persisted)",
-                savedFlight.getId(), savedFlight.getFlightNumber(), anchoredWaypoints.size());
+        log.info("Created new Flight plan ID: {} (Flight Number: {}) with GeoJSON route",
+                savedFlight.getId(), savedFlight.getFlightNumber());
         return flightMapper.toVm(savedFlight);
     }
 
@@ -130,62 +168,33 @@ public class FlightServiceImpl implements FlightService {
             }
         }
 
-        String effectiveDepHubId = (flightPutVm.departureHubId() != null && !flightPutVm.departureHubId().isBlank())
-                ? flightPutVm.departureHubId().trim()
-                : flight.getDepartureHubId();
+        if (flightPutVm.departureHubId() != null && !flightPutVm.departureHubId().isBlank()) {
+            String depHubId = flightPutVm.departureHubId().trim();
+            if (!hubClientService.checkHubExists(depHubId)) {
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, depHubId);
+            }
+        }
 
-        HubVm depHub = hubClientService.getHubById(effectiveDepHubId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, effectiveDepHubId));
-
-        String effectiveArrHubId = (flightPutVm.arrivalHubId() != null && !flightPutVm.arrivalHubId().isBlank())
-                ? flightPutVm.arrivalHubId().trim()
-                : flight.getArrivalHubId();
-
-        HubVm arrHub = hubClientService.getHubById(effectiveArrHubId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, effectiveArrHubId));
+        if (flightPutVm.arrivalHubId() != null && !flightPutVm.arrivalHubId().isBlank()) {
+            String arrHubId = flightPutVm.arrivalHubId().trim();
+            if (!hubClientService.checkHubExists(arrHubId)) {
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, arrHubId);
+            }
+        }
 
         flightMapper.updateEntityFromPutVm(flight, flightPutVm);
 
-        if (flightPutVm.waypoints() != null) {
-            List<WaypointVm> anchored = resolveAndAnchorWaypoints(flightPutVm.waypoints(), depHub, arrHub);
-            flight.setWaypoints(mapToWaypointEntities(anchored));
-        } else if (flightPutVm.departureHubId() != null || flightPutVm.arrivalHubId() != null) {
-            List<WaypointVm> existingWaypoints = waypointMapper.toVmList(flight.getWaypoints());
-            if (!existingWaypoints.isEmpty()) {
-                List<WaypointVm> reAnchored = new ArrayList<>(existingWaypoints);
-                if (flightPutVm.departureHubId() != null && !reAnchored.isEmpty()) {
-                    reAnchored.set(0, new WaypointVm(depHub.latitude(), depHub.longitude(), Objects.requireNonNullElse(depHub.altitude(), 0.0), 0.0));
-                }
-                if (flightPutVm.arrivalHubId() != null && !reAnchored.isEmpty()) {
-                    reAnchored.set(reAnchored.size() - 1, new WaypointVm(arrHub.latitude(), arrHub.longitude(), Objects.requireNonNullElse(arrHub.altitude(), 0.0), 0.0));
-                }
-                flight.setWaypoints(mapToWaypointEntities(reAnchored));
-            }
+        if (flightPutVm.plannedRoute() != null) {
+            flight.setPlannedRoute(serializeGeoJson(flightPutVm.plannedRoute()));
+        }
+
+        if (flightPutVm.actualRoute() != null) {
+            flight.setActualRoute(serializeGeoJson(flightPutVm.actualRoute()));
         }
 
         Flight updatedFlight = flightRepository.saveAndFlush(flight);
         log.info("Updated Flight plan with ID: {}", id);
         return flightMapper.toVm(updatedFlight);
-    }
-
-    private List<FlightWaypoint> mapToWaypointEntities(List<WaypointVm> waypoints) {
-        List<FlightWaypoint> waypointEntities = new ArrayList<>();
-        for (int i = 0; i < waypoints.size(); i++) {
-            WaypointVm w = waypoints.get(i);
-            FlightWaypoint wp = waypointMapper.toEntity(w);
-            wp.setSequence(i + 1);
-            if (wp.getName() == null || wp.getName().isBlank()) {
-                if (i == 0) {
-                    wp.setName(waypoints.size() == 1 ? "Departure / Arrival Hub" : "Departure Hub");
-                } else if (i == waypoints.size() - 1) {
-                    wp.setName("Arrival Hub");
-                } else {
-                    wp.setName("Waypoint " + (i + 1));
-                }
-            }
-            waypointEntities.add(wp);
-        }
-        return waypointEntities;
     }
 
     @Override
@@ -195,19 +204,19 @@ public class FlightServiceImpl implements FlightService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
         if (flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only planned flights can be authorized");
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only planned/scheduled flights can be authorized");
         }
 
-        flight.setAuthorizationStatus(com.utm.flight.model.enumeration.FlightAuthorizationStatus.APPROVED);
+        flight.setAuthorizationStatus(FlightAuthorizationStatus.APPROVED);
         flight.setStatus(FlightStatus.AUTHORIZED);
         Flight savedFlight = flightRepository.saveAndFlush(flight);
-        log.info("Flight ID: {} authorized by UTM", id);
+        log.info("Flight ID: {} authorized by ATC", id);
         return flightMapper.toVm(savedFlight);
     }
 
     @Override
     @Transactional
-    public FlightVm rejectFlight(String id, com.utm.flight.viewmodel.FlightRejectVm rejectVm) {
+    public FlightVm rejectFlight(String id, FlightRejectVm rejectVm) {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
@@ -215,7 +224,7 @@ public class FlightServiceImpl implements FlightService {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Cannot reject an active or completed flight");
         }
 
-        flight.setAuthorizationStatus(com.utm.flight.model.enumeration.FlightAuthorizationStatus.REJECTED);
+        flight.setAuthorizationStatus(FlightAuthorizationStatus.REJECTED);
         flight.setStatus(FlightStatus.CANCELLED);
         if (rejectVm != null && rejectVm.reason() != null && !rejectVm.reason().isBlank()) {
             String updatedNotes = (flight.getNotes() != null ? flight.getNotes() + "\n" : "") + "Rejected reason: "
@@ -234,7 +243,7 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getAuthorizationStatus() != com.utm.flight.model.enumeration.FlightAuthorizationStatus.APPROVED
+        if (flight.getAuthorizationStatus() != FlightAuthorizationStatus.APPROVED
                 && flight.getStatus() != FlightStatus.AUTHORIZED) {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Flight must be approved by ATC before takeoff");
         }
@@ -287,57 +296,30 @@ public class FlightServiceImpl implements FlightService {
         return flightMapper.toVm(savedFlight);
     }
 
-    private List<WaypointVm> resolveAndAnchorWaypoints(List<WaypointVm> inputWaypoints, HubVm depHub, HubVm arrHub) {
-        Double depLat = depHub != null ? depHub.latitude() : null;
-        Double depLon = depHub != null ? depHub.longitude() : null;
-        Double depAlt = depHub != null ? depHub.altitude() : 0.0;
-
-        Double arrLat = arrHub != null ? arrHub.latitude() : null;
-        Double arrLon = arrHub != null ? arrHub.longitude() : null;
-        Double arrAlt = arrHub != null ? arrHub.altitude() : 0.0;
-
-        WaypointVm depPoint = (depLat != null && depLon != null) ? new WaypointVm(depLat, depLon, depAlt, 0.0) : null;
-        WaypointVm arrPoint = (arrLat != null && arrLon != null) ? new WaypointVm(arrLat, arrLon, arrAlt, 0.0) : null;
-
-        if (inputWaypoints == null || inputWaypoints.isEmpty()) {
-            List<WaypointVm> fallback = new ArrayList<>();
-            if (depPoint != null) fallback.add(depPoint);
-            if (arrPoint != null) fallback.add(arrPoint);
-            return fallback;
+    private String buildPlannedRouteJson(FlightPostVm postVm, HubBriefVm depHub, HubBriefVm arrHub) {
+        if (postVm.plannedRoute() != null && postVm.plannedRoute().coordinates() != null && !postVm.plannedRoute().coordinates().isEmpty()) {
+            return serializeGeoJson(postVm.plannedRoute());
         }
 
-        List<WaypointVm> anchored = new ArrayList<>(inputWaypoints);
-
-        if (depPoint != null) {
-            WaypointVm first = anchored.getFirst();
-            if (first.latitude() == null || first.longitude() == null
-                    || calculateDistance(first.latitude(), first.longitude(), depPoint.latitude(), depPoint.longitude()) > 30.0) {
-                anchored.add(0, depPoint);
-            }
+        List<List<Double>> fallbackCoords = new ArrayList<>();
+        if (depHub != null && depHub.location() != null && depHub.location().lng() != null && depHub.location().lat() != null) {
+            fallbackCoords.add(List.of(depHub.location().lng(), depHub.location().lat(), Objects.requireNonNullElse(depHub.altitudeMsl(), 0.0)));
+        }
+        if (arrHub != null && arrHub.location() != null && arrHub.location().lng() != null && arrHub.location().lat() != null) {
+            fallbackCoords.add(List.of(arrHub.location().lng(), arrHub.location().lat(), Objects.requireNonNullElse(arrHub.altitudeMsl(), 0.0)));
         }
 
-        if (arrPoint != null) {
-            WaypointVm last = anchored.getLast();
-            if (last.latitude() == null || last.longitude() == null
-                    || calculateDistance(last.latitude(), last.longitude(), arrPoint.latitude(), arrPoint.longitude()) > 30.0) {
-                anchored.add(arrPoint);
-            }
-        }
-
-        return anchored;
+        return serializeGeoJson(GeoJsonLineStringVm.of(fallbackCoords));
     }
 
-    private double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
-        if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
-            return Double.MAX_VALUE;
+    private String serializeGeoJson(GeoJsonLineStringVm lineStringVm) {
+        if (lineStringVm == null) {
+            return "{\"type\":\"LineString\",\"coordinates\":[]}";
         }
-        final double R = 6371000.0;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        try {
+            return OBJECT_MAPPER.writeValueAsString(lineStringVm);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize plannedRoute GeoJSON LineString", e);
+        }
     }
 }

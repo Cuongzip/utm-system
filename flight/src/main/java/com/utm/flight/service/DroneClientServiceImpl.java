@@ -1,11 +1,14 @@
 package com.utm.flight.service;
 
 import com.utm.flight.config.ServiceUrlConfig;
+import com.utm.flight.viewmodel.DroneBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,25 +20,29 @@ public class DroneClientServiceImpl implements DroneClientService {
 
     @Override
     public boolean checkDroneExists(String droneId) {
+        return getDroneById(droneId).isPresent();
+    }
+
+    @Override
+    public Optional<DroneBriefVm> getDroneById(String droneId) {
         if (droneId == null || droneId.isBlank()) {
-            return false;
+            return Optional.empty();
         }
 
         String droneUrl = serviceUrlConfig.drone();
         String basePath = droneUrl.endsWith("/drone") ? "" : "/drone";
         try {
-            return Boolean.TRUE.equals(restClient.get()
+            DroneBriefVm drone = restClient.get()
                     .uri(droneUrl + basePath + "/api/v1/drones/{id}", droneId.trim())
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
                         log.warn("Drone {} verification returned status {}", droneId, response.getStatusCode());
                     })
-                    .toBodilessEntity()
-                    .getStatusCode()
-                    .is2xxSuccessful());
+                    .body(DroneBriefVm.class);
+            return Optional.ofNullable(drone);
         } catch (Exception e) {
-            log.error("Failed to verify drone ID {} at url {}: {}", droneId, droneUrl, e.getMessage());
-            return false;
+            log.error("Failed to fetch drone ID {} at url {}: {}", droneId, droneUrl, e.getMessage());
+            return Optional.empty();
         }
     }
 }

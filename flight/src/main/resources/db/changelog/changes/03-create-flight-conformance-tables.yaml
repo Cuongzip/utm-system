@@ -85,7 +85,7 @@ databaseChangeLog:
                   name: flight_id
         - createIndex:
             tableName: flight_conformance
-            indexName: idx_flight_conformance_status
+            indexName: idx_flight_conformance_eval_status
             columns:
               - column:
                   name: status

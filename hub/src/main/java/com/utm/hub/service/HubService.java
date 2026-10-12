@@ -6,8 +6,6 @@ import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
 import com.utm.hub.viewmodel.HubVm;
 
-import java.util.List;
-
 public interface HubService {
 
     HubListVm getHubs(String search, HubStatus status, int limit, int offset);

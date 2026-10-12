@@ -1,11 +1,15 @@
 package com.utm.flight.mapper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.Flight;
+import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.viewmodel.FlightPostVm;
 import com.utm.flight.viewmodel.FlightPutVm;
 import com.utm.flight.viewmodel.FlightVm;
+import com.utm.flight.viewmodel.GeoJsonLineStringVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
@@ -19,15 +23,17 @@ import java.util.List;
 
 @Mapper(
         componentModel = MappingConstants.ComponentModel.SPRING,
-        uses = {WaypointMapper.class},
         builder = @Builder(disableBuilder = true)
 )
 public interface FlightMapper {
 
+    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
     @Mapping(target = "authorizationStatus", source = "authorizationStatus", qualifiedByName = "mapAuthStatusToString")
-    @Mapping(target = "totalWaypoints", source = "flight", qualifiedByName = "mapTotalWaypoints")
-    @Mapping(target = "waypoints", source = "waypoints")
+    @Mapping(target = "conformanceStatus", source = "conformanceStatus", qualifiedByName = "mapConformanceStatusToString")
+    @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "stringToLineString")
+    @Mapping(target = "actualRoute", source = "actualRoute", qualifiedByName = "stringToLineString")
     FlightVm toVm(Flight flight);
 
     List<FlightVm> toVmList(List<Flight> flights);
@@ -35,6 +41,7 @@ public interface FlightMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "authorizationStatus", ignore = true)
+    @Mapping(target = "conformanceStatus", ignore = true)
     @Mapping(target = "actualDeparture", ignore = true)
     @Mapping(target = "actualArrival", ignore = true)
     @Mapping(target = "flightNumber", qualifiedByName = "trimString")
@@ -43,7 +50,8 @@ public interface FlightMapper {
     @Mapping(target = "arrivalHubId", qualifiedByName = "trimString")
     @Mapping(target = "pilotId", qualifiedByName = "trimString")
     @Mapping(target = "executionId", qualifiedByName = "trimString")
-    @Mapping(target = "waypoints", ignore = true)
+    @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "lineStringToString")
+    @Mapping(target = "actualRoute", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -62,7 +70,9 @@ public interface FlightMapper {
     @Mapping(target = "pilotId", qualifiedByName = "trimString")
     @Mapping(target = "executionId", ignore = true)
     @Mapping(target = "authorizationStatus", ignore = true)
-    @Mapping(target = "waypoints", ignore = true)
+    @Mapping(target = "conformanceStatus", ignore = true)
+    @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "lineStringToString")
+    @Mapping(target = "actualRoute", source = "actualRoute", qualifiedByName = "lineStringToString")
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -79,16 +89,37 @@ public interface FlightMapper {
         return status != null ? status.getValue() : null;
     }
 
+    @Named("mapConformanceStatusToString")
+    default String mapConformanceStatusToString(ConformanceStatus status) {
+        return status != null ? status.getValue() : null;
+    }
+
     @Named("trimString")
     default String trimString(String value) {
         return value != null ? value.trim() : null;
     }
 
-    @Named("mapTotalWaypoints")
-    default Integer mapTotalWaypoints(Flight flight) {
-        if (flight == null || flight.getWaypoints() == null) {
-            return 0;
+    @Named("stringToLineString")
+    default GeoJsonLineStringVm stringToLineString(String routeJson) {
+        if (routeJson == null || routeJson.isBlank()) {
+            return GeoJsonLineStringVm.empty();
         }
-        return flight.getWaypoints().size();
+        try {
+            return OBJECT_MAPPER.readValue(routeJson, GeoJsonLineStringVm.class);
+        } catch (JsonProcessingException e) {
+            return GeoJsonLineStringVm.empty();
+        }
+    }
+
+    @Named("lineStringToString")
+    default String lineStringToString(GeoJsonLineStringVm lineStringVm) {
+        if (lineStringVm == null) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.writeValueAsString(lineStringVm);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize route GeoJSON LineString", e);
+        }
     }
 }

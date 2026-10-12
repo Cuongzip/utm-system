@@ -59,9 +59,26 @@ databaseChangeLog:
                   name: execution_id
                   type: varchar(36)
               - column:
+                  name: planned_route
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actual_route
+                  type: text
+                  defaultValue: '{"type":"LineString","coordinates":[]}'
+                  constraints:
+                    nullable: false
+              - column:
                   name: authorization_status
                   type: varchar(50)
                   defaultValue: "PENDING"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: conformance_status
+                  type: varchar(50)
+                  defaultValue: "CONFORMING"
                   constraints:
                     nullable: false
               - column:
@@ -115,3 +132,9 @@ databaseChangeLog:
             columns:
               - column:
                   name: authorization_status
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_conformance_status
+            columns:
+              - column:
+                  name: conformance_status

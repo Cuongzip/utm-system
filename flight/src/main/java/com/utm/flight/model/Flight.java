@@ -1,29 +1,24 @@
 package com.utm.flight.model;
 
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.utm.commonlibrary.model.AbstractAuditEntity;
+import com.utm.flight.model.enumeration.ConformanceStatus;
+import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
-
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.ZonedDateTime;
 
 @Entity
 @Table(name = "flight")
@@ -72,52 +67,28 @@ public class Flight extends AbstractAuditEntity {
     @Column(name = "execution_id", length = 36)
     private String executionId;
 
+    @Column(name = "planned_route", columnDefinition = "TEXT", nullable = false)
+    private String plannedRoute;
+
+    @Column(name = "actual_route", columnDefinition = "TEXT", nullable = false)
+    @Builder.Default
+    private String actualRoute = "{\"type\":\"LineString\",\"coordinates\":[]}";
+
     @Enumerated(EnumType.STRING)
     @Column(name = "authorization_status", length = 50, nullable = false)
     @Builder.Default
-    private com.utm.flight.model.enumeration.FlightAuthorizationStatus authorizationStatus = com.utm.flight.model.enumeration.FlightAuthorizationStatus.PENDING;
+    private FlightAuthorizationStatus authorizationStatus = FlightAuthorizationStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "conformance_status", length = 50, nullable = false)
+    @Builder.Default
+    private ConformanceStatus conformanceStatus = ConformanceStatus.CONFORMING;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
     @Builder.Default
-    private FlightStatus status = FlightStatus.PLANNED;
-
-    @OneToMany(mappedBy = "flight", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @OrderBy("sequence ASC")
-    @Builder.Default
-    private List<FlightWaypoint> waypoints = new ArrayList<>();
+    private FlightStatus status = FlightStatus.SCHEDULED;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
-
-    public void setWaypoints(List<FlightWaypoint> newWaypoints) {
-        if (this.waypoints == null) {
-            this.waypoints = new ArrayList<>();
-        } else {
-            this.waypoints.clear();
-        }
-        if (newWaypoints != null) {
-            for (FlightWaypoint wp : newWaypoints) {
-                addWaypoint(wp);
-            }
-        }
-    }
-
-    public void addWaypoint(FlightWaypoint waypoint) {
-        if (waypoint != null) {
-            if (this.waypoints == null) {
-                this.waypoints = new ArrayList<>();
-            }
-            this.waypoints.add(waypoint);
-            waypoint.setFlight(this);
-        }
-    }
-
-    public void removeWaypoint(FlightWaypoint waypoint) {
-        if (waypoint != null && this.waypoints != null) {
-            this.waypoints.remove(waypoint);
-            waypoint.setFlight(null);
-        }
-    }
 }
-

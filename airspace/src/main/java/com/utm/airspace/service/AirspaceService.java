@@ -9,8 +9,6 @@ import com.utm.airspace.viewmodel.AirspaceZonePostVm;
 import com.utm.airspace.viewmodel.AirspaceZonePutVm;
 import com.utm.airspace.viewmodel.AirspaceZoneVm;
 
-import java.util.List;
-
 public interface AirspaceService {
 
     AirspaceCheckResultVm checkPoint(AirspaceCheckVm checkVm);

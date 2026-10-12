@@ -1,7 +1,9 @@
 package com.utm.connectivity.viewmodel;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Brief summary of Drone details retrieved from Drone microservice")
 public record DroneBriefVm(
         @Schema(description = "Drone UUID", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
