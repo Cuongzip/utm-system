@@ -89,30 +89,20 @@ public class SecurityConfig {
     public GrantedAuthoritiesMapper userAuthoritiesMapperForKeycloak() {
         return authorities -> {
             Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
+            if (authorities.isEmpty()) {
+                return mappedAuthorities;
+            }
+
             var authority = authorities.iterator().next();
-            boolean isOidc = authority instanceof OidcUserAuthority;
-
-            if (isOidc) {
-                var oidcUserAuthority = (OidcUserAuthority) authority;
+            if (authority instanceof OidcUserAuthority oidcUserAuthority) {
                 var userInfo = oidcUserAuthority.getUserInfo();
-
                 if (userInfo != null && userInfo.hasClaim(REALM_ACCESS_CLAIM)) {
-                    var realmAccess = userInfo.getClaimAsMap(REALM_ACCESS_CLAIM);
-                    var roles = (Collection<String>) realmAccess.get(ROLES_CLAIM);
-                    if (roles != null) {
-                        mappedAuthorities.addAll(generateAuthoritiesFromClaim(roles));
-                    }
+                    mappedAuthorities.addAll(extractAuthorities(userInfo.getClaimAsMap(REALM_ACCESS_CLAIM)));
                 }
-            } else {
-                var oauth2UserAuthority = (OAuth2UserAuthority) authority;
+            } else if (authority instanceof OAuth2UserAuthority oauth2UserAuthority) {
                 Map<String, Object> userAttributes = oauth2UserAuthority.getAttributes();
-
                 if (userAttributes != null && userAttributes.containsKey(REALM_ACCESS_CLAIM)) {
-                    var realmAccess = (Map<String, Object>) userAttributes.get(REALM_ACCESS_CLAIM);
-                    var roles = (Collection<String>) realmAccess.get(ROLES_CLAIM);
-                    if (roles != null) {
-                        mappedAuthorities.addAll(generateAuthoritiesFromClaim(roles));
-                    }
+                    mappedAuthorities.addAll(extractAuthorities(userAttributes.get(REALM_ACCESS_CLAIM)));
                 }
             }
 
@@ -120,9 +110,17 @@ public class SecurityConfig {
         };
     }
 
-    Collection<GrantedAuthority> generateAuthoritiesFromClaim(Collection<String> roles) {
-        return roles.stream()
-            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-            .collect(Collectors.toList());
+    private Collection<GrantedAuthority> extractAuthorities(Object realmAccessObj) {
+        if (realmAccessObj instanceof Map<?, ?> realmAccess) {
+            Object rolesObj = realmAccess.get(ROLES_CLAIM);
+            if (rolesObj instanceof Collection<?> roleList) {
+                return roleList.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toList());
+            }
+        }
+        return java.util.Collections.emptyList();
     }
 }

@@ -2,17 +2,15 @@ package com.utm.commonlibrary.config;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterFactory;
-import org.springframework.lang.NonNull;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class StringToEnumConverterFactory implements ConverterFactory<String, Enum> {
 
     @Override
-    @NonNull
-    @SuppressWarnings("unchecked")
-    public <T extends Enum> Converter<String, T> getConverter(@NonNull Class<T> targetType) {
+    public <T extends Enum> Converter<String, T> getConverter(Class<T> targetType) {
         return new StringToEnumConverter<>(targetType);
     }
 
@@ -25,8 +23,7 @@ public class StringToEnumConverterFactory implements ConverterFactory<String, En
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        public T convert(@NonNull String source) {
+        public T convert(String source) {
             if (source.trim().isEmpty()) {
                 return null;
             }
