@@ -348,7 +348,7 @@ services:
       - "8080:80"
     volumes:
       - ./identity/realm-export.json:/opt/keycloak/data/import/realm-export.json
-      - ./identity/themes/utm/theme:/opt/keycloak/themes
+      - ./identity/keycloak-theme/dist_keycloak/utm-theme.jar:/opt/keycloak/providers/utm-theme.jar
     depends_on:
       - postgres
     networks:

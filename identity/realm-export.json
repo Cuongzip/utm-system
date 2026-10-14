@@ -2,6 +2,7 @@
   "id": "UTM",
   "realm": "UTM",
   "displayName": "UTM",
+  "loginTheme": "utm",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
