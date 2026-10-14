@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="1200" height="800" viewBox="0 0 1200 800" version="1.1">
+  <title>UTM corner decorations - editable paths</title>
+  <desc>Transparent overlay. All strokes are individual editable paths. The three diagonal centerlines use the same 4:3 rise/run ratio. The middle diagonal is thick while its outward horizontal extension is thin.</desc>
+  <g id="top-left" inkscape:label="Top-left corner" fill="none" stroke="#64748B" stroke-linejoin="miter">
+    <path id="tl-outer-diagonal" inkscape:label="TL - thin outer diagonal"
+          d="M 25,67.5 L 70,7.5" stroke-width="1.5" stroke-linecap="butt"/>
+    <path id="tl-middle-bold-diagonal" inkscape:label="TL - thick middle diagonal"
+          d="M 50,90 L 106.25,15" stroke-width="3.5" stroke-linecap="butt"/>
+    <path id="tl-middle-thin-extension" inkscape:label="TL - thin outward extension"
+          d="M 104.5,15 L 210,15" stroke-width="1.5" stroke-linecap="butt"/>
+    <path id="tl-inner-corner" inkscape:label="TL - thin inner frame corner"
+          d="M 80,152.5 L 80,97.5 L 125,37.5 L 197.5,37.5"
+          stroke-width="1.2" stroke-linecap="butt"/>
+  </g>
+  <g id="bottom-right" inkscape:label="Bottom-right corner" fill="none" stroke="#64748B" stroke-linejoin="miter">
+    <path id="br-outer-diagonal" inkscape:label="BR - thin outer diagonal"
+          d="M 1175,732.5 L 1130,792.5" stroke-width="1.5" stroke-linecap="butt"/>
+    <path id="br-middle-bold-diagonal" inkscape:label="BR - thick middle diagonal"
+          d="M 1150,710 L 1093.75,785" stroke-width="3.5" stroke-linecap="butt"/>
+    <path id="br-middle-thin-extension" inkscape:label="BR - thin outward extension"
+          d="M 1095.5,785 L 990,785" stroke-width="1.5" stroke-linecap="butt"/>
+    <path id="br-inner-corner" inkscape:label="BR - thin inner frame corner"
+          d="M 1120,647.5 L 1120,702.5 L 1075,762.5 L 1002.5,762.5"
+          stroke-width="1.2" stroke-linecap="butt"/>
+  </g>
+</svg>

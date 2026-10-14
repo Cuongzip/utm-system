@@ -82,6 +82,14 @@ export default function Home() {
               <span>🔲</span>
               <span>Song song (3D & 2D)</span>
             </button>
+
+            <a
+              href="/login"
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-zinc-800 transition-all ml-1 border-l border-zinc-700/50 pl-2.5"
+            >
+              <span>🔐</span>
+              <span>Đăng nhập</span>
+            </a>
           </div>
         </div>
       </header>
