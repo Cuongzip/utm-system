@@ -6,14 +6,13 @@ import { Globe, Map, Columns2, Lock } from "lucide-react";
 
 import { API_ENDPOINTS } from "@/constants";
 
+import { CompassLoader } from "@/components/CompassLoader";
+
 const CesiumMap = dynamic(() => import("@/components/CesiumMap"), {
   ssr: false,
   loading: () => (
     <div className="flex h-[650px] w-full items-center justify-center rounded-xl bg-zinc-950 text-white border border-zinc-800">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
-        <span className="text-sm font-medium text-zinc-400">Đang tải bản đồ 3D Globe...</span>
-      </div>
+      <CompassLoader size={96} text="Đang tải bản đồ 3D Globe..." />
     </div>
   ),
 });
@@ -22,10 +21,7 @@ const Map2D = dynamic(() => import("@/components/Map2D"), {
   ssr: false,
   loading: () => (
     <div className="flex h-[650px] w-full items-center justify-center rounded-xl bg-zinc-950 text-white border border-zinc-800">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
-        <span className="text-sm font-medium text-zinc-400">Đang tải bản đồ 2D Flat Map...</span>
-      </div>
+      <CompassLoader size={96} text="Đang tải bản đồ 2D Flat Map..." />
     </div>
   ),
 });

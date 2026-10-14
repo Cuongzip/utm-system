@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Viewer, Cesium3DTileset, ImageryLayer } from "cesium";
 import { Mountain, Building2, Globe, Compass } from "lucide-react";
+import { CompassLoader } from "@/components/CompassLoader";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 declare global {
@@ -390,9 +391,8 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
       )}
 
       {!isLoaded && !error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 text-white z-10 gap-3">
-          <div className="w-9 h-9 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-zinc-300">Đang khởi tạo Cesium 3D Globe...</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm text-white z-10">
+          <CompassLoader size={110} text="Đang khởi tạo Cesium 3D Globe..." />
         </div>
       )}
       {error && (
