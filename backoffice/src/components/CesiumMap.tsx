@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Viewer, Cesium3DTileset, ImageryLayer } from "cesium";
+import { Mountain, Building2, Globe, Compass } from "lucide-react";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 declare global {
@@ -330,24 +331,24 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
           <div className="flex items-center gap-1.5">
             <button
               onClick={toggleTerrain}
-              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
                 showTerrain
                   ? "bg-emerald-500 text-white shadow-sm"
                   : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
               }`}
             >
-              <span>⛰️</span>
+              <Mountain className="h-3.5 w-3.5" />
               <span>Địa hình 3D: {showTerrain ? "Bật" : "Tắt"}</span>
             </button>
             <button
               onClick={toggleBuildings}
-              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
                 showBuildings
                   ? "bg-purple-500 text-white shadow-sm"
                   : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
               }`}
             >
-              <span>🏙️</span>
+              <Building2 className="h-3.5 w-3.5" />
               <span>Tòa nhà 3D: {showBuildings ? "Bật" : "Tắt"}</span>
             </button>
           </div>
@@ -359,30 +360,30 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
           <span className="px-1 text-xs font-semibold text-zinc-400">Bay nhanh xem 3D:</span>
           <button
             onClick={() => flyToPreset("fansipan")}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-emerald-600 text-zinc-200 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-emerald-600 text-zinc-200 transition-colors"
           >
-            <span>🏔️</span>
+            <Mountain className="h-3.5 w-3.5 text-emerald-400" />
             <span>Đỉnh Fansipan (3.143m)</span>
           </button>
           <button
             onClick={() => flyToPreset("landmark81")}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-purple-600 text-zinc-200 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-purple-600 text-zinc-200 transition-colors"
           >
-            <span>🏙️</span>
+            <Building2 className="h-3.5 w-3.5 text-purple-400" />
             <span>Landmark 81 (TP.HCM)</span>
           </button>
           <button
             onClick={() => flyToPreset("fuji")}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-sky-600 text-zinc-200 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-sky-600 text-zinc-200 transition-colors"
           >
-            <span>🗻</span>
+            <Compass className="h-3.5 w-3.5 text-sky-400" />
             <span>Núi Phú Sĩ</span>
           </button>
           <button
             onClick={() => flyToPreset("overview")}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
           >
-            <span>🌏</span>
+            <Globe className="h-3.5 w-3.5 text-zinc-400" />
             <span>Toàn cảnh</span>
           </button>
         </div>

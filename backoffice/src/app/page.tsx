@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { Globe, Map, Columns2, Lock } from "lucide-react";
 
 import { API_ENDPOINTS } from "@/constants";
 
@@ -59,7 +60,7 @@ export default function Home() {
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <span>🌍</span>
+              <Globe className="h-3.5 w-3.5" />
               <span>Bản đồ 3D</span>
             </button>
             <button
@@ -70,7 +71,7 @@ export default function Home() {
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <span>🗺️</span>
+              <Map className="h-3.5 w-3.5" />
               <span>Bản đồ 2D</span>
             </button>
             <button
@@ -81,7 +82,7 @@ export default function Home() {
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <span>🔲</span>
+              <Columns2 className="h-3.5 w-3.5" />
               <span>Song song (3D & 2D)</span>
             </button>
 
@@ -89,7 +90,7 @@ export default function Home() {
               href={API_ENDPOINTS.AUTH.LOGIN}
               className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-zinc-800 transition-all ml-1 border-l border-zinc-700/50 pl-2.5"
             >
-              <span>🔐</span>
+              <Lock className="h-3.5 w-3.5" />
               <span>Đăng nhập</span>
             </a>
           </div>

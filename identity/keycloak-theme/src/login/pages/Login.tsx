@@ -2,10 +2,17 @@ import { useState, useRef, useEffect } from "react";
 import type { PageProps } from "keycloakify/login/pages/PageProps";
 import type { KcContext } from "../KcContext";
 import type { I18n } from "../i18n";
-
-const PRIMARY_COLOR = "#64748B";
-const PRIMARY_HOVER_COLOR = "#475569";
-const PRIMARY_ACTIVE_COLOR = "#334155";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
 
 interface CornerDecorationsProps {
   color?: string;
@@ -13,7 +20,7 @@ interface CornerDecorationsProps {
 }
 
 export function UtmCornerDecorationsTopLeft({
-  color = PRIMARY_COLOR,
+  color = "var(--utm-primary, #64748B)",
   scale = 1,
 }: CornerDecorationsProps) {
   const width = 185 * scale;
@@ -49,7 +56,7 @@ export function UtmCornerDecorationsTopLeft({
 }
 
 export function UtmCornerDecorationsBottomRight({
-  color = PRIMARY_COLOR,
+  color = "var(--utm-primary, #64748B)",
   scale = 1,
 }: CornerDecorationsProps) {
   const width = 185 * scale;
@@ -132,12 +139,6 @@ export default function Login(
     return () => observer.disconnect();
   }, []);
 
-  const dynamicStyles = {
-    "--utm-primary": PRIMARY_COLOR,
-    "--utm-primary-hover": PRIMARY_HOVER_COLOR,
-    "--utm-primary-active": PRIMARY_ACTIVE_COLOR,
-  } as React.CSSProperties;
-
   const cutX = Number((56.25 * scale).toFixed(2));
   const cutY = Number((75 * scale).toFixed(2));
   const innerCutX = Number((cutX - 1).toFixed(2));
@@ -169,13 +170,9 @@ export default function Login(
         <div
           ref={cardRef}
           className="relative w-full max-w-[480px]"
-          style={dynamicStyles}
         >
-          <UtmCornerDecorationsTopLeft color={PRIMARY_COLOR} scale={scale} />
-          <UtmCornerDecorationsBottomRight
-            color={PRIMARY_COLOR}
-            scale={scale}
-          />
+          <UtmCornerDecorationsTopLeft scale={scale} />
+          <UtmCornerDecorationsBottomRight scale={scale} />
 
           <div
             className="relative w-full bg-[#d1d5db] p-[1.5px] drop-shadow-[0px_8px_25px_rgba(0,0,0,0.06)]"
@@ -185,60 +182,12 @@ export default function Login(
               className="relative w-full bg-white px-7 py-9 sm:px-10 sm:py-10 flex flex-col gap-7 sm:gap-8"
               style={{ clipPath: innerClipPath }}
             >
-              {/* UTM Brand Header */}
               <div className="flex items-center justify-center gap-3">
-                <svg
-                  className="w-10 h-10 shrink-0"
-                  viewBox="0 0 40 40"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r="3.75"
-                    stroke={PRIMARY_COLOR}
-                    strokeWidth="2.08"
-                  />
-                  <circle cx="9.17" cy="11.67" r="2.92" fill={PRIMARY_COLOR} />
-                  <circle
-                    cx="30.83"
-                    cy="11.67"
-                    r="2.92"
-                    fill={PRIMARY_COLOR}
-                  />
-                  <circle cx="9.17" cy="28.33" r="2.92" fill={PRIMARY_COLOR} />
-                  <circle
-                    cx="30.83"
-                    cy="28.33"
-                    r="2.92"
-                    fill={PRIMARY_COLOR}
-                  />
-                  <path
-                    d="M11.25 13.75L17.08 17.92"
-                    stroke={PRIMARY_COLOR}
-                    strokeWidth="2.08"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M28.75 13.75L22.92 17.92"
-                    stroke={PRIMARY_COLOR}
-                    strokeWidth="2.08"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M11.25 26.25L17.08 22.08"
-                    stroke={PRIMARY_COLOR}
-                    strokeWidth="2.08"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M28.75 26.25L22.92 22.08"
-                    stroke={PRIMARY_COLOR}
-                    strokeWidth="2.08"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                <img
+                  src={`${url.resourcesPath}/dist/svg/utm-logo.svg`}
+                  alt="UTM System"
+                  className="w-10 h-10 shrink-0 select-none pointer-events-none"
+                />
                 <div className="flex flex-col">
                   <span className="text-[14px] font-bold tracking-[2.24px] uppercase text-[#111827] leading-tight">
                     UTM SYSTEM
@@ -249,7 +198,6 @@ export default function Login(
                 </div>
               </div>
 
-              {/* Title & Description */}
               <div className="flex flex-col gap-1.5 pt-1">
                 <h1 className="text-[28px] font-bold tracking-[-0.7px] text-[#111827] leading-tight">
                   Welcome Back
@@ -259,7 +207,6 @@ export default function Login(
                 </p>
               </div>
 
-              {/* Status / Alert Message */}
               {displayMessage && (
                 <div
                   className={`flex items-start gap-2.5 p-3 rounded text-[13px] leading-snug border ${
@@ -273,25 +220,15 @@ export default function Login(
                   }`}
                   role="alert"
                 >
-                  <svg
-                    className="w-4 h-4 shrink-0 mt-0.5"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                  >
-                    {isErrorMessage ? (
-                      <path
-                        fillRule="evenodd"
-                        d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zm0 7.5a.75.75 0 10-1.5 0 .75.75 0 001.5 0z"
-                        clipRule="evenodd"
-                      />
-                    ) : (
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-                        clipRule="evenodd"
-                      />
-                    )}
-                  </svg>
+                  {isErrorMessage ? (
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" strokeWidth={1.75} />
+                  ) : isSuccessMessage ? (
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" strokeWidth={1.75} />
+                  ) : isWarningMessage ? (
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" strokeWidth={1.75} />
+                  ) : (
+                    <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" strokeWidth={1.75} />
+                  )}
                   <span
                     dangerouslySetInnerHTML={{
                       __html: displayMessage,
@@ -300,7 +237,6 @@ export default function Login(
                 </div>
               )}
 
-              {/* Keycloak Login Form */}
               <form
                 id="kc-form-login"
                 action={url.loginAction}
@@ -308,7 +244,6 @@ export default function Login(
                 onSubmit={() => setIsSubmitting(true)}
                 className="flex flex-col gap-5"
               >
-                {/* Hidden credential ID if WebAuthn / credentials */}
                 {auth?.selectedCredential && (
                   <input
                     type="hidden"
@@ -317,7 +252,6 @@ export default function Login(
                   />
                 )}
 
-                {/* Username / Email field */}
                 {!usernameHidden && (
                   <div className="flex flex-col gap-1.5">
                     <label
@@ -328,29 +262,7 @@ export default function Login(
                     </label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3.5 text-[#9ca3af] pointer-events-none">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <rect
-                            x="2"
-                            y="3.5"
-                            width="12"
-                            height="9"
-                            rx="1"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                          />
-                          <path
-                            d="M2 4.5L8 9L14 4.5"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                        <Mail className="w-4 h-4" strokeWidth={1.75} />
                       </span>
                       <input
                         id="username"
@@ -367,7 +279,6 @@ export default function Login(
                   </div>
                 )}
 
-                {/* Password field */}
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <label
@@ -388,28 +299,7 @@ export default function Login(
                   </div>
                   <div className="relative flex items-center">
                     <span className="absolute left-3.5 text-[#9ca3af] pointer-events-none">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <rect
-                          x="3"
-                          y="6.5"
-                          width="10"
-                          height="7"
-                          rx="1.5"
-                          stroke="#9CA3AF"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d="M5.5 6.5V4.5C5.5 3.12 6.62 2 8 2C9.38 2 10.5 3.12 10.5 4.5V6.5"
-                          stroke="#9CA3AF"
-                          strokeWidth="1.2"
-                        />
-                        <circle cx="8" cy="10" r="1" fill="#9CA3AF" />
-                      </svg>
+                      <Lock className="w-4 h-4" strokeWidth={1.75} />
                     </span>
                     <input
                       id="password"
@@ -429,64 +319,14 @@ export default function Login(
                       }
                     >
                       {showPassword ? (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <path
-                            d="M1.5 8C2.5 5 5 3 8 3C11 3 13.5 5 14.5 8C13.5 11 11 13 8 13C5 13 2.5 11 1.5 8Z"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <circle
-                            cx="8"
-                            cy="8"
-                            r="2.2"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                          />
-                        </svg>
+                        <EyeOff className="w-4 h-4" strokeWidth={1.75} />
                       ) : (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                        >
-                          <path
-                            d="M2 2L14 14"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M6.5 6.6C6.1 7 5.9 7.5 5.9 8.1C5.9 9.3 6.8 10.2 8 10.2C8.6 10.2 9.1 10 9.5 9.6"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                          />
-                          <path
-                            d="M9.8 5.4C9.3 5.1 8.7 5 8 5C5.3 5 3.1 6.8 2 8.1C2.8 9.1 4.1 10.3 5.8 10.9"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M10.5 6.1C12.3 7 13.5 8 14 8.1C13.4 9 12.4 10.1 11.1 10.8"
-                            stroke="#9CA3AF"
-                            strokeWidth="1.2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
+                        <Eye className="w-4 h-4" strokeWidth={1.75} />
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* Remember Me checkbox if enabled in realm */}
                 {realm.rememberMe && !usernameHidden && (
                   <div className="flex items-center gap-2">
                     <input
@@ -505,7 +345,6 @@ export default function Login(
                   </div>
                 )}
 
-                {/* Submit Button */}
                 <div className="pt-2">
                   <button
                     type="submit"
@@ -520,21 +359,7 @@ export default function Login(
                   >
                     <span>{isSubmitting ? "Signing In..." : "Sign In"}</span>
                     {!isSubmitting && (
-                      <svg
-                        width="14"
-                        height="11"
-                        viewBox="0 0 14 11"
-                        fill="none"
-                        className="transition-transform group-hover:translate-x-0.5"
-                      >
-                        <path
-                          d="M8 0.8L12.5 5.3M12.5 5.3L8 9.8M12.5 5.3H0.8"
-                          stroke="white"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
                     )}
                   </button>
                 </div>
