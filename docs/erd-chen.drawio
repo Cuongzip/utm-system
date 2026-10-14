@@ -1,0 +1,805 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" version="28.2.8">
+  <diagram id="optimal_diagram" name="DROPS-UTM-Optimal-Architecture">
+    <mxGraphModel dx="2562" dy="1300" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="6600" pageHeight="4600" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="g_tier1" value="TIER 1: CHỦ THỂ &amp;amp; HẠ TẦNG KHÔNG PHẬN (Organizations, Users, Hubs, Airspace Zones)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#888888;strokeWidth=1;strokeFactor=dashed;dashed=1;fontStyle=2;fontSize=12;fontColor=#444444;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="450" y="200" width="5700" height="850" as="geometry" />
+        </mxCell>
+        <mxCell id="g_tier2" value="TIER 2: THIẾT BỊ BAY &amp;amp; KẾ HOẠCH NGHIỆP VỤ (DeviceRegistration, Drone, Mission, Waypoint)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#888888;strokeWidth=1;strokeFactor=dashed;dashed=1;fontStyle=2;fontSize=12;fontColor=#444444;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="450" y="1350" width="5700" height="850" as="geometry" />
+        </mxCell>
+        <mxCell id="g_tier3" value="TIER 3: ĐIỀU HÀNH KHÔNG LƯU &amp;amp; TIẾN TRÌNH THỰC THI (Conflict Detection, Flight Operations, MissionExecution)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#888888;strokeWidth=1;strokeFactor=dashed;dashed=1;fontStyle=2;fontSize=12;fontColor=#444444;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="450" y="2450" width="5700" height="980" as="geometry" />
+        </mxCell>
+        <mxCell id="g_tier4" value="TIER 4: DỮ LIỆU VIỄN TRẮC SỐNG THỜI GIAN THỰC (Real-time Flight Telemetry Time-Series)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#888888;strokeWidth=1;strokeFactor=dashed;dashed=1;fontStyle=2;fontSize=12;fontColor=#444444;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="450" y="3600" width="5700" height="850" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_org" value="Organization" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="810" y="620" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="711.2131512692727" y="953.4954910672088" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_name" value="name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="594.1778431246305" y="881.3070381348365" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_type" value="type" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="515.3065236607068" y="768.6671204533134" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_type" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_type" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_registration_number" value="registration_number" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="487.5" y="634" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_registration_number" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_registration_number" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_contact_info" value="contact_info" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="515.3065236607067" y="499.33287954668685" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_contact_info" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_contact_info" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="594.1778431246305" y="386.6929618651635" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_org_created_at" value="created_at" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="711.2131512692724" y="314.5045089327912" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_org_created_at" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_org" target="attr_ent_org_created_at" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_user" value="User" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="2410" y="620" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="2164.6707417593716" y="511.44070409519725" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_email" value="email" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2115.9582658305126" y="337.6189144519027" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_email" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_email" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_first_name" value="first_name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2291.992097800812" y="377.6065358836631" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_first_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_first_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_last_name" value="last_name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2358.116162927893" y="209.63472909160993" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_last_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_last_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_role" value="role" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2474.293750583514" y="347.80016613155084" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_role" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_role" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_organization_id" value="organization_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2628.4255101574167" y="253.83038079301787" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_organization_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_organization_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_pilot_license" value="pilot_license" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2637.6095416491894" y="434.1150818396555" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_pilot_license" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_pilot_license" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_user_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2817.2123484257595" y="452.274147451499" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_user_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_user" target="attr_ent_user_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_hub" value="Hub" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="4110" y="620" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="3864.6707417593716" y="511.44070409519725" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_code" value="code" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3832.4160957164445" y="321.2293341235892" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_code" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_code" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_name" value="name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4020.4302172793214" y="364.4892179742215" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_location" value="location" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4127.5" y="204" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_location" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_location" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_altitude_msl" value="altitude_msl" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4234.569782720679" y="364.4892179742215" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_altitude_msl" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_altitude_msl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_airspace_radius" value="airspace_radius" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4422.583904283556" y="321.22933412358907" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_airspace_radius" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_airspace_radius" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_hub_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4390.329258240628" y="511.440704095197" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_hub_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_hub" target="attr_ent_hub_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_airspace" value="AirspaceZone" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="5710" y="620" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="5843.786848730728" y="314.50450893279117" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_hub_id" value="hub_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="5960.82215687537" y="386.6929618651634" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_name" value="name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6039.693476339293" y="499.3328795466866" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_zone_type" value="zone_type" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6067.5" y="634" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_zone_type" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_zone_type" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_geometry" value="geometry" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6039.693476339293" y="768.6671204533133" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_geometry" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_geometry" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_altitude_ceiling" value="altitude_ceiling" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="5960.82215687537" y="881.3070381348366" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_altitude_ceiling" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_altitude_ceiling" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_airspace_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="5843.786848730728" y="953.4954910672088" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_airspace_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_airspace" target="attr_ent_airspace_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_dev_reg" value="DeviceRegistration" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="810" y="1720" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="711.2131512692727" y="2053.495491067209" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_drone_id" value="drone_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="594.1778431246305" y="1981.3070381348366" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_drone_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_drone_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_device_identifier" value="device_identifier" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="515.3065236607068" y="1868.6671204533134" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_device_identifier" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_device_identifier" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_connection_status" value="connection_status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="487.5" y="1734" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_connection_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_connection_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_socket_id" value="socket_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="515.3065236607067" y="1599.3328795466869" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_socket_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_socket_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_certificate_fingerprint" value="certificate_fingerprint" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="594.1778431246305" y="1486.6929618651636" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_certificate_fingerprint" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_certificate_fingerprint" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_dev_reg_last_seen_at" value="last_seen_at" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="711.2131512692724" y="1414.5045089327912" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_dev_reg_last_seen_at" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_dev_reg" target="attr_ent_dev_reg_last_seen_at" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_drone" value="Drone" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="2410" y="1720" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="2202.524336609711" y="1465.8844449083576" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_registration_number" value="registration_number" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2205.943533691781" y="1319.4970057562732" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_registration_number" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_registration_number" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_manufacturer" value="manufacturer" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2329.5598450891525" y="1397.982550964925" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_manufacturer" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_manufacturer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_model" value="model" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2391.6465319831423" y="1265.3695178169007" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_model" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_model" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_owner_id" value="owner_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2473.1841672770183" y="1386.9942985191665" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_owner_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_owner_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_home_hub_id" value="home_hub_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2583.4222846240755" y="1290.617274628782" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_home_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_home_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_battery_capacity_wh" value="battery_capacity_wh" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2609.0706403561826" y="1434.7808452644686" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_battery_capacity_wh" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_battery_capacity_wh" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_max_payload" value="max_payload" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2748.788381950749" y="1390.9638858320172" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_max_payload" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_max_payload" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_drone_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2714.203215501147" y="1533.2482472771337" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_drone_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_drone" target="attr_ent_drone_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_mission" value="Mission" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="4110" y="1720" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="3977.011136936706" y="2147.4647531457995" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_name" value="name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3907.5" y="2115.051177665153" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_description" value="description" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3844.6734517379227" y="2071.0595549723503" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_description" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_description" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_departure_hub_id" value="departure_hub_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3790.4404450276497" y="2016.8265482620773" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_departure_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_departure_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_arrival_hub_id" value="arrival_hub_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3746.448822334847" y="1954" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_arrival_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_arrival_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_schedule_type" value="schedule_type" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3714.0352468542005" y="1884.4888630632943" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_schedule_type" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_schedule_type" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_scheduled_at" value="scheduled_at" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3694.1845886746287" y="1810.4051981734492" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_scheduled_at" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_scheduled_at" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_created_by" value="created_by" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3687.5" y="1734" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_created_by" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_created_by" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="3694.1845886746287" y="1657.5948018265506" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission" target="attr_ent_mission_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_waypoint" value="Waypoint" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="5710" y="1720" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="5843.786848730728" y="1414.5045089327912" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_mission_id" value="mission_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="5934.478885862965" y="1464.25986430098" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_mission_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_mission_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_sequence" value="sequence" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6006.011695058257" y="1538.9840116406444" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_sequence" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_sequence" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_name" value="name" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6051.763763254397" y="1631.7600281685473" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_name" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_name" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_latitude" value="latitude" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6067.5" y="1734" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_latitude" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_latitude" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_longitude" value="longitude" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6051.763763254397" y="1836.2399718314527" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_longitude" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_longitude" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_altitude" value="altitude" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="6006.011695058257" y="1929.0159883593556" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_altitude" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_altitude" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_actions" value="actions" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="5934.478885862965" y="2003.74013569902" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_actions" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_actions" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_waypoint_conditions" value="conditions" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="5843.786848730728" y="2053.4954910672086" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_waypoint_conditions" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_waypoint" target="attr_ent_waypoint_conditions" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_flight" value="Flight" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="2410" y="2820" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="2282.2620126437746" y="3280.9965626587223" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_flight_number" value="flight_number" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2198.444686370196" y="3244.406704742932" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_flight_number" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_flight_number" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_execution_id" value="execution_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2123.3003149360766" y="3192.2771993959564" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_execution_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_execution_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_drone_id" value="drone_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2059.6741662793656" y="3126.5818792196815" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_drone_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_drone_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_pilot_id" value="pilot_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2009.975382127288" y="3049.8082330918955" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_pilot_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_pilot_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_departure_hub_id" value="departure_hub_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1976.0857582072454" y="2964.8632198391606" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_departure_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_departure_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_arrival_hub_id" value="arrival_hub_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1959.2884918968796" y="2874.9631990913995" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_arrival_hub_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_arrival_hub_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_planned_route" value="planned_route" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2895.7115081031207" y="2874.9631990913995" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_planned_route" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_planned_route" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_actual_route" value="actual_route" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2878.9142417927546" y="2964.8632198391606" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_actual_route" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_actual_route" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_authorization_status" value="authorization_status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2845.024617872712" y="3049.8082330918955" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_authorization_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_authorization_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_conformance_status" value="conformance_status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2795.3258337206344" y="3126.581879219681" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_conformance_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" edge="1" parent="1" source="ent_flight" target="attr_ent_flight_conformance_status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_planned_departure" value="planned_departure" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2731.6996850639234" y="3192.2771993959564" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_planned_departure" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_planned_departure" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_actual_departure" value="actual_departure" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2656.555313629804" y="3244.406704742932" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_actual_departure" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_actual_departure" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_flight_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2572.7379873562254" y="3280.9965626587223" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_flight_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_mission_exec" value="MissionExecution" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="4110" y="2820" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="4560.815411325371" y="2757.594801826551" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_mission_id" value="mission_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4567.363240080359" y="2844.969504364752" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_mission_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_mission_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_current_waypoint_index" value="current_waypoint_index" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4556.468281360002" y="2931.9092109407784" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_current_waypoint_index" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_current_waypoint_index" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_total_waypoints" value="total_waypoints" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4528.562575017137" y="3014.9663253774693" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_total_waypoints" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_total_waypoints" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_completed_waypoints" value="completed_waypoints" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4484.752722514977" y="3090.8472157833075" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_completed_waypoints" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_completed_waypoints" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_started_at" value="started_at" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4426.776004619204" y="3156.542823605124" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_started_at" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_started_at" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_completed_at" value="completed_at" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4356.931489486979" y="3209.4479879181486" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_completed_at" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_completed_at" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_mission_exec_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="4277.988863063294" y="3247.4647531457995" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_mission_exec_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_mission_exec" target="attr_ent_mission_exec_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_conflict" value="Conflict" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="810" y="2820" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_id" value="&lt;u&gt;id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="711.2131512692727" y="3153.495491067209" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_conflict_type" value="conflict_type" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="608.9522127065766" y="3094.4551106604526" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_conflict_type" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_conflict_type" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_severity" value="severity" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="533.0513627132908" y="3004" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_severity" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_severity" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_primary_flight_id" value="primary_flight_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="492.66536397584923" y="2893.0403804067564" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_primary_flight_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_primary_flight_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_secondary_flight_id" value="secondary_flight_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="492.66536397584923" y="2774.9596195932436" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_secondary_flight_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_secondary_flight_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_detected_at" value="detected_at" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="533.0513627132909" y="2664" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_detected_at" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_detected_at" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_resolution_strategy" value="resolution_strategy" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="608.9522127065766" y="2573.5448893395474" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_resolution_strategy" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_resolution_strategy" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_conflict_status" value="status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="711.2131512692724" y="2514.5045089327914" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_conflict_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_conflict" target="attr_ent_conflict_status" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_telemetry" value="FlightTelemetry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="2410" y="3920" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_time" value="&lt;u&gt;time&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="2690.3292582406284" y="4056.5592959048026" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_time" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_time" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_drone_id" value="drone_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2750.79111721596" y="4217.518700493029" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_drone_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" edge="1" parent="1" source="ent_telemetry" target="attr_ent_telemetry_drone_id">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_flight_id" value="&lt;u&gt;flight_id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">
+          <mxGeometry x="2583.316886420579" y="4178.583519285737" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_flight_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_flight_id" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_latitude" value="latitude" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2547.826476033327" y="4346.821437385949" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_latitude" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_latitude" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_longitude" value="longitude" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2427.5" y="4224" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_longitude" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_longitude" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_altitude_msl" value="altitude_msl" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2307.1735239666737" y="4346.821437385949" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_altitude_msl" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_altitude_msl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_ground_speed" value="ground_speed" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2271.683113579421" y="4178.583519285737" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_ground_speed" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_ground_speed" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_heading" value="heading" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2104.20888278404" y="4217.518700493029" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_heading" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_heading" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="attr_ent_telemetry_battery_level" value="battery_level" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="2164.6707417593716" y="4056.5592959048026" width="145" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ent_telemetry_battery_level" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_battery_level" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_employs" value="employs" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1625" y="623" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_employs_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_org" target="rel_employs" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_employs_2" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_employs" target="ent_user" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_has_zone" value="manages_zone" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="4925" y="623" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_has_zone_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_hub" target="rel_has_zone" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_has_zone_2" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_has_zone" target="ent_airspace" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_owns" value="owns" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1625" y="1173" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_owns_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_org" target="rel_owns" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_owns_2" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_owns" target="ent_drone" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_creates_mission" value="creates" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="3275" y="1023" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_creates_mission_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_user" target="rel_creates_mission" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_creates_mission_2" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_creates_mission" target="ent_mission" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_bases" value="bases_at" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="3275" y="1323" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_bases_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_hub" target="rel_bases" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_bases_2" value="(0,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_bases" target="ent_drone" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_hub_mission" value="origin_hub" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="4125" y="1173" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_hub_mission_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_hub" target="rel_hub_mission" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_hub_mission_2" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_hub_mission" target="ent_mission" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_registers" value="online_device" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1625" y="1723" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_registers_1" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_dev_reg" target="rel_registers" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_registers_2" value="(0,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_registers" target="ent_drone" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_has_wp" value="has_waypoint" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="4925" y="1723" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_has_wp_1" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_mission" target="rel_has_wp" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_has_wp_2" value="(1,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_has_wp" target="ent_waypoint" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_executes_flight" value="executes" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="2425" y="2273" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_executes_flight_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_drone" target="rel_executes_flight" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_executes_flight_2" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_executes_flight" target="ent_flight" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_has_exec" value="has_execution" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="4125" y="2273" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_has_exec_1" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_mission" target="rel_has_exec" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_has_exec_2" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_has_exec" target="ent_mission_exec" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_pilots" value="pilots" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1625" y="2273" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_pilots_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_user" target="rel_pilots" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_pilots_2" value="(0,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_pilots" target="ent_flight" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_departs" value="departs_from" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="3025" y="2273" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_departs_1" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_hub" target="rel_departs" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_departs_2" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_departs" target="ent_flight" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_involves" value="involves" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1625" y="2823" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_involves_1" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_conflict" target="rel_involves" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_involves_2" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_involves" target="ent_flight" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_realized_by" value="realized_by_flight" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="3275" y="2823" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_realized_by_1" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_mission_exec" target="rel_realized_by" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_realized_by_2" value="(1,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_realized_by" target="ent_flight" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_telemetry" value="broadcasts" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="2425" y="3373" width="150" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_telemetry_1" value="(1,1)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="ent_flight" target="rel_telemetry" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rel_telemetry_2" value="(0,n)" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="rel_telemetry" target="ent_telemetry" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
