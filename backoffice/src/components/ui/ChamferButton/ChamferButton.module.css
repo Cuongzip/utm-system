@@ -1,0 +1,55 @@
+.btnSm {
+  clip-path: polygon(
+    8px 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 calc(100% - 8px),
+    0 8px
+  );
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
+}
+
+.btnMd {
+  clip-path: polygon(
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px),
+    0 14px
+  );
+  height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
+.dark {
+  background-color: #334155;
+  color: #ffffff;
+}
+
+.dark:hover {
+  background-color: #1e293b;
+}
+
+.active {
+  background-color: #94a3b8;
+  color: #ffffff;
+}
+
+.outline {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.outline:hover {
+  background-color: #f8fafc;
+}

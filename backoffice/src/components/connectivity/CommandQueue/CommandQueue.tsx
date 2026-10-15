@@ -1,0 +1,48 @@
+"use client";
+
+import { AlignLeft } from "lucide-react";
+import { ChamferCard } from "@/components/ui";
+import styles from "./CommandQueue.module.css";
+
+interface CommandQueueProps {
+  latency?: string;
+  pendingCount?: number;
+}
+
+export function CommandQueue({
+  latency = "0ms",
+  pendingCount = 0,
+}: CommandQueueProps) {
+  return (
+    <ChamferCard size="lg" accent="cyan" className="h-[222px]">
+      <div className="p-5 flex flex-col justify-between h-full">
+        <div className="flex flex-col gap-0.5 w-full">
+          <div className="flex items-center justify-between w-full pl-2">
+            <h2 className="text-[12px] font-bold uppercase text-[#1e293b] tracking-[0.6px] leading-4">
+              COMMAND QUEUE
+            </h2>
+            <span className="font-mono text-[10px] text-[#94a3b8] leading-[15px]">
+              LATENCY: {latency}
+            </span>
+          </div>
+          <p className="text-[12px] text-[#94a3b8] leading-4 pl-2">
+            Pending commands by priority
+          </p>
+        </div>
+
+        <div className="pt-3 w-full">
+          <div className={styles.emptyBox}>
+            <div className="flex items-center justify-center size-8 mb-2">
+              <AlignLeft className="w-8 h-8 text-[#cbd5e1] stroke-[1.5]" />
+            </div>
+            <span className="text-[12px] text-[#94a3b8] leading-4">
+              Queue is idle - {pendingCount} instructions pending
+            </span>
+          </div>
+        </div>
+      </div>
+    </ChamferCard>
+  );
+}
+
+export default CommandQueue;

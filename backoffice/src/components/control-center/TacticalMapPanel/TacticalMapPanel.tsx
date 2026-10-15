@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Globe, Map, Maximize2, Crosshair, Layers, Plus, Minus } from "lucide-react";
 import { CompassLoader } from "@/components/CompassLoader";
-import styles from "./TacticalMapPanel.module.css";
+import { ChamferCard } from "@/components/ui";
 
 const CesiumMap = dynamic(() => import("@/components/CesiumMap"), {
   ssr: false,
@@ -35,12 +35,14 @@ export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProp
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   return (
-    <div
-      className={`${styles.panelWrapper} transition-all ${
+    <ChamferCard
+      size="lg"
+      accent="cyan"
+      className={`transition-all ${
         isFullscreen ? "fixed inset-0 z-50 h-screen" : "h-[490px]"
       }`}
+      innerClassName="relative w-full h-full overflow-hidden bg-slate-900 select-none"
     >
-      <div className={`${styles.mapViewport} relative w-full h-full overflow-hidden bg-slate-900 select-none`}>
         <div className="absolute top-3 left-3 z-30 flex flex-col gap-1.5 pointer-events-auto">
           <div className="bg-white border border-[#e2e8f0] rounded-[4px] shadow-xs flex flex-col overflow-hidden">
             <button
@@ -119,8 +121,7 @@ export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProp
             <Map2D height="100%" hideToolbar />
           )}
         </div>
-      </div>
-    </div>
+    </ChamferCard>
   );
 }
 

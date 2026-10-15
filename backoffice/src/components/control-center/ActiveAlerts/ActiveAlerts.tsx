@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, BatteryMedium } from "lucide-react";
-import styles from "./ActiveAlerts.module.css";
+import { ChamferCard } from "@/components/ui";
 
 export interface AlertItem {
   id: string;
@@ -34,8 +34,8 @@ export function ActiveAlerts({
   alerts?: AlertItem[];
 }) {
   return (
-    <div className={styles.panelWrapper}>
-      <div className={`${styles.panelInner} p-4 bg-white flex flex-col justify-between h-full`}>
+    <ChamferCard size="lg" accent="cyan" className="h-[273px]">
+      <div className="p-4 flex flex-col justify-between h-full">
         <div>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 font-mono tracking-wider">
@@ -55,59 +55,62 @@ export function ActiveAlerts({
               const isHigh = alert.severity === "HIGH";
 
               return (
-                <div
+                <ChamferCard
                   key={alert.id}
-                  className={isHigh ? styles.alertHighWrapper : styles.alertWarnWrapper}
+                  size="sm"
+                  accent={isHigh ? "red" : "amber"}
+                  className={isHigh ? "bg-[#fecdd3]" : "bg-[#fde68a]"}
+                  innerClassName={`${isHigh ? "bg-[#fff1f2] text-red-950" : "bg-[#fffbeb] text-amber-950"} p-2.5 flex items-center justify-between`}
                 >
-                  <div
-                    className={`${styles.alertInner} p-2.5 flex items-start justify-between ${
-                      isHigh ? "bg-red-50/50" : "bg-amber-50/50"
-                    }`}
-                  >
-                    <div className="flex items-start space-x-2.5">
-                      <div
-                        className={`w-7 h-7 rounded-sm flex items-center justify-center shrink-0 mt-0.5 ${
-                          isHigh
-                            ? "bg-red-100 text-red-600"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {isHigh ? (
-                          <BatteryMedium className="h-4 w-4" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">{alert.title}</h4>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                          {alert.description}
-                        </p>
-                      </div>
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={`p-1.5 rounded-md ${
+                        isHigh
+                          ? "bg-red-100 text-red-600"
+                          : "bg-amber-100 text-amber-600"
+                      }`}
+                    >
+                      {isHigh ? (
+                        <BatteryMedium className="h-4 w-4" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4" />
+                      )}
                     </div>
-
-                    <div className="flex flex-col items-end">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold font-mono ${
-                          isHigh
-                            ? "bg-red-100 text-red-700 border border-red-200"
-                            : "bg-amber-100 text-amber-800 border border-amber-200"
+                    <div>
+                      <h4 className="text-xs font-bold font-mono">
+                        {alert.title}
+                      </h4>
+                      <p
+                        className={`text-[10px] font-mono ${
+                          isHigh ? "text-red-700" : "text-amber-700"
                         }`}
                       >
-                        {alert.severity}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono mt-1">
-                        {alert.time}
-                      </span>
+                        {alert.description}
+                      </p>
                     </div>
                   </div>
-                </div>
+
+                  <div className="text-right">
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                        isHigh
+                          ? "bg-red-200 text-red-800"
+                          : "bg-amber-200 text-amber-800"
+                      }`}
+                    >
+                      {alert.severity}
+                    </span>
+                    <span className="block text-[9px] text-slate-500 font-mono mt-0.5">
+                      {alert.time}
+                    </span>
+                  </div>
+                </ChamferCard>
               );
             })}
           </div>
         </div>
       </div>
-    </div>
+    </ChamferCard>
   );
 }
 

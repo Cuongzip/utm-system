@@ -6,6 +6,7 @@ import {
   Sliders,
   AlertTriangle,
   Layers,
+  Radio,
   Compass,
   PlaneTakeoff,
   Bot,
@@ -23,6 +24,7 @@ export type SidebarTabId =
   | "control-center"
   | "emergency"
   | "fleet"
+  | "connectivity"
   | "missions"
   | "flights"
   | "drones"
@@ -51,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "control-center", label: "Control Center", icon: Sliders },
   { id: "emergency", label: "Emergency", icon: AlertTriangle },
   { id: "fleet", label: "Fleet", icon: Layers },
+  { id: "connectivity", label: "Connectivity", icon: Radio },
   { id: "missions", label: "Missions", icon: Compass },
   { id: "flights", label: "Flights", icon: PlaneTakeoff },
   { id: "drones", label: "Drones", icon: Bot },

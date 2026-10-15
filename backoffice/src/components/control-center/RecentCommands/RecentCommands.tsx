@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock, ArrowRight } from "lucide-react";
-import styles from "./RecentCommands.module.css";
+import { ChamferCard } from "@/components/ui";
 
 export interface CommandItem {
   id: string;
@@ -25,8 +25,8 @@ export function RecentCommands({
   commands?: CommandItem[];
 }) {
   return (
-    <div className={styles.panelWrapper}>
-      <div className={`${styles.panelInner} p-4 bg-white flex flex-col justify-between h-full`}>
+    <ChamferCard size="lg" accent="cyan" className="h-[273px]">
+      <div className="p-4 flex flex-col justify-between h-full">
         <div>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 font-mono tracking-wider">
@@ -58,7 +58,7 @@ export function RecentCommands({
           </div>
         </div>
       </div>
-    </div>
+    </ChamferCard>
   );
 }
 
