@@ -1,142 +1,96 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
-import { Globe, Map, Columns2, Lock } from "lucide-react";
+import Header from "@/components/layout/Header";
+import Sidebar, { SidebarTabId } from "@/components/layout/Sidebar";
+import {
+  TacticalMapPanel,
+  LiveTelemetry,
+  FlightControl,
+  RecentCommands,
+  ActiveAlerts,
+} from "@/components/control-center";
+import { Sliders, Construction } from "lucide-react";
 
-import { API_ENDPOINTS } from "@/constants";
-
-import { CompassLoader } from "@/components/CompassLoader";
-
-const CesiumMap = dynamic(() => import("@/components/CesiumMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[650px] w-full items-center justify-center rounded-xl bg-zinc-950 text-white border border-zinc-800">
-      <CompassLoader size={96} text="Đang tải bản đồ 3D Globe..." />
-    </div>
-  ),
-});
-
-const Map2D = dynamic(() => import("@/components/Map2D"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[650px] w-full items-center justify-center rounded-xl bg-zinc-950 text-white border border-zinc-800">
-      <CompassLoader size={96} text="Đang tải bản đồ 2D Flat Map..." />
-    </div>
-  ),
-});
+const TAB_TITLES: Record<SidebarTabId, string> = {
+  dashboard: "Dashboard Overview",
+  "control-center": "Live Operations",
+  emergency: "Emergency Protocols",
+  fleet: "Fleet Management",
+  missions: "Missions Operations",
+  flights: "Flights Management",
+  drones: "Drones Management",
+  hubs: "Operations Hubs",
+  airspace: "Airspace Sectors",
+  conflicts: "Conflict Detection",
+  weather: "Weather Services",
+  developer: "Developer Console",
+  settings: "System Settings",
+};
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"3d" | "2d" | "split">("3d");
+  const [activeTab, setActiveTab] = useState<SidebarTabId>("control-center");
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-900 text-zinc-100">
-      <header className="border-b border-zinc-800 bg-zinc-950/90 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 font-bold">
-              UTM
-            </div>
-            <div>
-              <h1 className="text-base font-semibold leading-tight text-white">
-                UTM Backoffice - Hệ Thống Giám Sát Bản Đồ Không Gian
-              </h1>
-              <p className="text-xs text-zinc-400">
-                Hỗ trợ trực quan hóa không gian 3D & Bản đồ phẳng 2D phục vụ điều hành bay (UTM)
-              </p>
-            </div>
-          </div>
+    <div className={`min-h-screen flex font-sans antialiased overflow-x-hidden ${isDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-[#f8fafc] text-slate-800"}`}>
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+      />
 
-          <div className="flex items-center rounded-lg bg-zinc-900 p-1 border border-zinc-800">
-            <button
-              onClick={() => setActiveTab("3d")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === "3d"
-                  ? "bg-sky-500 text-white shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              <span>Bản đồ 3D</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("2d")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === "2d"
-                  ? "bg-amber-500 text-black font-semibold shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              <Map className="h-3.5 w-3.5" />
-              <span>Bản đồ 2D</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("split")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === "split"
-                  ? "bg-indigo-500 text-white shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              <Columns2 className="h-3.5 w-3.5" />
-              <span>Song song (3D & 2D)</span>
-            </button>
+      <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] overflow-y-auto">
+          <Header
+            activeViewTitle={TAB_TITLES[activeTab] || "Live Operations"}
+            userInitials="CU"
+          />
 
-            <a
-              href={API_ENDPOINTS.AUTH.LOGIN}
-              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-zinc-800 transition-all ml-1 border-l border-zinc-700/50 pl-2.5"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              <span>Đăng nhập</span>
-            </a>
-          </div>
-        </div>
-      </header>
+          <div className="p-6 space-y-6">
+            {activeTab === "control-center" ? (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-8">
+                    <TacticalMapPanel initialMode="globe" />
+                  </div>
 
-      <main className="flex-1 p-6">
-        <div className="mx-auto max-w-7xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-medium text-zinc-100">
-                {activeTab === "3d" && "Bản đồ không gian số 3D (3D Globe)"}
-                {activeTab === "2d" && "Bản đồ phẳng 2D (2D Flat Tactical Map)"}
-                {activeTab === "split" && "Hiển thị đồng thời: Bản đồ 3D Globe & Bản đồ 2D"}
-              </h2>
-              <p className="text-sm text-zinc-400">
-                {activeTab === "3d" && "Mô phỏng địa cầu 3D với ảnh vệ tinh phân giải cao, hỗ trợ quản lý độ cao bay và địa hình."}
-                {activeTab === "2d" && "Bản đồ phẳng 2D thể hiện chi tiết mạng lưới đường phố, địa danh, hỗ trợ giám sát không phận."}
-                {activeTab === "split" && "So sánh trực quan giữa góc nhìn địa hình 3D toàn cảnh và bản đồ 2D đường xá."}
-              </p>
-            </div>
-          </div>
-
-          {activeTab === "3d" && <CesiumMap height="680px" />}
-
-          {activeTab === "2d" && <Map2D height="680px" />}
-
-          {activeTab === "split" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider">
-                    Góc nhìn 3D Globe
-                  </span>
+                  <div className="lg:col-span-4">
+                    <LiveTelemetry />
+                  </div>
                 </div>
-                <CesiumMap height="620px" />
-              </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-                    Góc nhìn 2D Flat Map
-                  </span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <FlightControl uavId="UAV-008" statusText="Ready for control" />
+                  <RecentCommands />
+                  <ActiveAlerts />
                 </div>
-                <Map2D height="620px" />
+              </>
+            ) : (
+              <div className="octa-border-wrapper-lg tech-mark-tl-br min-h-[500px]">
+                <div className="octa-lg bg-white p-12 flex flex-col items-center justify-center text-center h-full">
+                  <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 mb-4 shadow-xs">
+                    <Construction className="h-6 w-6 text-slate-600 animate-bounce" />
+                  </div>
+                  <h2 className="text-base font-bold font-mono text-slate-800">
+                    {TAB_TITLES[activeTab]} (Giao diện đang hoàn thiện)
+                  </h2>
+                  <p className="mt-2 max-w-md text-xs text-slate-500 font-mono">
+                    Chỉ làm UI mẫu theo yêu cầu. Nhấn{" "}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("control-center")}
+                      className="font-bold text-slate-800 underline inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sliders className="h-3 w-3" /> Control Center
+                    </button>{" "}
+                    để xem bản đồ điều hành 2D/3D Globe và telemetry.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
+            )}
+          </div>
+        </main>
     </div>
   );
 }

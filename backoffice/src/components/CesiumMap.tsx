@@ -14,9 +14,10 @@ declare global {
 
 interface CesiumMapProps {
   height?: string;
+  hideToolbar?: boolean;
 }
 
-export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
+export default function CesiumMap({ height = "650px", hideToolbar = false }: CesiumMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,8 +68,8 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
           maximumRenderTimeChange: Infinity,
           animation: false,
           timeline: false,
-          fullscreenButton: true,
-          homeButton: true,
+          fullscreenButton: !hideToolbar,
+          homeButton: !hideToolbar,
           sceneModePicker: false,
           baseLayerPicker: false,
           navigationHelpButton: false,
@@ -96,7 +97,9 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
         }
 
         viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(108.2772, 14.0583, 7000000.0),
+          destination: hideToolbar
+            ? Cesium.Cartesian3.fromDegrees(108.2208, 16.0544, 45000.0)
+            : Cesium.Cartesian3.fromDegrees(108.2772, 14.0583, 7000000.0),
         });
 
         setIsLoaded(true);
@@ -258,10 +261,15 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-xl border border-zinc-800 shadow-2xl bg-zinc-950"
-      style={{ height }}
+      className={
+        hideToolbar
+          ? "relative w-full h-full overflow-hidden bg-zinc-950"
+          : "relative w-full overflow-hidden rounded-xl border border-zinc-800 shadow-2xl bg-zinc-950"
+      }
+      style={{ height: hideToolbar ? "100%" : height }}
     >
-      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 rounded-lg bg-zinc-900/95 p-1.5 backdrop-blur border border-zinc-700/60 shadow-lg">
+      {!hideToolbar && (
+        <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 rounded-lg bg-zinc-900/95 p-1.5 backdrop-blur border border-zinc-700/60 shadow-lg">
         <div className="flex items-center gap-1 border-r border-zinc-700/80 pr-2">
           <span className="px-1 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Chế độ:</span>
           <button
@@ -355,8 +363,9 @@ export default function CesiumMap({ height = "650px" }: CesiumMapProps) {
           </div>
         )}
       </div>
+      )}
 
-      {hasIonToken && (
+      {!hideToolbar && hasIonToken && (
         <div className="absolute bottom-4 left-3 z-20 flex items-center gap-2 rounded-lg bg-zinc-900/90 p-1.5 backdrop-blur border border-zinc-700/60 shadow-lg">
           <span className="px-1 text-xs font-semibold text-zinc-400">Bay nhanh xem 3D:</span>
           <button

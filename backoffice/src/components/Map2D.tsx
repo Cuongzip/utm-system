@@ -12,9 +12,10 @@ declare global {
 
 interface Map2DProps {
   height?: string;
+  hideToolbar?: boolean;
 }
 
-export default function Map2D({ height = "650px" }: Map2DProps) {
+export default function Map2D({ height = "650px", hideToolbar = false }: Map2DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +48,8 @@ export default function Map2D({ height = "650px" }: Map2DProps) {
           maximumRenderTimeChange: Infinity,
           animation: false,
           timeline: false,
-          fullscreenButton: true,
-          homeButton: true,
+          fullscreenButton: !hideToolbar,
+          homeButton: !hideToolbar,
           sceneModePicker: false,
           baseLayerPicker: false,
           navigationHelpButton: false,
@@ -69,7 +70,9 @@ export default function Map2D({ height = "650px" }: Map2DProps) {
         if (viewer.scene.moon) viewer.scene.moon.show = false;
 
         viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(108.2772, 14.0583, 4000000.0),
+          destination: hideToolbar
+            ? Cesium.Cartesian3.fromDegrees(108.2208, 16.0544, 45000.0)
+            : Cesium.Cartesian3.fromDegrees(108.2772, 14.0583, 4000000.0),
         });
 
         setIsLoaded(true);
@@ -120,42 +123,48 @@ export default function Map2D({ height = "650px" }: Map2DProps) {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-xl border border-zinc-800 shadow-2xl bg-zinc-950"
-      style={{ height }}
+      className={
+        hideToolbar
+          ? "relative w-full h-full overflow-hidden bg-zinc-950"
+          : "relative w-full overflow-hidden rounded-xl border border-zinc-800 shadow-2xl bg-zinc-950"
+      }
+      style={{ height: hideToolbar ? "100%" : height }}
     >
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-lg bg-zinc-900/90 p-1.5 backdrop-blur border border-zinc-700/60 shadow-lg">
-        <span className="px-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Lớp 2D:</span>
-        <button
-          onClick={() => switchLayer("street")}
-          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-            layerType === "street"
-              ? "bg-amber-500 text-black font-semibold shadow-sm"
-              : "text-zinc-300 hover:bg-zinc-800"
-          }`}
-        >
-          Đường phố (Esri)
-        </button>
-        <button
-          onClick={() => switchLayer("carto")}
-          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-            layerType === "carto"
-              ? "bg-amber-500 text-black font-semibold shadow-sm"
-              : "text-zinc-300 hover:bg-zinc-800"
-          }`}
-        >
-          Carto Voyager
-        </button>
-        <button
-          onClick={() => switchLayer("satellite")}
-          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-            layerType === "satellite"
-              ? "bg-amber-500 text-black font-semibold shadow-sm"
-              : "text-zinc-300 hover:bg-zinc-800"
-          }`}
-        >
-          Vệ tinh 2D
-        </button>
-      </div>
+      {!hideToolbar && (
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-lg bg-zinc-900/90 p-1.5 backdrop-blur border border-zinc-700/60 shadow-lg">
+          <span className="px-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Lớp 2D:</span>
+          <button
+            onClick={() => switchLayer("street")}
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              layerType === "street"
+                ? "bg-amber-500 text-black font-semibold shadow-sm"
+                : "text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            Đường phố (Esri)
+          </button>
+          <button
+            onClick={() => switchLayer("carto")}
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              layerType === "carto"
+                ? "bg-amber-500 text-black font-semibold shadow-sm"
+                : "text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            Carto Voyager
+          </button>
+          <button
+            onClick={() => switchLayer("satellite")}
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              layerType === "satellite"
+                ? "bg-amber-500 text-black font-semibold shadow-sm"
+                : "text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            Vệ tinh 2D
+          </button>
+        </div>
+      )}
 
       {!isLoaded && !error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 text-white z-10 gap-3">
