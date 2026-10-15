@@ -5,5 +5,8 @@ export * from "./ConnectivityTabs";
 export * from "./TelemetryDistribution";
 export * from "./CommandQueue";
 export * from "./ConnectedDevicesPanel";
+export * from "./RegisteredDevicesTable";
+export * from "./TelemetryModesPanel";
+export * from "./RegisterDeviceModal";
 export * from "./ConnectivityView";
 export { default } from "./ConnectivityView";

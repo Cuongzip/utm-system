@@ -12,6 +12,7 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
   }
 
   const response = await fetch(endpoint, {
+    credentials: "same-origin",
     ...options,
     headers,
   });

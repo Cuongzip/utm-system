@@ -3,3 +3,4 @@ export * from "./droneService";
 export * from "./flightService";
 export * from "./airspaceService";
 export * from "./conflictService";
+export * from "./connectivityService";

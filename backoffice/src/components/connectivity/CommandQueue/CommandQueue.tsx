@@ -7,11 +7,13 @@ import styles from "./CommandQueue.module.css";
 interface CommandQueueProps {
   latency?: string;
   pendingCount?: number;
+  byPriority?: Record<number, number>;
 }
 
 export function CommandQueue({
   latency = "0ms",
   pendingCount = 0,
+  byPriority = { 0: 0, 1: 0, 2: 0, 3: 0 },
 }: CommandQueueProps) {
   return (
     <ChamferCard size="lg" accent="cyan" className="h-[222px]">
@@ -31,14 +33,35 @@ export function CommandQueue({
         </div>
 
         <div className="pt-3 w-full">
-          <div className={styles.emptyBox}>
-            <div className="flex items-center justify-center size-8 mb-2">
-              <AlignLeft className="w-8 h-8 text-[#cbd5e1] stroke-[1.5]" />
+          {pendingCount === 0 ? (
+            <div className={styles.emptyBox}>
+              <div className="flex items-center justify-center size-8 mb-2">
+                <AlignLeft className="w-8 h-8 text-[#cbd5e1] stroke-[1.5]" />
+              </div>
+              <span className="text-[12px] text-[#94a3b8] leading-4">
+                Queue is idle - {pendingCount} instructions pending
+              </span>
             </div>
-            <span className="text-[12px] text-[#94a3b8] leading-4">
-              Queue is idle - {pendingCount} instructions pending
-            </span>
-          </div>
+          ) : (
+            <div className={styles.priorityGrid}>
+              <div className={styles.priorityCard}>
+                <span className={styles.priorityLabel}>P0 Emergency</span>
+                <span className={styles.priorityValue}>{byPriority[0] || 0}</span>
+              </div>
+              <div className={styles.priorityCard}>
+                <span className={styles.priorityLabel}>P1 High</span>
+                <span className={styles.priorityValue}>{byPriority[1] || 0}</span>
+              </div>
+              <div className={styles.priorityCard}>
+                <span className={styles.priorityLabel}>P2 Normal</span>
+                <span className={styles.priorityValue}>{byPriority[2] || 0}</span>
+              </div>
+              <div className={styles.priorityCard}>
+                <span className={styles.priorityLabel}>P3 Background</span>
+                <span className={styles.priorityValue}>{byPriority[3] || 0}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </ChamferCard>
