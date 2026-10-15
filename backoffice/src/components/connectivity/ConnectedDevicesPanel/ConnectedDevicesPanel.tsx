@@ -1,7 +1,7 @@
 "use client";
 
 import { WifiOff, Activity, Trash2, Loader2 } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { ChamferCard, StatusBadge } from "@/components/ui";
 import type { DeviceRegistration } from "@/types";
 import styles from "./ConnectedDevicesPanel.module.css";
 
@@ -122,26 +122,10 @@ export function ConnectedDevicesPanel({
                       </div>
                     </td>
                     <td className={styles.td}>
-                      <span
-                        className={
-                          isOnline(device)
-                            ? styles.badgeOnline
-                            : device.connectionStatus === "connecting"
-                            ? styles.badgeConnecting
-                            : styles.badgeOffline
-                        }
-                      >
-                        <span
-                          className={`${styles.statusDot} ${
-                            isOnline(device)
-                              ? styles.pulseGreen
-                              : device.connectionStatus === "connecting"
-                              ? styles.amberDot
-                              : styles.grayDot
-                          }`}
-                        />
-                        {device.connectionStatus.toUpperCase()}
-                      </span>
+                      <StatusBadge
+                        status={isOnline(device) ? "online" : device.connectionStatus}
+                        label={device.connectionStatus.toUpperCase()}
+                      />
                     </td>
                     <td className={`${styles.td} font-mono text-[11px] text-[#64748b]`}>
                       {device.socketId || "—"}

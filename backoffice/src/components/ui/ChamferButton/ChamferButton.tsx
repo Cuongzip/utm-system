@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib";
 import styles from "./ChamferButton.module.css";
 
 export type ChamferButtonVariant = "dark" | "outline" | "active";
@@ -16,7 +17,7 @@ interface ChamferButtonProps
 export function ChamferButton({
   variant = "dark",
   size = "sm",
-  className = "",
+  className,
   children,
   ...props
 }: ChamferButtonProps) {
@@ -25,7 +26,12 @@ export function ChamferButton({
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none font-bold ${sizeClass} ${variantClass} ${className}`}
+      className={cn(
+        "inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none font-bold",
+        sizeClass,
+        variantClass,
+        className
+      )}
       {...props}
     >
       {children}

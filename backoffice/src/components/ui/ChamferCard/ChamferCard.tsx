@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { cn } from "@/lib";
 import styles from "./ChamferCard.module.css";
 
 export type ChamferSize = "sm" | "md" | "lg";
@@ -31,20 +31,17 @@ const ACCENT_CLASSES: Record<ChamferAccent, string> = {
 export function ChamferCard({
   size = "lg",
   accent = "cyan",
-  className = "",
-  innerClassName = "",
+  className,
+  innerClassName,
   style,
   children,
 }: ChamferCardProps) {
-  const sizeClass = SIZE_CLASSES[size];
-  const accentClass = ACCENT_CLASSES[accent];
-
   return (
     <div
       style={style}
-      className={`${styles.wrapper} ${sizeClass} ${accentClass} ${className}`}
+      className={cn(styles.wrapper, SIZE_CLASSES[size], ACCENT_CLASSES[accent], className)}
     >
-      <div className={`${styles.inner} ${sizeClass} ${innerClassName}`}>
+      <div className={cn(styles.inner, SIZE_CLASSES[size], innerClassName)}>
         {children}
       </div>
     </div>

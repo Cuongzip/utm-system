@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Search, Activity, Trash2, Loader2, Plus } from "lucide-react";
-import { ChamferCard, ChamferButton } from "@/components/ui";
+import { ChamferCard, ChamferButton, StatusBadge } from "@/components/ui";
 import type { DeviceRegistration, DeviceConnectionStatus } from "@/types";
 import styles from "./RegisteredDevicesTable.module.css";
 
@@ -139,26 +139,10 @@ export function RegisteredDevicesTable({
                         </div>
                       </td>
                       <td className={styles.td}>
-                        <span
-                          className={
-                            isOnline
-                              ? styles.badgeOnline
-                              : isConnecting
-                              ? styles.badgeConnecting
-                              : styles.badgeOffline
-                          }
-                        >
-                          <span
-                            className={`${styles.statusDot} ${
-                              isOnline
-                                ? styles.pulseGreen
-                                : isConnecting
-                                ? styles.amberDot
-                                : styles.grayDot
-                            }`}
-                          />
-                          {device.connectionStatus.toUpperCase()}
-                        </span>
+                        <StatusBadge
+                          status={device.connectionStatus}
+                          label={device.connectionStatus.toUpperCase()}
+                        />
                       </td>
                       <td className={`${styles.td} font-mono text-[11px] text-[#64748b]`}>
                         {device.socketId || "—"}

@@ -16,8 +16,6 @@ import { Sliders, Construction } from "lucide-react";
 const TAB_TITLES: Record<SidebarTabId, string> = {
   dashboard: "Dashboard Overview",
   "control-center": "Live Operations",
-  emergency: "Emergency Protocols",
-  fleet: "Fleet Management",
   connectivity: "Device Connectivity",
   missions: "Missions Operations",
   flights: "Flights Management",
@@ -25,8 +23,6 @@ const TAB_TITLES: Record<SidebarTabId, string> = {
   hubs: "Operations Hubs",
   airspace: "Airspace Sectors",
   conflicts: "Conflict Detection",
-  weather: "Weather Services",
-  developer: "Developer Console",
   settings: "System Settings",
 };
 

@@ -4,8 +4,6 @@ import Image from "next/image";
 import {
   LayoutDashboard,
   Sliders,
-  AlertTriangle,
-  Layers,
   Radio,
   Compass,
   PlaneTakeoff,
@@ -13,8 +11,6 @@ import {
   Building2,
   Shield,
   AlertOctagon,
-  CloudSun,
-  Code2,
   Settings,
   Moon,
 } from "lucide-react";
@@ -22,8 +18,6 @@ import {
 export type SidebarTabId =
   | "dashboard"
   | "control-center"
-  | "emergency"
-  | "fleet"
   | "connectivity"
   | "missions"
   | "flights"
@@ -31,8 +25,6 @@ export type SidebarTabId =
   | "hubs"
   | "airspace"
   | "conflicts"
-  | "weather"
-  | "developer"
   | "settings";
 
 interface SidebarProps {
@@ -51,8 +43,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "control-center", label: "Control Center", icon: Sliders },
-  { id: "emergency", label: "Emergency", icon: AlertTriangle },
-  { id: "fleet", label: "Fleet", icon: Layers },
   { id: "connectivity", label: "Connectivity", icon: Radio },
   { id: "missions", label: "Missions", icon: Compass },
   { id: "flights", label: "Flights", icon: PlaneTakeoff },
@@ -60,8 +50,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "hubs", label: "Hubs", icon: Building2 },
   { id: "airspace", label: "Airspace", icon: Shield },
   { id: "conflicts", label: "Conflicts", icon: AlertOctagon },
-  { id: "weather", label: "Weather", icon: CloudSun },
-  { id: "developer", label: "Developer", icon: Code2 },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
