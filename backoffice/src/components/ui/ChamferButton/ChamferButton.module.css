@@ -1,38 +1,20 @@
 .btnSm {
-  clip-path: polygon(
-    8px 0,
-    calc(100% - 8px) 0,
-    100% 8px,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    8px 100%,
-    0 calc(100% - 8px),
-    0 8px
-  );
+  clip-path: var(--chamfer-clip-sm);
   height: 32px;
   padding: 0 16px;
   font-size: 12px;
 }
 
 .btnMd {
-  clip-path: polygon(
-    14px 0,
-    calc(100% - 14px) 0,
-    100% 14px,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    14px 100%,
-    0 calc(100% - 14px),
-    0 14px
-  );
+  clip-path: var(--chamfer-clip-md);
   height: 40px;
   padding: 0 20px;
   font-size: 14px;
 }
 
 .dark {
-  background-color: #334155;
-  color: #ffffff;
+  background-color: var(--color-border-dark);
+  color: var(--color-text-light);
 }
 
 .dark:hover {
@@ -40,16 +22,16 @@
 }
 
 .active {
-  background-color: #94a3b8;
-  color: #ffffff;
+  background-color: var(--color-status-offline);
+  color: var(--color-text-light);
 }
 
 .outline {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background-color: var(--color-surface-panel);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-border-dark);
 }
 
 .outline:hover {
-  background-color: #f8fafc;
+  background-color: var(--color-surface-base);
 }
