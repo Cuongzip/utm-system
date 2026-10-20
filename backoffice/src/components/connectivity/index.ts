@@ -1,4 +1,3 @@
-export * from "./ConnectivityHeader";
 export * from "./ConnectivityAlert";
 export * from "./ConnectivityMetrics";
 export * from "./ConnectivityTabs";

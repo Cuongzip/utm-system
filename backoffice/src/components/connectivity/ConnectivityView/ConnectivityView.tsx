@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import ConnectivityHeader from "../ConnectivityHeader";
+import { PageHeader, ChamferButton } from "@/components/ui";
+import { RotateCw, Plus } from "lucide-react";
 import ConnectivityAlert from "../ConnectivityAlert";
 import ConnectivityMetrics from "../ConnectivityMetrics";
 import ConnectivityTabs, { ConnectivitySubTab } from "../ConnectivityTabs";
@@ -78,10 +79,21 @@ export function ConnectivityView() {
 
   return (
     <div className={styles.container}>
-      <ConnectivityHeader
-        onRefresh={fetchData}
-        onRegisterDevice={() => setIsRegisterOpen(true)}
-      />
+      <PageHeader title="Device Connectivity">
+        <button
+          type="button"
+          onClick={fetchData}
+          className="h-8 bg-white border border-[#cbd5e1] rounded-[6px] px-[15px] flex items-center gap-[6px] text-[#334155] text-[12px] font-bold hover:bg-[#f8fafc] cursor-pointer transition-colors"
+        >
+          <RotateCw className="w-3.5 h-3.5 text-[#334155]" />
+          <span>Refresh</span>
+        </button>
+
+        <ChamferButton variant="dark" size="sm" onClick={() => setIsRegisterOpen(true)}>
+          <Plus className="w-4 h-4 text-white" />
+          <span>Register Device</span>
+        </ChamferButton>
+      </PageHeader>
 
       {error && (
         <ConnectivityAlert

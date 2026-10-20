@@ -12,3 +12,6 @@ export { default as RecentCommands } from "./RecentCommands";
 
 export * from "./ActiveAlerts";
 export { default as ActiveAlerts } from "./ActiveAlerts";
+
+export * from "./ControlCenterView";
+export { default as ControlCenterView } from "./ControlCenterView";
