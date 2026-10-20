@@ -65,9 +65,6 @@ export function TelemetryModesPanel({
           <h2 className="text-[12px] font-bold uppercase text-[#1e293b] tracking-[0.6px] leading-4">
             ADAPTIVE TELEMETRY MODES
           </h2>
-          <p className="text-[12px] text-[#94a3b8] leading-4 mt-0.5">
-            Dynamic bandwidth allocation and transmission rates based on flight phase and safety severity
-          </p>
         </div>
 
         <div className={styles.grid}>
