@@ -1,6 +1,6 @@
 "use client";
 
-import { Radio, AlertTriangle, ChevronRight, Drone, Bot, Signal } from "lucide-react";
+import { Radio, ChevronRight, Drone, Bot, Signal } from "lucide-react";
 import { ChamferCard, StatusBadge } from "@/components/ui";
 
 export interface TelemetryData {

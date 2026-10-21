@@ -72,7 +72,7 @@ export function HubsTable({
                 <tr>
                   <td colSpan={6} className={styles.emptyTd}>
                     <div className={styles.emptyWrapper}>
-                      <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin mb-2" />
+                      <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin" />
                       <span>Loading vertiport hubs...</span>
                     </div>
                   </td>

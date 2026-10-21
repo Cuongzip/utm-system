@@ -116,9 +116,6 @@ export function RegisteredDevicesTable({
               </thead>
               <tbody>
                 {filteredDevices.map((device) => {
-                  const isOnline = device.connectionStatus === "online";
-                  const isConnecting = device.connectionStatus === "connecting";
-
                   return (
                     <tr key={device.id} className={styles.row}>
                       <td className={`${styles.td} font-mono font-bold text-[#0f172a]`}>

@@ -36,12 +36,15 @@ export function RegisterDroneModal({
 
   useEffect(() => {
     if (isOpen) {
-      hubService
-        .getAll()
-        .then((items) => {
+      const fetchHubs = async () => {
+        try {
+          const items = await hubService.getAll();
           setHubs(items || []);
-        })
-        .catch(() => {});
+        } catch {
+          setHubs([]);
+        }
+      };
+      fetchHubs();
 
       if (droneToEdit) {
         setRegistrationNumber(droneToEdit.registrationNumber || droneToEdit.id || "");

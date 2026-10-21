@@ -74,7 +74,7 @@ export function DronesTable({
                 <tr>
                   <td colSpan={7} className={styles.emptyTd}>
                     <div className={styles.emptyWrapper}>
-                      <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin mb-2" />
+                      <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin" />
                       <span>Loading drone fleet...</span>
                     </div>
                   </td>
