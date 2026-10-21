@@ -1,166 +1,331 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --font-sans:
+        system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    --font-mono:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-tech-cyan: #00A3BF;
-  --color-tech-cyan-hover: #008b9e;
-  --color-tech-cyan-light: #e6f6f9;
-  --color-tech-cyan-glow: #00e5ff;
-  --color-tech-cyan-border: rgba(0, 163, 191, 0.35);
+    --color-tech-cyan: #00a3bf;
+    --color-tech-cyan-hover: #008b9e;
+    --color-tech-cyan-light: #e6f6f9;
+    --color-tech-cyan-glow: #00e5ff;
+    --color-tech-cyan-border: rgba(0, 163, 191, 0.35);
 
-  --color-tech-amber: #f59e0b;
-  --color-tech-amber-hover: #d97706;
-  --color-tech-amber-light: #fffbeb;
-  --color-tech-amber-border: rgba(245, 158, 11, 0.35);
+    --color-tech-amber: #f59e0b;
+    --color-tech-amber-hover: #d97706;
+    --color-tech-amber-light: #fffbeb;
+    --color-tech-amber-border: rgba(245, 158, 11, 0.35);
 
-  --color-tech-red: #ef4444;
-  --color-tech-red-hover: #dc2626;
-  --color-tech-red-light: #fef2f2;
-  --color-tech-red-border: rgba(239, 68, 68, 0.35);
+    --color-tech-red: #ef4444;
+    --color-tech-red-hover: #dc2626;
+    --color-tech-red-light: #fef2f2;
+    --color-tech-red-border: rgba(239, 68, 68, 0.35);
 
-  --color-status-online: #10b981;
-  --color-status-online-bg: #ecfdf5;
-  --color-status-online-border: #a7f3d0;
-  --color-status-online-text: #059669;
+    --color-status-online: #10b981;
+    --color-status-online-bg: #ecfdf5;
+    --color-status-online-border: #a7f3d0;
+    --color-status-online-text: #059669;
 
-  --color-status-offline: #94a3b8;
-  --color-status-offline-bg: #f1f5f9;
-  --color-status-offline-border: #cbd5e1;
-  --color-status-offline-text: #64748b;
+    --color-status-offline: #94a3b8;
+    --color-status-offline-bg: #f1f5f9;
+    --color-status-offline-border: #cbd5e1;
+    --color-status-offline-text: #64748b;
 
-  --color-status-connecting: #f59e0b;
-  --color-status-connecting-bg: #fffbeb;
-  --color-status-connecting-border: #fde68a;
-  --color-status-connecting-text: #d97706;
+    --color-status-connecting: #f59e0b;
+    --color-status-connecting-bg: #fffbeb;
+    --color-status-connecting-border: #fde68a;
+    --color-status-connecting-text: #d97706;
 
-  --color-status-alert: #ef4444;
-  --color-status-alert-bg: #fef2f2;
-  --color-status-alert-border: #fecaca;
-  --color-status-alert-text: #dc2626;
+    --color-status-alert: #ef4444;
+    --color-status-alert-bg: #fef2f2;
+    --color-status-alert-border: #fecaca;
+    --color-status-alert-text: #dc2626;
 
-  --color-surface-base: #f8fafc;
-  --color-surface-panel: #ffffff;
-  --color-surface-card: #f1f5f9;
-  --color-surface-subtle: #f8fafc;
-  --color-border-subtle: #f1f5f9;
-  --color-border-default: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-  --color-border-dark: #334155;
+    --color-surface-base: #f8fafc;
+    --color-surface-panel: #ffffff;
+    --color-surface-card: #f1f5f9;
+    --color-surface-subtle: #f8fafc;
+    --color-border-subtle: #f1f5f9;
+    --color-border-default: #e2e8f0;
+    --color-border-strong: #cbd5e1;
+    --color-border-dark: #334155;
 
-  --color-tactical-bg: #070b12;
-  --color-tactical-panel: rgba(12, 20, 31, 0.92);
-  --color-tactical-panel-solid: #0d1522;
-  --color-tactical-border: rgba(0, 163, 191, 0.28);
-  --color-tactical-grid: rgba(0, 163, 191, 0.08);
+    --color-tactical-bg: #070b12;
+    --color-tactical-panel: rgba(12, 20, 31, 0.92);
+    --color-tactical-panel-solid: #0d1522;
+    --color-tactical-border: rgba(0, 163, 191, 0.28);
+    --color-tactical-grid: rgba(0, 163, 191, 0.08);
 
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
-  --color-text-light: #ffffff;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94a3b8;
+    --color-text-light: #ffffff;
 
-  --chamfer-clip-sm: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
-  --chamfer-clip-md: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
-  --chamfer-clip-lg: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px);
+    --chamfer-clip-sm: polygon(
+        8px 0,
+        calc(100% - 8px) 0,
+        100% 8px,
+        100% calc(100% - 8px),
+        calc(100% - 8px) 100%,
+        8px 100%,
+        0 calc(100% - 8px),
+        0 8px
+    );
+    --chamfer-clip-md: polygon(
+        14px 0,
+        calc(100% - 14px) 0,
+        100% 14px,
+        100% calc(100% - 14px),
+        calc(100% - 14px) 100%,
+        14px 100%,
+        0 calc(100% - 14px),
+        0 14px
+    );
+    --chamfer-clip-lg: polygon(
+        16px 0,
+        calc(100% - 16px) 0,
+        100% 16px,
+        100% calc(100% - 16px),
+        calc(100% - 16px) 100%,
+        16px 100%,
+        0 calc(100% - 16px),
+        0 16px
+    );
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-sans);
+    --font-mono: var(--font-mono);
 
-  --color-tech-cyan: var(--color-tech-cyan);
-  --color-tech-cyan-hover: var(--color-tech-cyan-hover);
-  --color-tech-cyan-light: var(--color-tech-cyan-light);
-  --color-tech-cyan-glow: var(--color-tech-cyan-glow);
+    --color-tech-cyan: var(--color-tech-cyan);
+    --color-tech-cyan-hover: var(--color-tech-cyan-hover);
+    --color-tech-cyan-light: var(--color-tech-cyan-light);
+    --color-tech-cyan-glow: var(--color-tech-cyan-glow);
 
-  --color-tech-amber: var(--color-tech-amber);
-  --color-tech-amber-hover: var(--color-tech-amber-hover);
-  --color-tech-amber-light: var(--color-tech-amber-light);
+    --color-tech-amber: var(--color-tech-amber);
+    --color-tech-amber-hover: var(--color-tech-amber-hover);
+    --color-tech-amber-light: var(--color-tech-amber-light);
 
-  --color-tech-red: var(--color-tech-red);
-  --color-tech-red-hover: var(--color-tech-red-hover);
-  --color-tech-red-light: var(--color-tech-red-light);
+    --color-tech-red: var(--color-tech-red);
+    --color-tech-red-hover: var(--color-tech-red-hover);
+    --color-tech-red-light: var(--color-tech-red-light);
 
-  --color-status-online: var(--color-status-online);
-  --color-status-online-bg: var(--color-status-online-bg);
-  --color-status-online-border: var(--color-status-online-border);
-  --color-status-online-text: var(--color-status-online-text);
+    --color-status-online: var(--color-status-online);
+    --color-status-online-bg: var(--color-status-online-bg);
+    --color-status-online-border: var(--color-status-online-border);
+    --color-status-online-text: var(--color-status-online-text);
 
-  --color-status-offline: var(--color-status-offline);
-  --color-status-offline-bg: var(--color-status-offline-bg);
-  --color-status-offline-border: var(--color-status-offline-border);
-  --color-status-offline-text: var(--color-status-offline-text);
+    --color-status-offline: var(--color-status-offline);
+    --color-status-offline-bg: var(--color-status-offline-bg);
+    --color-status-offline-border: var(--color-status-offline-border);
+    --color-status-offline-text: var(--color-status-offline-text);
 
-  --color-status-connecting: var(--color-status-connecting);
-  --color-status-connecting-bg: var(--color-status-connecting-bg);
-  --color-status-connecting-border: var(--color-status-connecting-border);
-  --color-status-connecting-text: var(--color-status-connecting-text);
+    --color-status-connecting: var(--color-status-connecting);
+    --color-status-connecting-bg: var(--color-status-connecting-bg);
+    --color-status-connecting-border: var(--color-status-connecting-border);
+    --color-status-connecting-text: var(--color-status-connecting-text);
 
-  --color-status-alert: var(--color-status-alert);
-  --color-status-alert-bg: var(--color-status-alert-bg);
-  --color-status-alert-border: var(--color-status-alert-border);
-  --color-status-alert-text: var(--color-status-alert-text);
+    --color-status-alert: var(--color-status-alert);
+    --color-status-alert-bg: var(--color-status-alert-bg);
+    --color-status-alert-border: var(--color-status-alert-border);
+    --color-status-alert-text: var(--color-status-alert-text);
 
-  --color-surface-base: var(--color-surface-base);
-  --color-surface-panel: var(--color-surface-panel);
-  --color-surface-card: var(--color-surface-card);
+    --color-surface-base: var(--color-surface-base);
+    --color-surface-panel: var(--color-surface-panel);
+    --color-surface-card: var(--color-surface-card);
 
-  --color-border-default: var(--color-border-default);
-  --color-border-strong: var(--color-border-strong);
-  --color-border-dark: var(--color-border-dark);
+    --color-border-default: var(--color-border-default);
+    --color-border-strong: var(--color-border-strong);
+    --color-border-dark: var(--color-border-dark);
 
-  --color-tactical-bg: var(--color-tactical-bg);
-  --color-tactical-panel: var(--color-tactical-panel);
-  --color-tactical-panel-solid: var(--color-tactical-panel-solid);
-  --color-tactical-border: var(--color-tactical-border);
-  --color-tactical-grid: var(--color-tactical-grid);
+    --color-tactical-bg: var(--color-tactical-bg);
+    --color-tactical-panel: var(--color-tactical-panel);
+    --color-tactical-panel-solid: var(--color-tactical-panel-solid);
+    --color-tactical-border: var(--color-tactical-border);
+    --color-tactical-grid: var(--color-tactical-grid);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
 }
 
 .chamfer-sm {
-  clip-path: var(--chamfer-clip-sm);
+    clip-path: var(--chamfer-clip-sm);
 }
 
 .chamfer-md {
-  clip-path: var(--chamfer-clip-md);
+    clip-path: var(--chamfer-clip-md);
 }
 
 .chamfer-lg {
-  clip-path: var(--chamfer-clip-lg);
+    clip-path: var(--chamfer-clip-lg);
 }
 
 .tech-corners-cyan::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 14px;
-  height: 14px;
-  border-top: 2.5px solid var(--color-tech-cyan);
-  border-left: 2.5px solid var(--color-tech-cyan);
-  pointer-events: none;
-  z-index: 10;
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 14px;
+    height: 14px;
+    border-top: 2.5px solid var(--color-tech-cyan);
+    border-left: 2.5px solid var(--color-tech-cyan);
+    pointer-events: none;
+    z-index: 10;
 }
 
 .tech-corners-cyan::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 14px;
-  height: 14px;
-  border-bottom: 2.5px solid var(--color-tech-cyan);
-  border-right: 2.5px solid var(--color-tech-cyan);
-  pointer-events: none;
-  z-index: 10;
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    border-bottom: 2.5px solid var(--color-tech-cyan);
+    border-right: 2.5px solid var(--color-tech-cyan);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.btn-outline {
+    height: 32px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-border-dark);
+    background-color: var(--color-surface-panel);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.btn-outline:hover {
+    background-color: var(--color-surface-base);
+    color: var(--color-text-primary);
+    border-color: var(--color-text-muted);
+}
+
+.btn-outline:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-solid,
+.btn-dark {
+    height: 32px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-light);
+    background-color: var(--color-border-dark);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.btn-solid:hover,
+.btn-dark:hover {
+    background-color: var(--color-text-primary);
+    border-color: var(--color-text-primary);
+}
+
+.btn-solid:disabled,
+.btn-dark:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-cyan {
+    height: 32px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-light);
+    background-color: var(--color-tech-cyan);
+    border: 1px solid var(--color-tech-cyan);
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.btn-cyan:hover {
+    background-color: var(--color-tech-cyan-hover);
+    border-color: var(--color-tech-cyan-hover);
+}
+
+.btn-cyan:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-border-dark);
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border-strong);
+    background-color: var(--color-surface-panel);
+    color: var(--color-text-primary);
+    outline: none;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.form-input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.form-input:focus,
+.form-select:focus {
+    border-color: var(--color-tech-cyan);
+    box-shadow: 0 0 0 2px var(--color-tech-cyan-border);
+}
+
+.form-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-top: 4px;
 }

@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { Modal } from "@/components/ui";
 import { hubService } from "@/services/hubService";
 import type { Drone, DroneRegistrationPayload, Hub } from "@/types";
-import styles from "./RegisterDroneModal.module.css";
 
 interface RegisterDroneModalProps {
   isOpen: boolean;
@@ -72,9 +70,7 @@ export function RegisterDroneModal({
     }
   }, [isOpen, droneToEdit]);
 
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!registrationNumber.trim() || !manufacturer.trim() || !model.trim()) {
       setError("Registration number, manufacturer and model are required");
@@ -112,261 +108,214 @@ export function RegisterDroneModal({
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <ChamferCard size="lg" accent="cyan" className="w-full">
-          <div className={styles.modalHeader}>
-            <div className={styles.headerText}>
-              <h3 className={styles.title}>
-                {droneToEdit ? "Edit Drone" : "Register Drone"}
-              </h3>
-              <p className={styles.subtitle}>
-                Fill in the details to register a new drone.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className={styles.closeButton}
-              aria-label="Close modal"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className={styles.form}>
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
-                {error}
-              </div>
-            )}
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label} htmlFor="registrationNumber">
-                Registration Number
-              </label>
-              <input
-                id="registrationNumber"
-                type="text"
-                required
-                value={registrationNumber}
-                onChange={(e) => setRegistrationNumber(e.target.value)}
-                placeholder="e.g. DRN-001"
-                className={styles.input}
-              />
-            </div>
-
-            <div className={styles.twoCols}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="manufacturer">
-                  Manufacturer
-                </label>
-                <input
-                  id="manufacturer"
-                  type="text"
-                  required
-                  value={manufacturer}
-                  onChange={(e) => setManufacturer(e.target.value)}
-                  placeholder="e.g. DJI"
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="model">
-                  Model
-                </label>
-                <input
-                  id="model"
-                  type="text"
-                  required
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="e.g. Matrice 300 RTK"
-                  className={styles.input}
-                />
-              </div>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label} htmlFor="serialNumber">
-                Serial Number
-              </label>
-              <input
-                id="serialNumber"
-                type="text"
-                value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
-                placeholder="e.g. SN-12345678"
-                className={styles.input}
-              />
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label} htmlFor="homeHub">
-                Home Hub
-              </label>
-              <select
-                id="homeHub"
-                value={homeHubId}
-                onChange={(e) => setHomeHubId(e.target.value)}
-                className={styles.select}
-              >
-                <option value="">Select a hub</option>
-                {hubs.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name} {h.code ? `(${h.code})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label} htmlFor="communicationProtocol">
-                Communication Protocol
-              </label>
-              <select
-                id="communicationProtocol"
-                value={communicationProtocol}
-                onChange={(e) => setCommunicationProtocol(e.target.value)}
-                className={styles.select}
-              >
-                <option value="">Select protocol</option>
-                <option value="MAVLink">MAVLink</option>
-                <option value="Cellular 4G/5G">Cellular 4G/5G</option>
-                <option value="Direct RF">Direct RF</option>
-                <option value="Satellite">Satellite</option>
-              </select>
-            </div>
-
-            <div className={styles.sectionTitle}>
-              Energy &amp; Performance
-            </div>
-
-            <div className={styles.twoCols}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="batteryCapacityWh">
-                  Battery capacity (Wh)
-                </label>
-                <input
-                  id="batteryCapacityWh"
-                  type="number"
-                  step="any"
-                  value={batteryCapacityWh}
-                  onChange={(e) => setBatteryCapacityWh(e.target.value)}
-                  placeholder="e.g. 300"
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="hoverPowerW">
-                  Hover power (W)
-                </label>
-                <input
-                  id="hoverPowerW"
-                  type="number"
-                  step="any"
-                  value={hoverPowerW}
-                  onChange={(e) => setHoverPowerW(e.target.value)}
-                  placeholder="e.g. 800"
-                  className={styles.input}
-                />
-              </div>
-            </div>
-
-            <div className={styles.twoCols}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="cruisePowerW">
-                  Cruise power (W)
-                </label>
-                <input
-                  id="cruisePowerW"
-                  type="number"
-                  step="any"
-                  value={cruisePowerW}
-                  onChange={(e) => setCruisePowerW(e.target.value)}
-                  placeholder="e.g. 500"
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="cruiseSpeedMs">
-                  Cruise speed (m/s)
-                </label>
-                <input
-                  id="cruiseSpeedMs"
-                  type="number"
-                  step="any"
-                  value={cruiseSpeedMs}
-                  onChange={(e) => setCruiseSpeedMs(e.target.value)}
-                  placeholder="e.g. 15"
-                  className={styles.input}
-                />
-              </div>
-            </div>
-
-            <div className={styles.twoCols}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="batteryHealthPct">
-                  Battery health (%)
-                </label>
-                <input
-                  id="batteryHealthPct"
-                  type="number"
-                  step="any"
-                  value={batteryHealthPct}
-                  onChange={(e) => setBatteryHealthPct(e.target.value)}
-                  placeholder="e.g. 95"
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.label} htmlFor="windToleranceMs">
-                  Wind tolerance (m/s)
-                </label>
-                <input
-                  id="windToleranceMs"
-                  type="number"
-                  step="any"
-                  value={windToleranceMs}
-                  onChange={(e) => setWindToleranceMs(e.target.value)}
-                  placeholder="e.g. 12"
-                  className={styles.input}
-                />
-              </div>
-            </div>
-
-            <div className={styles.actions}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className={styles.cancelBtn}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className={styles.submitBtn}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <span>{droneToEdit ? "Save Changes" : "Register Drone"}</span>
-                )}
-              </button>
-            </div>
-          </form>
-        </ChamferCard>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={droneToEdit ? "Edit Drone" : "Register Drone"}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={error}
+      submitText={droneToEdit ? "Save Changes" : "Register Drone"}
+      loadingText="Saving..."
+    >
+      <div className="form-group">
+        <label className="form-label" htmlFor="registrationNumber">
+          Registration Number
+        </label>
+        <input
+          id="registrationNumber"
+          type="text"
+          required
+          value={registrationNumber}
+          onChange={(e) => setRegistrationNumber(e.target.value)}
+          placeholder="e.g. DRN-001"
+          className="form-input"
+        />
       </div>
-    </div>
+
+      <div className="form-row-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor="manufacturer">
+            Manufacturer
+          </label>
+          <input
+            id="manufacturer"
+            type="text"
+            required
+            value={manufacturer}
+            onChange={(e) => setManufacturer(e.target.value)}
+            placeholder="e.g. DJI"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="model">
+            Model
+          </label>
+          <input
+            id="model"
+            type="text"
+            required
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="e.g. Matrice 300 RTK"
+            className="form-input"
+          />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label" htmlFor="serialNumber">
+          Serial Number
+        </label>
+        <input
+          id="serialNumber"
+          type="text"
+          value={serialNumber}
+          onChange={(e) => setSerialNumber(e.target.value)}
+          placeholder="e.g. SN-12345678"
+          className="form-input"
+        />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label" htmlFor="homeHub">
+          Home Hub
+        </label>
+        <select
+          id="homeHub"
+          value={homeHubId}
+          onChange={(e) => setHomeHubId(e.target.value)}
+          className="form-select"
+        >
+          <option value="">Select a hub</option>
+          {hubs.map((h) => (
+            <option key={h.id} value={h.id}>
+              {h.name} {h.code ? `(${h.code})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label" htmlFor="communicationProtocol">
+          Communication Protocol
+        </label>
+        <select
+          id="communicationProtocol"
+          value={communicationProtocol}
+          onChange={(e) => setCommunicationProtocol(e.target.value)}
+          className="form-select"
+        >
+          <option value="">Select protocol</option>
+          <option value="MAVLink">MAVLink</option>
+          <option value="Cellular 4G/5G">Cellular 4G/5G</option>
+          <option value="Direct RF">Direct RF</option>
+          <option value="Satellite">Satellite</option>
+        </select>
+      </div>
+
+      <div className="form-section-title">
+        Energy &amp; Performance
+      </div>
+
+      <div className="form-row-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor="batteryCapacityWh">
+            Battery capacity (Wh)
+          </label>
+          <input
+            id="batteryCapacityWh"
+            type="number"
+            step="any"
+            value={batteryCapacityWh}
+            onChange={(e) => setBatteryCapacityWh(e.target.value)}
+            placeholder="e.g. 300"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="hoverPowerW">
+            Hover power (W)
+          </label>
+          <input
+            id="hoverPowerW"
+            type="number"
+            step="any"
+            value={hoverPowerW}
+            onChange={(e) => setHoverPowerW(e.target.value)}
+            placeholder="e.g. 800"
+            className="form-input"
+          />
+        </div>
+      </div>
+
+      <div className="form-row-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor="cruisePowerW">
+            Cruise power (W)
+          </label>
+          <input
+            id="cruisePowerW"
+            type="number"
+            step="any"
+            value={cruisePowerW}
+            onChange={(e) => setCruisePowerW(e.target.value)}
+            placeholder="e.g. 500"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="cruiseSpeedMs">
+            Cruise speed (m/s)
+          </label>
+          <input
+            id="cruiseSpeedMs"
+            type="number"
+            step="any"
+            value={cruiseSpeedMs}
+            onChange={(e) => setCruiseSpeedMs(e.target.value)}
+            placeholder="e.g. 15"
+            className="form-input"
+          />
+        </div>
+      </div>
+
+      <div className="form-row-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor="batteryHealthPct">
+            Battery health (%)
+          </label>
+          <input
+            id="batteryHealthPct"
+            type="number"
+            step="any"
+            value={batteryHealthPct}
+            onChange={(e) => setBatteryHealthPct(e.target.value)}
+            placeholder="e.g. 95"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="windToleranceMs">
+            Wind tolerance (m/s)
+          </label>
+          <input
+            id="windToleranceMs"
+            type="number"
+            step="any"
+            value={windToleranceMs}
+            onChange={(e) => setWindToleranceMs(e.target.value)}
+            placeholder="e.g. 12"
+            className="form-input"
+          />
+        </div>
+      </div>
+    </Modal>
   );
 }
 

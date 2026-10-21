@@ -19,20 +19,20 @@
 .th {
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--color-status-offline-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #ffffff;
+  border-bottom: 1px solid var(--color-border-default);
+  background-color: var(--color-surface-panel);
   white-space: nowrap;
 }
 
 .td {
   padding: 16px 20px;
   font-size: 13px;
-  color: #1e293b;
-  border-bottom: 1px solid #f1f5f9;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-subtle);
   white-space: nowrap;
 }
 
@@ -41,38 +41,38 @@
 }
 
 .row:hover {
-  background-color: #f8fafc;
+  background-color: var(--color-surface-base);
 }
 
 .registrationText {
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
   letter-spacing: -0.2px;
 }
 
 .manufacturerText {
   font-size: 13px;
   font-weight: 500;
-  color: #334155;
+  color: var(--color-border-dark);
 }
 
 .modelText {
   font-size: 13px;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .homeHubText {
   font-size: 13px;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .flightHoursText {
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 
 .badgeAvailable {
@@ -84,9 +84,9 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background-color: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background-color: var(--color-status-online-bg);
+  color: var(--color-status-online-text);
+  border: 1px solid var(--color-status-online-border);
 }
 
 .badgeInFlight {
@@ -98,9 +98,9 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background-color: #ecfeff;
-  color: #00A3BF;
-  border: 1px solid #a5f3fc;
+  background-color: var(--color-tech-cyan-light);
+  color: var(--color-tech-cyan);
+  border: 1px solid var(--color-tech-cyan-border);
 }
 
 .badgeCharging {
@@ -112,9 +112,9 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background-color: #fffbeb;
-  color: #d97706;
-  border: 1px solid #fde68a;
+  background-color: var(--color-status-connecting-bg);
+  color: var(--color-status-connecting-text);
+  border: 1px solid var(--color-status-connecting-border);
 }
 
 .badgeMaintenance {
@@ -126,9 +126,9 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background-color: #fff7ed;
-  color: #ea580c;
-  border: 1px solid #fed7aa;
+  background-color: var(--color-tech-amber-light);
+  color: var(--color-tech-amber-hover);
+  border: 1px solid var(--color-tech-amber-border);
 }
 
 .badgeOffline {
@@ -140,9 +140,9 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background-color: #f1f5f9;
-  color: #64748b;
-  border: 1px solid #cbd5e1;
+  background-color: var(--color-status-offline-bg);
+  color: var(--color-status-offline-text);
+  border: 1px solid var(--color-status-offline-border);
 }
 
 .actionBtn {
@@ -154,15 +154,15 @@
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
-  color: #64748b;
+  color: var(--color-status-offline-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .actionBtn:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
-  border-color: #e2e8f0;
+  background-color: var(--color-surface-card);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-default);
 }
 
 .menuDropdown {
@@ -171,8 +171,8 @@
   top: 100%;
   margin-top: 4px;
   width: 130px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-surface-panel);
+  border: 1px solid var(--color-border-default);
   border-radius: 6px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 30;
@@ -188,7 +188,7 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--color-text-primary);
   border-radius: 4px;
   border: none;
   background: transparent;
@@ -198,8 +198,8 @@
 }
 
 .menuItem:hover {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--color-surface-base);
+  color: var(--color-text-primary);
 }
 
 .menuItemDanger {
@@ -208,7 +208,7 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 500;
-  color: #ef4444;
+  color: var(--color-tech-red);
   border-radius: 4px;
   border: none;
   background: transparent;
@@ -218,8 +218,8 @@
 }
 
 .menuItemDanger:hover {
-  background-color: #fef2f2;
-  color: #dc2626;
+  background-color: var(--color-tech-red-light);
+  color: var(--color-tech-red-hover);
 }
 
 .emptyTd {

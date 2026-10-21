@@ -80,7 +80,7 @@ export function DronesTable({
                 <tr>
                   <td colSpan={7} className={styles.emptyTd}>
                     <div className={styles.emptyWrapper}>
-                      <Loader2 className="w-6 h-6 text-[#00A3BF] animate-spin mb-2" />
+                      <Loader2 className="w-6 h-6 text-[var(--color-tech-cyan)] animate-spin mb-2" />
                       <span>Loading drone fleet...</span>
                     </div>
                   </td>
@@ -89,9 +89,9 @@ export function DronesTable({
                 <tr>
                   <td colSpan={7} className={styles.emptyTd}>
                     <div className={styles.emptyWrapper}>
-                      <Bot className="w-8 h-8 text-[#cbd5e1] mb-1" />
-                      <span className="font-semibold text-slate-700">No drones found</span>
-                      <span className="text-xs text-slate-400">
+                      <Bot className="w-8 h-8 text-[var(--color-border-strong)] mb-1" />
+                      <span className="font-semibold text-[var(--color-text-primary)]">No drones found</span>
+                      <span className="text-xs text-[var(--color-text-muted)]">
                         Register a drone to begin fleet operations.
                       </span>
                     </div>
