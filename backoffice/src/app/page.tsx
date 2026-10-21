@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 import Sidebar, { SidebarTabId } from "@/components/layout/Sidebar";
 import { ControlCenterView } from "@/components/control-center";
 import { ConnectivityView } from "@/components/connectivity";
+import { DronesView } from "@/components/drones";
 import { Sliders, Construction } from "lucide-react";
 
 const TAB_TITLES: Record<SidebarTabId, string> = {
@@ -21,7 +22,7 @@ const TAB_TITLES: Record<SidebarTabId, string> = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<SidebarTabId>("connectivity");
+  const [activeTab, setActiveTab] = useState<SidebarTabId>("drones");
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   return (
@@ -38,6 +39,8 @@ export default function Home() {
           <ControlCenterView />
         ) : activeTab === "connectivity" ? (
           <ConnectivityView />
+        ) : activeTab === "drones" ? (
+          <DronesView />
         ) : (
           <div className="p-8 space-y-6">
             <PageHeader title={TAB_TITLES[activeTab] || "UTM System"} />

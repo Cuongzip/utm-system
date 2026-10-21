@@ -9,6 +9,14 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `/api/api/v1/drones/${id}`,
     TELEMETRY: (id: string) => `/api/api/v1/telemetry/${id}`,
   },
+  HUBS: {
+    BASE: "/api/api/v1/hubs",
+    BY_ID: (id: string) => `/api/api/v1/hubs/${id}`,
+  },
+  ORGANIZATIONS: {
+    BASE: "/api/api/v1/organizations",
+    BY_ID: (id: string) => `/api/api/v1/organizations/${id}`,
+  },
   FLIGHTS: {
     BASE: "/api/api/v1/flights",
     BY_ID: (id: string) => `/api/api/v1/flights/${id}`,

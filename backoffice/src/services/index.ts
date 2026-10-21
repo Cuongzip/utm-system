@@ -4,3 +4,4 @@ export * from "./flightService";
 export * from "./airspaceService";
 export * from "./conflictService";
 export * from "./connectivityService";
+export * from "./hubService";
