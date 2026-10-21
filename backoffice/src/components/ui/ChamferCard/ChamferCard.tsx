@@ -7,46 +7,44 @@ export type ChamferSize = "sm" | "md" | "lg";
 export type ChamferAccent = "dark" | "cyan" | "amber" | "red" | "none";
 
 interface ChamferCardProps {
-  size?: ChamferSize;
-  accent?: ChamferAccent;
-  className?: string;
-  innerClassName?: string;
-  style?: React.CSSProperties;
-  children: React.ReactNode;
+    size?: ChamferSize;
+    accent?: ChamferAccent;
+    className?: string;
+    innerClassName?: string;
+    style?: React.CSSProperties;
+    children: React.ReactNode;
 }
 
 const SIZE_CLASSES: Record<ChamferSize, string> = {
-  sm: styles.chamferSm,
-  md: styles.chamferMd,
-  lg: styles.chamferLg,
+    sm: styles.chamferSm,
+    md: styles.chamferMd,
+    lg: styles.chamferLg,
 };
 
 const ACCENT_CLASSES: Record<ChamferAccent, string> = {
-  dark: styles.techDark,
-  cyan: styles.techCyan,
-  amber: styles.techAmber,
-  red: styles.techRed,
-  none: "",
+    dark: styles.techDark,
+    cyan: styles.techCyan,
+    amber: styles.techAmber,
+    red: styles.techRed,
+    none: "",
 };
 
 export function ChamferCard({
-  size = "lg",
-  accent = "dark",
-  className,
-  innerClassName,
-  style,
-  children,
+    size = "lg",
+    accent = "dark",
+    className,
+    innerClassName,
+    style,
+    children,
 }: ChamferCardProps) {
-  return (
-    <div
-      style={style}
-      className={cn(styles.wrapper, SIZE_CLASSES[size], ACCENT_CLASSES[accent], className)}
-    >
-      <div className={cn(styles.inner, SIZE_CLASSES[size], innerClassName)}>
-        {children}
-      </div>
-    </div>
-  );
+    return (
+        <div
+            style={style}
+            className={cn(styles.wrapper, SIZE_CLASSES[size], ACCENT_CLASSES[accent], className)}
+        >
+            <div className={cn(styles.inner, SIZE_CLASSES[size], innerClassName)}>{children}</div>
+        </div>
+    );
 }
 
 export default ChamferCard;

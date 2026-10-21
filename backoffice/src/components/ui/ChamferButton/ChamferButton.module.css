@@ -1,37 +1,37 @@
 .btnSm {
-  clip-path: var(--chamfer-clip-sm);
-  height: 32px;
-  padding: 0 16px;
-  font-size: 12px;
+    clip-path: var(--chamfer-clip-sm);
+    height: 32px;
+    padding: 0 16px;
+    font-size: 12px;
 }
 
 .btnMd {
-  clip-path: var(--chamfer-clip-md);
-  height: 40px;
-  padding: 0 20px;
-  font-size: 14px;
+    clip-path: var(--chamfer-clip-md);
+    height: 40px;
+    padding: 0 20px;
+    font-size: 14px;
 }
 
 .dark {
-  background-color: var(--color-border-dark);
-  color: var(--color-text-light);
+    background-color: var(--color-border-dark);
+    color: var(--color-text-light);
 }
 
 .dark:hover {
-  background-color: #1e293b;
+    background-color: #1e293b;
 }
 
 .active {
-  background-color: var(--color-status-offline);
-  color: var(--color-text-light);
+    background-color: var(--color-status-offline);
+    color: var(--color-text-light);
 }
 
 .outline {
-  background-color: var(--color-surface-panel);
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-border-dark);
+    background-color: var(--color-surface-panel);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-border-dark);
 }
 
 .outline:hover {
-  background-color: var(--color-surface-base);
+    background-color: var(--color-surface-base);
 }

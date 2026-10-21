@@ -1,70 +1,70 @@
 .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-  line-height: 1.4;
-  white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+    line-height: 1.4;
+    white-space: nowrap;
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    flex-shrink: 0;
 }
 
 .online {
-  background-color: var(--color-status-online-bg);
-  color: var(--color-status-online-text);
-  border: 1px solid var(--color-status-online-border);
+    background-color: var(--color-status-online-bg);
+    color: var(--color-status-online-text);
+    border: 1px solid var(--color-status-online-border);
 }
 
 .online .dot {
-  background-color: var(--color-status-online);
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    background-color: var(--color-status-online);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .offline {
-  background-color: var(--color-status-offline-bg);
-  color: var(--color-status-offline-text);
-  border: 1px solid var(--color-status-offline-border);
+    background-color: var(--color-status-offline-bg);
+    color: var(--color-status-offline-text);
+    border: 1px solid var(--color-status-offline-border);
 }
 
 .offline .dot {
-  background-color: var(--color-status-offline);
+    background-color: var(--color-status-offline);
 }
 
 .connecting {
-  background-color: var(--color-status-connecting-bg);
-  color: var(--color-status-connecting-text);
-  border: 1px solid var(--color-status-connecting-border);
+    background-color: var(--color-status-connecting-bg);
+    color: var(--color-status-connecting-text);
+    border: 1px solid var(--color-status-connecting-border);
 }
 
 .connecting .dot {
-  background-color: var(--color-status-connecting);
+    background-color: var(--color-status-connecting);
 }
 
 .alert {
-  background-color: var(--color-status-alert-bg);
-  color: var(--color-status-alert-text);
-  border: 1px solid var(--color-status-alert-border);
+    background-color: var(--color-status-alert-bg);
+    color: var(--color-status-alert-text);
+    border: 1px solid var(--color-status-alert-border);
 }
 
 .alert .dot {
-  background-color: var(--color-status-alert);
+    background-color: var(--color-status-alert);
 }
 
 .inFlight {
-  background-color: var(--color-surface-card);
-  color: var(--color-border-dark);
-  border: 1px solid var(--color-border-strong);
+    background-color: var(--color-surface-card);
+    color: var(--color-border-dark);
+    border: 1px solid var(--color-border-strong);
 }
 
 .inFlight .dot {
-  background-color: var(--color-border-dark);
+    background-color: var(--color-border-dark);
 }
