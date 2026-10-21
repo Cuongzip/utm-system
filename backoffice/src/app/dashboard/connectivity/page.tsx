@@ -3,20 +3,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, ChamferButton } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
-import ConnectivityAlert from "../ConnectivityAlert";
-import ConnectivityMetrics from "../ConnectivityMetrics";
-import ConnectivityTabs, { ConnectivitySubTab } from "../ConnectivityTabs";
-import TelemetryDistribution from "../TelemetryDistribution";
-import CommandQueue from "../CommandQueue";
-import ConnectedDevicesPanel from "../ConnectedDevicesPanel";
-import RegisteredDevicesTable from "../RegisteredDevicesTable";
-import TelemetryModesPanel from "../TelemetryModesPanel";
-import RegisterDeviceModal from "../RegisterDeviceModal";
+import {
+  ConnectivityAlert,
+  ConnectivityMetrics,
+  ConnectivityTabs,
+  ConnectivitySubTab,
+  TelemetryDistribution,
+  CommandQueue,
+  ConnectedDevicesPanel,
+  RegisteredDevicesTable,
+  TelemetryModesPanel,
+  RegisterDeviceModal,
+} from "@/components/connectivity";
 import { connectivityService } from "@/services/connectivityService";
 import type { DeviceRegistration, DeviceRegistrationPayload } from "@/types";
-import styles from "./ConnectivityView.module.css";
 
-export function ConnectivityView() {
+export default function ConnectivityPage() {
   const [activeSubTab, setActiveSubTab] = useState<ConnectivitySubTab>("overview");
   const [devices, setDevices] = useState<DeviceRegistration[]>([]);
   const [onlineDevices, setOnlineDevices] = useState<DeviceRegistration[]>([]);
@@ -78,7 +80,7 @@ export function ConnectivityView() {
   const activeCount = onlineCount;
 
   return (
-    <div className={styles.container}>
+    <div className="p-8 flex flex-col gap-6 w-full">
       <PageHeader title="Device Connectivity">
         <button
           type="button"
@@ -177,5 +179,3 @@ export function ConnectivityView() {
     </div>
   );
 }
-
-export default ConnectivityView;

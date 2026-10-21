@@ -3,13 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "@/components/ui";
 import { Plus } from "lucide-react";
-import { DronesTable } from "../DronesTable";
-import { RegisterDroneModal } from "../RegisterDroneModal";
+import { DronesTable, RegisterDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import type { Drone, DroneRegistrationPayload } from "@/types";
-import styles from "./DronesView.module.css";
 
-export function DronesView() {
+export default function DronesPage() {
   const [drones, setDrones] = useState<Drone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +55,7 @@ export function DronesView() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className="p-8 flex flex-col gap-6 w-full">
       <PageHeader title="DRONES" subtitle="Manage drone fleet">
         <button
           type="button"
@@ -104,5 +102,3 @@ export function DronesView() {
     </div>
   );
 }
-
-export default DronesView;

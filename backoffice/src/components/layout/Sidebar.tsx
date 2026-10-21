@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Sliders,
@@ -28,8 +31,8 @@ export type SidebarTabId =
   | "settings";
 
 interface SidebarProps {
-  activeTab: SidebarTabId;
-  onTabChange: (tabId: SidebarTabId) => void;
+  activeTab?: SidebarTabId;
+  onTabChange?: (tabId: SidebarTabId) => void;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
@@ -37,20 +40,21 @@ interface SidebarProps {
 interface NavItem {
   id: SidebarTabId;
   label: string;
+  href: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "control-center", label: "Control Center", icon: Sliders },
-  { id: "connectivity", label: "Connectivity", icon: Radio },
-  { id: "missions", label: "Missions", icon: Compass },
-  { id: "flights", label: "Flights", icon: PlaneTakeoff },
-  { id: "drones", label: "Drones", icon: Bot },
-  { id: "hubs", label: "Hubs", icon: Building2 },
-  { id: "airspace", label: "Airspace", icon: Shield },
-  { id: "conflicts", label: "Conflicts", icon: AlertOctagon },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { id: "control-center", label: "Control Center", href: "/dashboard/control-center", icon: Sliders },
+  { id: "connectivity", label: "Connectivity", href: "/dashboard/connectivity", icon: Radio },
+  { id: "missions", label: "Missions", href: "/dashboard/missions", icon: Compass },
+  { id: "flights", label: "Flights", href: "/dashboard/flights", icon: PlaneTakeoff },
+  { id: "drones", label: "Drones", href: "/dashboard/drones", icon: Bot },
+  { id: "hubs", label: "Hubs", href: "/dashboard/hubs", icon: Building2 },
+  { id: "airspace", label: "Airspace", href: "/dashboard/airspace", icon: Shield },
+  { id: "conflicts", label: "Conflicts", href: "/dashboard/conflicts", icon: AlertOctagon },
+  { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar({
@@ -59,11 +63,30 @@ export function Sidebar({
   isDarkMode = false,
   onToggleDarkMode,
 }: SidebarProps) {
+  const pathname = usePathname() || "";
+  const [internalDarkMode, setInternalDarkMode] = useState(isDarkMode);
+
+  const handleToggleDarkMode = () => {
+    if (onToggleDarkMode) {
+      onToggleDarkMode();
+    } else {
+      setInternalDarkMode((prev) => {
+        const next = !prev;
+        if (typeof document !== "undefined") {
+          document.documentElement.classList.toggle("dark", next);
+        }
+        return next;
+      });
+    }
+  };
+
+  const currentDark = onToggleDarkMode ? isDarkMode : internalDarkMode;
+
   return (
-    <nav className="w-60 bg-white text-slate-600 flex flex-col justify-between shrink-0 z-40 border-r border-slate-200 min-h-full">
+    <nav className="w-60 bg-white text-slate-600 flex flex-col justify-between shrink-0 z-40 border-r border-slate-200 min-h-screen">
       <div className="flex flex-col">
         <div className="h-16 flex items-center px-5 border-b border-slate-200">
-          <div className="flex items-center space-x-3">
+          <Link href="/dashboard" className="flex items-center space-x-3">
             <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center p-1 shadow-2xs">
               <Image
                 src="/svg/utm-logo.svg"
@@ -82,20 +105,25 @@ export function Sidebar({
                 UTM SYSTEM
               </span>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div className="space-y-1 px-3 py-4 text-xs font-medium">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive =
+              activeTab !== undefined
+                ? activeTab === item.id
+                : item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(item.href);
 
             return (
-              <button
+              <Link
                 key={item.id}
-                type="button"
-                onClick={() => onTabChange(item.id)}
-                className={`flex items-center w-full px-3 py-2 rounded-md transition-colors text-left cursor-pointer ${
+                href={item.href}
+                onClick={() => onTabChange?.(item.id)}
+                className={`flex items-center w-full px-3 py-2 rounded-md transition-colors text-left ${
                   isActive
                     ? "text-white bg-slate-600 shadow-sm font-semibold"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -107,7 +135,7 @@ export function Sidebar({
                   }`}
                 />
                 <span>{item.label}</span>
-              </button>
+              </Link>
             );
           })}
         </div>
@@ -122,8 +150,8 @@ export function Sidebar({
           <div className="relative">
             <input
               type="checkbox"
-              checked={isDarkMode}
-              onChange={onToggleDarkMode}
+              checked={currentDark}
+              onChange={handleToggleDarkMode}
               className="sr-only peer"
             />
             <div className="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-slate-600" />

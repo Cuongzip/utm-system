@@ -1,15 +1,16 @@
 "use client";
 
-import React from "react";
 import { PageHeader } from "@/components/ui";
 import { Building2, Navigation, Radio } from "lucide-react";
-import { TacticalMapPanel } from "../TacticalMapPanel";
-import { LiveTelemetry } from "../LiveTelemetry";
-import { FlightControl } from "../FlightControl";
-import { RecentCommands } from "../RecentCommands";
-import { ActiveAlerts } from "../ActiveAlerts";
+import {
+  TacticalMapPanel,
+  LiveTelemetry,
+  FlightControl,
+  RecentCommands,
+  ActiveAlerts,
+} from "@/components/control-center";
 
-export function ControlCenterView() {
+export default function ControlCenterPage() {
   return (
     <div className="p-8 space-y-6">
       <PageHeader title="Live Operations">
@@ -47,5 +48,3 @@ export function ControlCenterView() {
     </div>
   );
 }
-
-export default ControlCenterView;
