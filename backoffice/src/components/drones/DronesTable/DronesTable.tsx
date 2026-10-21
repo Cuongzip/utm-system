@@ -65,7 +65,7 @@ export function DronesTable({
                                 <th className={styles.th}>MODEL</th>
                                 <th className={styles.th}>HOME HUB</th>
                                 <th className={styles.th}>STATUS</th>
-                                <th className={styles.th}>FLIGHT HOURS</th>
+                                <th className={styles.th}>MAX PAYLOAD</th>
                                 <th className={styles.th} style={{ textAlign: "right" }}></th>
                             </tr>
                         </thead>
@@ -98,9 +98,7 @@ export function DronesTable({
                                     >
                                         <td className={styles.td}>
                                             <span className={styles.registrationText}>
-                                                {drone.registrationNumber ||
-                                                    drone.serialNumber ||
-                                                    drone.id}
+                                                {drone.registrationNumber || drone.id}
                                             </span>
                                         </td>
                                         <td className={styles.td}>
@@ -115,9 +113,7 @@ export function DronesTable({
                                             <span className={styles.homeHubText}>
                                                 {drone.homeHub
                                                     ? drone.homeHub.name
-                                                    : drone.homeHubName ||
-                                                      drone.homeHubId ||
-                                                      "Unassigned"}
+                                                    : drone.homeHubId || "Unassigned"}
                                             </span>
                                         </td>
                                         <td className={styles.td}>
@@ -125,9 +121,7 @@ export function DronesTable({
                                         </td>
                                         <td className={styles.td}>
                                             <span className={styles.flightHoursText}>
-                                                {drone.flightHours !== undefined
-                                                    ? drone.flightHours
-                                                    : 0}
+                                                {drone.maxPayload ? `${drone.maxPayload} kg` : "—"}
                                             </span>
                                         </td>
                                         <td

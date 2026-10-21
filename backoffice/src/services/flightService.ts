@@ -1,18 +1,18 @@
 import { apiClient } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { FlightPlan } from "@/types";
+import type { Flight } from "@/types";
 
 export const flightService = {
-    getAll: async (): Promise<FlightPlan[]> => {
-        return apiClient<FlightPlan[]>(API_ENDPOINTS.FLIGHTS.BASE);
+    getAll: async (): Promise<Flight[]> => {
+        return apiClient<Flight[]>(API_ENDPOINTS.FLIGHTS.BASE);
     },
 
-    getById: async (id: string): Promise<FlightPlan> => {
-        return apiClient<FlightPlan>(API_ENDPOINTS.FLIGHTS.BY_ID(id));
+    getById: async (id: string): Promise<Flight> => {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BY_ID(id));
     },
 
-    submitPlan: async (plan: Partial<FlightPlan>): Promise<FlightPlan> => {
-        return apiClient<FlightPlan>(API_ENDPOINTS.FLIGHTS.SUBMIT_PLAN, {
+    submitPlan: async (plan: Partial<Flight>): Promise<Flight> => {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.SUBMIT_PLAN, {
             method: "POST",
             body: JSON.stringify(plan),
         });

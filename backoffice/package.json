@@ -12,7 +12,8 @@
     "lint": "eslint",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json,md}\"",
-    "prepare": "cd .. && git config core.hooksPath backoffice/.husky"
+    "codegen": "orval && node scripts/fix-codegen.mjs",
+    "prepare": "node -e \"try { require('child_process').execSync('cd .. && git config core.hooksPath backoffice/.husky', {stdio:'ignore'}) } catch {}\""
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,css,json,md}": [
@@ -26,7 +27,8 @@
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
@@ -37,6 +39,7 @@
     "eslint-config-next": "16.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
+    "orval": "^7.13.2",
     "prettier": "^3.9.10",
     "tailwindcss": "^4",
     "typescript": "^5"

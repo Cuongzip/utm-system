@@ -116,8 +116,8 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
             const coordCounter: Record<string, number> = {};
 
             hubs.forEach((hub) => {
-                const lat = hub.location?.lat ?? hub.latitude;
-                const lng = hub.location?.lng ?? hub.longitude;
+                const lat = hub.location?.lat;
+                const lng = hub.location?.lng;
                 if (lat === undefined || lng === undefined) return;
 
                 const isSelected = selectedHubId === hub.id;
@@ -180,8 +180,8 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
 
             if (selectedHubId) {
                 const target = hubs.find((h) => h.id === selectedHubId);
-                const lat = target?.location?.lat ?? target?.latitude;
-                const lng = target?.location?.lng ?? target?.longitude;
+                const lat = target?.location?.lat;
+                const lng = target?.location?.lng;
                 if (lat !== undefined && lng !== undefined) {
                     const zoomHeight = Math.max((target?.airspaceRadius || 5000) * 4, 15000);
                     viewer.camera.flyTo({
@@ -192,8 +192,8 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
             } else if (hubs.length > 0) {
                 const valid = hubs
                     .map((h) => ({
-                        lat: h.location?.lat ?? h.latitude,
-                        lng: h.location?.lng ?? h.longitude,
+                        lat: h.location?.lat,
+                        lng: h.location?.lng,
                     }))
                     .filter(
                         (c): c is { lat: number; lng: number } =>
@@ -280,21 +280,13 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
                                     <span>
                                         Lat:{" "}
                                         <span className={styles.inspectorValue}>
-                                            {(
-                                                selectedHub.location?.lat ??
-                                                selectedHub.latitude ??
-                                                0
-                                            ).toFixed(4)}
+                                            {(selectedHub.location?.lat ?? 0).toFixed(4)}
                                         </span>
                                     </span>
                                     <span>
                                         Lng:{" "}
                                         <span className={styles.inspectorValue}>
-                                            {(
-                                                selectedHub.location?.lng ??
-                                                selectedHub.longitude ??
-                                                0
-                                            ).toFixed(4)}
+                                            {(selectedHub.location?.lng ?? 0).toFixed(4)}
                                         </span>
                                     </span>
                                     <span>

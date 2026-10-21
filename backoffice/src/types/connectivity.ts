@@ -1,40 +1,25 @@
-export type DeviceConnectionStatus = "online" | "offline" | "connecting";
+import type zod from "zod";
+import type {
+    registerDeviceBody,
+    getDeviceByIdResponse,
+    getDevicesResponse,
+    getDevicesQueryParams,
+} from "@/generated/connectivity";
 
-export interface DeviceRegistration {
+export type DeviceConnectionStatus = NonNullable<
+    zod.infer<typeof getDevicesQueryParams>["connectionStatus"]
+>;
+
+export type DeviceRegistrationPayload = zod.infer<typeof registerDeviceBody>;
+
+export type DeviceRegistrationGenerated = NonNullable<zod.infer<typeof getDeviceByIdResponse>>;
+export type DeviceRegistration = DeviceRegistrationGenerated & {
     id: string;
-    droneId: string;
-    droneRegistrationNumber?: string;
-    droneModel?: string;
-    deviceIdentifier: string;
-    connectionStatus: DeviceConnectionStatus;
-    socketId?: string;
-    certificateFingerprint?: string;
-    lastSeenAt?: string;
-    createdOn: string;
-    lastModifiedOn?: string;
-}
+};
 
-export interface DeviceRegistrationListResponse {
-    items: DeviceRegistration[];
-    total: number;
-}
-
-export interface DeviceRegistrationPayload {
-    droneId: string;
-    deviceIdentifier: string;
-    certificateFingerprint?: string;
-}
-
-export interface ConnectivityStats {
-    totalDevices: number;
-    onlineDevices: number;
-    activeDevices: number;
-    pendingCommands: number;
-    protocolStatusCount: number;
-    latencyMs: number;
-    telemetryModes: Record<string, number>;
-    commandQueue: {
-        pendingCount: number;
-        byPriority: Record<number, number>;
-    };
-}
+export type DeviceRegistrationListResponse = Omit<
+    NonNullable<zod.infer<typeof getDevicesResponse>>,
+    "items"
+> & {
+    items?: DeviceRegistration[];
+};

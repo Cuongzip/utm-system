@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui";
+import { cn, parseApiError, validateSchema, createFieldErrorCleaner } from "@/utils";
+import { registerDeviceBody } from "@/generated";
 import type { DeviceRegistrationPayload } from "@/types";
 
 interface RegisterDeviceModalProps {
@@ -15,30 +17,40 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
     const [deviceIdentifier, setDeviceIdentifier] = useState("");
     const [certificateFingerprint, setCertificateFingerprint] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+
+    useEffect(() => {
+        if (isOpen) {
+            setDroneId("");
+            setDeviceIdentifier("");
+            setCertificateFingerprint("");
+            setFieldErrors({});
+        }
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!droneId.trim() || !deviceIdentifier.trim()) {
-            setError("Drone ID and Device Identifier are required");
+
+        const validation = validateSchema(registerDeviceBody, {
+            droneId: droneId.trim(),
+            deviceIdentifier: deviceIdentifier.trim(),
+            certificateFingerprint: certificateFingerprint.trim() || undefined,
+        });
+
+        if (!validation.success) {
+            setFieldErrors(validation.errors);
             return;
         }
 
         try {
             setLoading(true);
-            setError(null);
-            await onSubmit({
-                droneId: droneId.trim(),
-                deviceIdentifier: deviceIdentifier.trim(),
-                certificateFingerprint: certificateFingerprint.trim() || undefined,
-            });
-            setDroneId("");
-            setDeviceIdentifier("");
-            setCertificateFingerprint("");
+            setFieldErrors({});
+            await onSubmit(validation.data as DeviceRegistrationPayload);
             onClose();
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to register device";
-            setError(msg);
+            const parsed = parseApiError(err, "Failed to register device");
+            setFieldErrors(parsed.fieldErrors);
         } finally {
             setLoading(false);
         }
@@ -51,7 +63,6 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
             title="Register Drone Device"
             onSubmit={handleSubmit}
             loading={loading}
-            error={error}
             submitText="Register Device"
             loadingText="Registering..."
         >
@@ -62,12 +73,17 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
                 <input
                     id="droneId"
                     type="text"
-                    required
                     value={droneId}
-                    onChange={(e) => setDroneId(e.target.value)}
+                    onChange={(e) => {
+                        setDroneId(e.target.value);
+                        clearFieldError("droneId");
+                    }}
                     placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
-                    className="form-input"
+                    className={cn("form-input", fieldErrors.droneId && "form-input-error")}
                 />
+                {fieldErrors.droneId && (
+                    <span className="form-error-msg">{fieldErrors.droneId}</span>
+                )}
             </div>
 
             <div className="form-group">
@@ -77,12 +93,17 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
                 <input
                     id="deviceIdentifier"
                     type="text"
-                    required
                     value={deviceIdentifier}
-                    onChange={(e) => setDeviceIdentifier(e.target.value)}
+                    onChange={(e) => {
+                        setDeviceIdentifier(e.target.value);
+                        clearFieldError("deviceIdentifier");
+                    }}
                     placeholder="e.g. DEV-UTM-0091"
-                    className="form-input"
+                    className={cn("form-input", fieldErrors.deviceIdentifier && "form-input-error")}
                 />
+                {fieldErrors.deviceIdentifier && (
+                    <span className="form-error-msg">{fieldErrors.deviceIdentifier}</span>
+                )}
             </div>
 
             <div className="form-group">
@@ -93,10 +114,19 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
                     id="certificateFingerprint"
                     type="text"
                     value={certificateFingerprint}
-                    onChange={(e) => setCertificateFingerprint(e.target.value)}
+                    onChange={(e) => {
+                        setCertificateFingerprint(e.target.value);
+                        clearFieldError("certificateFingerprint");
+                    }}
                     placeholder="e.g. SHA256:4a:5b:6c..."
-                    className="form-input"
+                    className={cn(
+                        "form-input",
+                        fieldErrors.certificateFingerprint && "form-input-error"
+                    )}
                 />
+                {fieldErrors.certificateFingerprint && (
+                    <span className="form-error-msg">{fieldErrors.certificateFingerprint}</span>
+                )}
             </div>
         </Modal>
     );

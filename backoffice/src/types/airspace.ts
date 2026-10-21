@@ -1,19 +1,26 @@
-export interface AirspaceZone {
-    id: string;
-    name: string;
-    type: "RESTRICTED" | "CONTROLLED" | "GEO_FENCE" | "NO_FLY";
-    floorAltitude: number;
-    ceilingAltitude: number;
-    isActive: boolean;
-}
+import type zod from "zod";
+import type {
+    createZoneBody,
+    updateZoneBody,
+    getZoneByIdResponse,
+    getAllZonesResponse,
+} from "@/generated/airspace";
+import type { ConflictAlert } from "./alert";
 
-export interface ConflictAlert {
+export type { ConflictAlert };
+
+export type CreateAirspaceZonePayload = zod.infer<typeof createZoneBody>;
+export type UpdateAirspaceZonePayload = zod.infer<typeof updateZoneBody>;
+export type AirspaceZoneType = NonNullable<zod.infer<typeof getZoneByIdResponse>["zoneType"]>;
+export type AirspaceZoneStatus = NonNullable<zod.infer<typeof getZoneByIdResponse>["status"]>;
+
+export type AirspaceZone = NonNullable<zod.infer<typeof getZoneByIdResponse>> & {
     id: string;
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-    type: "STRATEGIC" | "TACTICAL" | "GEO_FENCE_BREACH" | "PROXIMITY";
-    sourceDroneId: string;
-    targetDroneId?: string;
-    detectedAt: string;
-    status: "ACTIVE" | "RESOLVED" | "ACKNOWLEDGED";
-    description: string;
-}
+};
+
+export type AirspaceZoneListResponse = Omit<
+    NonNullable<zod.infer<typeof getAllZonesResponse>>,
+    "items"
+> & {
+    items?: AirspaceZone[];
+};

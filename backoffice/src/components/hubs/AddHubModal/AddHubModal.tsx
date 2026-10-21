@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui";
-import type { Hub, CreateHubPayload, UpdateHubPayload } from "@/types";
+import {
+    cn,
+    parseApiError,
+    validateSchema,
+    parseFormNumber,
+    createFieldErrorCleaner,
+} from "@/utils";
+import { createHubBody, updateHubBody } from "@/generated";
+import type { Hub, CreateHubPayload, UpdateHubPayload, HubStatus } from "@/types";
 
 interface AddHubModalProps {
     isOpen: boolean;
@@ -10,6 +18,8 @@ interface AddHubModalProps {
     onClose: () => void;
     onSubmit: (payload: CreateHubPayload | UpdateHubPayload, id?: string) => Promise<void>;
 }
+
+const HUB_STATUS_OPTIONS = updateHubBody.shape.status.unwrap().options;
 
 export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModalProps) {
     const [code, setCode] = useState("");
@@ -19,17 +29,18 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
     const [airspaceRadius, setAirspaceRadius] = useState("");
     const [altitudeMsl, setAltitudeMsl] = useState("");
     const [timezone, setTimezone] = useState("UTC");
-    const [status, setStatus] = useState("ACTIVE");
+    const [status, setStatus] = useState<HubStatus>(HUB_STATUS_OPTIONS[0]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
 
     useEffect(() => {
         if (isOpen) {
             if (hubToEdit) {
                 setCode(hubToEdit.code || "");
                 setName(hubToEdit.name || "");
-                const hubLat = hubToEdit.location?.lat ?? hubToEdit.latitude;
-                const hubLng = hubToEdit.location?.lng ?? hubToEdit.longitude;
+                const hubLat = hubToEdit.location?.lat;
+                const hubLng = hubToEdit.location?.lng;
                 setLat(hubLat !== undefined ? String(hubLat) : "");
                 setLng(hubLng !== undefined ? String(hubLng) : "");
                 setAirspaceRadius(
@@ -40,7 +51,10 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                 setAltitudeMsl(
                     hubToEdit.altitudeMsl !== undefined ? String(hubToEdit.altitudeMsl) : "400"
                 );
-                setStatus((hubToEdit.status || "ACTIVE").toUpperCase());
+                const matchedStatus = HUB_STATUS_OPTIONS.find(
+                    (s) => s.toLowerCase() === hubToEdit.status?.toLowerCase()
+                );
+                setStatus(matchedStatus || HUB_STATUS_OPTIONS[0]);
                 setTimezone("UTC");
             } else {
                 setCode("");
@@ -50,58 +64,54 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                 setAirspaceRadius("5000");
                 setAltitudeMsl("400");
                 setTimezone("UTC");
-                setStatus("ACTIVE");
+                setStatus(HUB_STATUS_OPTIONS[0]);
             }
-            setError(null);
+            setFieldErrors({});
         }
     }, [isOpen, hubToEdit]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!code.trim() || !name.trim()) {
-            setError("Hub Code and Name are required");
+
+        const schema = hubToEdit ? updateHubBody : createHubBody;
+        const validationData = hubToEdit
+            ? {
+                  name: name.trim() || undefined,
+                  airspaceRadius: parseFormNumber(airspaceRadius),
+                  altitudeMsl: parseFormNumber(altitudeMsl),
+                  status,
+              }
+            : {
+                  code: code.trim().toUpperCase(),
+                  name: name.trim(),
+                  location: {
+                      lat: parseFormNumber(lat) as number,
+                      lng: parseFormNumber(lng) as number,
+                  },
+                  altitudeMsl: parseFormNumber(altitudeMsl) as number,
+                  airspaceRadius: parseFormNumber(airspaceRadius) as number,
+              };
+
+        const validation = validateSchema(schema, validationData);
+
+        if (!validation.success) {
+            setFieldErrors(validation.errors);
             return;
         }
-
-        const latitudeNum = parseFloat(lat);
-        const longitudeNum = parseFloat(lng);
-        if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
-            setError("Valid Latitude and Longitude coordinates are required");
-            return;
-        }
-
-        const radiusNum = parseFloat(airspaceRadius) || 5000;
-        const altitudeNum = parseFloat(altitudeMsl) || 0;
 
         try {
             setLoading(true);
-            setError(null);
+            setFieldErrors({});
 
             if (hubToEdit) {
-                const updatePayload: UpdateHubPayload = {
-                    name: name.trim(),
-                    airspaceRadius: radiusNum,
-                    altitudeMsl: altitudeNum,
-                    status,
-                };
-                await onSubmit(updatePayload, hubToEdit.id);
+                await onSubmit(validation.data as UpdateHubPayload, hubToEdit.id);
             } else {
-                const createPayload: CreateHubPayload = {
-                    code: code.trim().toUpperCase(),
-                    name: name.trim(),
-                    location: {
-                        lat: latitudeNum,
-                        lng: longitudeNum,
-                    },
-                    altitudeMsl: altitudeNum,
-                    airspaceRadius: radiusNum,
-                };
-                await onSubmit(createPayload);
+                await onSubmit(validation.data as CreateHubPayload);
             }
             onClose();
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to save hub";
-            setError(msg);
+            const parsed = parseApiError(err, "Failed to save hub");
+            setFieldErrors(parsed.fieldErrors);
         } finally {
             setLoading(false);
         }
@@ -114,7 +124,6 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
             title={hubToEdit ? "Edit Hub" : "Add Hub"}
             onSubmit={handleSubmit}
             loading={loading}
-            error={error}
             submitText={hubToEdit ? "Save Changes" : "Create Hub"}
             loadingText={hubToEdit ? "Saving..." : "Creating..."}
         >
@@ -125,13 +134,16 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                 <input
                     id="hubCode"
                     type="text"
-                    required
                     disabled={!!hubToEdit}
                     value={code}
-                    onChange={(e) => setCode(e.target.value)}
+                    onChange={(e) => {
+                        setCode(e.target.value);
+                        clearFieldError("code");
+                    }}
                     placeholder="e.g. HUB-001"
-                    className="form-input"
+                    className={cn("form-input", fieldErrors.code && "form-input-error")}
                 />
+                {fieldErrors.code && <span className="form-error-msg">{fieldErrors.code}</span>}
             </div>
 
             <div className="form-group">
@@ -141,12 +153,15 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                 <input
                     id="hubName"
                     type="text"
-                    required
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                        setName(e.target.value);
+                        clearFieldError("name");
+                    }}
                     placeholder="Hub name"
-                    className="form-input"
+                    className={cn("form-input", fieldErrors.name && "form-input-error")}
                 />
+                {fieldErrors.name && <span className="form-error-msg">{fieldErrors.name}</span>}
             </div>
 
             <div className="form-row-2">
@@ -158,12 +173,22 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         id="latitude"
                         type="number"
                         step="any"
-                        required
                         value={lat}
-                        onChange={(e) => setLat(e.target.value)}
+                        onChange={(e) => {
+                            setLat(e.target.value);
+                            clearFieldError("lat", "location.lat");
+                        }}
                         placeholder="e.g. 37.9838"
-                        className="form-input"
+                        className={cn(
+                            "form-input",
+                            (fieldErrors.lat || fieldErrors["location.lat"]) && "form-input-error"
+                        )}
                     />
+                    {(fieldErrors.lat || fieldErrors["location.lat"]) && (
+                        <span className="form-error-msg">
+                            {fieldErrors.lat || fieldErrors["location.lat"]}
+                        </span>
+                    )}
                 </div>
 
                 <div className="form-group">
@@ -174,12 +199,22 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         id="longitude"
                         type="number"
                         step="any"
-                        required
                         value={lng}
-                        onChange={(e) => setLng(e.target.value)}
+                        onChange={(e) => {
+                            setLng(e.target.value);
+                            clearFieldError("lng", "location.lng");
+                        }}
                         placeholder="e.g. 23.7275"
-                        className="form-input"
+                        className={cn(
+                            "form-input",
+                            (fieldErrors.lng || fieldErrors["location.lng"]) && "form-input-error"
+                        )}
                     />
+                    {(fieldErrors.lng || fieldErrors["location.lng"]) && (
+                        <span className="form-error-msg">
+                            {fieldErrors.lng || fieldErrors["location.lng"]}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -192,12 +227,20 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         id="airspaceRadius"
                         type="number"
                         step="any"
-                        required
                         value={airspaceRadius}
-                        onChange={(e) => setAirspaceRadius(e.target.value)}
+                        onChange={(e) => {
+                            setAirspaceRadius(e.target.value);
+                            clearFieldError("airspaceRadius");
+                        }}
                         placeholder="5000"
-                        className="form-input"
+                        className={cn(
+                            "form-input",
+                            fieldErrors.airspaceRadius && "form-input-error"
+                        )}
                     />
+                    {fieldErrors.airspaceRadius && (
+                        <span className="form-error-msg">{fieldErrors.airspaceRadius}</span>
+                    )}
                 </div>
 
                 <div className="form-group">
@@ -209,10 +252,16 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         type="number"
                         step="any"
                         value={altitudeMsl}
-                        onChange={(e) => setAltitudeMsl(e.target.value)}
+                        onChange={(e) => {
+                            setAltitudeMsl(e.target.value);
+                            clearFieldError("altitudeMsl");
+                        }}
                         placeholder="400"
-                        className="form-input"
+                        className={cn("form-input", fieldErrors.altitudeMsl && "form-input-error")}
                     />
+                    {fieldErrors.altitudeMsl && (
+                        <span className="form-error-msg">{fieldErrors.altitudeMsl}</span>
+                    )}
                 </div>
             </div>
 
@@ -225,10 +274,16 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         id="timezone"
                         type="text"
                         value={timezone}
-                        onChange={(e) => setTimezone(e.target.value)}
+                        onChange={(e) => {
+                            setTimezone(e.target.value);
+                            clearFieldError("timezone");
+                        }}
                         placeholder="UTC"
-                        className="form-input"
+                        className={cn("form-input", fieldErrors.timezone && "form-input-error")}
                     />
+                    {fieldErrors.timezone && (
+                        <span className="form-error-msg">{fieldErrors.timezone}</span>
+                    )}
                 </div>
 
                 {hubToEdit && (
@@ -239,13 +294,21 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         <select
                             id="status"
                             value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                            className="form-select"
+                            onChange={(e) => {
+                                setStatus(e.target.value as HubStatus);
+                                clearFieldError("status");
+                            }}
+                            className={cn("form-select", fieldErrors.status && "form-input-error")}
                         >
-                            <option value="ACTIVE">ACTIVE</option>
-                            <option value="MAINTENANCE">MAINTENANCE</option>
-                            <option value="INACTIVE">INACTIVE</option>
+                            {HUB_STATUS_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                    {opt.toUpperCase()}
+                                </option>
+                            ))}
                         </select>
+                        {fieldErrors.status && (
+                            <span className="form-error-msg">{fieldErrors.status}</span>
+                        )}
                     </div>
                 )}
             </div>

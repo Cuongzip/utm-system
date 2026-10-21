@@ -1,35 +1,25 @@
-export type FlightStatus =
-    | "PENDING"
-    | "APPROVED"
-    | "ACTIVE"
-    | "CONFORMING"
-    | "NON_CONFORMING"
-    | "CONTINGENT"
-    | "COMPLETED"
-    | "CANCELLED";
+import type zod from "zod";
+import type {
+    createFlightBody,
+    updateFlightBody,
+    getFlightByIdResponse,
+    getFlightsResponse,
+} from "@/generated/flight";
+import type { TelemetryPoint } from "./telemetry";
 
-export interface FlightPlan {
+export type { TelemetryPoint };
+
+export type CreateFlightPayload = zod.infer<typeof createFlightBody>;
+export type UpdateFlightPayload = zod.infer<typeof updateFlightBody>;
+
+export type FlightGenerated = NonNullable<zod.infer<typeof getFlightByIdResponse>>;
+export type Flight = FlightGenerated & {
     id: string;
-    flightId: string;
-    droneId: string;
-    droneName?: string;
-    pilotName?: string;
-    organizationId: string;
-    status: FlightStatus;
-    departureTime: string;
-    arrivalTime: string;
-    minAltitude: number;
-    maxAltitude: number;
-    waypointsCount: number;
-}
+};
 
-export interface TelemetryPoint {
-    droneId: string;
-    latitude: number;
-    longitude: number;
-    altitudeMeters: number;
-    speedMps: number;
-    headingDegrees: number;
-    batteryPct: number;
-    timestamp: string;
-}
+export type FlightListResponse = Omit<
+    NonNullable<zod.infer<typeof getFlightsResponse>>,
+    "items"
+> & {
+    items?: Flight[];
+};

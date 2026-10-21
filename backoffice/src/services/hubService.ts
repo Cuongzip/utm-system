@@ -1,6 +1,6 @@
 import { apiClient } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { Hub, HubListResponse } from "@/types";
+import type { Hub, HubListResponse, CreateHubPayload, UpdateHubPayload } from "@/types";
 
 export const hubService = {
     getHubs: async (params?: {
@@ -37,14 +37,14 @@ export const hubService = {
         return apiClient<Hub>(API_ENDPOINTS.HUBS.BY_ID(id));
     },
 
-    createHub: async (payload: import("@/types").CreateHubPayload): Promise<Hub> => {
+    createHub: async (payload: CreateHubPayload): Promise<Hub> => {
         return apiClient<Hub>(API_ENDPOINTS.HUBS.BASE, {
             method: "POST",
             body: JSON.stringify(payload),
         });
     },
 
-    updateHub: async (id: string, payload: import("@/types").UpdateHubPayload): Promise<Hub> => {
+    updateHub: async (id: string, payload: UpdateHubPayload): Promise<Hub> => {
         return apiClient<Hub>(API_ENDPOINTS.HUBS.BY_ID(id), {
             method: "PUT",
             body: JSON.stringify(payload),

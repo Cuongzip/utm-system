@@ -3,6 +3,14 @@
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui";
 import { hubService } from "@/services/hubService";
+import {
+    cn,
+    parseApiError,
+    validateSchema,
+    parseFormNumber,
+    createFieldErrorCleaner,
+} from "@/utils";
+import { createDroneBody } from "@/generated";
 import type { Drone, DroneRegistrationPayload, Hub } from "@/types";
 
 interface RegisterDroneModalProps {
@@ -21,18 +29,13 @@ export function RegisterDroneModal({
     const [registrationNumber, setRegistrationNumber] = useState("");
     const [manufacturer, setManufacturer] = useState("");
     const [model, setModel] = useState("");
-    const [serialNumber, setSerialNumber] = useState("");
     const [homeHubId, setHomeHubId] = useState("");
-    const [communicationProtocol, setCommunicationProtocol] = useState("");
     const [batteryCapacityWh, setBatteryCapacityWh] = useState("");
-    const [hoverPowerW, setHoverPowerW] = useState("");
-    const [cruisePowerW, setCruisePowerW] = useState("");
-    const [cruiseSpeedMs, setCruiseSpeedMs] = useState("");
-    const [batteryHealthPct, setBatteryHealthPct] = useState("");
-    const [windToleranceMs, setWindToleranceMs] = useState("");
+    const [maxPayload, setMaxPayload] = useState("");
     const [hubs, setHubs] = useState<Hub[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
 
     useEffect(() => {
         if (isOpen) {
@@ -50,61 +53,50 @@ export function RegisterDroneModal({
                 setRegistrationNumber(droneToEdit.registrationNumber || droneToEdit.id || "");
                 setManufacturer(droneToEdit.manufacturer || "");
                 setModel(droneToEdit.model || "");
-                setSerialNumber(droneToEdit.serialNumber || "");
                 setHomeHubId(droneToEdit.homeHubId || droneToEdit.homeHub?.id || "");
                 setBatteryCapacityWh(
                     droneToEdit.batteryCapacityWh ? String(droneToEdit.batteryCapacityWh) : ""
                 );
+                setMaxPayload(droneToEdit.maxPayload ? String(droneToEdit.maxPayload) : "");
             } else {
                 setRegistrationNumber("");
                 setManufacturer("");
                 setModel("");
-                setSerialNumber("");
                 setHomeHubId("");
-                setCommunicationProtocol("");
                 setBatteryCapacityWh("");
-                setHoverPowerW("");
-                setCruisePowerW("");
-                setCruiseSpeedMs("");
-                setBatteryHealthPct("");
-                setWindToleranceMs("");
+                setMaxPayload("");
             }
-            setError(null);
+            setFieldErrors({});
         }
     }, [isOpen, droneToEdit]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!registrationNumber.trim() || !manufacturer.trim() || !model.trim()) {
-            setError("Registration number, manufacturer and model are required");
+
+        const payload = {
+            registrationNumber: registrationNumber.trim(),
+            manufacturer: manufacturer.trim(),
+            model: model.trim(),
+            homeHubId: homeHubId ? homeHubId.trim() : undefined,
+            batteryCapacityWh: parseFormNumber(batteryCapacityWh) as number,
+            maxPayload: parseFormNumber(maxPayload) as number,
+        };
+
+        const validation = validateSchema(createDroneBody, payload);
+
+        if (!validation.success) {
+            setFieldErrors(validation.errors);
             return;
         }
 
         try {
             setLoading(true);
-            setError(null);
-            await onSubmit(
-                {
-                    registrationNumber: registrationNumber.trim(),
-                    manufacturer: manufacturer.trim(),
-                    model: model.trim(),
-                    serialNumber: serialNumber.trim() || undefined,
-                    homeHubId: homeHubId ? homeHubId.trim() : undefined,
-                    communicationProtocol: communicationProtocol || undefined,
-                    batteryCapacityWh: batteryCapacityWh ? parseFloat(batteryCapacityWh) : 300,
-                    hoverPowerW: hoverPowerW ? parseFloat(hoverPowerW) : undefined,
-                    cruisePowerW: cruisePowerW ? parseFloat(cruisePowerW) : undefined,
-                    cruiseSpeedMs: cruiseSpeedMs ? parseFloat(cruiseSpeedMs) : undefined,
-                    batteryHealthPct: batteryHealthPct ? parseFloat(batteryHealthPct) : undefined,
-                    windToleranceMs: windToleranceMs ? parseFloat(windToleranceMs) : undefined,
-                    status: droneToEdit?.status || "AVAILABLE",
-                },
-                droneToEdit?.id
-            );
+            setFieldErrors({});
+            await onSubmit(validation.data as DroneRegistrationPayload, droneToEdit?.id);
             onClose();
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to register drone";
-            setError(msg);
+            const parsed = parseApiError(err, "Failed to register drone");
+            setFieldErrors(parsed.fieldErrors);
         } finally {
             setLoading(false);
         }
@@ -117,69 +109,72 @@ export function RegisterDroneModal({
             title={droneToEdit ? "Edit Drone" : "Register Drone"}
             onSubmit={handleSubmit}
             loading={loading}
-            error={error}
             submitText={droneToEdit ? "Save Changes" : "Register Drone"}
             loadingText="Saving..."
         >
             <div className="form-group">
                 <label className="form-label" htmlFor="registrationNumber">
-                    Registration Number
+                    Registration Number *
                 </label>
                 <input
                     id="registrationNumber"
                     type="text"
-                    required
                     value={registrationNumber}
-                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                    onChange={(e) => {
+                        setRegistrationNumber(e.target.value);
+                        clearFieldError("registrationNumber");
+                    }}
                     placeholder="e.g. DRN-001"
-                    className="form-input"
+                    className={cn(
+                        "form-input",
+                        fieldErrors.registrationNumber && "form-input-error"
+                    )}
                 />
+                {fieldErrors.registrationNumber && (
+                    <span className="form-error-msg">{fieldErrors.registrationNumber}</span>
+                )}
             </div>
 
             <div className="form-row-2">
                 <div className="form-group">
                     <label className="form-label" htmlFor="manufacturer">
-                        Manufacturer
+                        Manufacturer *
                     </label>
                     <input
                         id="manufacturer"
                         type="text"
-                        required
                         value={manufacturer}
-                        onChange={(e) => setManufacturer(e.target.value)}
+                        onChange={(e) => {
+                            setManufacturer(e.target.value);
+                            clearFieldError("manufacturer");
+                        }}
                         placeholder="e.g. DJI"
-                        className="form-input"
+                        className={cn("form-input", fieldErrors.manufacturer && "form-input-error")}
                     />
+                    {fieldErrors.manufacturer && (
+                        <span className="form-error-msg">{fieldErrors.manufacturer}</span>
+                    )}
                 </div>
 
                 <div className="form-group">
                     <label className="form-label" htmlFor="model">
-                        Model
+                        Model *
                     </label>
                     <input
                         id="model"
                         type="text"
-                        required
                         value={model}
-                        onChange={(e) => setModel(e.target.value)}
+                        onChange={(e) => {
+                            setModel(e.target.value);
+                            clearFieldError("model");
+                        }}
                         placeholder="e.g. Matrice 300 RTK"
-                        className="form-input"
+                        className={cn("form-input", fieldErrors.model && "form-input-error")}
                     />
+                    {fieldErrors.model && (
+                        <span className="form-error-msg">{fieldErrors.model}</span>
+                    )}
                 </div>
-            </div>
-
-            <div className="form-group">
-                <label className="form-label" htmlFor="serialNumber">
-                    Serial Number
-                </label>
-                <input
-                    id="serialNumber"
-                    type="text"
-                    value={serialNumber}
-                    onChange={(e) => setSerialNumber(e.target.value)}
-                    placeholder="e.g. SN-12345678"
-                    className="form-input"
-                />
             </div>
 
             <div className="form-group">
@@ -189,8 +184,11 @@ export function RegisterDroneModal({
                 <select
                     id="homeHub"
                     value={homeHubId}
-                    onChange={(e) => setHomeHubId(e.target.value)}
-                    className="form-select"
+                    onChange={(e) => {
+                        setHomeHubId(e.target.value);
+                        clearFieldError("homeHubId");
+                    }}
+                    className={cn("form-select", fieldErrors.homeHubId && "form-input-error")}
                 >
                     <option value="">Select a hub</option>
                     {hubs.map((h) => (
@@ -199,121 +197,55 @@ export function RegisterDroneModal({
                         </option>
                     ))}
                 </select>
+                {fieldErrors.homeHubId && (
+                    <span className="form-error-msg">{fieldErrors.homeHubId}</span>
+                )}
             </div>
-
-            <div className="form-group">
-                <label className="form-label" htmlFor="communicationProtocol">
-                    Communication Protocol
-                </label>
-                <select
-                    id="communicationProtocol"
-                    value={communicationProtocol}
-                    onChange={(e) => setCommunicationProtocol(e.target.value)}
-                    className="form-select"
-                >
-                    <option value="">Select protocol</option>
-                    <option value="MAVLink">MAVLink</option>
-                    <option value="Cellular 4G/5G">Cellular 4G/5G</option>
-                    <option value="Direct RF">Direct RF</option>
-                    <option value="Satellite">Satellite</option>
-                </select>
-            </div>
-
-            <div className="form-section-title">Energy &amp; Performance</div>
 
             <div className="form-row-2">
                 <div className="form-group">
                     <label className="form-label" htmlFor="batteryCapacityWh">
-                        Battery capacity (Wh)
+                        Battery Capacity (Wh) *
                     </label>
                     <input
                         id="batteryCapacityWh"
                         type="number"
                         step="any"
                         value={batteryCapacityWh}
-                        onChange={(e) => setBatteryCapacityWh(e.target.value)}
+                        onChange={(e) => {
+                            setBatteryCapacityWh(e.target.value);
+                            clearFieldError("batteryCapacityWh");
+                        }}
                         placeholder="e.g. 300"
-                        className="form-input"
+                        className={cn(
+                            "form-input",
+                            fieldErrors.batteryCapacityWh && "form-input-error"
+                        )}
                     />
+                    {fieldErrors.batteryCapacityWh && (
+                        <span className="form-error-msg">{fieldErrors.batteryCapacityWh}</span>
+                    )}
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label" htmlFor="hoverPowerW">
-                        Hover power (W)
+                    <label className="form-label" htmlFor="maxPayload">
+                        Max Payload (kg) *
                     </label>
                     <input
-                        id="hoverPowerW"
+                        id="maxPayload"
                         type="number"
                         step="any"
-                        value={hoverPowerW}
-                        onChange={(e) => setHoverPowerW(e.target.value)}
-                        placeholder="e.g. 800"
-                        className="form-input"
+                        value={maxPayload}
+                        onChange={(e) => {
+                            setMaxPayload(e.target.value);
+                            clearFieldError("maxPayload");
+                        }}
+                        placeholder="e.g. 5"
+                        className={cn("form-input", fieldErrors.maxPayload && "form-input-error")}
                     />
-                </div>
-            </div>
-
-            <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="cruisePowerW">
-                        Cruise power (W)
-                    </label>
-                    <input
-                        id="cruisePowerW"
-                        type="number"
-                        step="any"
-                        value={cruisePowerW}
-                        onChange={(e) => setCruisePowerW(e.target.value)}
-                        placeholder="e.g. 500"
-                        className="form-input"
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label" htmlFor="cruiseSpeedMs">
-                        Cruise speed (m/s)
-                    </label>
-                    <input
-                        id="cruiseSpeedMs"
-                        type="number"
-                        step="any"
-                        value={cruiseSpeedMs}
-                        onChange={(e) => setCruiseSpeedMs(e.target.value)}
-                        placeholder="e.g. 15"
-                        className="form-input"
-                    />
-                </div>
-            </div>
-
-            <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="batteryHealthPct">
-                        Battery health (%)
-                    </label>
-                    <input
-                        id="batteryHealthPct"
-                        type="number"
-                        step="any"
-                        value={batteryHealthPct}
-                        onChange={(e) => setBatteryHealthPct(e.target.value)}
-                        placeholder="e.g. 95"
-                        className="form-input"
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label" htmlFor="windToleranceMs">
-                        Wind tolerance (m/s)
-                    </label>
-                    <input
-                        id="windToleranceMs"
-                        type="number"
-                        step="any"
-                        value={windToleranceMs}
-                        onChange={(e) => setWindToleranceMs(e.target.value)}
-                        placeholder="e.g. 12"
-                        className="form-input"
-                    />
+                    {fieldErrors.maxPayload && (
+                        <span className="form-error-msg">{fieldErrors.maxPayload}</span>
+                    )}
                 </div>
             </div>
         </Modal>

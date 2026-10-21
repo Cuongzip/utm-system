@@ -1,6 +1,6 @@
 "use client";
 
-import { Battery, Gauge, MapPin, Plane, Clock } from "lucide-react";
+import { Battery, Gauge, MapPin, Plane } from "lucide-react";
 import { Modal, ChamferButton } from "@/components/ui";
 import type { Drone } from "@/types";
 
@@ -16,11 +16,7 @@ export function DroneDetailsModal({ drone, onClose }: DroneDetailsModalProps) {
         <Modal
             isOpen={!!drone}
             onClose={onClose}
-            title={
-                <span className="font-mono">
-                    {drone.registrationNumber || drone.serialNumber || drone.id}
-                </span>
-            }
+            title={<span className="font-mono">{drone.registrationNumber || drone.id}</span>}
             icon={<Plane className="w-5 h-5 text-[var(--color-border-dark)]" />}
             maxWidth="520px"
             footer={
@@ -58,7 +54,7 @@ export function DroneDetailsModal({ drone, onClose }: DroneDetailsModalProps) {
                         <span className="font-semibold text-[var(--color-text-primary)]">
                             {drone.homeHub?.name
                                 ? `${drone.homeHub.name} (${drone.homeHub.code})`
-                                : drone.homeHubName || drone.homeHubId || "Unassigned"}
+                                : drone.homeHubId || "Unassigned"}
                         </span>
                     </div>
 
@@ -68,7 +64,7 @@ export function DroneDetailsModal({ drone, onClose }: DroneDetailsModalProps) {
                             Battery Capacity
                         </span>
                         <span className="font-mono font-bold text-[var(--color-text-primary)]">
-                            {drone.batteryCapacityWh ? `${drone.batteryCapacityWh} Wh` : "300 Wh"}
+                            {drone.batteryCapacityWh ? `${drone.batteryCapacityWh} Wh` : "N/A"}
                         </span>
                     </div>
 
@@ -79,16 +75,6 @@ export function DroneDetailsModal({ drone, onClose }: DroneDetailsModalProps) {
                         </span>
                         <span className="font-mono font-semibold text-[var(--color-text-primary)]">
                             {drone.maxPayload ? `${drone.maxPayload} kg` : "N/A"}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center justify-between py-2 border-b border-[var(--color-border-subtle)]">
-                        <span className="flex items-center gap-2 text-[var(--color-text-muted)] font-medium">
-                            <Clock className="w-4 h-4 text-[var(--color-text-muted)]" />
-                            Flight Hours Logged
-                        </span>
-                        <span className="font-mono font-semibold text-[var(--color-text-primary)]">
-                            {drone.flightHours !== undefined ? `${drone.flightHours} hrs` : "0 hrs"}
                         </span>
                     </div>
 

@@ -90,7 +90,7 @@ export function Modal({
                     </div>
 
                     {onSubmit ? (
-                        <form onSubmit={onSubmit} className={styles.form}>
+                        <form onSubmit={onSubmit} className={styles.form} noValidate>
                             {error && <div className={styles.errorAlert}>{error}</div>}
                             {children}
                             {footer ? (

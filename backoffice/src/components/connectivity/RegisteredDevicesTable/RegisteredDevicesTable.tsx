@@ -29,10 +29,15 @@ export function RegisteredDevicesTable({
         return devices.filter((d) => {
             const matchSearch =
                 search === "" ||
-                d.deviceIdentifier.toLowerCase().includes(search.toLowerCase()) ||
-                d.droneId.toLowerCase().includes(search.toLowerCase()) ||
-                (d.droneRegistrationNumber &&
-                    d.droneRegistrationNumber.toLowerCase().includes(search.toLowerCase()));
+                Boolean(
+                    d.deviceIdentifier &&
+                    d.deviceIdentifier.toLowerCase().includes(search.toLowerCase())
+                ) ||
+                Boolean(d.droneId && d.droneId.toLowerCase().includes(search.toLowerCase())) ||
+                Boolean(
+                    d.droneRegistrationNumber &&
+                    d.droneRegistrationNumber.toLowerCase().includes(search.toLowerCase())
+                );
 
             const matchStatus = statusFilter === "all" || d.connectionStatus === statusFilter;
 
@@ -139,7 +144,8 @@ export function RegisteredDevicesTable({
                                                 <div className="flex flex-col">
                                                     <span className="font-medium text-[#1e293b]">
                                                         {device.droneRegistrationNumber ||
-                                                            device.droneId.substring(0, 8)}
+                                                            device.droneId?.substring(0, 8) ||
+                                                            "—"}
                                                     </span>
                                                     {device.droneModel && (
                                                         <span className="text-[11px] text-[#94a3b8]">
@@ -150,8 +156,10 @@ export function RegisteredDevicesTable({
                                             </td>
                                             <td className={styles.td}>
                                                 <StatusBadge
-                                                    status={device.connectionStatus}
-                                                    label={device.connectionStatus.toUpperCase()}
+                                                    status={device.connectionStatus || "offline"}
+                                                    label={(
+                                                        device.connectionStatus || "offline"
+                                                    ).toUpperCase()}
                                                 />
                                             </td>
                                             <td

@@ -62,7 +62,7 @@ export function HubsTable({
                                 <th className={styles.th}>CODE</th>
                                 <th className={styles.th}>NAME</th>
                                 <th className={styles.th}>STATUS</th>
-                                <th className={styles.th}>MAX DRONES</th>
+                                <th className={styles.th}>AVAILABLE DRONES</th>
                                 <th className={styles.th}>AIRSPACE RADIUS</th>
                                 <th className={styles.th} style={{ textAlign: "right" }}></th>
                             </tr>
@@ -90,7 +90,7 @@ export function HubsTable({
                             ) : (
                                 hubs.map((hub) => {
                                     const isSelected = selectedHubId === hub.id;
-                                    const maxDrones = hub.maxDrones ?? "—";
+                                    const availableDrones = hub.availableDronesCount ?? "—";
                                     const radius = hub.airspaceRadius
                                         ? `${(hub.airspaceRadius / 1000).toFixed(1)} km`
                                         : "5.0 km";
@@ -115,7 +115,7 @@ export function HubsTable({
                                             </td>
                                             <td className={styles.td}>
                                                 <span className={styles.valueText}>
-                                                    {maxDrones}
+                                                    {availableDrones}
                                                 </span>
                                             </td>
                                             <td className={styles.td}>

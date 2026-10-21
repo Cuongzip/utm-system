@@ -1,41 +1,21 @@
-export interface HubLocation {
-    lat: number;
-    lng: number;
-}
+import type zod from "zod";
+import type {
+    createHubBody,
+    updateHubBody,
+    getHubByIdResponse,
+    getHubsResponse,
+} from "@/generated/hub";
 
-export interface Hub {
+export type CreateHubPayload = zod.infer<typeof createHubBody>;
+export type UpdateHubPayload = zod.infer<typeof updateHubBody>;
+export type HubStatus = NonNullable<UpdateHubPayload["status"]>;
+
+export type HubGenerated = NonNullable<zod.infer<typeof getHubByIdResponse>>;
+export type Hub = HubGenerated & {
     id: string;
-    name: string;
-    code: string;
-    location?: HubLocation;
-    latitude?: number;
-    longitude?: number;
-    altitudeMsl?: number;
-    airspaceRadius?: number;
-    status?: string;
-    availableDronesCount?: number;
-    maxDrones?: number;
-    corridors?: string[];
-    createdOn?: string;
-    lastModifiedOn?: string;
-}
+};
 
-export interface CreateHubPayload {
-    code: string;
-    name: string;
-    location: HubLocation;
-    altitudeMsl: number;
-    airspaceRadius: number;
-}
-
-export interface UpdateHubPayload {
-    name?: string;
-    altitudeMsl?: number;
-    airspaceRadius?: number;
-    status?: string;
-}
-
-export interface HubListResponse {
-    items: Hub[];
-    total: number;
-}
+export type HubListResponse = Omit<NonNullable<zod.infer<typeof getHubsResponse>>, "items"> & {
+    items?: Hub[];
+};
+export type HubLocation = NonNullable<HubGenerated["location"]>;

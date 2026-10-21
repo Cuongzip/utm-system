@@ -100,7 +100,8 @@ export function ConnectedDevicesPanel({
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-[#1e293b]">
                                                     {device.droneRegistrationNumber ||
-                                                        device.droneId.substring(0, 8)}
+                                                        device.droneId?.substring(0, 8) ||
+                                                        "—"}
                                                 </span>
                                                 {device.droneModel && (
                                                     <span className="text-[11px] text-[#94a3b8]">
@@ -114,9 +115,11 @@ export function ConnectedDevicesPanel({
                                                 status={
                                                     isOnline(device)
                                                         ? "online"
-                                                        : device.connectionStatus
+                                                        : device.connectionStatus || "offline"
                                                 }
-                                                label={device.connectionStatus.toUpperCase()}
+                                                label={(
+                                                    device.connectionStatus || "offline"
+                                                ).toUpperCase()}
                                             />
                                         </td>
                                         <td
