@@ -13,7 +13,7 @@ export function FlightControl({
   statusText = "Ready for control",
 }: FlightControlProps) {
   return (
-    <ChamferCard size="lg" accent="cyan" className="h-[273px]">
+    <ChamferCard size="lg" accent="dark" className="h-[273px]">
       <div className="p-4 flex flex-col justify-between h-full">
         <div>
           <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 font-mono tracking-wider">
@@ -25,7 +25,7 @@ export function FlightControl({
           </p>
 
           <div className="grid grid-cols-3 gap-3 mt-4">
-            <ChamferCard size="md" accent="cyan" className="bg-[#94a3b8]">
+            <ChamferCard size="md" accent="dark" className="bg-[#94a3b8]">
               <button
                 type="button"
                 className="w-full h-28 flex flex-col items-center justify-center p-2 bg-[#475569] hover:bg-[#334155] text-white shadow-xs transition-colors group cursor-pointer border-none"
@@ -38,7 +38,7 @@ export function FlightControl({
               </button>
             </ChamferCard>
 
-            <ChamferCard size="md" accent="cyan">
+            <ChamferCard size="md" accent="dark">
               <button
                 type="button"
                 className="w-full h-28 flex flex-col items-center justify-center p-2 bg-[#f8fafc] hover:bg-slate-100 text-[#334155] transition-colors group cursor-pointer border-none"
@@ -51,7 +51,7 @@ export function FlightControl({
               </button>
             </ChamferCard>
 
-            <ChamferCard size="md" accent="cyan">
+            <ChamferCard size="md" accent="dark">
               <button
                 type="button"
                 className="w-full h-28 flex flex-col items-center justify-center p-2 bg-[#f8fafc] hover:bg-slate-100 text-[#334155] transition-colors group cursor-pointer border-none"

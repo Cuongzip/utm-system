@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Activity, Trash2, Loader2, Plus } from "lucide-react";
-import { ChamferCard, ChamferButton, StatusBadge } from "@/components/ui";
+import { Activity, Trash2, Loader2, Plus } from "lucide-react";
+import { ChamferCard, ChamferButton, StatusBadge, SearchInput, EmptyState } from "@/components/ui";
 import type { DeviceRegistration, DeviceConnectionStatus } from "@/types";
 import styles from "./RegisteredDevicesTable.module.css";
 
@@ -42,7 +42,7 @@ export function RegisteredDevicesTable({
   }, [devices, search, statusFilter]);
 
   return (
-    <ChamferCard size="lg" accent="cyan" className="min-h-[420px]">
+    <ChamferCard size="lg" accent="dark" className="min-h-[420px]">
       <div className="p-5 flex flex-col h-full w-full gap-4">
         <div className={styles.toolbar}>
           <div className={styles.filterGroup}>
@@ -77,16 +77,11 @@ export function RegisteredDevicesTable({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className={styles.searchBox}>
-              <Search className={styles.searchIcon} />
-              <input
-                type="text"
-                placeholder="Search device ID or drone..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={styles.searchInput}
-              />
-            </div>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search device ID or drone..."
+            />
 
             <ChamferButton variant="dark" size="sm" onClick={onRegisterDevice}>
               <Plus className="w-3.5 h-3.5 text-white" />
@@ -97,13 +92,14 @@ export function RegisteredDevicesTable({
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 w-full">
-            <Loader2 className="w-8 h-8 text-[#00A3BF] animate-spin mb-3" />
+            <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin mb-3" />
             <p className="text-[13px] text-[#64748b]">Loading device registry...</p>
           </div>
         ) : filteredDevices.length === 0 ? (
-          <div className={styles.emptyState}>
-            No devices found matching current filters.
-          </div>
+          <EmptyState
+            title="No devices found matching current filters"
+            compact
+          />
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
@@ -163,7 +159,7 @@ export function RegisteredDevicesTable({
                             type="button"
                             onClick={() => onHeartbeat?.(device.id)}
                             title="Ping Heartbeat"
-                            className={styles.iconBtn}
+                            className="btn-icon"
                           >
                             <Activity className="w-3.5 h-3.5" />
                           </button>
@@ -171,7 +167,7 @@ export function RegisteredDevicesTable({
                             type="button"
                             onClick={() => onRevoke?.(device.id)}
                             title="Revoke Device"
-                            className={styles.dangerBtn}
+                            className="btn-icon-danger"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

@@ -1,8 +1,7 @@
 "use client";
 
 import { AlignLeft } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
-import styles from "./CommandQueue.module.css";
+import { ChamferCard, EmptyState } from "@/components/ui";
 
 interface CommandQueueProps {
   latency?: string;
@@ -16,44 +15,43 @@ export function CommandQueue({
   byPriority = { 0: 0, 1: 0, 2: 0, 3: 0 },
 }: CommandQueueProps) {
   return (
-    <ChamferCard size="lg" accent="cyan" className="h-[222px]">
+    <ChamferCard size="lg" accent="dark" className="h-[222px]">
       <div className="p-5 flex flex-col justify-between h-full">
         <div className="flex items-center justify-between w-full pl-2">
-          <h2 className="text-[12px] font-bold uppercase text-[#1e293b] tracking-[0.6px] leading-4">
+          <h2 className="text-[12px] font-bold uppercase text-[var(--color-text-primary)] tracking-[0.6px] leading-4">
             COMMAND QUEUE
           </h2>
-          <span className="font-mono text-[10px] text-[#94a3b8] leading-[15px]">
+          <span className="font-mono text-[10px] text-[var(--color-text-muted)] leading-[15px]">
             LATENCY: {latency}
           </span>
         </div>
 
         <div className="pt-3 w-full">
           {pendingCount === 0 ? (
-            <div className={styles.emptyBox}>
-              <div className="flex items-center justify-center size-8 mb-2">
-                <AlignLeft className="w-8 h-8 text-[#cbd5e1] stroke-[1.5]" />
-              </div>
-              <span className="text-[12px] text-[#94a3b8] leading-4">
-                Queue is idle - {pendingCount} instructions pending
-              </span>
+            <div className="border border-dashed border-[var(--color-border-default)] rounded-md py-6 px-4 flex flex-col items-center justify-center w-full">
+              <EmptyState
+                icon={AlignLeft}
+                title={`Queue is idle - ${pendingCount} instructions pending`}
+                compact
+              />
             </div>
           ) : (
-            <div className={styles.priorityGrid}>
-              <div className={styles.priorityCard}>
-                <span className={styles.priorityLabel}>P0 Emergency</span>
-                <span className={styles.priorityValue}>{byPriority[0] || 0}</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
+              <div className="bg-[var(--color-surface-base)] border border-[var(--color-border-default)] rounded p-2 flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">P0 Emergency</span>
+                <span className="font-mono text-lg font-bold text-[var(--color-text-primary)]">{byPriority[0] || 0}</span>
               </div>
-              <div className={styles.priorityCard}>
-                <span className={styles.priorityLabel}>P1 High</span>
-                <span className={styles.priorityValue}>{byPriority[1] || 0}</span>
+              <div className="bg-[var(--color-surface-base)] border border-[var(--color-border-default)] rounded p-2 flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">P1 High</span>
+                <span className="font-mono text-lg font-bold text-[var(--color-text-primary)]">{byPriority[1] || 0}</span>
               </div>
-              <div className={styles.priorityCard}>
-                <span className={styles.priorityLabel}>P2 Normal</span>
-                <span className={styles.priorityValue}>{byPriority[2] || 0}</span>
+              <div className="bg-[var(--color-surface-base)] border border-[var(--color-border-default)] rounded p-2 flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">P2 Normal</span>
+                <span className="font-mono text-lg font-bold text-[var(--color-text-primary)]">{byPriority[2] || 0}</span>
               </div>
-              <div className={styles.priorityCard}>
-                <span className={styles.priorityLabel}>P3 Background</span>
-                <span className={styles.priorityValue}>{byPriority[3] || 0}</span>
+              <div className="bg-[var(--color-surface-base)] border border-[var(--color-border-default)] rounded p-2 flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">P3 Background</span>
+                <span className="font-mono text-lg font-bold text-[var(--color-text-primary)]">{byPriority[3] || 0}</span>
               </div>
             </div>
           )}

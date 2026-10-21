@@ -34,7 +34,7 @@ export function ActiveAlerts({
   alerts?: AlertItem[];
 }) {
   return (
-    <ChamferCard size="lg" accent="cyan" className="h-[273px]">
+    <ChamferCard size="lg" accent="dark" className="h-[273px]">
       <div className="p-4 flex flex-col justify-between h-full">
         <div>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -44,7 +44,7 @@ export function ActiveAlerts({
             </div>
             <a
               href="#"
-              className="text-[11px] font-medium text-slate-500 hover:text-cyan-600 flex items-center"
+              className="text-[11px] font-medium text-slate-500 hover:text-slate-900 flex items-center"
             >
               View all <ArrowRight className="h-3 w-3 ml-0.5" />
             </a>

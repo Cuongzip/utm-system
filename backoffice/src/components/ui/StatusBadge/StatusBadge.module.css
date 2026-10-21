@@ -58,3 +58,13 @@
 .alert .dot {
   background-color: var(--color-status-alert);
 }
+
+.inFlight {
+  background-color: var(--color-surface-card);
+  color: var(--color-border-dark);
+  border: 1px solid var(--color-border-strong);
+}
+
+.inFlight .dot {
+  background-color: var(--color-border-dark);
+}

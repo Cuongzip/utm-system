@@ -21,7 +21,7 @@ export function DroneDetailsModal({ drone, onClose }: DroneDetailsModalProps) {
           {drone.registrationNumber || drone.serialNumber || drone.id}
         </span>
       }
-      icon={<Plane className="w-5 h-5 text-[var(--color-tech-cyan)]" />}
+      icon={<Plane className="w-5 h-5 text-[var(--color-border-dark)]" />}
       maxWidth="520px"
       footer={
         <ChamferButton

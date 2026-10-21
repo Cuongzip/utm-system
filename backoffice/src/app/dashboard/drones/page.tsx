@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChamferButton, PageHeader } from "@/components/ui";
+import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { Plus } from "lucide-react";
 import { DronesTable, RegisterDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
@@ -67,16 +67,7 @@ export default function DronesPage() {
       </PageHeader>
 
       {error && (
-        <div className="p-3 bg-[var(--color-status-alert-bg)] border border-[var(--color-status-alert-border)] text-[var(--color-status-alert-text)] text-xs rounded-md flex items-center justify-between">
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="text-[var(--color-tech-red)] hover:text-[var(--color-tech-red-hover)] text-xs font-bold"
-          >
-            Dismiss
-          </button>
-        </div>
+        <AlertBanner message={error} onDismiss={() => setError(null)} />
       )}
 
       <DronesTable

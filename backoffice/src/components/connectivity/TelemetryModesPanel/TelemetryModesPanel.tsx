@@ -59,7 +59,7 @@ export function TelemetryModesPanel({
   ];
 
   return (
-    <ChamferCard size="lg" accent="cyan" className="min-h-[420px]">
+    <ChamferCard size="lg" accent="dark" className="min-h-[420px]">
       <div className="p-5 flex flex-col h-full w-full gap-4">
         <div>
           <h2 className="text-[12px] font-bold uppercase text-[#1e293b] tracking-[0.6px] leading-4">

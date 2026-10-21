@@ -36,4 +36,27 @@ export const hubService = {
   getById: async (id: string): Promise<Hub> => {
     return apiClient<Hub>(API_ENDPOINTS.HUBS.BY_ID(id));
   },
+
+  createHub: async (payload: import("@/types").CreateHubPayload): Promise<Hub> => {
+    return apiClient<Hub>(API_ENDPOINTS.HUBS.BASE, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateHub: async (
+    id: string,
+    payload: import("@/types").UpdateHubPayload
+  ): Promise<Hub> => {
+    return apiClient<Hub>(API_ENDPOINTS.HUBS.BY_ID(id), {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteHub: async (id: string): Promise<void> => {
+    return apiClient<void>(API_ENDPOINTS.HUBS.BY_ID(id), {
+      method: "DELETE",
+    });
+  },
 };

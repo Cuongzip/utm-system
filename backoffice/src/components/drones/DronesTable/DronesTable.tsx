@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Bot, Loader2 } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { Bot, Loader2, Edit, Trash2 } from "lucide-react";
+import { ChamferCard, StatusBadge, ActionMenu, ActionMenuItem, EmptyState } from "@/components/ui";
 import type { Drone } from "@/types";
 import styles from "./DronesTable.module.css";
 
@@ -21,47 +20,42 @@ export function DronesTable({
   onSelectDrone,
   onDeleteDrone,
 }: DronesTableProps) {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const getActions = (drone: Drone): ActionMenuItem[] => {
+    const items: ActionMenuItem[] = [];
 
-  const handleEdit = (drone: Drone) => {
-    setOpenMenuId(null);
-    if (onEditDrone) {
-      onEditDrone(drone);
-    } else if (onSelectDrone) {
-      onSelectDrone(drone);
+    if (onEditDrone || onSelectDrone) {
+      items.push({
+        label: "Edit",
+        icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+        onClick: () => {
+          if (onEditDrone) {
+            onEditDrone(drone);
+          } else if (onSelectDrone) {
+            onSelectDrone(drone);
+          }
+        },
+      });
     }
-  };
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const renderStatusBadge = (status: string | undefined) => {
-    const s = (status || "AVAILABLE").toUpperCase();
-    switch (s) {
-      case "AVAILABLE":
-        return <span className={styles.badgeAvailable}>AVAILABLE</span>;
-      case "IN_FLIGHT":
-        return <span className={styles.badgeInFlight}>IN FLIGHT</span>;
-      case "CHARGING":
-        return <span className={styles.badgeCharging}>CHARGING</span>;
-      case "MAINTENANCE":
-        return <span className={styles.badgeMaintenance}>MAINTENANCE</span>;
-      default:
-        return <span className={styles.badgeOffline}>{s}</span>;
+    if (onDeleteDrone) {
+      items.push({
+        label: "Delete",
+        icon: <Trash2 className="w-3.5 h-3.5" />,
+        danger: true,
+        onClick: () => {
+          if (confirm("Are you sure you want to delete this drone?")) {
+            onDeleteDrone(drone.id);
+          }
+        },
+      });
     }
+
+    return items;
   };
 
   return (
     <div className={styles.container}>
-      <ChamferCard size="lg" accent="cyan" className="w-full">
+      <ChamferCard size="lg" accent="dark" className="w-full">
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
@@ -80,26 +74,28 @@ export function DronesTable({
                 <tr>
                   <td colSpan={7} className={styles.emptyTd}>
                     <div className={styles.emptyWrapper}>
-                      <Loader2 className="w-6 h-6 text-[var(--color-tech-cyan)] animate-spin mb-2" />
+                      <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin mb-2" />
                       <span>Loading drone fleet...</span>
                     </div>
                   </td>
                 </tr>
               ) : drones.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className={styles.emptyTd}>
-                    <div className={styles.emptyWrapper}>
-                      <Bot className="w-8 h-8 text-[var(--color-border-strong)] mb-1" />
-                      <span className="font-semibold text-[var(--color-text-primary)]">No drones found</span>
-                      <span className="text-xs text-[var(--color-text-muted)]">
-                        Register a drone to begin fleet operations.
-                      </span>
-                    </div>
+                  <td colSpan={7} className="py-6">
+                    <EmptyState
+                      icon={Bot}
+                      title="No drones found"
+                      description="Register a drone to monitor its status and telemetry"
+                    />
                   </td>
                 </tr>
               ) : (
                 drones.map((drone) => (
-                  <tr key={drone.id} className={styles.row}>
+                  <tr
+                    key={drone.id}
+                    className={styles.row}
+                    onClick={() => onSelectDrone?.(drone)}
+                  >
                     <td className={styles.td}>
                       <span className={styles.registrationText}>
                         {drone.registrationNumber || drone.serialNumber || drone.id}
@@ -115,54 +111,25 @@ export function DronesTable({
                     </td>
                     <td className={styles.td}>
                       <span className={styles.homeHubText}>
-                        {drone.homeHub?.name
-                          ? `${drone.homeHub.name} (${drone.homeHub.code})`
+                        {drone.homeHub
+                          ? drone.homeHub.name
                           : drone.homeHubName || drone.homeHubId || "Unassigned"}
                       </span>
                     </td>
-                    <td className={styles.td}>{renderStatusBadge(drone.status)}</td>
+                    <td className={styles.td}>
+                      <StatusBadge status={drone.status || "AVAILABLE"} />
+                    </td>
                     <td className={styles.td}>
                       <span className={styles.flightHoursText}>
                         {drone.flightHours !== undefined ? drone.flightHours : 0}
                       </span>
                     </td>
-                    <td className={styles.td} style={{ textAlign: "right" }}>
-                      <div className="relative inline-block text-left" ref={openMenuId === drone.id ? menuRef : null}>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setOpenMenuId(openMenuId === drone.id ? null : drone.id)
-                          }
-                          className={styles.actionBtn}
-                          aria-label="Actions"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-
-                        {openMenuId === drone.id && (
-                          <div className={styles.menuDropdown}>
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(drone)}
-                              className={styles.menuItem}
-                            >
-                              Edit
-                            </button>
-                            {onDeleteDrone && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  onDeleteDrone(drone.id);
-                                }}
-                                className={styles.menuItemDanger}
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                    <td
+                      className={styles.td}
+                      style={{ textAlign: "right" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ActionMenu items={getActions(drone)} />
                     </td>
                   </tr>
                 ))

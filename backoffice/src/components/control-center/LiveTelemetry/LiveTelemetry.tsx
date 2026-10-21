@@ -1,7 +1,7 @@
 "use client";
 
 import { Radio, AlertTriangle, ChevronRight, Drone, Bot, Signal } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { ChamferCard, StatusBadge } from "@/components/ui";
 
 export interface TelemetryData {
   uavId: string;
@@ -44,13 +44,10 @@ export function LiveTelemetry({
               LIVE TELEMETRY
             </span>
           </div>
-          <span className="flex items-center text-[10px] font-bold font-mono text-emerald-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-            LIVE
-          </span>
+          <StatusBadge status="live" label="LIVE" />
         </div>
 
-        <ChamferCard size="md" accent="cyan" className="mt-3 cursor-pointer hover:opacity-95 transition-opacity">
+        <ChamferCard size="md" accent="dark" className="mt-3 cursor-pointer hover:opacity-95 transition-opacity">
           <div className="p-3 bg-slate-50 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 chamfer-sm bg-white border border-slate-300 flex items-center justify-center text-slate-700 shadow-2xs">
@@ -62,10 +59,7 @@ export function LiveTelemetry({
                     {data.uavId}
                   </span>
                   {data.hasAlert && (
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-red-100 text-red-700 border border-red-200 flex items-center">
-                      <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                      ALERT
-                    </span>
+                    <StatusBadge status="alert" label="ALERT" />
                   )}
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono mt-0.5">

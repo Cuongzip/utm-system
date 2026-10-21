@@ -37,7 +37,7 @@ export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProp
   return (
     <ChamferCard
       size="lg"
-      accent="cyan"
+      accent="dark"
       className={`transition-all ${
         isFullscreen ? "fixed inset-0 z-50 h-screen" : "h-[490px]"
       }`}

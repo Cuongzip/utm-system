@@ -4,7 +4,7 @@ import { cn } from "@/lib";
 import styles from "./ChamferCard.module.css";
 
 export type ChamferSize = "sm" | "md" | "lg";
-export type ChamferAccent = "cyan" | "amber" | "red" | "none";
+export type ChamferAccent = "dark" | "cyan" | "amber" | "red" | "none";
 
 interface ChamferCardProps {
   size?: ChamferSize;
@@ -22,6 +22,7 @@ const SIZE_CLASSES: Record<ChamferSize, string> = {
 };
 
 const ACCENT_CLASSES: Record<ChamferAccent, string> = {
+  dark: styles.techDark,
   cyan: styles.techCyan,
   amber: styles.techAmber,
   red: styles.techRed,
@@ -30,7 +31,7 @@ const ACCENT_CLASSES: Record<ChamferAccent, string> = {
 
 export function ChamferCard({
   size = "lg",
-  accent = "cyan",
+  accent = "dark",
   className,
   innerClassName,
   style,

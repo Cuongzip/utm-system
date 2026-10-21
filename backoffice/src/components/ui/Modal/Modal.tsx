@@ -38,7 +38,7 @@ export function Modal({
   title,
   icon,
   maxWidth = "480px",
-  accent = "cyan",
+  accent = "dark",
   className,
   children,
   onSubmit,
