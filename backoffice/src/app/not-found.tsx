@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChamferCard, ChamferButton } from "@/components/ui";
+import { ChamferCard, ChamferButton, OutlineButton } from "@/components/ui";
 
 export default function NotFound() {
     return (
@@ -91,12 +91,7 @@ export default function NotFound() {
                                     VỀ TRUNG TÂM CHỈ HUY
                                 </ChamferButton>
                             </Link>
-                            <ChamferButton
-                                size="md"
-                                variant="outline"
-                                className="border-slate-700 text-slate-300 hover:bg-slate-800/60"
-                                onClick={() => window.location.reload()}
-                            >
+                            <OutlineButton size="md" onClick={() => window.location.reload()}>
                                 <svg
                                     className="w-4 h-4 mr-1"
                                     fill="none"
@@ -111,7 +106,7 @@ export default function NotFound() {
                                     />
                                 </svg>
                                 QUÉT LẠI TÍN HIỆU
-                            </ChamferButton>
+                            </OutlineButton>
                         </div>
                     </div>
                 </ChamferCard>

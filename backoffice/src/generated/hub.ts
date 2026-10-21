@@ -31,13 +31,11 @@ export const getHubByIdResponse = zod
                     .number()
                     .min(getHubByIdResponseLocationLatMin)
                     .max(getHubByIdResponseLocationLatMax)
-                    .optional()
                     .describe("Latitude (-90 to 90)"),
                 lng: zod
                     .number()
                     .min(getHubByIdResponseLocationLngMin)
                     .max(getHubByIdResponseLocationLngMax)
-                    .optional()
                     .describe("Longitude (-180 to 180)"),
             })
             .optional()
@@ -100,13 +98,11 @@ export const updateHubResponse = zod
                     .number()
                     .min(updateHubResponseLocationLatMin)
                     .max(updateHubResponseLocationLatMax)
-                    .optional()
                     .describe("Latitude (-90 to 90)"),
                 lng: zod
                     .number()
                     .min(updateHubResponseLocationLngMin)
                     .max(updateHubResponseLocationLngMax)
-                    .optional()
                     .describe("Longitude (-180 to 180)"),
             })
             .optional()
@@ -181,13 +177,11 @@ export const getHubsResponse = zod
                                     .number()
                                     .min(getHubsResponseItemsItemLocationLatMin)
                                     .max(getHubsResponseItemsItemLocationLatMax)
-                                    .optional()
                                     .describe("Latitude (-90 to 90)"),
                                 lng: zod
                                     .number()
                                     .min(getHubsResponseItemsItemLocationLngMin)
                                     .max(getHubsResponseItemsItemLocationLngMax)
-                                    .optional()
                                     .describe("Longitude (-180 to 180)"),
                             })
                             .optional()
@@ -247,13 +241,11 @@ export const createHubBody = zod
                     .number()
                     .min(createHubBodyLocationLatMin)
                     .max(createHubBodyLocationLatMax)
-                    .optional()
                     .describe("Latitude (-90 to 90)"),
                 lng: zod
                     .number()
                     .min(createHubBodyLocationLngMin)
                     .max(createHubBodyLocationLngMax)
-                    .optional()
                     .describe("Longitude (-180 to 180)"),
             })
             .describe("WGS84 Geographical coordinates"),

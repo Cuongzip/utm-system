@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { PageHeader, ChamferButton } from "@/components/ui";
+import { PageHeader, ChamferButton, OutlineButton } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
 import {
     ConnectivityAlert,
@@ -82,14 +82,10 @@ export default function ConnectivityPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="Device Connectivity">
-                <button
-                    type="button"
-                    onClick={fetchData}
-                    className="h-8 bg-white border border-[#cbd5e1] rounded-[6px] px-[15px] flex items-center gap-[6px] text-[#334155] text-[12px] font-bold hover:bg-[#f8fafc] cursor-pointer transition-colors"
-                >
+                <OutlineButton size="sm" onClick={fetchData}>
                     <RotateCw className="w-3.5 h-3.5 text-[#334155]" />
                     <span>Refresh</span>
-                </button>
+                </OutlineButton>
 
                 <ChamferButton variant="dark" size="sm" onClick={() => setIsRegisterOpen(true)}>
                     <Plus className="w-4 h-4 text-white" />

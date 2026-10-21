@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib";
-import { ChamferButton } from "../ChamferButton";
+import { OutlineButton } from "../OutlineButton";
 
 export interface EmptyStateProps {
     icon?: React.ComponentType<{ className?: string }>;
@@ -63,14 +63,9 @@ export function EmptyState({
                 </p>
             )}
             {action && (
-                <ChamferButton
-                    variant="outline"
-                    size="sm"
-                    onClick={action.onClick}
-                    className="mt-4"
-                >
+                <OutlineButton size="sm" onClick={action.onClick} className="mt-4">
                     {action.label}
-                </ChamferButton>
+                </OutlineButton>
             )}
             {children}
         </div>

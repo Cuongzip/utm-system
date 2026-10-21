@@ -5,6 +5,7 @@ import { X, Loader2 } from "lucide-react";
 import {
     ChamferCard,
     ChamferButton,
+    OutlineButton,
     type ChamferButtonVariant,
     type ChamferAccent,
 } from "@/components/ui";
@@ -97,15 +98,14 @@ export function Modal({
                                 footer
                             ) : (
                                 <div className={styles.actions}>
-                                    <ChamferButton
-                                        variant="outline"
+                                    <OutlineButton
                                         size="sm"
                                         type="button"
                                         onClick={onClose}
                                         disabled={loading}
                                     >
                                         {cancelText}
-                                    </ChamferButton>
+                                    </OutlineButton>
                                     <ChamferButton
                                         variant={submitVariant}
                                         size="sm"

@@ -1,7 +1,7 @@
 "use client";
 
 import { Battery, Gauge, MapPin, Plane } from "lucide-react";
-import { Modal, ChamferButton } from "@/components/ui";
+import { Modal, OutlineButton } from "@/components/ui";
 import type { Drone } from "@/types";
 
 interface DroneDetailsModalProps {
@@ -20,9 +20,9 @@ export function DroneDetailsModal({ drone, onClose }: DroneDetailsModalProps) {
             icon={<Plane className="w-5 h-5 text-[var(--color-border-dark)]" />}
             maxWidth="520px"
             footer={
-                <ChamferButton type="button" variant="outline" size="sm" onClick={onClose}>
+                <OutlineButton size="sm" type="button" onClick={onClose}>
                     Close
-                </ChamferButton>
+                </OutlineButton>
             }
         >
             <div className="flex flex-col gap-4 text-xs">
