@@ -6,20 +6,11 @@ import { Globe, Map, Maximize2, Crosshair, Layers, Plus, Minus } from "lucide-re
 import { CompassLoader } from "@/components/CompassLoader";
 import { ChamferCard } from "@/components/ui";
 
-const CesiumMap = dynamic(() => import("@/components/CesiumMap"), {
+const BaseCesiumMap = dynamic(() => import("@/components/map").then((mod) => mod.BaseCesiumMap), {
     ssr: false,
     loading: () => (
         <div className="flex h-full w-full items-center justify-center bg-slate-900 text-white">
-            <CompassLoader size={96} text="Đang tải bản đồ 3D Globe..." />
-        </div>
-    ),
-});
-
-const Map2D = dynamic(() => import("@/components/Map2D"), {
-    ssr: false,
-    loading: () => (
-        <div className="flex h-full w-full items-center justify-center bg-slate-900 text-white">
-            <CompassLoader size={96} text="Đang tải bản đồ 2D Flat Map..." />
+            <CompassLoader size={96} text="Đang tải bản đồ tác chiến UTM..." />
         </div>
     ),
 });
@@ -115,11 +106,17 @@ export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProp
             </div>
 
             <div className="relative h-full w-full">
-                {mapMode === "globe" ? (
-                    <CesiumMap height="100%" hideToolbar />
-                ) : (
-                    <Map2D height="100%" hideToolbar />
-                )}
+                <BaseCesiumMap
+                    mode={mapMode === "globe" ? "3d" : "2d"}
+                    layerType="satellite"
+                    height="100%"
+                    hideToolbar
+                    initialCoordinates={{
+                        lng: 108.2208,
+                        lat: 16.0544,
+                        height: 45000.0,
+                    }}
+                />
             </div>
         </ChamferCard>
     );
