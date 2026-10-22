@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Loader2, Edit, Trash2, MapPin } from "lucide-react";
+import { Shield, Edit, Trash2, MapPin } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
     ActionMenu,
     type ActionMenuItem,
-    EmptyState,
     ConfirmDialog,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableLoading,
+    TableEmpty,
 } from "@/components/ui";
-import { cn } from "@/lib";
 import type { AirspaceZone } from "@/types";
-import styles from "./AirspaceTable.module.css";
 
 interface AirspaceTableProps {
     zones: AirspaceZone[];
@@ -65,103 +70,83 @@ export function AirspaceTable({
     };
 
     return (
-        <div className={styles.container}>
+        <div className="flex flex-col gap-4 w-full">
             <ChamferCard size="lg" accent="dark" className="w-full">
-                <div className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th className={styles.th}>ZONE NAME</th>
-                                <th className={styles.th}>TYPE</th>
-                                <th className={styles.th}>ASSOCIATED HUB</th>
-                                <th className={styles.th}>CEILING ALT</th>
-                                <th className={styles.th}>STATUS</th>
-                                <th className={styles.th} style={{ textAlign: "right" }}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className={styles.emptyTd}>
-                                        <div className={styles.emptyWrapper}>
-                                            <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin" />
-                                            <span>Loading airspace zones...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : zones.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="py-8">
-                                        <EmptyState
-                                            icon={Shield}
-                                            title="No airspace zones found"
-                                            description="Establish your first 3D airspace restriction zone or corridor"
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                zones.map((zone) => {
-                                    const isSelected = selectedZoneId === zone.id;
-                                    const hubName = zone.hubId
-                                        ? hubMap.get(zone.hubId) || zone.hubId
-                                        : "—";
-                                    const altitudeText =
-                                        zone.altitudeCeiling !== undefined
-                                            ? `${zone.altitudeCeiling} m`
-                                            : "120 m";
+                <Table fixed>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead width="30%">ZONE NAME</TableHead>
+                            <TableHead width="16%">TYPE</TableHead>
+                            <TableHead width="22%">ASSOCIATED HUB</TableHead>
+                            <TableHead width="14%">CEILING ALT</TableHead>
+                            <TableHead width="12%">STATUS</TableHead>
+                            <TableHead width="6%" align="right"></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableLoading colSpan={6} message="Loading airspace zones..." />
+                        ) : zones.length === 0 ? (
+                            <TableEmpty
+                                colSpan={6}
+                                icon={Shield}
+                                title="No airspace zones found"
+                                description="Establish your first 3D airspace restriction zone or corridor"
+                            />
+                        ) : (
+                            zones.map((zone) => {
+                                const isSelected = selectedZoneId === zone.id;
+                                const hubName = zone.hubId
+                                    ? hubMap.get(zone.hubId) || zone.hubId
+                                    : "—";
+                                const altitudeText =
+                                    zone.altitudeCeiling !== undefined
+                                        ? `${zone.altitudeCeiling} m`
+                                        : "120 m";
 
-                                    return (
-                                        <tr
-                                            key={zone.id}
-                                            className={cn(
-                                                styles.row,
-                                                isSelected && styles.selectedRow
-                                            )}
-                                            onClick={() => onSelectZone?.(zone)}
+                                return (
+                                    <TableRow
+                                        key={zone.id}
+                                        selected={isSelected}
+                                        onClick={() => onSelectZone?.(zone)}
+                                    >
+                                        <TableCell
+                                            truncate
+                                            bold
+                                            tooltip={zone.name || "Unnamed Sector"}
                                         >
-                                            <td className={styles.td}>
-                                                <div className={styles.nameContainer}>
-                                                    <span className={styles.nameText}>
-                                                        {zone.name || "Unnamed Sector"}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className={styles.td}>
-                                                <StatusBadge
-                                                    status={zone.zoneType || "warning"}
-                                                    showDot={true}
-                                                />
-                                            </td>
-                                            <td className={styles.td}>
-                                                <span className="text-[13px] text-slate-700 font-medium">
-                                                    {hubName}
-                                                </span>
-                                            </td>
-                                            <td className={styles.td}>
-                                                <span className={styles.valueText}>
-                                                    {altitudeText}
-                                                </span>
-                                            </td>
-                                            <td className={styles.td}>
-                                                <StatusBadge
-                                                    status={zone.status || "active"}
-                                                    showDot={true}
-                                                />
-                                            </td>
-                                            <td
-                                                className={styles.td}
-                                                style={{ textAlign: "right" }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <ActionMenu items={getActions(zone)} />
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            {zone.name || "Unnamed Sector"}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={zone.zoneType || "warning"}
+                                                showDot={true}
+                                            />
+                                        </TableCell>
+                                        <TableCell truncate muted tooltip={hubName}>
+                                            {hubName}
+                                        </TableCell>
+                                        <TableCell mono darkText>
+                                            {altitudeText}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={zone.status || "active"}
+                                                showDot={true}
+                                            />
+                                        </TableCell>
+                                        <TableCell
+                                            align="right"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <ActionMenu items={getActions(zone)} />
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
             </ChamferCard>
 
             <ConfirmDialog

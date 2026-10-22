@@ -90,19 +90,17 @@ export default function HubsPage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
-                <div className="xl:col-span-7 flex flex-col gap-4">
-                    <HubsTable
-                        hubs={hubs}
-                        loading={loading}
-                        selectedHubId={highlightedHubId}
-                        onSelectHub={handleSelectHub}
-                        onEditHub={handleEditHub}
-                        onDeleteHub={handleDeleteHub}
-                    />
-                </div>
+            <div className="flex flex-col gap-6 w-full">
+                <HubsTable
+                    hubs={hubs}
+                    loading={loading}
+                    selectedHubId={highlightedHubId}
+                    onSelectHub={handleSelectHub}
+                    onEditHub={handleEditHub}
+                    onDeleteHub={handleDeleteHub}
+                />
 
-                <div className="xl:col-span-5 flex flex-col gap-4 h-[580px]">
+                <div className="w-full h-[560px]">
                     <HubsMap
                         hubs={hubs}
                         selectedHubId={highlightedHubId}

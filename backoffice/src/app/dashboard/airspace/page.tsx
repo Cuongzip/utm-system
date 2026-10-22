@@ -130,20 +130,18 @@ export default function AirspacePage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
-                <div className="xl:col-span-7 flex flex-col gap-4">
-                    <AirspaceTable
-                        zones={zones}
-                        loading={loading}
-                        selectedZoneId={highlightedZoneId}
-                        onSelectZone={handleSelectZone}
-                        onEditZone={handleEditZone}
-                        onDeleteZone={handleDeleteZone}
-                        hubMap={hubMap}
-                    />
-                </div>
+            <div className="flex flex-col gap-6 w-full">
+                <AirspaceTable
+                    zones={zones}
+                    loading={loading}
+                    selectedZoneId={highlightedZoneId}
+                    onSelectZone={handleSelectZone}
+                    onEditZone={handleEditZone}
+                    onDeleteZone={handleDeleteZone}
+                    hubMap={hubMap}
+                />
 
-                <div className="xl:col-span-5 flex flex-col gap-4 h-[580px]">
+                <div className="w-full h-[560px]">
                     <AirspaceMap
                         zones={zones}
                         selectedZoneId={highlightedZoneId}

@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Loader2, Edit, Trash2, MapPin } from "lucide-react";
+import { Building2, Edit, Trash2, MapPin } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
     ActionMenu,
-    ActionMenuItem,
-    EmptyState,
+    type ActionMenuItem,
     ConfirmDialog,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableLoading,
+    TableEmpty,
 } from "@/components/ui";
-import { cn } from "@/lib";
 import type { Hub } from "@/types";
-import styles from "./HubsTable.module.css";
 
 interface HubsTableProps {
     hubs: Hub[];
@@ -63,87 +68,70 @@ export function HubsTable({
     };
 
     return (
-        <div className={styles.container}>
+        <div className="flex flex-col gap-4 w-full">
             <ChamferCard size="lg" accent="dark" className="w-full">
-                <div className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th className={styles.th}>CODE</th>
-                                <th className={styles.th}>NAME</th>
-                                <th className={styles.th}>STATUS</th>
-                                <th className={styles.th}>AVAILABLE DRONES</th>
-                                <th className={styles.th}>AIRSPACE RADIUS</th>
-                                <th className={styles.th} style={{ textAlign: "right" }}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className={styles.emptyTd}>
-                                        <div className={styles.emptyWrapper}>
-                                            <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin" />
-                                            <span>Loading vertiport hubs...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : hubs.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="py-6">
-                                        <EmptyState
-                                            icon={Building2}
-                                            title="No vertiport hubs found"
-                                            description="Get started by adding a new hub"
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                hubs.map((hub) => {
-                                    const isSelected = selectedHubId === hub.id;
-                                    const availableDrones = hub.availableDronesCount ?? "—";
-                                    const radius = hub.airspaceRadius
-                                        ? `${(hub.airspaceRadius / 1000).toFixed(1)} km`
-                                        : "5.0 km";
+                <Table fixed>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead width="15%">CODE</TableHead>
+                            <TableHead width="32%">NAME</TableHead>
+                            <TableHead width="15%">STATUS</TableHead>
+                            <TableHead width="18%">AVAILABLE DRONES</TableHead>
+                            <TableHead width="16%">AIRSPACE RADIUS</TableHead>
+                            <TableHead width="4%" align="right"></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableLoading colSpan={6} message="Loading vertiport hubs..." />
+                        ) : hubs.length === 0 ? (
+                            <TableEmpty
+                                colSpan={6}
+                                icon={Building2}
+                                title="No vertiport hubs found"
+                                description="Get started by adding a new hub"
+                            />
+                        ) : (
+                            hubs.map((hub) => {
+                                const isSelected = selectedHubId === hub.id;
+                                const availableDrones = hub.availableDronesCount ?? "—";
+                                const radius = hub.airspaceRadius
+                                    ? `${(hub.airspaceRadius / 1000).toFixed(1)} km`
+                                    : "5.0 km";
 
-                                    return (
-                                        <tr
-                                            key={hub.id}
-                                            onClick={() => onSelectHub?.(hub)}
-                                            className={cn(
-                                                styles.row,
-                                                isSelected && styles.selectedRow
-                                            )}
+                                return (
+                                    <TableRow
+                                        key={hub.id}
+                                        selected={isSelected}
+                                        onClick={() => onSelectHub?.(hub)}
+                                    >
+                                        <TableCell mono bold>
+                                            {hub.code}
+                                        </TableCell>
+                                        <TableCell truncate bold tooltip={hub.name}>
+                                            {hub.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={hub.status || "ACTIVE"} />
+                                        </TableCell>
+                                        <TableCell mono darkText>
+                                            {availableDrones}
+                                        </TableCell>
+                                        <TableCell mono darkText>
+                                            {radius}
+                                        </TableCell>
+                                        <TableCell
+                                            align="right"
+                                            onClick={(e) => e.stopPropagation()}
                                         >
-                                            <td className={styles.td}>
-                                                <span className={styles.codeText}>{hub.code}</span>
-                                            </td>
-                                            <td className={styles.td}>
-                                                <span className={styles.nameText}>{hub.name}</span>
-                                            </td>
-                                            <td className={styles.td}>
-                                                <StatusBadge status={hub.status || "ACTIVE"} />
-                                            </td>
-                                            <td className={styles.td}>
-                                                <span className={styles.valueText}>
-                                                    {availableDrones}
-                                                </span>
-                                            </td>
-                                            <td className={styles.td}>
-                                                <span className={styles.valueText}>{radius}</span>
-                                            </td>
-                                            <td
-                                                className={styles.td}
-                                                style={{ textAlign: "right" }}
-                                            >
-                                                <ActionMenu items={getActions(hub)} />
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            <ActionMenu items={getActions(hub)} />
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
             </ChamferCard>
 
             <ConfirmDialog
@@ -158,11 +146,9 @@ export function HubsTable({
                 title="Delete Vertiport Hub"
                 description={
                     <span>
-                        Are you sure you want to delete vertiport hub{" "}
-                        <strong className="text-slate-900">
-                            {hubToDelete?.name || hubToDelete?.code || "this hub"}
-                        </strong>
-                        ? This may affect associated airspace sectors and flight routes.
+                        Are you sure you want to delete{" "}
+                        <strong className="text-slate-900">{hubToDelete?.name}</strong>? All
+                        associated drones will lose their home hub assignment.
                     </span>
                 }
                 confirmText="Delete Hub"
@@ -171,5 +157,3 @@ export function HubsTable({
         </div>
     );
 }
-
-export default HubsTable;

@@ -1,17 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Loader2, Edit, Trash2 } from "lucide-react";
+import { Bot, Edit, Trash2 } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
     ActionMenu,
-    ActionMenuItem,
-    EmptyState,
+    type ActionMenuItem,
     ConfirmDialog,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableLoading,
+    TableEmpty,
 } from "@/components/ui";
 import type { Drone } from "@/types";
-import styles from "./DronesTable.module.css";
 
 interface DronesTableProps {
     drones: Drone[];
@@ -60,89 +66,74 @@ export function DronesTable({
     };
 
     return (
-        <div className={styles.container}>
+        <div className="flex flex-col gap-4 w-full">
             <ChamferCard size="lg" accent="dark" className="w-full">
-                <div className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th className={styles.th}>REGISTRATION</th>
-                                <th className={styles.th}>MANUFACTURER</th>
-                                <th className={styles.th}>MODEL</th>
-                                <th className={styles.th}>HOME HUB</th>
-                                <th className={styles.th}>STATUS</th>
-                                <th className={styles.th}>MAX PAYLOAD</th>
-                                <th className={styles.th} style={{ textAlign: "right" }}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={7} className={styles.emptyTd}>
-                                        <div className={styles.emptyWrapper}>
-                                            <Loader2 className="w-6 h-6 text-[var(--color-border-dark)] animate-spin" />
-                                            <span>Loading drone fleet...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : drones.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="py-6">
-                                        <EmptyState
-                                            icon={Bot}
-                                            title="No drones found"
-                                            description="Register a drone to monitor its status and telemetry"
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                drones.map((drone) => (
-                                    <tr
-                                        key={drone.id}
-                                        className={styles.row}
-                                        onClick={() => onSelectDrone?.(drone)}
-                                    >
-                                        <td className={styles.td}>
-                                            <span className={styles.registrationText}>
-                                                {drone.registrationNumber || drone.id}
-                                            </span>
-                                        </td>
-                                        <td className={styles.td}>
-                                            <span className={styles.manufacturerText}>
-                                                {drone.manufacturer || "Unknown"}
-                                            </span>
-                                        </td>
-                                        <td className={styles.td}>
-                                            <span className={styles.modelText}>{drone.model}</span>
-                                        </td>
-                                        <td className={styles.td}>
-                                            <span className={styles.homeHubText}>
-                                                {drone.homeHub
-                                                    ? drone.homeHub.name
-                                                    : drone.homeHubId || "Unassigned"}
-                                            </span>
-                                        </td>
-                                        <td className={styles.td}>
+                <Table fixed>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead width="20%">REGISTRATION</TableHead>
+                            <TableHead width="15%">MANUFACTURER</TableHead>
+                            <TableHead width="15%">MODEL</TableHead>
+                            <TableHead width="18%">HOME HUB</TableHead>
+                            <TableHead width="14%">STATUS</TableHead>
+                            <TableHead width="14%">MAX PAYLOAD</TableHead>
+                            <TableHead width="4%" align="right"></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableLoading colSpan={7} message="Loading drone fleet..." />
+                        ) : drones.length === 0 ? (
+                            <TableEmpty
+                                colSpan={7}
+                                icon={Bot}
+                                title="No drones found"
+                                description="Register a drone to monitor its status and telemetry"
+                            />
+                        ) : (
+                            drones.map((drone) => {
+                                const regText = drone.registrationNumber || drone.id;
+                                const mfgText = drone.manufacturer || "Unknown";
+                                const modelText = drone.model || "—";
+                                const hubText = drone.homeHub
+                                    ? drone.homeHub.name
+                                    : drone.homeHubId || "Unassigned";
+                                const maxPayloadText = drone.maxPayload
+                                    ? `${drone.maxPayload} kg`
+                                    : "—";
+
+                                return (
+                                    <TableRow key={drone.id} onClick={() => onSelectDrone?.(drone)}>
+                                        <TableCell mono bold truncate tooltip={regText}>
+                                            {regText}
+                                        </TableCell>
+                                        <TableCell darkText truncate tooltip={mfgText}>
+                                            {mfgText}
+                                        </TableCell>
+                                        <TableCell muted truncate tooltip={modelText}>
+                                            {modelText}
+                                        </TableCell>
+                                        <TableCell muted truncate tooltip={hubText}>
+                                            {hubText}
+                                        </TableCell>
+                                        <TableCell>
                                             <StatusBadge status={drone.status || "AVAILABLE"} />
-                                        </td>
-                                        <td className={styles.td}>
-                                            <span className={styles.flightHoursText}>
-                                                {drone.maxPayload ? `${drone.maxPayload} kg` : "—"}
-                                            </span>
-                                        </td>
-                                        <td
-                                            className={styles.td}
-                                            style={{ textAlign: "right" }}
+                                        </TableCell>
+                                        <TableCell mono darkText>
+                                            {maxPayloadText}
+                                        </TableCell>
+                                        <TableCell
+                                            align="right"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <ActionMenu items={getActions(drone)} />
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
             </ChamferCard>
 
             <ConfirmDialog
@@ -154,19 +145,17 @@ export function DronesTable({
                         setDroneToDelete(null);
                     }
                 }}
-                title="Delete Drone"
+                title="Decommission Drone"
                 description={
                     <span>
-                        Are you sure you want to delete drone{" "}
+                        Are you sure you want to decommission drone{" "}
                         <strong className="text-slate-900">
-                            {droneToDelete?.registrationNumber ||
-                                droneToDelete?.model ||
-                                "this drone"}
+                            {droneToDelete?.registrationNumber || droneToDelete?.id}
                         </strong>
-                        ? This action cannot be undone.
+                        ? This drone will be unassigned from any active flight routes.
                     </span>
                 }
-                confirmText="Delete Drone"
+                confirmText="Decommission"
                 variant="danger"
             />
         </div>

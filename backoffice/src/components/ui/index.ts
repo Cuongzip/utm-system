@@ -12,3 +12,4 @@ export * from "./ConfirmDialog";
 export * from "./Tooltip";
 export * from "./CustomSelect";
 export * from "./Toast";
+export * from "./Table";
