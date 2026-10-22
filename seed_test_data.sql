@@ -36,7 +36,7 @@ ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
 
 INSERT INTO airspace_zone (id, name, zone_type, geometry, altitude_ceiling, status, description, created_on, created_by)
 VALUES
-  ('c7352fe9-beb1-48d3-94ff-ae7ce4be0564', 'Saigon River Low-Altitude Flight Corridor', 'CORRIDOR', '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7150,10.7800],[106.7350,10.7850]]}', 150.0, 'ACTIVE', 'Hành lang bay dọc sông Sài Gòn kết nối Quận 1 và Quận 2', NOW(), 'system')
+  ('c7352fe9-beb1-48d3-94ff-ae7ce4be0564', 'Saigon River Low-Altitude Flight Corridor', 'HUB_CORRIDOR', '{"type":"Polygon","coordinates":[[[106.7009,10.7750],[106.7150,10.7780],[106.7350,10.7830],[106.7360,10.7870],[106.7140,10.7820],[106.7000,10.7780],[106.7009,10.7750]]]}', 150.0, 'ACTIVE', 'Hành lang bay dọc sông Sài Gòn kết nối Quận 1 và Quận 2', NOW(), 'system')
 ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';
 
 \c utm_drone;

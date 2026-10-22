@@ -61,8 +61,27 @@ public interface AirspaceZoneMapper {
         }
         try {
             return OBJECT_MAPPER.readValue(geometryJson, GeoJsonPolygonVm.class);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to parse GeoJSON geometry", e);
+        } catch (Exception e) {
+            try {
+                com.fasterxml.jackson.databind.JsonNode root = OBJECT_MAPPER.readTree(geometryJson);
+                String type = root.path("type").asText("Polygon");
+                if ("LineString".equalsIgnoreCase(type)) {
+                    java.util.List<java.util.List<Double>> points = new java.util.ArrayList<>();
+                    for (com.fasterxml.jackson.databind.JsonNode pt : root.path("coordinates")) {
+                        if (pt.isArray() && pt.size() >= 2) {
+                            points.add(java.util.List.of(pt.get(0).asDouble(), pt.get(1).asDouble()));
+                        }
+                    }
+                    if (!points.isEmpty()) {
+                        if (!points.get(0).equals(points.get(points.size() - 1))) {
+                            points.add(points.get(0));
+                        }
+                        return new GeoJsonPolygonVm("Polygon", java.util.List.of(points));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            return null;
         }
     }
 }

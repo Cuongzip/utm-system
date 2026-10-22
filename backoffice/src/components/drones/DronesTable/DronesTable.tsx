@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Bot, Loader2, Edit, Trash2 } from "lucide-react";
-import { ChamferCard, StatusBadge, ActionMenu, ActionMenuItem, EmptyState } from "@/components/ui";
+import {
+    ChamferCard,
+    StatusBadge,
+    ActionMenu,
+    ActionMenuItem,
+    EmptyState,
+    ConfirmDialog,
+} from "@/components/ui";
 import type { Drone } from "@/types";
 import styles from "./DronesTable.module.css";
 
@@ -20,6 +28,8 @@ export function DronesTable({
     onSelectDrone,
     onDeleteDrone,
 }: DronesTableProps) {
+    const [droneToDelete, setDroneToDelete] = useState<Drone | null>(null);
+
     const getActions = (drone: Drone): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [];
 
@@ -42,11 +52,7 @@ export function DronesTable({
                 label: "Delete",
                 icon: <Trash2 className="w-3.5 h-3.5" />,
                 danger: true,
-                onClick: () => {
-                    if (confirm("Are you sure you want to delete this drone?")) {
-                        onDeleteDrone(drone.id);
-                    }
-                },
+                onClick: () => setDroneToDelete(drone),
             });
         }
 
@@ -138,6 +144,31 @@ export function DronesTable({
                     </table>
                 </div>
             </ChamferCard>
+
+            <ConfirmDialog
+                isOpen={!!droneToDelete}
+                onClose={() => setDroneToDelete(null)}
+                onConfirm={() => {
+                    if (droneToDelete && onDeleteDrone) {
+                        onDeleteDrone(droneToDelete.id);
+                        setDroneToDelete(null);
+                    }
+                }}
+                title="Delete Drone"
+                description={
+                    <span>
+                        Are you sure you want to delete drone{" "}
+                        <strong className="text-slate-900">
+                            {droneToDelete?.registrationNumber ||
+                                droneToDelete?.model ||
+                                "this drone"}
+                        </strong>
+                        ? This action cannot be undone.
+                    </span>
+                }
+                confirmText="Delete Drone"
+                variant="danger"
+            />
         </div>
     );
 }

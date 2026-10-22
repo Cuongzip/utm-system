@@ -45,17 +45,23 @@ export function StatusBadge({ status, label, showDot = true, className }: Status
                 normalized === "charging" ||
                 normalized === "pending" ||
                 normalized === "idle" ||
-                normalized === "contingent"
+                normalized === "contingent" ||
+                normalized === "restricted" ||
+                normalized === "warning"
               ? styles.connecting
               : normalized === "alert" ||
                   normalized === "error" ||
                   normalized === "failed" ||
                   normalized === "non_conforming" ||
-                  normalized === "cancelled"
+                  normalized === "cancelled" ||
+                  normalized === "no_fly_zone" ||
+                  normalized === "nfz"
                 ? styles.alert
                 : normalized === "in_flight" ||
                     normalized === "returning" ||
-                    normalized === "pre_flight"
+                    normalized === "pre_flight" ||
+                    normalized === "hub_corridor" ||
+                    normalized === "corridor"
                   ? styles.inFlight
                   : styles.offline;
 

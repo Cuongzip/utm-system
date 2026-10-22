@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
@@ -33,12 +34,19 @@ export default function HubsPage() {
     }, [fetchHubs]);
 
     const handleSaveHub = async (payload: CreateHubPayload | UpdateHubPayload, id?: string) => {
-        if (id) {
-            await hubService.updateHub(id, payload as UpdateHubPayload);
-        } else {
-            await hubService.createHub(payload as CreateHubPayload);
+        try {
+            if (id) {
+                await hubService.updateHub(id, payload as UpdateHubPayload);
+                toast.success("Vertiport hub updated successfully");
+            } else {
+                await hubService.createHub(payload as CreateHubPayload);
+                toast.success("Vertiport hub created successfully");
+            }
+            await fetchHubs();
+        } catch (err: unknown) {
+            toast.error("Failed to save hub");
+            throw err;
         }
-        await fetchHubs();
     };
 
     const handleDeleteHub = async (id: string) => {
@@ -47,8 +55,10 @@ export default function HubsPage() {
             if (highlightedHubId === id) {
                 setHighlightedHubId(null);
             }
+            toast.success("Vertiport hub deleted successfully");
             await fetchHubs();
         } catch {
+            toast.error("Failed to delete hub");
             setError("Failed to delete hub");
         }
     };

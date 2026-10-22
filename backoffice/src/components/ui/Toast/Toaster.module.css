@@ -1,0 +1,172 @@
+.toaster {
+    --chamfer-clip-sm: polygon(
+        8px 0,
+        calc(100% - 8px) 0,
+        100% 8px,
+        100% calc(100% - 8px),
+        calc(100% - 8px) 100%,
+        8px 100%,
+        0 calc(100% - 8px),
+        0 8px
+    );
+}
+
+.toaster,
+.toaster *,
+.toast,
+.toast * {
+    border-radius: 0 !important;
+}
+
+.toast {
+    position: relative !important;
+    background-color: var(--color-border-strong, #cbd5e1) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    clip-path: var(--chamfer-clip-sm) !important;
+    box-shadow: none !important;
+    filter: drop-shadow(0 4px 12px rgba(15, 23, 42, 0.08))
+        drop-shadow(0 1px 3px rgba(15, 23, 42, 0.05)) !important;
+    padding: 12px 42px 12px 14px !important;
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    font-family: var(--font-sans) !important;
+    width: 356px !important;
+    box-sizing: border-box !important;
+}
+
+:global(.dark) .toast {
+    background-color: #334155 !important;
+}
+
+.toaster [data-sonner-toast]::before,
+.toaster [data-sonner-toast][data-expanded]::before,
+.toaster [data-sonner-toast][data-swiping]::before,
+.toaster [data-sonner-toast][data-removed]::before,
+.toast::before,
+.toast[data-expanded]::before,
+.toast[data-swiping]::before,
+.toast[data-removed]::before {
+    display: none !important;
+    content: none !important;
+}
+
+.toaster [data-sonner-toast]::after,
+.toaster [data-sonner-toast][data-expanded]::after,
+.toaster [data-sonner-toast][data-expanded="true"]::after,
+.toaster [data-sonner-toast][data-swiping]::after,
+.toaster [data-sonner-toast][data-removed]::after,
+.toast::after,
+.toast[data-expanded]::after,
+.toast[data-expanded="true"]::after,
+.toast[data-swiping]::after,
+.toast[data-removed]::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 1px !important;
+    top: 1px !important;
+    bottom: 1px !important;
+    left: 1px !important;
+    right: 1px !important;
+    width: auto !important;
+    height: auto !important;
+    clip-path: var(--chamfer-clip-sm) !important;
+    background-color: var(--color-surface-panel, #ffffff) !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    transform: none !important;
+}
+
+:global(.dark) .toaster [data-sonner-toast]::after,
+:global(.dark) .toast::after {
+    background-color: #0d1522 !important;
+}
+
+.toast > * {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.toast [data-content] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+.toast [data-icon] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+.toast [data-title] {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-primary, #0f172a) !important;
+    line-height: 1.4 !important;
+}
+
+:global(.dark) .toast [data-title] {
+    color: #f8fafc !important;
+}
+
+.toast [data-description] {
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    color: var(--color-text-secondary, #64748b) !important;
+    margin-top: 2px !important;
+    line-height: 1.3 !important;
+}
+
+:global(.dark) .toast [data-description] {
+    color: #94a3b8 !important;
+}
+
+.toaster [data-sonner-toast] [data-close-button],
+.toast [data-close-button] {
+    position: absolute !important;
+    left: auto !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 0 !important;
+    border: 1px solid var(--color-border-default, #e2e8f0) !important;
+    background: #ffffff !important;
+    color: var(--color-text-muted, #94a3b8) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    opacity: 0.8 !important;
+    transition: all 0.15s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    z-index: 2 !important;
+}
+
+:global(.dark) .toaster [data-sonner-toast] [data-close-button],
+:global(.dark) .toast [data-close-button] {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+.toaster [data-sonner-toast] [data-close-button]:hover,
+.toast [data-close-button]:hover {
+    opacity: 1 !important;
+    color: var(--color-text-primary, #0f172a) !important;
+    background: #f8fafc !important;
+    border-color: var(--color-border-strong, #cbd5e1) !important;
+}
+
+:global(.dark) .toaster [data-sonner-toast] [data-close-button]:hover,
+:global(.dark) .toast [data-close-button]:hover {
+    background: #334155 !important;
+    color: #ffffff !important;
+}

@@ -2,7 +2,15 @@
 
 import { useState, useMemo } from "react";
 import { Activity, Trash2, Loader2, Plus } from "lucide-react";
-import { ChamferCard, ChamferButton, StatusBadge, SearchInput, EmptyState } from "@/components/ui";
+import {
+    ChamferCard,
+    ChamferButton,
+    StatusBadge,
+    SearchInput,
+    EmptyState,
+    ConfirmDialog,
+    Tooltip,
+} from "@/components/ui";
 import type { DeviceRegistration, DeviceConnectionStatus } from "@/types";
 import styles from "./RegisteredDevicesTable.module.css";
 
@@ -24,6 +32,7 @@ export function RegisteredDevicesTable({
 }: RegisteredDevicesTableProps) {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | DeviceConnectionStatus>("all");
+    const [deviceToRevoke, setDeviceToRevoke] = useState<DeviceRegistration | null>(null);
 
     const filteredDevices = useMemo(() => {
         return devices.filter((d) => {
@@ -183,22 +192,28 @@ export function RegisteredDevicesTable({
                                             </td>
                                             <td className={`${styles.td} text-right`}>
                                                 <div className="flex items-center justify-end gap-1.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onHeartbeat?.(device.id)}
-                                                        title="Ping Heartbeat"
-                                                        className="btn-icon"
-                                                    >
-                                                        <Activity className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onRevoke?.(device.id)}
-                                                        title="Revoke Device"
-                                                        className="btn-icon-danger"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    <Tooltip content="Ping Heartbeat">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onHeartbeat?.(device.id)}
+                                                            className="btn-icon"
+                                                            aria-label="Ping Heartbeat"
+                                                        >
+                                                            <Activity className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </Tooltip>
+                                                    <Tooltip content="Revoke Device">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setDeviceToRevoke(device)
+                                                            }
+                                                            className="btn-icon-danger"
+                                                            aria-label="Revoke Device"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </Tooltip>
                                                 </div>
                                             </td>
                                         </tr>
@@ -209,6 +224,29 @@ export function RegisteredDevicesTable({
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                isOpen={!!deviceToRevoke}
+                onClose={() => setDeviceToRevoke(null)}
+                onConfirm={() => {
+                    if (deviceToRevoke && onRevoke) {
+                        onRevoke(deviceToRevoke.id);
+                        setDeviceToRevoke(null);
+                    }
+                }}
+                title="Revoke Device Registration"
+                description={
+                    <span>
+                        Are you sure you want to revoke device{" "}
+                        <strong className="text-slate-900 font-mono">
+                            {deviceToRevoke?.deviceIdentifier || "this device"}
+                        </strong>
+                        ? The device socket connection will be terminated immediately.
+                    </span>
+                }
+                confirmText="Revoke Device"
+                variant="danger"
+            />
         </ChamferCard>
     );
 }

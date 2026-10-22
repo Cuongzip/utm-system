@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { DronesTable, RegisterDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import type { Drone, DroneRegistrationPayload } from "@/types";
@@ -32,19 +33,28 @@ export default function DronesPage() {
     }, [fetchDrones]);
 
     const handleSaveDrone = async (payload: DroneRegistrationPayload, id?: string) => {
-        if (id) {
-            await droneService.updateDrone(id, payload);
-        } else {
-            await droneService.createDrone(payload);
+        try {
+            if (id) {
+                await droneService.updateDrone(id, payload);
+                toast.success("Drone updated successfully");
+            } else {
+                await droneService.createDrone(payload);
+                toast.success("Drone registered successfully");
+            }
+            await fetchDrones();
+        } catch (err: unknown) {
+            toast.error("Failed to save drone");
+            throw err;
         }
-        await fetchDrones();
     };
 
     const handleDeleteDrone = async (id: string) => {
         try {
             await droneService.deleteDrone(id);
+            toast.success("Drone deleted successfully");
             await fetchDrones();
         } catch {
+            toast.error("Failed to delete drone");
             setError("Failed to delete drone");
         }
     };

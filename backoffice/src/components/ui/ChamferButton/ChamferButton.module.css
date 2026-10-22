@@ -25,3 +25,12 @@
     background-color: var(--color-status-offline);
     color: var(--color-text-light);
 }
+
+.danger {
+    background-color: var(--color-tech-red);
+    color: var(--color-text-light);
+}
+
+.danger:hover {
+    background-color: var(--color-tech-red-hover);
+}

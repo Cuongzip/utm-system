@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal } from "@/components/ui";
+import { Modal, CustomSelect } from "@/components/ui";
 import { hubService } from "@/services/hubService";
 import {
     cn,
@@ -181,22 +181,21 @@ export function RegisterDroneModal({
                 <label className="form-label" htmlFor="homeHub">
                     Home Hub
                 </label>
-                <select
-                    id="homeHub"
+                <CustomSelect
                     value={homeHubId}
-                    onChange={(e) => {
-                        setHomeHubId(e.target.value);
+                    onValueChange={(val) => {
+                        setHomeHubId(val);
                         clearFieldError("homeHubId");
                     }}
-                    className={cn("form-select", fieldErrors.homeHubId && "form-input-error")}
-                >
-                    <option value="">Select a hub</option>
-                    {hubs.map((h) => (
-                        <option key={h.id} value={h.id}>
-                            {h.name} {h.code ? `(${h.code})` : ""}
-                        </option>
-                    ))}
-                </select>
+                    options={[
+                        { value: "", label: "Select a hub" },
+                        ...hubs.map((h) => ({
+                            value: h.id,
+                            label: `${h.name}${h.code ? ` (${h.code})` : ""}`,
+                        })),
+                    ]}
+                    error={Boolean(fieldErrors.homeHubId)}
+                />
                 {fieldErrors.homeHubId && (
                     <span className="form-error-msg">{fieldErrors.homeHubId}</span>
                 )}

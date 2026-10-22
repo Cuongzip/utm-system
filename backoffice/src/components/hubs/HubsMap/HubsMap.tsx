@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Navigation, Loader2, X } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { ChamferCard, Tooltip } from "@/components/ui";
 import type { Hub } from "@/types";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import styles from "./HubsMap.module.css";
@@ -297,14 +297,16 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
                                     </span>
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => onSelectHub?.(null as unknown as Hub)}
-                                className="text-slate-400 hover:text-white p-1 rounded transition-colors"
-                                aria-label="Close inspector"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
+                            <Tooltip content="Close hub inspector" side="left">
+                                <button
+                                    type="button"
+                                    onClick={() => onSelectHub?.(null as unknown as Hub)}
+                                    className="text-slate-400 hover:text-white p-1 rounded transition-colors cursor-pointer"
+                                    aria-label="Close inspector"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
                         </div>
                     )}
                 </div>

@@ -25,6 +25,9 @@ export const API_ENDPOINTS = {
     AIRSPACES: {
         BASE: "/api/api/v1/airspace",
         ZONES: "/api/api/v1/airspace/zones",
+        BY_ID: (id: string) => `/api/api/v1/airspace/zones/${id}`,
+        CHECK_POINT: "/api/api/v1/airspace/check",
+        CHECK_PATH: "/api/api/v1/airspace/check-path",
     },
     CONFLICTS: {
         BASE: "/api/api/v1/conflicts",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal } from "@/components/ui";
+import { Modal, CustomSelect } from "@/components/ui";
 import {
     cn,
     parseApiError,
@@ -291,21 +291,18 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         <label className="form-label" htmlFor="status">
                             Status
                         </label>
-                        <select
-                            id="status"
+                        <CustomSelect
                             value={status}
-                            onChange={(e) => {
-                                setStatus(e.target.value as HubStatus);
+                            onValueChange={(val) => {
+                                setStatus(val as HubStatus);
                                 clearFieldError("status");
                             }}
-                            className={cn("form-select", fieldErrors.status && "form-input-error")}
-                        >
-                            {HUB_STATUS_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>
-                                    {opt.toUpperCase()}
-                                </option>
-                            ))}
-                        </select>
+                            options={HUB_STATUS_OPTIONS.map((opt) => ({
+                                value: opt,
+                                label: opt.toUpperCase(),
+                            }))}
+                            error={Boolean(fieldErrors.status)}
+                        />
                         {fieldErrors.status && (
                             <span className="form-error-msg">{fieldErrors.status}</span>
                         )}

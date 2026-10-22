@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib";
 
@@ -18,68 +19,46 @@ interface ActionMenuProps {
 }
 
 export function ActionMenu({ items, className, buttonClassName }: ActionMenuProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const handleOutsideClick = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                setIsOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleOutsideClick);
-        document.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            document.removeEventListener("mousedown", handleOutsideClick);
-            document.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [isOpen]);
-
     return (
-        <div ref={containerRef} className={cn("relative inline-block text-left", className)}>
-            <button
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setIsOpen((prev) => !prev);
-                }}
-                className={cn(
-                    "w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs",
-                    buttonClassName
-                )}
-                aria-label="Actions"
-            >
-                <MoreHorizontal className="w-4 h-4" />
-            </button>
-
-            {isOpen && (
-                <div
-                    className="absolute right-0 top-full mt-1 w-32 rounded-md bg-white border border-slate-200 shadow-md py-1 z-40 flex flex-col gap-0.5"
+        <DropdownMenuPrimitive.Root>
+            <DropdownMenuPrimitive.Trigger asChild>
+                <button
+                    type="button"
                     onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                        "w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs focus:outline-none",
+                        buttonClassName
+                    )}
+                    aria-label="Actions"
+                >
+                    <MoreHorizontal className="w-4 h-4" />
+                </button>
+            </DropdownMenuPrimitive.Trigger>
+
+            <DropdownMenuPrimitive.Portal>
+                <DropdownMenuPrimitive.Content
+                    align="end"
+                    sideOffset={4}
+                    collisionPadding={8}
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                        "z-[9999] min-w-[8.5rem] overflow-hidden rounded-md border border-slate-200 bg-white p-1 text-slate-700 shadow-md",
+                        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
+                        className
+                    )}
                 >
                     {items.map((item, index) => (
-                        <button
+                        <DropdownMenuPrimitive.Item
                             key={index}
-                            type="button"
-                            onClick={() => {
-                                setIsOpen(false);
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 item.onClick();
                             }}
                             className={cn(
-                                "w-full text-left px-3 py-1.5 text-xs font-medium flex items-center gap-2 cursor-pointer transition-colors bg-transparent border-none",
+                                "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2.5 py-1.5 text-xs font-medium outline-none transition-colors",
                                 item.danger
-                                    ? "text-red-600 hover:bg-red-50"
-                                    : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                                    ? "text-red-600 focus:bg-red-50 focus:text-red-700 hover:bg-red-50 hover:text-red-700"
+                                    : "text-slate-700 focus:bg-slate-100 focus:text-slate-900 hover:bg-slate-100 hover:text-slate-900"
                             )}
                         >
                             {item.icon && (
@@ -88,11 +67,11 @@ export function ActionMenu({ items, className, buttonClassName }: ActionMenuProp
                                 </span>
                             )}
                             <span>{item.label}</span>
-                        </button>
+                        </DropdownMenuPrimitive.Item>
                     ))}
-                </div>
-            )}
-        </div>
+                </DropdownMenuPrimitive.Content>
+            </DropdownMenuPrimitive.Portal>
+        </DropdownMenuPrimitive.Root>
     );
 }
 

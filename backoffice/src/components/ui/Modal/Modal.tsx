@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
 import {
     ChamferCard,
@@ -52,88 +53,85 @@ export function Modal({
     submitVariant = "dark",
     footer,
 }: ModalProps) {
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                onClose();
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, onClose]);
-
-    if (!isOpen) return null;
-
     const styleMaxWidth = typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth;
 
     return (
-        <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
-            <div
-                className={cn(styles.modal, className)}
-                style={{ maxWidth: styleMaxWidth }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <ChamferCard size="lg" accent={accent} className="w-full">
-                    <div className={styles.modalHeader}>
-                        <div className={styles.headerLeft}>
-                            {icon && <span className={styles.icon}>{icon}</span>}
-                            <h3 className={styles.title}>{title}</h3>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className={styles.closeButton}
-                            aria-label="Close modal"
+        <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogPrimitive.Portal>
+                <DialogPrimitive.Overlay className={styles.overlay} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                    <DialogPrimitive.Content asChild aria-describedby={undefined}>
+                        <div
+                            className={cn(styles.modal, "pointer-events-auto", className)}
+                            style={{ maxWidth: styleMaxWidth }}
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-
-                    {onSubmit ? (
-                        <form onSubmit={onSubmit} className={styles.form} noValidate>
-                            {error && <div className={styles.errorAlert}>{error}</div>}
-                            {children}
-                            {footer ? (
-                                footer
-                            ) : (
-                                <div className={styles.actions}>
-                                    <OutlineButton
-                                        size="sm"
-                                        type="button"
-                                        onClick={onClose}
-                                        disabled={loading}
-                                    >
-                                        {cancelText}
-                                    </OutlineButton>
-                                    <ChamferButton
-                                        variant={submitVariant}
-                                        size="sm"
-                                        type="submit"
-                                        disabled={loading || submitDisabled}
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                <span>{loadingText}</span>
-                                            </>
-                                        ) : (
-                                            <span>{submitText}</span>
-                                        )}
-                                    </ChamferButton>
+                            <ChamferCard size="lg" accent={accent} className="w-full">
+                                <div className={styles.modalHeader}>
+                                    <div className={styles.headerLeft}>
+                                        {icon && <span className={styles.icon}>{icon}</span>}
+                                        <DialogPrimitive.Title asChild>
+                                            <h3 className={styles.title}>{title}</h3>
+                                        </DialogPrimitive.Title>
+                                    </div>
+                                    <DialogPrimitive.Close asChild>
+                                        <button
+                                            type="button"
+                                            className={styles.closeButton}
+                                            aria-label="Close modal"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </DialogPrimitive.Close>
                                 </div>
-                            )}
-                        </form>
-                    ) : (
-                        <div className={styles.body}>
-                            {error && <div className={styles.errorAlert}>{error}</div>}
-                            {children}
-                            {footer && <div className={styles.actions}>{footer}</div>}
+
+                                {onSubmit ? (
+                                    <form onSubmit={onSubmit} className={styles.form} noValidate>
+                                        {error && <div className={styles.errorAlert}>{error}</div>}
+                                        {children}
+                                        {footer ? (
+                                            footer
+                                        ) : (
+                                            <div className={styles.actions}>
+                                                <OutlineButton
+                                                    size="sm"
+                                                    type="button"
+                                                    onClick={onClose}
+                                                    disabled={loading}
+                                                >
+                                                    {cancelText}
+                                                </OutlineButton>
+                                                <ChamferButton
+                                                    variant={submitVariant}
+                                                    size="sm"
+                                                    type="submit"
+                                                    disabled={loading || submitDisabled}
+                                                >
+                                                    {loading ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                            <span>{loadingText}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span>{submitText}</span>
+                                                    )}
+                                                </ChamferButton>
+                                            </div>
+                                        )}
+                                    </form>
+                                ) : (
+                                    <div className={styles.body}>
+                                        {error && <div className={styles.errorAlert}>{error}</div>}
+                                        {children}
+                                        {footer && <div className={styles.actions}>{footer}</div>}
+                                    </div>
+                                )}
+                            </ChamferCard>
                         </div>
-                    )}
-                </ChamferCard>
-            </div>
-        </div>
+                    </DialogPrimitive.Content>
+                </div>
+            </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
     );
 }
 

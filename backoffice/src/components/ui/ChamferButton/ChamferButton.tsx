@@ -4,7 +4,7 @@ import React from "react";
 import { cn } from "@/lib";
 import styles from "./ChamferButton.module.css";
 
-export type ChamferButtonVariant = "dark" | "active";
+export type ChamferButtonVariant = "dark" | "active" | "danger";
 export type ChamferButtonSize = "sm" | "md";
 
 interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

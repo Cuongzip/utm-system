@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Building2, Loader2, Edit, Trash2, MapPin } from "lucide-react";
-import { ChamferCard, StatusBadge, ActionMenu, ActionMenuItem, EmptyState } from "@/components/ui";
+import {
+    ChamferCard,
+    StatusBadge,
+    ActionMenu,
+    ActionMenuItem,
+    EmptyState,
+    ConfirmDialog,
+} from "@/components/ui";
 import { cn } from "@/lib";
 import type { Hub } from "@/types";
 import styles from "./HubsTable.module.css";
@@ -23,6 +31,8 @@ export function HubsTable({
     onEditHub,
     onDeleteHub,
 }: HubsTableProps) {
+    const [hubToDelete, setHubToDelete] = useState<Hub | null>(null);
+
     const getActions = (hub: Hub): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
             {
@@ -45,7 +55,7 @@ export function HubsTable({
                 label: "Delete",
                 icon: <Trash2 className="w-3.5 h-3.5" />,
                 danger: true,
-                onClick: () => onDeleteHub(hub.id),
+                onClick: () => setHubToDelete(hub),
             });
         }
 
@@ -135,6 +145,29 @@ export function HubsTable({
                     </table>
                 </div>
             </ChamferCard>
+
+            <ConfirmDialog
+                isOpen={!!hubToDelete}
+                onClose={() => setHubToDelete(null)}
+                onConfirm={() => {
+                    if (hubToDelete && onDeleteHub) {
+                        onDeleteHub(hubToDelete.id);
+                        setHubToDelete(null);
+                    }
+                }}
+                title="Delete Vertiport Hub"
+                description={
+                    <span>
+                        Are you sure you want to delete vertiport hub{" "}
+                        <strong className="text-slate-900">
+                            {hubToDelete?.name || hubToDelete?.code || "this hub"}
+                        </strong>
+                        ? This may affect associated airspace sectors and flight routes.
+                    </span>
+                }
+                confirmText="Delete Hub"
+                variant="danger"
+            />
         </div>
     );
 }
