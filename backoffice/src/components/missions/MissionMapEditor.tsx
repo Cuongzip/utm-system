@@ -335,14 +335,14 @@ export function MissionMapEditor({
     return (
         <ChamferCard size="lg" accent="dark" className={cn("w-full h-full", className)}>
             <div className="flex flex-col h-full bg-[var(--color-surface-panel)] overflow-hidden">
-                <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-end gap-3 bg-[var(--color-surface-panel)] z-10">
+                <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono ml-auto">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             <span>READ-ONLY VIEW</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <>
                             <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                                 <button
                                     type="button"
@@ -414,7 +414,7 @@ export function MissionMapEditor({
                                 />
                                 <span className="font-mono text-slate-400 text-[11px]">m</span>
                             </div>
-                        </div>
+                        </>
                     )}
                 </div>
 

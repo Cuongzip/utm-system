@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, CustomSelect } from "@/components/ui";
+import { Modal, CustomSelect, DateTimePicker } from "@/components/ui";
 import type { Flight, Drone, Hub } from "@/types";
 
 export interface AddFlightModalProps {
@@ -178,22 +178,18 @@ export function AddFlightModal({
                 <div className="form-row-2">
                     <div className="form-group">
                         <label className="form-label">Scheduled Departure</label>
-                        <input
-                            type="datetime-local"
+                        <DateTimePicker
                             value={scheduledDeparture}
-                            onChange={(e) => setScheduledDeparture(e.target.value)}
-                            required
-                            className="form-input font-mono text-xs"
+                            onChange={setScheduledDeparture}
+                            placeholder="Select departure"
                         />
                     </div>
                     <div className="form-group">
                         <label className="form-label">Scheduled Arrival</label>
-                        <input
-                            type="datetime-local"
+                        <DateTimePicker
                             value={scheduledArrival}
-                            onChange={(e) => setScheduledArrival(e.target.value)}
-                            required
-                            className="form-input font-mono text-xs"
+                            onChange={setScheduledArrival}
+                            placeholder="Select arrival"
                         />
                     </div>
                 </div>

@@ -13,7 +13,7 @@ import {
     X,
     MapPin,
 } from "lucide-react";
-import { ChamferCard, CustomSelect, type SelectOption } from "@/components/ui";
+import { ChamferCard, CustomSelect, DateTimePicker, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import type { Waypoint, Drone, Hub, MissionScheduleType } from "@/types";
 
@@ -968,18 +968,15 @@ export function MissionFormSidebar({
                                         <label className="form-label block text-[11px] font-mono text-[var(--color-text-muted)] mb-1">
                                             DEPARTURE DATE & TIME
                                         </label>
-                                        <input
-                                            type="datetime-local"
+                                        <DateTimePicker
                                             value={scheduledAt}
                                             disabled={isReadOnly}
-                                            onChange={(e) => {
-                                                onScheduledAtChange(e.target.value);
+                                            onChange={(val) => {
+                                                onScheduledAtChange(val);
                                                 onClearFieldError?.("scheduledAt");
                                             }}
-                                            className={cn(
-                                                "form-input font-mono",
-                                                fieldErrors.scheduledAt && "form-input-error"
-                                            )}
+                                            error={Boolean(fieldErrors.scheduledAt)}
+                                            placeholder="Select departure date & time"
                                         />
                                         {fieldErrors.scheduledAt && (
                                             <span className="form-error-msg">

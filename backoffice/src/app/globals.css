@@ -278,3 +278,42 @@ body {
     color: var(--color-text-primary);
     margin-top: 4px;
 }
+
+.utm-calendar {
+    --rdp-accent-color: #334155;
+    --rdp-accent-background-color: #f1f5f9;
+    --rdp-day-height: 34px;
+    --rdp-day-width: 34px;
+    --rdp-day_button-height: 32px;
+    --rdp-day_button-width: 32px;
+    --rdp-day_button-border-radius: 6px;
+    --rdp-selected-border: 2px solid #334155;
+}
+
+.utm-calendar .rdp-root {
+    --rdp-accent-color: #334155;
+    --rdp-accent-background-color: #f1f5f9;
+    font-size: 13px;
+}
+
+.utm-calendar .rdp-day_button {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+}
+
+.utm-calendar .rdp-day_button:hover:not([disabled]) {
+    background-color: #f1f5f9;
+}
+
+.utm-calendar .rdp-selected .rdp-day_button {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.utm-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+    font-weight: 700;
+    color: var(--color-tech-cyan);
+    border-bottom: 2px solid var(--color-tech-cyan);
+}
