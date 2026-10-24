@@ -23,8 +23,13 @@ import type {
     CreateMissionPayload,
     UpdateMissionPayload,
 } from "@/types";
-import { calculateDistance, parseApiError, validateSchema } from "@/utils";
-import { createMissionBody, updateMissionBody } from "@/generated/mission";
+import { calculateDistance, parseApiError, validateSchema, createFieldErrorCleaner } from "@/utils";
+import { createMissionBody, updateMissionBody, addWaypointBody } from "@/generated/mission";
+import zod from "zod";
+
+const waypointsSchema = zod.object({
+    waypoints: zod.array(addWaypointBody),
+});
 
 export default function NewMissionPage() {
     const router = useRouter();
@@ -55,6 +60,8 @@ export default function NewMissionPage() {
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
         "details"
     );
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
 
     const fetchPrerequisites = useCallback(async () => {
         try {
@@ -189,6 +196,15 @@ export default function NewMissionPage() {
             altitude: altitude || defaultAltitude,
         };
         setWaypoints((prev) => [...prev, newWp]);
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            for (const k of Object.keys(next)) {
+                if (k.startsWith("waypoints")) {
+                    delete next[k];
+                }
+            }
+            return next;
+        });
     };
 
     const handleUpdateWaypoint = (updated: Waypoint) => {
@@ -273,6 +289,15 @@ export default function NewMissionPage() {
         ];
 
         setWaypoints(newWaypoints);
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            for (const k of Object.keys(next)) {
+                if (k.startsWith("waypoints")) {
+                    delete next[k];
+                }
+            }
+            return next;
+        });
         toast.success(
             `Generated direct route from ${selectedDepartureHub.code || selectedDepartureHub.name} to ${selectedArrivalHub.code || selectedArrivalHub.name}`
         );
@@ -298,20 +323,54 @@ export default function NewMissionPage() {
             scheduledAt: scheduledIso,
         };
 
+        setFieldErrors({});
+
         const schema = editMissionId ? updateMissionBody : createMissionBody;
         const validation = validateSchema(schema, payload);
 
+        const newFieldErrors: Record<string, string> = {};
+
+        const waypointValidation = validateSchema(waypointsSchema, {
+            waypoints: waypoints.map((w) => ({
+                ...w,
+                altitude: w.altitude === undefined ? defaultAltitude : w.altitude,
+            })),
+        });
+
+        if (!waypointValidation.success) {
+            Object.assign(newFieldErrors, waypointValidation.errors);
+        }
+
         if (!validation.success) {
+            Object.assign(newFieldErrors, validation.errors);
+        }
+
+        if (!validation.success || Object.keys(newFieldErrors).length > 0) {
+            setFieldErrors(newFieldErrors);
             if (
-                validation.errors.name ||
-                validation.errors.departureHubId ||
-                validation.errors.arrivalHubId ||
-                validation.errors.scheduledAt
+                newFieldErrors.name ||
+                newFieldErrors.departureHubId ||
+                newFieldErrors.arrivalHubId
             ) {
                 setActiveSidebarTab("details");
+            } else if (Object.keys(newFieldErrors).some((k) => k.startsWith("waypoints"))) {
+                setActiveSidebarTab("waypoints");
+                const firstInvalidKey = Object.keys(newFieldErrors).find((k) =>
+                    k.startsWith("waypoints.")
+                );
+                if (firstInvalidKey) {
+                    const match = firstInvalidKey.match(/^waypoints\.(\d+)/);
+                    if (match) {
+                        const wpIdx = parseInt(match[1], 10);
+                        const wp = waypoints[wpIdx];
+                        if (wp) {
+                            setSelectedWaypointId(String(wp.id || wp.tempId));
+                        }
+                    }
+                }
+            } else if (newFieldErrors.scheduledAt) {
+                setActiveSidebarTab("schedule");
             }
-            const firstError = Object.values(validation.errors)[0];
-            toast.error(firstError || "Please check your mission inputs");
             return;
         }
 
@@ -422,7 +481,20 @@ export default function NewMissionPage() {
             router.push("/dashboard/missions");
         } catch (err: unknown) {
             const parsed = parseApiError(err, "Failed to save mission");
-            toast.error(parsed.message);
+            if (Object.keys(parsed.fieldErrors).length > 0) {
+                setFieldErrors(parsed.fieldErrors);
+                if (
+                    parsed.fieldErrors.name ||
+                    parsed.fieldErrors.departureHubId ||
+                    parsed.fieldErrors.arrivalHubId
+                ) {
+                    setActiveSidebarTab("details");
+                } else if (parsed.fieldErrors.scheduledAt) {
+                    setActiveSidebarTab("schedule");
+                }
+            } else {
+                toast.error(parsed.message);
+            }
         } finally {
             setSubmitting(false);
         }
@@ -495,7 +567,7 @@ export default function NewMissionPage() {
                         disabled={submitting}
                     >
                         <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
-                        <span>Back to Missions</span>
+                        <span>Cancel</span>
                     </OutlineButton>
 
                     {!isReadOnly && (
@@ -571,6 +643,8 @@ export default function NewMissionPage() {
                         totalDistanceM={totalDistanceM}
                         isReadOnly={isReadOnly}
                         className="h-full"
+                        fieldErrors={fieldErrors}
+                        onClearFieldError={clearFieldError}
                     />
                 </div>
             </div>

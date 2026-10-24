@@ -335,12 +335,7 @@ export function MissionMapEditor({
     return (
         <ChamferCard size="lg" accent="dark" className={cn("w-full h-full", className)}>
             <div className="flex flex-col h-full bg-[var(--color-surface-panel)] overflow-hidden">
-                <div className="px-[18px] py-3 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
-                    <div className="text-[13px] font-bold text-[var(--color-text-primary)] flex items-center gap-2 tracking-[-0.2px]">
-                        <Compass className="w-4 h-4 text-[var(--color-border-dark)]" />
-                        <span>TACTICAL ROUTE CANVAS</span>
-                    </div>
-
+                <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-end gap-3 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -370,7 +365,7 @@ export function MissionMapEditor({
                                     className={cn(
                                         "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
                                         mode === "add"
-                                            ? "bg-[var(--color-tech-cyan)] text-white shadow-2xs"
+                                            ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                             : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                     )}
                                     title="Click on map to add waypoint"
@@ -385,7 +380,7 @@ export function MissionMapEditor({
                                     className={cn(
                                         "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
                                         mode === "draw"
-                                            ? "bg-[var(--color-tech-cyan)] text-white shadow-2xs"
+                                            ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                             : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                     )}
                                     title="Draw continuous path"
@@ -400,7 +395,7 @@ export function MissionMapEditor({
                                     className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
                                     title="Auto connect Departure Vertiport to Arrival Vertiport"
                                 >
-                                    <Route className="w-3.5 h-3.5 text-[var(--color-tech-cyan)]" />
+                                    <Route className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
                                     <span>Hub-to-Hub</span>
                                 </button>
                             </div>
@@ -458,7 +453,7 @@ export function MissionMapEditor({
                     ) : (
                         (mode === "add" || mode === "draw") && (
                             <div className="absolute top-3 right-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                                <Plus className="w-3.5 h-3.5 text-[var(--color-tech-cyan)] animate-pulse" />
+                                <Plus className="w-3.5 h-3.5 text-white animate-pulse" />
                                 <span>Click to add • Drag point to move</span>
                             </div>
                         )

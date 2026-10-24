@@ -11,6 +11,7 @@ import {
     ChevronUp,
     ChevronDown,
     X,
+    MapPin,
 } from "lucide-react";
 import { ChamferCard, CustomSelect, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
@@ -44,6 +45,8 @@ interface MissionFormSidebarProps {
     totalDistanceM: number;
     isReadOnly?: boolean;
     className?: string;
+    fieldErrors?: Record<string, string>;
+    onClearFieldError?: (field: string) => void;
 }
 
 export function MissionFormSidebar({
@@ -74,14 +77,37 @@ export function MissionFormSidebar({
     totalDistanceM,
     isReadOnly = false,
     className = "",
+    fieldErrors = {},
+    onClearFieldError,
 }: MissionFormSidebarProps) {
     const [waypointSubTab, setWaypointSubTab] = useState<"position" | "actions" | "conditions">(
         "position"
     );
 
-    const isFeasible = Boolean(departureHubId && waypoints.length >= 2);
+    const isFeasible = Boolean(departureHubId && waypoints.length > 0);
     const estimatedMinutes = totalDistanceM > 0 ? Math.ceil(totalDistanceM / 1000 / 0.5) : 0;
     const estimatedBatteryPct = Math.min(100, Math.ceil((totalDistanceM / 1000) * 4));
+
+    const selectedIdx = selectedWaypoint
+        ? waypoints.findIndex(
+              (w) =>
+                  (w.id && w.id === selectedWaypoint.id) ||
+                  (w.tempId && w.tempId === selectedWaypoint.tempId)
+          )
+        : -1;
+
+    const nameError = selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.name`] : undefined;
+    const latError =
+        selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.latitude`] : undefined;
+    const lngError =
+        selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.longitude`] : undefined;
+    const altError =
+        selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.altitude`] : undefined;
+    const hasPositionErrors = Boolean(nameError || latError || lngError || altError);
+
+    const hasWaypointErrors = Boolean(
+        fieldErrors.waypoints || Object.keys(fieldErrors).some((k) => k.startsWith("waypoints."))
+    );
 
     const droneOptions: SelectOption[] = [
         { value: "", label: "No drone assigned" },
@@ -104,54 +130,61 @@ export function MissionFormSidebar({
     return (
         <ChamferCard size="lg" accent="dark" className={cn("w-full h-full", className)}>
             <div className="flex flex-col h-full bg-[var(--color-surface-panel)] select-none overflow-hidden">
-                <div className="px-[18px] py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between bg-[var(--color-surface-panel)] z-10">
-                    <div className="text-[13px] font-bold text-[var(--color-text-primary)] flex items-center gap-2 tracking-[-0.2px]">
-                        <Sliders className="w-4 h-4 text-[var(--color-border-dark)]" />
-                        <span>MISSION PARAMETERS</span>
-                    </div>
-                    <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]">
-                        {waypoints.length} {waypoints.length === 1 ? "POINT" : "POINTS"}
-                    </span>
-                </div>
-
                 <div className="grid grid-cols-3 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs">
                     <button
                         type="button"
                         onClick={() => onTabChange("details")}
                         className={cn(
-                            "py-3 text-center border-b-2 transition-colors cursor-pointer text-xs font-bold tracking-wide",
+                            "py-3 text-center border-b-2 transition-colors cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-1.5",
                             activeTab === "details"
                                 ? "border-[var(--color-border-dark)] text-[var(--color-text-primary)] bg-[var(--color-surface-card)]/50"
-                                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
+                            (fieldErrors.name ||
+                                fieldErrors.departureHubId ||
+                                fieldErrors.arrivalHubId) &&
+                                "text-red-600"
                         )}
                     >
-                        Details
+                        <span>Details</span>
+                        {(fieldErrors.name ||
+                            fieldErrors.departureHubId ||
+                            fieldErrors.arrivalHubId) && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        )}
                     </button>
 
                     <button
                         type="button"
                         onClick={() => onTabChange("waypoints")}
                         className={cn(
-                            "py-3 text-center border-b-2 transition-colors cursor-pointer text-xs font-bold tracking-wide",
+                            "py-3 text-center border-b-2 transition-colors cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-1.5",
                             activeTab === "waypoints"
                                 ? "border-[var(--color-border-dark)] text-[var(--color-text-primary)] bg-[var(--color-surface-card)]/50"
-                                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
+                            hasWaypointErrors && "text-red-600"
                         )}
                     >
-                        Waypoints {waypoints.length > 0 && `(${waypoints.length})`}
+                        <span>Waypoints {waypoints.length > 0 && `(${waypoints.length})`}</span>
+                        {hasWaypointErrors && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        )}
                     </button>
 
                     <button
                         type="button"
                         onClick={() => onTabChange("schedule")}
                         className={cn(
-                            "py-3 text-center border-b-2 transition-colors cursor-pointer text-xs font-bold tracking-wide",
+                            "py-3 text-center border-b-2 transition-colors cursor-pointer text-xs font-bold tracking-wide flex items-center justify-center gap-1.5",
                             activeTab === "schedule"
                                 ? "border-[var(--color-border-dark)] text-[var(--color-text-primary)] bg-[var(--color-surface-card)]/50"
-                                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
+                            fieldErrors.scheduledAt && "text-red-600"
                         )}
                     >
-                        Schedule
+                        <span>Schedule</span>
+                        {fieldErrors.scheduledAt && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        )}
                     </button>
                 </div>
 
@@ -167,9 +200,18 @@ export function MissionFormSidebar({
                                     placeholder="Enter mission name"
                                     value={name}
                                     disabled={isReadOnly}
-                                    onChange={(e) => onNameChange(e.target.value)}
-                                    className="form-input"
+                                    onChange={(e) => {
+                                        onNameChange(e.target.value);
+                                        onClearFieldError?.("name");
+                                    }}
+                                    className={cn(
+                                        "form-input",
+                                        fieldErrors.name && "form-input-error"
+                                    )}
                                 />
+                                {fieldErrors.name && (
+                                    <span className="form-error-msg">{fieldErrors.name}</span>
+                                )}
                             </div>
 
                             <div className="form-group">
@@ -202,10 +244,19 @@ export function MissionFormSidebar({
                                 <CustomSelect
                                     value={departureHubId}
                                     disabled={isReadOnly}
-                                    onValueChange={onDepartureHubIdChange}
+                                    onValueChange={(val) => {
+                                        onDepartureHubIdChange(val);
+                                        onClearFieldError?.("departureHubId");
+                                    }}
                                     options={hubOptions}
                                     placeholder="Select departure hub"
+                                    className={cn(fieldErrors.departureHubId && "form-input-error")}
                                 />
+                                {fieldErrors.departureHubId && (
+                                    <span className="form-error-msg">
+                                        {fieldErrors.departureHubId}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="form-group">
@@ -213,10 +264,19 @@ export function MissionFormSidebar({
                                 <CustomSelect
                                     value={arrivalHubId}
                                     disabled={isReadOnly}
-                                    onValueChange={onArrivalHubIdChange}
+                                    onValueChange={(val) => {
+                                        onArrivalHubIdChange(val);
+                                        onClearFieldError?.("arrivalHubId");
+                                    }}
                                     options={arrivalHubOptions}
                                     placeholder="Same as departure"
+                                    className={cn(fieldErrors.arrivalHubId && "form-input-error")}
                                 />
+                                {fieldErrors.arrivalHubId && (
+                                    <span className="form-error-msg">
+                                        {fieldErrors.arrivalHubId}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="pt-2">
@@ -228,8 +288,8 @@ export function MissionFormSidebar({
                                         <div className="flex items-start gap-2 text-[var(--color-text-muted)]">
                                             <AlertCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                                             <span>
-                                                Select departure vertiport and draw at least 2
-                                                waypoints on the map to verify route feasibility.
+                                                Select departure vertiport and add waypoints on the
+                                                map to verify route feasibility.
                                             </span>
                                         </div>
                                     ) : (
@@ -270,6 +330,12 @@ export function MissionFormSidebar({
 
                     {activeTab === "waypoints" && (
                         <div className="space-y-4">
+                            {fieldErrors.waypoints && (
+                                <div className="p-2.5 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                                    <span>{fieldErrors.waypoints}</span>
+                                </div>
+                            )}
                             {selectedWaypoint ? (
                                 <div className="space-y-3.5">
                                     <div className="flex items-center justify-between border-b border-[var(--color-border-default)] pb-2.5">
@@ -293,13 +359,17 @@ export function MissionFormSidebar({
                                             type="button"
                                             onClick={() => setWaypointSubTab("position")}
                                             className={cn(
-                                                "py-1 rounded transition-colors cursor-pointer",
+                                                "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1",
                                                 waypointSubTab === "position"
                                                     ? "bg-[var(--color-surface-panel)] shadow-2xs text-[var(--color-text-primary)] font-bold"
-                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
+                                                hasPositionErrors && "text-red-600"
                                             )}
                                         >
-                                            Position
+                                            <span>Position</span>
+                                            {hasPositionErrors && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                            )}
                                         </button>
                                         <button
                                             type="button"
@@ -336,72 +406,157 @@ export function MissionFormSidebar({
                                                     placeholder="Optional waypoint name"
                                                     value={selectedWaypoint.name || ""}
                                                     disabled={isReadOnly}
-                                                    onChange={(e) =>
+                                                    onChange={(e) => {
                                                         onUpdateWaypoint({
                                                             ...selectedWaypoint,
                                                             name: e.target.value,
-                                                        })
-                                                    }
-                                                    className="form-input"
+                                                        });
+                                                        if (selectedIdx >= 0) {
+                                                            onClearFieldError?.(
+                                                                `waypoints.${selectedIdx}.name`
+                                                            );
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        "form-input",
+                                                        nameError && "form-input-error"
+                                                    )}
                                                 />
+                                                {nameError && (
+                                                    <span className="form-error-msg">
+                                                        {nameError}
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="form-row-2">
                                                 <div className="form-group">
-                                                    <label className="form-label">Latitude</label>
+                                                    <label className="form-label">
+                                                        Latitude{" "}
+                                                        <span className="text-red-500">*</span>
+                                                    </label>
                                                     <input
                                                         type="number"
                                                         step="0.000001"
-                                                        value={selectedWaypoint.latitude}
+                                                        value={
+                                                            selectedWaypoint.latitude ===
+                                                                undefined ||
+                                                            Number.isNaN(selectedWaypoint.latitude)
+                                                                ? ""
+                                                                : selectedWaypoint.latitude
+                                                        }
                                                         disabled={isReadOnly}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
+                                                            const val =
+                                                                e.target.value === ""
+                                                                    ? (NaN as unknown as number)
+                                                                    : parseFloat(e.target.value);
                                                             onUpdateWaypoint({
                                                                 ...selectedWaypoint,
-                                                                latitude:
-                                                                    parseFloat(e.target.value) || 0,
-                                                            })
-                                                        }
-                                                        className="form-input font-mono"
+                                                                latitude: val,
+                                                            });
+                                                            if (selectedIdx >= 0) {
+                                                                onClearFieldError?.(
+                                                                    `waypoints.${selectedIdx}.latitude`
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            "form-input font-mono",
+                                                            latError && "form-input-error"
+                                                        )}
                                                     />
+                                                    {latError && (
+                                                        <span className="form-error-msg">
+                                                            {latError}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="form-group">
-                                                    <label className="form-label">Longitude</label>
+                                                    <label className="form-label">
+                                                        Longitude{" "}
+                                                        <span className="text-red-500">*</span>
+                                                    </label>
                                                     <input
                                                         type="number"
                                                         step="0.000001"
-                                                        value={selectedWaypoint.longitude}
+                                                        value={
+                                                            selectedWaypoint.longitude ===
+                                                                undefined ||
+                                                            Number.isNaN(selectedWaypoint.longitude)
+                                                                ? ""
+                                                                : selectedWaypoint.longitude
+                                                        }
                                                         disabled={isReadOnly}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
+                                                            const val =
+                                                                e.target.value === ""
+                                                                    ? (NaN as unknown as number)
+                                                                    : parseFloat(e.target.value);
                                                             onUpdateWaypoint({
                                                                 ...selectedWaypoint,
-                                                                longitude:
-                                                                    parseFloat(e.target.value) || 0,
-                                                            })
-                                                        }
-                                                        className="form-input font-mono"
+                                                                longitude: val,
+                                                            });
+                                                            if (selectedIdx >= 0) {
+                                                                onClearFieldError?.(
+                                                                    `waypoints.${selectedIdx}.longitude`
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            "form-input font-mono",
+                                                            lngError && "form-input-error"
+                                                        )}
                                                     />
+                                                    {lngError && (
+                                                        <span className="form-error-msg">
+                                                            {lngError}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
 
                                             <div className="form-row-2">
                                                 <div className="form-group">
                                                     <label className="form-label">
-                                                        Altitude (m)
+                                                        Altitude (m){" "}
+                                                        <span className="text-red-500">*</span>
                                                     </label>
                                                     <input
                                                         type="number"
-                                                        value={selectedWaypoint.altitude || 50}
+                                                        value={
+                                                            selectedWaypoint.altitude ===
+                                                                undefined ||
+                                                            Number.isNaN(selectedWaypoint.altitude)
+                                                                ? ""
+                                                                : selectedWaypoint.altitude
+                                                        }
                                                         disabled={isReadOnly}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
+                                                            const val =
+                                                                e.target.value === ""
+                                                                    ? (NaN as unknown as number)
+                                                                    : parseFloat(e.target.value);
                                                             onUpdateWaypoint({
                                                                 ...selectedWaypoint,
-                                                                altitude:
-                                                                    parseFloat(e.target.value) ||
-                                                                    50,
-                                                            })
-                                                        }
-                                                        className="form-input font-mono"
+                                                                altitude: val,
+                                                            });
+                                                            if (selectedIdx >= 0) {
+                                                                onClearFieldError?.(
+                                                                    `waypoints.${selectedIdx}.altitude`
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            "form-input font-mono",
+                                                            altError && "form-input-error"
+                                                        )}
                                                     />
+                                                    {altError && (
+                                                        <span className="form-error-msg">
+                                                            {altError}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label">
@@ -610,89 +765,130 @@ export function MissionFormSidebar({
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium">
-                                        Click a waypoint to edit details, drag on map or use arrows
-                                        to move.
-                                    </div>
                                     {waypoints.length === 0 ? (
-                                        <div className="p-6 border border-dashed border-[var(--color-border-default)] rounded-md text-center text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-card)]/40">
-                                            No waypoints defined yet. Use the map toolbar to add
-                                            points.
+                                        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                            <div className="w-14 h-14 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center mb-3 text-slate-400">
+                                                <MapPin className="w-7 h-7 stroke-[1.75]" />
+                                            </div>
+                                            <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                                No waypoints yet
+                                            </h4>
+                                            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                                                Click on the map to add waypoints
+                                            </p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-                                            {waypoints.map((wp, idx) => (
-                                                <div
-                                                    key={wp.id || wp.tempId || idx}
-                                                    onClick={() => onSelectWaypoint(wp)}
-                                                    className="flex items-center justify-between p-2.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)] hover:shadow-2xs cursor-pointer transition-all"
-                                                >
-                                                    <div className="flex items-center gap-2.5">
-                                                        <span className="w-5 h-5 rounded-full bg-[var(--color-border-dark)] text-white font-mono text-[10px] flex items-center justify-center font-bold">
-                                                            {wp.sequence}
-                                                        </span>
-                                                        <div className="text-xs font-mono">
-                                                            <span className="font-semibold text-[var(--color-text-primary)]">
-                                                                {wp.name || `Point ${wp.sequence}`}
-                                                            </span>
-                                                            <span className="text-[var(--color-text-muted)] ml-2 text-[11px]">
-                                                                Alt: {wp.altitude || 50}m
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                                        <>
+                                            <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium">
+                                                Click a waypoint to edit details, drag on map or use
+                                                arrows to move.
+                                            </div>
+                                            <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+                                                {waypoints.map((wp, idx) => {
+                                                    const wpHasError = Object.keys(
+                                                        fieldErrors
+                                                    ).some((k) =>
+                                                        k.startsWith(`waypoints.${idx}.`)
+                                                    );
+                                                    return (
+                                                        <div
+                                                            key={wp.id || wp.tempId || idx}
+                                                            onClick={() => onSelectWaypoint(wp)}
+                                                            className={cn(
+                                                                "flex items-center justify-between p-2.5 rounded-md border transition-all cursor-pointer",
+                                                                wpHasError
+                                                                    ? "border-red-300 bg-red-50/40 hover:border-red-400 dark:border-red-800 dark:bg-red-950/20"
+                                                                    : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)] hover:shadow-2xs"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center gap-2.5">
+                                                                <span
+                                                                    className={cn(
+                                                                        "w-5 h-5 rounded-full font-mono text-[10px] flex items-center justify-center font-bold text-white",
+                                                                        wpHasError
+                                                                            ? "bg-red-500"
+                                                                            : "bg-[var(--color-border-dark)]"
+                                                                    )}
+                                                                >
+                                                                    {wp.sequence}
+                                                                </span>
+                                                                <div className="text-xs font-mono">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-semibold text-[var(--color-text-primary)]">
+                                                                            {wp.name ||
+                                                                                `Point ${wp.sequence}`}
+                                                                        </span>
+                                                                        {wpHasError && (
+                                                                            <span className="text-[10px] text-red-500 font-sans font-medium flex items-center gap-0.5">
+                                                                                <AlertCircle className="w-3 h-3 text-red-500" />
+                                                                                Invalid
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-[var(--color-text-muted)] ml-2 text-[11px]">
+                                                                        Alt: {wp.altitude || 50}m
+                                                                    </span>
+                                                                </div>
+                                                            </div>
 
-                                                    {!isReadOnly && (
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                disabled={idx === 0}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    onMoveWaypointOrder?.(
-                                                                        idx,
-                                                                        idx - 1
-                                                                    );
-                                                                }}
-                                                                className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
-                                                                title="Move point up"
-                                                            >
-                                                                <ChevronUp className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    idx === waypoints.length - 1
-                                                                }
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    onMoveWaypointOrder?.(
-                                                                        idx,
-                                                                        idx + 1
-                                                                    );
-                                                                }}
-                                                                className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
-                                                                title="Move point down"
-                                                            >
-                                                                <ChevronDown className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    onDeleteWaypoint(
-                                                                        String(wp.id || wp.tempId)
-                                                                    );
-                                                                }}
-                                                                className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-tech-red)] hover:bg-red-50 cursor-pointer transition-colors"
-                                                                title="Delete point"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
+                                                            {!isReadOnly && (
+                                                                <div className="flex items-center gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={idx === 0}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onMoveWaypointOrder?.(
+                                                                                idx,
+                                                                                idx - 1
+                                                                            );
+                                                                        }}
+                                                                        className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
+                                                                        title="Move point up"
+                                                                    >
+                                                                        <ChevronUp className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            idx ===
+                                                                            waypoints.length - 1
+                                                                        }
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onMoveWaypointOrder?.(
+                                                                                idx,
+                                                                                idx + 1
+                                                                            );
+                                                                        }}
+                                                                        className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
+                                                                        title="Move point down"
+                                                                    >
+                                                                        <ChevronDown className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onDeleteWaypoint(
+                                                                                String(
+                                                                                    wp.id ||
+                                                                                        wp.tempId
+                                                                                )
+                                                                            );
+                                                                        }}
+                                                                        className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-tech-red)] hover:bg-red-50 cursor-pointer transition-colors"
+                                                                        title="Delete point"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}
@@ -709,11 +905,18 @@ export function MissionFormSidebar({
                                     "p-4 rounded-md border transition-all flex items-start gap-3.5",
                                     isReadOnly ? "cursor-default opacity-80" : "cursor-pointer",
                                     scheduleType === "immediate"
-                                        ? "border-[var(--color-tech-cyan)] bg-[var(--color-tech-cyan-light)] shadow-xs"
+                                        ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] shadow-xs"
                                         : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)]"
                                 )}
                             >
-                                <div className="w-8 h-8 rounded bg-[var(--color-tech-cyan)]/15 text-[var(--color-tech-cyan)] flex items-center justify-center shrink-0">
+                                <div
+                                    className={cn(
+                                        "w-8 h-8 rounded flex items-center justify-center shrink-0 border transition-colors",
+                                        scheduleType === "immediate"
+                                            ? "bg-[var(--color-border-dark)] text-white border-[var(--color-border-dark)]"
+                                            : "bg-slate-100 text-slate-500 border-slate-200"
+                                    )}
+                                >
                                     <Play className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1">
@@ -732,12 +935,19 @@ export function MissionFormSidebar({
                                     "p-4 rounded-md border transition-all flex flex-col gap-3",
                                     isReadOnly ? "cursor-default opacity-80" : "cursor-pointer",
                                     scheduleType === "scheduled"
-                                        ? "border-[var(--color-tech-amber)] bg-[var(--color-tech-amber-light)] shadow-xs"
+                                        ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] shadow-xs"
                                         : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)]"
                                 )}
                             >
                                 <div className="flex items-start gap-3.5">
-                                    <div className="w-8 h-8 rounded bg-[var(--color-tech-amber)]/20 text-[var(--color-tech-amber-hover)] flex items-center justify-center shrink-0">
+                                    <div
+                                        className={cn(
+                                            "w-8 h-8 rounded flex items-center justify-center shrink-0 border transition-colors",
+                                            scheduleType === "scheduled"
+                                                ? "bg-[var(--color-border-dark)] text-white border-[var(--color-border-dark)]"
+                                                : "bg-slate-100 text-slate-500 border-slate-200"
+                                        )}
+                                    >
                                         <Clock className="w-4 h-4" />
                                     </div>
                                     <div className="flex-1">
@@ -762,9 +972,20 @@ export function MissionFormSidebar({
                                             type="datetime-local"
                                             value={scheduledAt}
                                             disabled={isReadOnly}
-                                            onChange={(e) => onScheduledAtChange(e.target.value)}
-                                            className="form-input font-mono"
+                                            onChange={(e) => {
+                                                onScheduledAtChange(e.target.value);
+                                                onClearFieldError?.("scheduledAt");
+                                            }}
+                                            className={cn(
+                                                "form-input font-mono",
+                                                fieldErrors.scheduledAt && "form-input-error"
+                                            )}
                                         />
+                                        {fieldErrors.scheduledAt && (
+                                            <span className="form-error-msg">
+                                                {fieldErrors.scheduledAt}
+                                            </span>
+                                        )}
                                     </div>
                                 )}
                             </div>

@@ -558,16 +558,11 @@ export const getMissionsResponse = zod
  * Plan a new flight mission in draft status
  * @summary Create a new mission
  */
-export const createMissionBodyNameMin = 0;
 export const createMissionBodyNameMax = 255;
 
 export const createMissionBody = zod
     .object({
-        name: zod
-            .string()
-            .min(createMissionBodyNameMin)
-            .max(createMissionBodyNameMax)
-            .describe("Mission name"),
+        name: zod.string().min(1).max(createMissionBodyNameMax).describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().min(1).describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().min(1).describe("Arrival Hub UUID identifier"),
