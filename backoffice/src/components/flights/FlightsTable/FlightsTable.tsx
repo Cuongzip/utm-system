@@ -126,13 +126,15 @@ export function FlightsTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="16%">FLIGHT NUMBER</TableHead>
-                            <TableHead width="16%">DRONE</TableHead>
-                            <TableHead width="18%">DEPARTURE HUB</TableHead>
-                            <TableHead width="18%">ARRIVAL HUB</TableHead>
-                            <TableHead width="14%">STATUS</TableHead>
-                            <TableHead width="14%">PLANNED DEPARTURE</TableHead>
-                            <TableHead width="4%" align="right"></TableHead>
+                            <TableHead width="180px">FLIGHT NUMBER</TableHead>
+                            <TableHead width="160px">DRONE</TableHead>
+                            <TableHead width="180px">DEPARTURE HUB</TableHead>
+                            <TableHead width="180px">ARRIVAL HUB</TableHead>
+                            <TableHead width="130px">STATUS</TableHead>
+                            <TableHead width="160px">PLANNED DEPARTURE</TableHead>
+                            <TableHead width="100px" align="right">
+                                ACTIONS
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -1,5 +1,6 @@
 package com.utm.connectivity.viewmodel;
 
+import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -22,7 +23,7 @@ public record DeviceRegistrationVm(
         String deviceIdentifier,
 
         @Schema(description = "Current connection status", example = "online")
-        String connectionStatus,
+        DeviceConnectionStatus connectionStatus,
 
         @Schema(description = "Current active WebSocket session ID", example = "ws-session-abc-123")
         String socketId,

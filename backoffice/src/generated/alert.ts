@@ -35,11 +35,11 @@ export const getAlertsResponse = zod
                         id: zod.string().optional().describe("Unique alert UUID identifier"),
                         alertType: zod.string().optional().describe("Alert type code"),
                         severity: zod
-                            .string()
+                            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
                             .optional()
                             .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
                         status: zod
-                            .string()
+                            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
                             .optional()
                             .describe(
                                 "Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"
@@ -153,9 +153,12 @@ export const resolveAlertResponse = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
         alertType: zod.string().optional().describe("Alert type code"),
-        severity: zod.string().optional().describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
         status: zod
-            .string()
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
             .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
@@ -217,9 +220,12 @@ export const acknowledgeAlertResponse = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
         alertType: zod.string().optional().describe("Alert type code"),
-        severity: zod.string().optional().describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
         status: zod
-            .string()
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
             .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
@@ -274,9 +280,12 @@ export const getAlertByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
         alertType: zod.string().optional().describe("Alert type code"),
-        severity: zod.string().optional().describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
         status: zod
-            .string()
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
             .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
@@ -327,9 +336,12 @@ export const getActiveAlertsResponseItem = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
         alertType: zod.string().optional().describe("Alert type code"),
-        severity: zod.string().optional().describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
         status: zod
-            .string()
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
             .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),

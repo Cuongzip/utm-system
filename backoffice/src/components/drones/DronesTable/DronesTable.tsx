@@ -71,13 +71,15 @@ export function DronesTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="20%">REGISTRATION</TableHead>
-                            <TableHead width="15%">MANUFACTURER</TableHead>
-                            <TableHead width="15%">MODEL</TableHead>
-                            <TableHead width="18%">HOME HUB</TableHead>
-                            <TableHead width="14%">STATUS</TableHead>
-                            <TableHead width="14%">MAX PAYLOAD</TableHead>
-                            <TableHead width="4%" align="right"></TableHead>
+                            <TableHead width="180px">REGISTRATION</TableHead>
+                            <TableHead width="150px">MANUFACTURER</TableHead>
+                            <TableHead width="150px">MODEL</TableHead>
+                            <TableHead width="180px">HOME HUB</TableHead>
+                            <TableHead width="130px">STATUS</TableHead>
+                            <TableHead width="130px">MAX PAYLOAD</TableHead>
+                            <TableHead width="100px" align="right">
+                                ACTIONS
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

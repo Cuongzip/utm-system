@@ -1,5 +1,7 @@
 package com.utm.organization.viewmodel;
 
+import com.utm.organization.model.enumeration.OrganizationStatus;
+import com.utm.organization.model.enumeration.OrganizationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -13,7 +15,7 @@ public record OrganizationVm(
         String name,
 
         @Schema(description = "Organization category / type", example = "operator")
-        String type,
+        OrganizationType type,
 
         @Schema(description = "Business registration number / license code", example = "VN-BIZ-0109988776")
         String registrationNumber,
@@ -22,7 +24,7 @@ public record OrganizationVm(
         String contactInfo,
 
         @Schema(description = "Operational status", example = "active")
-        String status,
+        OrganizationStatus status,
 
         @Schema(description = "Record creation timestamp", example = "2026-09-28T10:00:00Z")
         ZonedDateTime createdOn,

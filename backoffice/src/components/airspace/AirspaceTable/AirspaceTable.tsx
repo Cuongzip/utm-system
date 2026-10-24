@@ -75,12 +75,14 @@ export function AirspaceTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="30%">ZONE NAME</TableHead>
-                            <TableHead width="16%">TYPE</TableHead>
-                            <TableHead width="22%">ASSOCIATED HUB</TableHead>
-                            <TableHead width="14%">CEILING ALT</TableHead>
-                            <TableHead width="12%">STATUS</TableHead>
-                            <TableHead width="6%" align="right"></TableHead>
+                            <TableHead width="240px">ZONE NAME</TableHead>
+                            <TableHead width="150px">TYPE</TableHead>
+                            <TableHead width="180px">ASSOCIATED HUB</TableHead>
+                            <TableHead width="130px">CEILING ALT</TableHead>
+                            <TableHead width="130px">STATUS</TableHead>
+                            <TableHead width="100px" align="right">
+                                ACTIONS
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

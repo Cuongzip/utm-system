@@ -8,35 +8,44 @@
 import zod from "zod";
 
 /**
- * Apply resolution strategy (altitude_change, speed_adjustment, reroute, hold) and mark conflict as resolved
- * @summary Resolve conflict
+ * Get list of all detected airspace conflicts with optional filters
+ * @summary List all conflicts
  */
-export const resolveConflictParams = zod.object({
-    id: zod.string().describe("Unique UUID identifier of the conflict"),
+export const getAllConflictsQueryParams = zod.object({
+    status: zod
+        .string()
+        .optional()
+        .describe(
+            "Filter by conflict status (detected, notified, resolving, resolved, acknowledged, dismissed)"
+        ),
+    severity: zod
+        .string()
+        .optional()
+        .describe("Filter by severity (emergency, critical, high, warning, medium, low)"),
+    flightId: zod.string().optional().describe("Filter by flight ID (primary or secondary)"),
 });
 
-export const resolveConflictBody = zod
-    .object({
-        strategy: zod
-            .string()
-            .min(1)
-            .describe("Resolution strategy (altitude_change, speed_adjustment, reroute, hold)"),
-        actions: zod
-            .record(zod.string(), zod.any())
-            .describe("Detailed commands or directives to execute the resolution"),
-    })
-    .describe("Payload to resolve an airspace conflict");
-
-export const resolveConflictResponse = zod
+export const getAllConflictsResponseItem = zod
     .object({
         id: zod.string().optional().describe("Unique UUID of the conflict record"),
         conflictType: zod
-            .string()
+            .enum([
+                "loss_of_separation",
+                "geofence_violation",
+                "airspace_breach",
+                "terrain_proximity",
+                "separation_minimum",
+                "head_on",
+                "convergence",
+            ])
             .optional()
             .describe("Conflict type (separation_minimum, head_on, convergence, airspace_breach)"),
-        severity: zod.string().optional().describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
+        severity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
         status: zod
-            .string()
+            .enum(["detected", "notified", "acknowledged", "resolving", "resolved", "dismissed"])
             .optional()
             .describe(
                 "Current conflict lifecycle status (detected, notified, resolving, resolved)"
@@ -79,7 +88,276 @@ export const resolveConflictResponse = zod
             .optional()
             .describe("Calculated time to closest point of approach / conflict in seconds"),
         description: zod.string().optional().describe("Detailed conflict explanation"),
-        resolutionStrategy: zod.string().optional().describe("Applied resolution strategy"),
+        resolutionStrategy: zod
+            .enum([
+                "hover",
+                "reroute",
+                "divert_altitude",
+                "return_to_base",
+                "speed_adjustment",
+                "altitude_change",
+                "hold",
+                "auto_cleared",
+            ])
+            .optional()
+            .describe("Applied resolution strategy"),
+        resolutionActions: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Detailed resolution directives"),
+        resolvedAt: zod.iso.datetime({}).optional().describe("Timestamp when marked resolved"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("User or system agent that resolved the conflict"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("User who created this record"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod.string().optional().describe("User who last modified this record"),
+    })
+    .describe("Airspace Conflict Detail View Model");
+export const getAllConflictsResponse = zod.array(getAllConflictsResponseItem);
+
+/**
+ * Report an airspace conflict or automated conformance breach
+ * @summary Report or create a conflict
+ */
+export const createConflictBody = zod
+    .object({
+        primaryFlightId: zod.string().min(1).describe("Primary flight UUID"),
+        secondaryFlightId: zod
+            .string()
+            .optional()
+            .describe("Secondary flight UUID (if flight-to-flight conflict)"),
+        conflictType: zod
+            .string()
+            .optional()
+            .describe(
+                "Conflict type (geofence_violation, loss_of_separation, airspace_breach, terrain_proximity)"
+            ),
+        severity: zod
+            .string()
+            .optional()
+            .describe("Severity (warning, critical, emergency, low, medium, high)"),
+        hubId: zod.string().optional().describe("Associated Hub ID"),
+        locationLat: zod.number().optional().describe("Latitude of conflict centroid"),
+        locationLon: zod.number().optional().describe("Longitude of conflict centroid"),
+        altitude: zod.number().optional().describe("Altitude in meters"),
+        separationDistance: zod
+            .number()
+            .optional()
+            .describe("Measured horizontal separation or cross-track deviation in meters"),
+        verticalSeparation: zod
+            .number()
+            .optional()
+            .describe("Measured vertical separation or altitude error in meters"),
+        timeToConflictSec: zod
+            .number()
+            .optional()
+            .describe("Estimated time to conflict in seconds"),
+        description: zod
+            .string()
+            .optional()
+            .describe("Descriptive reason or breach violation details"),
+    })
+    .describe("Payload to report or create a new conflict");
+
+/**
+ * Apply resolution strategy (altitude_change, speed_adjustment, reroute, hold) and mark conflict as resolved
+ * @summary Resolve conflict
+ */
+export const resolveConflictParams = zod.object({
+    id: zod.string().describe("Unique UUID identifier of the conflict"),
+});
+
+export const resolveConflictBody = zod
+    .object({
+        strategy: zod
+            .string()
+            .min(1)
+            .describe("Resolution strategy (altitude_change, speed_adjustment, reroute, hold)"),
+        actions: zod
+            .record(zod.string(), zod.any())
+            .describe("Detailed commands or directives to execute the resolution"),
+    })
+    .describe("Payload to resolve an airspace conflict");
+
+export const resolveConflictResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID of the conflict record"),
+        conflictType: zod
+            .enum([
+                "loss_of_separation",
+                "geofence_violation",
+                "airspace_breach",
+                "terrain_proximity",
+                "separation_minimum",
+                "head_on",
+                "convergence",
+            ])
+            .optional()
+            .describe("Conflict type (separation_minimum, head_on, convergence, airspace_breach)"),
+        severity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
+        status: zod
+            .enum(["detected", "notified", "acknowledged", "resolving", "resolved", "dismissed"])
+            .optional()
+            .describe(
+                "Current conflict lifecycle status (detected, notified, resolving, resolved)"
+            ),
+        primaryFlightId: zod
+            .string()
+            .optional()
+            .describe("UUID identifier of primary flight involved"),
+        secondaryFlightId: zod
+            .string()
+            .optional()
+            .describe("UUID identifier of secondary flight involved"),
+        hubId: zod.string().optional().describe("Associated Hub UUID identifier"),
+        detectedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the conflict was detected"),
+        detectionMethod: zod
+            .string()
+            .optional()
+            .describe("Detection source / mechanism (automated_telemetry, manual)"),
+        location: zod
+            .object({
+                latitude: zod.number().optional().describe("WGS84 Latitude"),
+                longitude: zod.number().optional().describe("WGS84 Longitude"),
+            })
+            .optional()
+            .describe("WGS84 Coordinates representation"),
+        altitude: zod.number().optional().describe("Altitude of conflict event in meters"),
+        separationDistance: zod
+            .number()
+            .optional()
+            .describe("Measured horizontal separation distance in meters"),
+        verticalSeparation: zod
+            .number()
+            .optional()
+            .describe("Measured vertical separation distance in meters"),
+        timeToConflictSec: zod
+            .number()
+            .optional()
+            .describe("Calculated time to closest point of approach / conflict in seconds"),
+        description: zod.string().optional().describe("Detailed conflict explanation"),
+        resolutionStrategy: zod
+            .enum([
+                "hover",
+                "reroute",
+                "divert_altitude",
+                "return_to_base",
+                "speed_adjustment",
+                "altitude_change",
+                "hold",
+                "auto_cleared",
+            ])
+            .optional()
+            .describe("Applied resolution strategy"),
+        resolutionActions: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Detailed resolution directives"),
+        resolvedAt: zod.iso.datetime({}).optional().describe("Timestamp when marked resolved"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("User or system agent that resolved the conflict"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("User who created this record"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod.string().optional().describe("User who last modified this record"),
+    })
+    .describe("Airspace Conflict Detail View Model");
+
+/**
+ * ATC or operator acknowledges an active conflict alert
+ * @summary Acknowledge conflict
+ */
+export const acknowledgeConflictParams = zod.object({
+    id: zod.string().describe("Unique UUID identifier of the conflict"),
+});
+
+export const acknowledgeConflictResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID of the conflict record"),
+        conflictType: zod
+            .enum([
+                "loss_of_separation",
+                "geofence_violation",
+                "airspace_breach",
+                "terrain_proximity",
+                "separation_minimum",
+                "head_on",
+                "convergence",
+            ])
+            .optional()
+            .describe("Conflict type (separation_minimum, head_on, convergence, airspace_breach)"),
+        severity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
+        status: zod
+            .enum(["detected", "notified", "acknowledged", "resolving", "resolved", "dismissed"])
+            .optional()
+            .describe(
+                "Current conflict lifecycle status (detected, notified, resolving, resolved)"
+            ),
+        primaryFlightId: zod
+            .string()
+            .optional()
+            .describe("UUID identifier of primary flight involved"),
+        secondaryFlightId: zod
+            .string()
+            .optional()
+            .describe("UUID identifier of secondary flight involved"),
+        hubId: zod.string().optional().describe("Associated Hub UUID identifier"),
+        detectedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the conflict was detected"),
+        detectionMethod: zod
+            .string()
+            .optional()
+            .describe("Detection source / mechanism (automated_telemetry, manual)"),
+        location: zod
+            .object({
+                latitude: zod.number().optional().describe("WGS84 Latitude"),
+                longitude: zod.number().optional().describe("WGS84 Longitude"),
+            })
+            .optional()
+            .describe("WGS84 Coordinates representation"),
+        altitude: zod.number().optional().describe("Altitude of conflict event in meters"),
+        separationDistance: zod
+            .number()
+            .optional()
+            .describe("Measured horizontal separation distance in meters"),
+        verticalSeparation: zod
+            .number()
+            .optional()
+            .describe("Measured vertical separation distance in meters"),
+        timeToConflictSec: zod
+            .number()
+            .optional()
+            .describe("Calculated time to closest point of approach / conflict in seconds"),
+        description: zod.string().optional().describe("Detailed conflict explanation"),
+        resolutionStrategy: zod
+            .enum([
+                "hover",
+                "reroute",
+                "divert_altitude",
+                "return_to_base",
+                "speed_adjustment",
+                "altitude_change",
+                "hold",
+                "auto_cleared",
+            ])
+            .optional()
+            .describe("Applied resolution strategy"),
         resolutionActions: zod
             .record(zod.string(), zod.any())
             .optional()
@@ -129,89 +407,6 @@ export const evaluateConflictsResponse = zod
     .describe("Summary result of an airspace conflict detection scan");
 
 /**
- * Get list of all detected airspace conflicts with optional filters
- * @summary List all conflicts
- */
-export const getAllConflictsQueryParams = zod.object({
-    status: zod
-        .string()
-        .optional()
-        .describe("Filter by conflict status (detected, notified, resolving, resolved)"),
-    severity: zod.string().optional().describe("Filter by severity (LOW, MEDIUM, HIGH, CRITICAL)"),
-    flightId: zod.string().optional().describe("Filter by flight ID (primary or secondary)"),
-});
-
-export const getAllConflictsResponseItem = zod
-    .object({
-        id: zod.string().optional().describe("Unique UUID of the conflict record"),
-        conflictType: zod
-            .string()
-            .optional()
-            .describe("Conflict type (separation_minimum, head_on, convergence, airspace_breach)"),
-        severity: zod.string().optional().describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
-        status: zod
-            .string()
-            .optional()
-            .describe(
-                "Current conflict lifecycle status (detected, notified, resolving, resolved)"
-            ),
-        primaryFlightId: zod
-            .string()
-            .optional()
-            .describe("UUID identifier of primary flight involved"),
-        secondaryFlightId: zod
-            .string()
-            .optional()
-            .describe("UUID identifier of secondary flight involved"),
-        hubId: zod.string().optional().describe("Associated Hub UUID identifier"),
-        detectedAt: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Timestamp when the conflict was detected"),
-        detectionMethod: zod
-            .string()
-            .optional()
-            .describe("Detection source / mechanism (automated_telemetry, manual)"),
-        location: zod
-            .object({
-                latitude: zod.number().optional().describe("WGS84 Latitude"),
-                longitude: zod.number().optional().describe("WGS84 Longitude"),
-            })
-            .optional()
-            .describe("WGS84 Coordinates representation"),
-        altitude: zod.number().optional().describe("Altitude of conflict event in meters"),
-        separationDistance: zod
-            .number()
-            .optional()
-            .describe("Measured horizontal separation distance in meters"),
-        verticalSeparation: zod
-            .number()
-            .optional()
-            .describe("Measured vertical separation distance in meters"),
-        timeToConflictSec: zod
-            .number()
-            .optional()
-            .describe("Calculated time to closest point of approach / conflict in seconds"),
-        description: zod.string().optional().describe("Detailed conflict explanation"),
-        resolutionStrategy: zod.string().optional().describe("Applied resolution strategy"),
-        resolutionActions: zod
-            .record(zod.string(), zod.any())
-            .optional()
-            .describe("Detailed resolution directives"),
-        resolvedAt: zod.iso.datetime({}).optional().describe("Timestamp when marked resolved"),
-        resolvedBy: zod
-            .string()
-            .optional()
-            .describe("User or system agent that resolved the conflict"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("User who created this record"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod.string().optional().describe("User who last modified this record"),
-    })
-    .describe("Airspace Conflict Detail View Model");
-export const getAllConflictsResponse = zod.array(getAllConflictsResponseItem);
-
-/**
  * Retrieve detailed information of a specific airspace conflict including separation and CPA
  * @summary Get conflict details
  */
@@ -223,12 +418,23 @@ export const getConflictByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID of the conflict record"),
         conflictType: zod
-            .string()
+            .enum([
+                "loss_of_separation",
+                "geofence_violation",
+                "airspace_breach",
+                "terrain_proximity",
+                "separation_minimum",
+                "head_on",
+                "convergence",
+            ])
             .optional()
             .describe("Conflict type (separation_minimum, head_on, convergence, airspace_breach)"),
-        severity: zod.string().optional().describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
+        severity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
         status: zod
-            .string()
+            .enum(["detected", "notified", "acknowledged", "resolving", "resolved", "dismissed"])
             .optional()
             .describe(
                 "Current conflict lifecycle status (detected, notified, resolving, resolved)"
@@ -271,7 +477,19 @@ export const getConflictByIdResponse = zod
             .optional()
             .describe("Calculated time to closest point of approach / conflict in seconds"),
         description: zod.string().optional().describe("Detailed conflict explanation"),
-        resolutionStrategy: zod.string().optional().describe("Applied resolution strategy"),
+        resolutionStrategy: zod
+            .enum([
+                "hover",
+                "reroute",
+                "divert_altitude",
+                "return_to_base",
+                "speed_adjustment",
+                "altitude_change",
+                "hold",
+                "auto_cleared",
+            ])
+            .optional()
+            .describe("Applied resolution strategy"),
         resolutionActions: zod
             .record(zod.string(), zod.any())
             .optional()
@@ -296,12 +514,23 @@ export const getActiveConflictsResponseItem = zod
     .object({
         id: zod.string().optional().describe("Unique UUID of the conflict record"),
         conflictType: zod
-            .string()
+            .enum([
+                "loss_of_separation",
+                "geofence_violation",
+                "airspace_breach",
+                "terrain_proximity",
+                "separation_minimum",
+                "head_on",
+                "convergence",
+            ])
             .optional()
             .describe("Conflict type (separation_minimum, head_on, convergence, airspace_breach)"),
-        severity: zod.string().optional().describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
+        severity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Severity level (LOW, MEDIUM, HIGH, CRITICAL)"),
         status: zod
-            .string()
+            .enum(["detected", "notified", "acknowledged", "resolving", "resolved", "dismissed"])
             .optional()
             .describe(
                 "Current conflict lifecycle status (detected, notified, resolving, resolved)"
@@ -344,7 +573,19 @@ export const getActiveConflictsResponseItem = zod
             .optional()
             .describe("Calculated time to closest point of approach / conflict in seconds"),
         description: zod.string().optional().describe("Detailed conflict explanation"),
-        resolutionStrategy: zod.string().optional().describe("Applied resolution strategy"),
+        resolutionStrategy: zod
+            .enum([
+                "hover",
+                "reroute",
+                "divert_altitude",
+                "return_to_base",
+                "speed_adjustment",
+                "altitude_change",
+                "hold",
+                "auto_cleared",
+            ])
+            .optional()
+            .describe("Applied resolution strategy"),
         resolutionActions: zod
             .record(zod.string(), zod.any())
             .optional()

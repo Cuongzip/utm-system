@@ -1,20 +1,13 @@
 import { apiClient } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { Drone, DroneListResponse, DroneRegistrationPayload } from "@/types";
+import type { Drone, DroneListResponse, DroneRegistrationPayload, DroneQueryParams } from "@/types";
+
+export type GetDronesParams = DroneQueryParams;
 
 export const droneService = {
-    getDrones: async (params?: {
-        status?: string;
-        search?: string;
-        homeHubId?: string;
-        ownerId?: string;
-        limit?: number;
-        offset?: number;
-    }): Promise<DroneListResponse> => {
+    getDrones: async (params?: GetDronesParams): Promise<DroneListResponse> => {
         const searchParams = new URLSearchParams();
-        if (params?.status && params.status !== "ALL") {
-            searchParams.set("status", params.status.toLowerCase());
-        }
+        if (params?.status) searchParams.set("status", params.status);
         if (params?.search) searchParams.set("search", params.search);
         if (params?.homeHubId) searchParams.set("homeHubId", params.homeHubId);
         if (params?.ownerId) searchParams.set("ownerId", params.ownerId);

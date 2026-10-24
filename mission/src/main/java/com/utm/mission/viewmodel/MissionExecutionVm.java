@@ -1,5 +1,6 @@
 package com.utm.mission.viewmodel;
 
+import com.utm.mission.model.enumeration.ExecutionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -28,7 +29,7 @@ public record MissionExecutionVm(
         ZonedDateTime completedAt,
 
         @Schema(description = "Execution progress status (in_progress, paused, completed, aborted, failed)", example = "in_progress")
-        String status,
+        ExecutionStatus status,
 
         @Schema(description = "Creation timestamp", example = "2026-10-11T09:00:00Z")
         ZonedDateTime createdOn,

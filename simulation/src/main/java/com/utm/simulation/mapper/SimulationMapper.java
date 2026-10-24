@@ -16,7 +16,6 @@ import org.mapstruct.Named;
 )
 public interface SimulationMapper {
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
     @Mapping(target = "currentLat", source = "currentLat", qualifiedByName = "roundCoord")
     @Mapping(target = "currentLon", source = "currentLon", qualifiedByName = "roundCoord")
     @Mapping(target = "currentAlt", source = "currentAlt", qualifiedByName = "roundOneDecimal")
@@ -49,10 +48,7 @@ public interface SimulationMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     SimulationSession toEntity(SimulationSessionCreateVm createVm);
 
-    @Named("mapStatusToString")
-    default String mapStatusToString(SimulationStatus status) {
-        return status != null ? status.getValue() : null;
-    }
+
 
     @Named("roundCoord")
     default Double roundCoord(Double val) {

@@ -4,11 +4,13 @@ import type {
     updateHubBody,
     getHubByIdResponse,
     getHubsResponse,
+    getHubsQueryParams,
 } from "@/generated/hub";
 
 export type CreateHubPayload = zod.infer<typeof createHubBody>;
 export type UpdateHubPayload = zod.infer<typeof updateHubBody>;
-export type HubStatus = NonNullable<UpdateHubPayload["status"]>;
+export type HubQueryParams = zod.infer<typeof getHubsQueryParams>;
+export type HubStatus = NonNullable<zod.infer<typeof getHubByIdResponse>["status"]>;
 
 export type HubGenerated = NonNullable<zod.infer<typeof getHubByIdResponse>>;
 export type Hub = HubGenerated & {

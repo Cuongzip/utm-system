@@ -15,8 +15,6 @@ import java.util.List;
 )
 public interface AlertMapper {
 
-    @Mapping(target = "severity", expression = "java(entity.getSeverity() != null ? entity.getSeverity().getValue() : null)")
-    @Mapping(target = "status", expression = "java(entity.getStatus() != null ? entity.getStatus().getValue() : null)")
     AlertVm toVm(Alert entity);
 
     List<AlertVm> toVmList(List<Alert> entities);

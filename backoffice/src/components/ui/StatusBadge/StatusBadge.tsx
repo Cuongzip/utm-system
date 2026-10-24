@@ -54,23 +54,31 @@ export function StatusBadge({
                 normalized === "idle" ||
                 normalized === "contingent" ||
                 normalized === "restricted" ||
-                normalized === "warning"
+                normalized === "warning" ||
+                normalized === "paused"
               ? styles.connecting
               : normalized === "alert" ||
                   normalized === "error" ||
                   normalized === "failed" ||
+                  normalized === "aborted" ||
                   normalized === "non_conforming" ||
                   normalized === "cancelled" ||
                   normalized === "no_fly_zone" ||
                   normalized === "nfz"
                 ? styles.alert
                 : normalized === "in_flight" ||
+                    normalized === "executing" ||
+                    normalized === "running" ||
                     normalized === "returning" ||
                     normalized === "pre_flight" ||
                     normalized === "hub_corridor" ||
                     normalized === "corridor"
                   ? styles.inFlight
-                  : styles.offline;
+                  : normalized === "scheduled" || normalized === "planned"
+                    ? styles.scheduled
+                    : normalized === "draft"
+                      ? styles.draft
+                      : styles.offline;
 
     const displayLabel = label || String(status || "").replace(/_/g, " ");
 

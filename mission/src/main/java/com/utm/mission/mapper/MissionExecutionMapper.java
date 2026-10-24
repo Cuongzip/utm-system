@@ -32,13 +32,7 @@ public interface MissionExecutionMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     MissionExecution toEntity(MissionExecutePostVm postVm, String missionId, Integer totalWaypoints);
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
     MissionExecutionVm toVm(MissionExecution execution);
 
     List<MissionExecutionVm> toVmList(List<MissionExecution> executions);
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(ExecutionStatus status) {
-        return status != null ? status.getValue() : null;
-    }
 }

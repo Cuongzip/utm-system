@@ -1,5 +1,6 @@
 package com.utm.mission.viewmodel;
 
+import com.utm.mission.model.enumeration.MissionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Brief summary of mission for inter-service lookups")
@@ -17,6 +18,6 @@ public record MissionBriefVm(
         String arrivalHubId,
 
         @Schema(description = "Mission operational status", example = "draft")
-        String status
+        MissionStatus status
 ) {
 }

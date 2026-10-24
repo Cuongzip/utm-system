@@ -4,5 +4,6 @@ export * from "./BaseCesiumMap";
 export * from "./layers/HubsLayer";
 export * from "./layers/AirspaceLayer";
 export * from "./layers/FlightsLayer";
+export * from "./layers/MissionLayer";
 export * from "./MapInspector";
 export * from "./MapCardLayout";

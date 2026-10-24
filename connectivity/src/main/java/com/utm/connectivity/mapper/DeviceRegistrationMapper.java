@@ -20,7 +20,6 @@ public interface DeviceRegistrationMapper {
     @Mapping(target = "droneRegistrationNumber", source = "drone.registrationNumber")
     @Mapping(target = "droneModel", source = "drone.model")
     @Mapping(target = "deviceIdentifier", source = "entity.deviceIdentifier")
-    @Mapping(target = "connectionStatus", source = "entity.connectionStatus", qualifiedByName = "mapStatusToString")
     @Mapping(target = "socketId", source = "entity.socketId")
     @Mapping(target = "certificateFingerprint", source = "entity.certificateFingerprint")
     @Mapping(target = "lastSeenAt", source = "entity.lastSeenAt")
@@ -43,11 +42,6 @@ public interface DeviceRegistrationMapper {
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     DeviceRegistration toEntity(DeviceRegistrationPostVm postVm);
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(DeviceConnectionStatus status) {
-        return status != null ? status.getValue() : null;
-    }
 
     @Named("trimString")
     default String trimString(String value) {

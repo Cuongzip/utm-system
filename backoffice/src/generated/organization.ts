@@ -19,7 +19,10 @@ export const getOrganizationByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the organization"),
         name: zod.string().optional().describe("Legal / operational organization name"),
-        type: zod.string().optional().describe("Organization category / type"),
+        type: zod
+            .enum(["operator", "authority", "enterprise"])
+            .optional()
+            .describe("Organization category / type"),
         registrationNumber: zod
             .string()
             .optional()
@@ -28,7 +31,10 @@ export const getOrganizationByIdResponse = zod
             .string()
             .optional()
             .describe("Contact details such as email, phone, physical address"),
-        status: zod.string().optional().describe("Operational status"),
+        status: zod
+            .enum(["active", "suspended", "inactive"])
+            .optional()
+            .describe("Operational status"),
         createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
         createdBy: zod
             .string()
@@ -80,7 +86,10 @@ export const updateOrganizationResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the organization"),
         name: zod.string().optional().describe("Legal / operational organization name"),
-        type: zod.string().optional().describe("Organization category / type"),
+        type: zod
+            .enum(["operator", "authority", "enterprise"])
+            .optional()
+            .describe("Organization category / type"),
         registrationNumber: zod
             .string()
             .optional()
@@ -89,7 +98,10 @@ export const updateOrganizationResponse = zod
             .string()
             .optional()
             .describe("Contact details such as email, phone, physical address"),
-        status: zod.string().optional().describe("Operational status"),
+        status: zod
+            .enum(["active", "suspended", "inactive"])
+            .optional()
+            .describe("Operational status"),
         createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
         createdBy: zod
             .string()
@@ -149,7 +161,10 @@ export const getOrganizationsResponse = zod
                             .string()
                             .optional()
                             .describe("Legal / operational organization name"),
-                        type: zod.string().optional().describe("Organization category / type"),
+                        type: zod
+                            .enum(["operator", "authority", "enterprise"])
+                            .optional()
+                            .describe("Organization category / type"),
                         registrationNumber: zod
                             .string()
                             .optional()
@@ -158,7 +173,10 @@ export const getOrganizationsResponse = zod
                             .string()
                             .optional()
                             .describe("Contact details such as email, phone, physical address"),
-                        status: zod.string().optional().describe("Operational status"),
+                        status: zod
+                            .enum(["active", "suspended", "inactive"])
+                            .optional()
+                            .describe("Operational status"),
                         createdOn: zod.iso
                             .datetime({})
                             .optional()

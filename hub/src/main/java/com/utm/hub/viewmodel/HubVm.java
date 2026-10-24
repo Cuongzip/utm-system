@@ -1,6 +1,7 @@
 package com.utm.hub.viewmodel;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.utm.hub.model.enumeration.HubStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -28,7 +29,7 @@ public record HubVm(
         Double airspaceRadius,
 
         @Schema(description = "Current operational status of the Hub", example = "active")
-        String status,
+        HubStatus status,
 
         @Schema(description = "Number of available drones currently docked at the Hub", example = "3")
         Long availableDronesCount,

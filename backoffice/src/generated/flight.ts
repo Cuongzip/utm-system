@@ -66,17 +66,26 @@ export const getFlightByIdResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -200,17 +209,26 @@ export const updateFlightResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -336,17 +354,32 @@ export const getFlightsResponse = zod
                                 "GeoJSON LineString representation for 2D/3D flight route coordinates"
                             ),
                         authorizationStatus: zod
-                            .string()
+                            .enum(["pending", "approved", "rejected"])
                             .optional()
                             .describe("ATC authorization status (pending, approved, rejected)"),
                         conformanceStatus: zod
-                            .string()
+                            .enum([
+                                "conformant",
+                                "conforming",
+                                "contingent",
+                                "non_conforming",
+                                "unknown",
+                            ])
                             .optional()
                             .describe(
                                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
                             ),
                         status: zod
-                            .string()
+                            .enum([
+                                "planned",
+                                "scheduled",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "cancelled",
+                                "diverted",
+                                "emergency_landing",
+                            ])
                             .optional()
                             .describe(
                                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -479,17 +512,26 @@ export const startFlightResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -573,17 +615,26 @@ export const rejectFlightResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -661,17 +712,26 @@ export const completeFlightResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -749,17 +809,26 @@ export const authorizeFlightResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
@@ -846,17 +915,26 @@ export const abortFlightResponse = zod
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
         authorizationStatus: zod
-            .string()
+            .enum(["pending", "approved", "rejected"])
             .optional()
             .describe("ATC authorization status (pending, approved, rejected)"),
         conformanceStatus: zod
-            .string()
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
             .optional()
             .describe(
                 "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
             ),
         status: zod
-            .string()
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
             .optional()
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"

@@ -31,7 +31,10 @@ export const getDroneByIdResponse = zod
             .optional()
             .describe("Rated battery capacity in Watt-hours (Wh)"),
         maxPayload: zod.number().optional().describe("Maximum payload capacity in kilograms (kg)"),
-        status: zod.string().optional().describe("Current operational status"),
+        status: zod
+            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
+            .optional()
+            .describe("Current operational status"),
         owner: zod
             .object({
                 id: zod.string().optional().describe("Organization UUID identifier"),
@@ -124,7 +127,10 @@ export const updateDroneResponse = zod
             .optional()
             .describe("Rated battery capacity in Watt-hours (Wh)"),
         maxPayload: zod.number().optional().describe("Maximum payload capacity in kilograms (kg)"),
-        status: zod.string().optional().describe("Current operational status"),
+        status: zod
+            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
+            .optional()
+            .describe("Current operational status"),
         owner: zod
             .object({
                 id: zod.string().optional().describe("Organization UUID identifier"),
@@ -237,7 +243,10 @@ export const getDronesResponse = zod
                             .number()
                             .optional()
                             .describe("Maximum payload capacity in kilograms (kg)"),
-                        status: zod.string().optional().describe("Current operational status"),
+                        status: zod
+                            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
+                            .optional()
+                            .describe("Current operational status"),
                         owner: zod
                             .object({
                                 id: zod

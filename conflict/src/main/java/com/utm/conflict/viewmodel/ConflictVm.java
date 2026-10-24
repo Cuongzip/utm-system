@@ -1,5 +1,9 @@
 package com.utm.conflict.viewmodel;
 
+import com.utm.conflict.model.enumeration.ConflictSeverity;
+import com.utm.conflict.model.enumeration.ConflictStatus;
+import com.utm.conflict.model.enumeration.ConflictType;
+import com.utm.conflict.model.enumeration.ResolutionStrategy;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.ZonedDateTime;
 import java.util.Map;
@@ -10,13 +14,13 @@ public record ConflictVm(
         String id,
 
         @Schema(description = "Conflict type (separation_minimum, head_on, convergence, airspace_breach)", example = "separation_minimum")
-        String conflictType,
+        ConflictType conflictType,
 
         @Schema(description = "Severity level (LOW, MEDIUM, HIGH, CRITICAL)", example = "HIGH")
-        String severity,
+        ConflictSeverity severity,
 
         @Schema(description = "Current conflict lifecycle status (detected, notified, resolving, resolved)", example = "detected")
-        String status,
+        ConflictStatus status,
 
         @Schema(description = "UUID identifier of primary flight involved", example = "550e8400-e29b-41d4-a716-446655440001")
         String primaryFlightId,
@@ -52,7 +56,7 @@ public record ConflictVm(
         String description,
 
         @Schema(description = "Applied resolution strategy", example = "altitude_change")
-        String resolutionStrategy,
+        ResolutionStrategy resolutionStrategy,
 
         @Schema(description = "Detailed resolution directives")
         Map<String, Object> resolutionActions,

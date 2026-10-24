@@ -4,6 +4,7 @@ import type {
     updateZoneBody,
     getZoneByIdResponse,
     getAllZonesResponse,
+    getAllZonesQueryParams,
     checkPathBody,
     checkPathResponse,
     checkPointBody,
@@ -15,6 +16,7 @@ export type { ConflictAlert };
 
 export type CreateAirspaceZonePayload = zod.infer<typeof createZoneBody>;
 export type UpdateAirspaceZonePayload = zod.infer<typeof updateZoneBody>;
+export type AirspaceQueryParams = zod.infer<typeof getAllZonesQueryParams>;
 export type AirspaceZoneType = NonNullable<zod.infer<typeof getZoneByIdResponse>["zoneType"]>;
 export type AirspaceZoneStatus = NonNullable<zod.infer<typeof getZoneByIdResponse>["status"]>;
 

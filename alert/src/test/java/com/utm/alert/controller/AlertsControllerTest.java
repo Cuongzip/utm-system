@@ -41,8 +41,8 @@ class AlertsControllerTest {
         return new AlertVm(
                 id,
                 alertType,
-                severity.getValue(),
-                status.getValue(),
+                severity,
+                status,
                 "drone-123",
                 "flight-456",
                 "hub-789",

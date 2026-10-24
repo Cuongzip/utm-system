@@ -43,4 +43,15 @@ export const API_ENDPOINTS = {
         TELEMETRY_STATS: "/api/api/v1/connectivity/telemetry/stats",
         COMMANDS_STATS: "/api/api/v1/connectivity/commands/stats",
     },
+    MISSIONS: {
+        BASE: "/api/api/v1/missions",
+        BY_ID: (id: string) => `/api/api/v1/missions/${id}`,
+        EXECUTE: (id: string) => `/api/api/v1/missions/${id}/execute`,
+        DUPLICATE: (id: string) => `/api/api/v1/missions/${id}/duplicate`,
+        WAYPOINTS: (missionId: string) => `/api/api/v1/missions/${missionId}/waypoints`,
+        WAYPOINT_BY_ID: (missionId: string, waypointId: string) =>
+            `/api/api/v1/missions/${missionId}/waypoints/${waypointId}`,
+        REORDER_WAYPOINTS: (missionId: string) =>
+            `/api/api/v1/missions/${missionId}/waypoints/reorder`,
+    },
 } as const;

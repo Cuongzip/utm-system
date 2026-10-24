@@ -1,14 +1,14 @@
 import { apiClient } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { Flight, FlightListResponse } from "@/types";
+import type {
+    Flight,
+    FlightListResponse,
+    FlightQueryParams,
+    CreateFlightPayload,
+    UpdateFlightPayload,
+} from "@/types";
 
-export interface GetFlightsParams {
-    status?: string;
-    droneId?: string;
-    hubId?: string;
-    limit?: number;
-    offset?: number;
-}
+export type GetFlightsParams = FlightQueryParams;
 
 export const flightService = {
     getAll: async (): Promise<Flight[]> => {
@@ -20,8 +20,10 @@ export const flightService = {
     getFlights: async (params?: GetFlightsParams): Promise<FlightListResponse> => {
         const query = new URLSearchParams();
         if (params?.status) query.set("status", params.status);
+        if (params?.authorizationStatus)
+            query.set("authorizationStatus", params.authorizationStatus);
+        if (params?.pilotId) query.set("pilotId", params.pilotId);
         if (params?.droneId) query.set("droneId", params.droneId);
-        if (params?.hubId) query.set("hubId", params.hubId);
         if (params?.limit !== undefined) query.set("limit", String(params.limit));
         if (params?.offset !== undefined) query.set("offset", String(params.offset));
 
@@ -41,21 +43,24 @@ export const flightService = {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BY_ID(id));
     },
 
-    createFlight: async (payload: Partial<Flight>): Promise<Flight> => {
+    createFlight: async (payload: CreateFlightPayload | Partial<Flight>): Promise<Flight> => {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BASE, {
             method: "POST",
             body: JSON.stringify(payload),
         });
     },
 
-    updateFlight: async (id: string, payload: Partial<Flight>): Promise<Flight> => {
+    updateFlight: async (
+        id: string,
+        payload: UpdateFlightPayload | Partial<Flight>
+    ): Promise<Flight> => {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BY_ID(id), {
             method: "PUT",
             body: JSON.stringify(payload),
         });
     },
 
-    submitPlan: async (plan: Partial<Flight>): Promise<Flight> => {
+    submitPlan: async (plan: CreateFlightPayload | Partial<Flight>): Promise<Flight> => {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.SUBMIT_PLAN, {
             method: "POST",
             body: JSON.stringify(plan),

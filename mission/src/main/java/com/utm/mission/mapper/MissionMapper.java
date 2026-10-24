@@ -49,8 +49,6 @@ public interface MissionMapper {
     @Mapping(target = "description", source = "description", qualifiedByName = "trimString")
     void updateEntityFromVm(MissionPutVm putVm, @MappingTarget Mission entity);
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
-    @Mapping(target = "scheduleType", source = "scheduleType", qualifiedByName = "mapScheduleTypeToString")
     @Mapping(target = "waypointCount", expression = "java(entity.getWaypoints() != null ? entity.getWaypoints().size() : 0)")
     @Mapping(target = "estimatedDistanceMeters", ignore = true)
     @Mapping(target = "departureHub", ignore = true)
@@ -58,7 +56,6 @@ public interface MissionMapper {
     @Mapping(target = "waypoints", source = "waypoints")
     MissionVm toVm(Mission entity);
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
     MissionBriefVm toBriefVm(Mission entity);
 
     List<MissionVm> toVmList(List<Mission> entities);
@@ -66,15 +63,5 @@ public interface MissionMapper {
     @Named("trimString")
     default String trimString(String value) {
         return value != null ? value.trim() : null;
-    }
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(MissionStatus status) {
-        return status != null ? status.getValue() : null;
-    }
-
-    @Named("mapScheduleTypeToString")
-    default String mapScheduleTypeToString(MissionScheduleType scheduleType) {
-        return scheduleType != null ? scheduleType.getValue() : null;
     }
 }

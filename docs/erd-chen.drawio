@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" version="28.2.8">
   <diagram id="optimal_diagram" name="DROPS-UTM-Optimal-Architecture">
-    <mxGraphModel dx="2562" dy="1300" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="6600" pageHeight="4600" background="#ffffff" math="0" shadow="0">
+    <mxGraphModel dx="1281" dy="698" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="6600" pageHeight="4600" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -481,10 +481,10 @@
         <mxCell id="e_ent_flight_authorization_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_authorization_status" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="attr_ent_flight_conformance_status" value="conformance_status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="attr_ent_flight_conformance_status" value="conformance_status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="2795.3258337206344" y="3126.581879219681" width="145" height="32" as="geometry" />
         </mxCell>
-        <mxCell id="e_ent_flight_conformance_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" edge="1" parent="1" source="ent_flight" target="attr_ent_flight_conformance_status">
+        <mxCell id="e_ent_flight_conformance_status" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_flight" target="attr_ent_flight_conformance_status" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="attr_ent_flight_planned_departure" value="planned_departure" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
@@ -616,10 +616,10 @@
         <mxCell id="e_ent_telemetry_time" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_time" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="attr_ent_telemetry_drone_id" value="drone_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="attr_ent_telemetry_drone_id" value="drone_id" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="2750.79111721596" y="4217.518700493029" width="145" height="32" as="geometry" />
         </mxCell>
-        <mxCell id="e_ent_telemetry_drone_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" edge="1" parent="1" source="ent_telemetry" target="attr_ent_telemetry_drone_id">
+        <mxCell id="e_ent_telemetry_drone_id" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1;" parent="1" source="ent_telemetry" target="attr_ent_telemetry_drone_id" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="attr_ent_telemetry_flight_id" value="&lt;u&gt;flight_id&lt;/u&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;fontColor=#000000;fontSize=10;fontStyle=4;" parent="1" vertex="1">

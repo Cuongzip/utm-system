@@ -22,7 +22,6 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 )
 public interface HubMapper {
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
     @Mapping(target = "location", source = "location")
     @Mapping(target = "availableDronesCount", ignore = true)
     @Mapping(target = "corridors", ignore = true)
@@ -100,11 +99,6 @@ public interface HubMapper {
         if (putVm.airspaceRadius() != null && putVm.airspaceRadius() <= 0) {
             throw new BadRequestException("Airspace radius must be greater than 0");
         }
-    }
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(HubStatus status) {
-        return status != null ? status.getValue() : null;
     }
 
     @Named("trimString")

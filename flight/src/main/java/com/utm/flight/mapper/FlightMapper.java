@@ -29,9 +29,6 @@ public interface FlightMapper {
 
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
-    @Mapping(target = "authorizationStatus", source = "authorizationStatus", qualifiedByName = "mapAuthStatusToString")
-    @Mapping(target = "conformanceStatus", source = "conformanceStatus", qualifiedByName = "mapConformanceStatusToString")
     @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "stringToLineString")
     @Mapping(target = "actualRoute", source = "actualRoute", qualifiedByName = "stringToLineString")
     FlightVm toVm(Flight flight);
@@ -78,21 +75,6 @@ public interface FlightMapper {
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     void updateEntityFromPutVm(@MappingTarget Flight flight, FlightPutVm flightPutVm);
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(FlightStatus status) {
-        return status != null ? status.getValue() : null;
-    }
-
-    @Named("mapAuthStatusToString")
-    default String mapAuthStatusToString(FlightAuthorizationStatus status) {
-        return status != null ? status.getValue() : null;
-    }
-
-    @Named("mapConformanceStatusToString")
-    default String mapConformanceStatusToString(ConformanceStatus status) {
-        return status != null ? status.getValue() : null;
-    }
 
     @Named("trimString")
     default String trimString(String value) {

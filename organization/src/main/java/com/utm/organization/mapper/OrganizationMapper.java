@@ -21,8 +21,6 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 )
 public interface OrganizationMapper {
 
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
-    @Mapping(target = "type", source = "type", qualifiedByName = "mapTypeToString")
     OrganizationVm toVm(Organization organization);
 
     @Mapping(target = "id", ignore = true)
@@ -71,16 +69,6 @@ public interface OrganizationMapper {
         if (putVm.name() != null && putVm.name().trim().isBlank()) {
             throw new BadRequestException("Organization name cannot be blank");
         }
-    }
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(OrganizationStatus status) {
-        return status != null ? status.getValue() : null;
-    }
-
-    @Named("mapTypeToString")
-    default String mapTypeToString(OrganizationType type) {
-        return type != null ? type.getValue() : null;
     }
 
     @Named("trimString")

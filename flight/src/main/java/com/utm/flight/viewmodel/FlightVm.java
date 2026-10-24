@@ -1,5 +1,8 @@
 package com.utm.flight.viewmodel;
 
+import com.utm.flight.model.enumeration.ConformanceStatus;
+import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
+import com.utm.flight.model.enumeration.FlightStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.ZonedDateTime;
 
@@ -50,13 +53,13 @@ public record FlightVm(
         GeoJsonLineStringVm actualRoute,
 
         @Schema(description = "ATC authorization status (pending, approved, rejected)", example = "approved")
-        String authorizationStatus,
+        FlightAuthorizationStatus authorizationStatus,
 
         @Schema(description = "4D flight conformance monitoring status (conforming, contingent, non_conforming)", example = "conforming")
-        String conformanceStatus,
+        ConformanceStatus conformanceStatus,
 
         @Schema(description = "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)", example = "scheduled")
-        String status,
+        FlightStatus status,
 
         @Schema(description = "Flight remarks, route notes or weather considerations", example = "Medical parcel delivery route via Corridor Bravo")
         String notes,

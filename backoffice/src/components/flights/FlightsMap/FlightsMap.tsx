@@ -30,7 +30,7 @@ export function FlightsMap({
 }: FlightsMapProps) {
     const selectedFlight = flights.find((f) => f.id === selectedFlightId);
     const activeFlightsCount = flights.filter(
-        (f) => f.status === "active" || f.status === "in_flight"
+        (f) => f.status === "active" || (f.status as string) === "in_flight"
     ).length;
 
     type ExtendedFlight = Flight & {

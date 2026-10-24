@@ -96,7 +96,7 @@ export const getDevicesResponse = zod
                             .optional()
                             .describe("Unique hardware device identifier"),
                         connectionStatus: zod
-                            .string()
+                            .enum(["offline", "online", "connecting"])
                             .optional()
                             .describe("Current connection status"),
                         socketId: zod
@@ -146,7 +146,10 @@ export const getDeviceByIdResponse = zod
         droneRegistrationNumber: zod.string().optional().describe("Aircraft registration number"),
         droneModel: zod.string().optional().describe("Drone aircraft model"),
         deviceIdentifier: zod.string().optional().describe("Unique hardware device identifier"),
-        connectionStatus: zod.string().optional().describe("Current connection status"),
+        connectionStatus: zod
+            .enum(["offline", "online", "connecting"])
+            .optional()
+            .describe("Current connection status"),
         socketId: zod.string().optional().describe("Current active WebSocket session ID"),
         certificateFingerprint: zod
             .string()
@@ -186,7 +189,10 @@ export const getOnlineDevicesResponseItem = zod
         droneRegistrationNumber: zod.string().optional().describe("Aircraft registration number"),
         droneModel: zod.string().optional().describe("Drone aircraft model"),
         deviceIdentifier: zod.string().optional().describe("Unique hardware device identifier"),
-        connectionStatus: zod.string().optional().describe("Current connection status"),
+        connectionStatus: zod
+            .enum(["offline", "online", "connecting"])
+            .optional()
+            .describe("Current connection status"),
         socketId: zod.string().optional().describe("Current active WebSocket session ID"),
         certificateFingerprint: zod
             .string()

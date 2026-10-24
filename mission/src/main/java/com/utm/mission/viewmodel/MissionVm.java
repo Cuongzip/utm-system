@@ -1,5 +1,7 @@
 package com.utm.mission.viewmodel;
 
+import com.utm.mission.model.enumeration.MissionScheduleType;
+import com.utm.mission.model.enumeration.MissionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -23,13 +25,13 @@ public record MissionVm(
         String arrivalHubId,
 
         @Schema(description = "Schedule type ('immediate' or 'scheduled')", example = "immediate")
-        String scheduleType,
+        MissionScheduleType scheduleType,
 
         @Schema(description = "Scheduled departure timestamp", example = "2026-10-15T08:00:00Z")
         ZonedDateTime scheduledAt,
 
         @Schema(description = "Mission operational status", example = "draft")
-        String status,
+        MissionStatus status,
 
         @Schema(description = "Total number of waypoints defined for this mission", example = "5")
         Integer waypointCount,

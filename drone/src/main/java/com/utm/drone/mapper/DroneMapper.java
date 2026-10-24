@@ -29,7 +29,6 @@ public interface DroneMapper {
     @Mapping(target = "homeHubId", source = "drone.homeHubId")
     @Mapping(target = "batteryCapacityWh", source = "drone.batteryCapacityWh")
     @Mapping(target = "maxPayload", source = "drone.maxPayload")
-    @Mapping(target = "status", source = "drone.status", qualifiedByName = "mapStatusToString")
     @Mapping(target = "owner", source = "owner")
     @Mapping(target = "homeHub", source = "homeHub")
     @Mapping(target = "deviceRegistration", source = "deviceRegistration")
@@ -39,7 +38,6 @@ public interface DroneMapper {
     @Mapping(target = "lastModifiedBy", source = "drone.lastModifiedBy")
     DroneVm toVm(Drone drone, OrganizationBriefVm owner, HubBriefVm homeHub, DeviceRegistrationBriefVm deviceRegistration);
 
-    @Mapping(target = "status", source = "drone.status", qualifiedByName = "mapStatusToString")
     @Mapping(target = "owner", ignore = true)
     @Mapping(target = "homeHub", ignore = true)
     @Mapping(target = "deviceRegistration", ignore = true)
@@ -70,11 +68,6 @@ public interface DroneMapper {
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     void updateEntityFromPutVm(@MappingTarget Drone drone, DronePutVm putVm);
-
-    @Named("mapStatusToString")
-    default String mapStatusToString(DroneStatus status) {
-        return status != null ? status.getValue() : null;
-    }
 
     @Named("trimString")
     default String trimString(String value) {

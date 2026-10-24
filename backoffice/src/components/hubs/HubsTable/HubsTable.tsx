@@ -73,12 +73,14 @@ export function HubsTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="15%">CODE</TableHead>
-                            <TableHead width="30%">NAME</TableHead>
-                            <TableHead width="15%">STATUS</TableHead>
-                            <TableHead width="18%">AVAILABLE DRONES</TableHead>
-                            <TableHead width="16%">AIRSPACE RADIUS</TableHead>
-                            <TableHead width="6%" align="right"></TableHead>
+                            <TableHead width="140px">CODE</TableHead>
+                            <TableHead width="240px">NAME</TableHead>
+                            <TableHead width="130px">STATUS</TableHead>
+                            <TableHead width="170px">AVAILABLE DRONES</TableHead>
+                            <TableHead width="150px">AIRSPACE RADIUS</TableHead>
+                            <TableHead width="100px" align="right">
+                                ACTIONS
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

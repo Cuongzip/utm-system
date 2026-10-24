@@ -1,5 +1,7 @@
 package com.utm.alert.viewmodel;
 
+import com.utm.alert.model.enumeration.AlertSeverity;
+import com.utm.alert.model.enumeration.AlertStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.ZonedDateTime;
 
@@ -12,10 +14,10 @@ public record AlertVm(
         String alertType,
 
         @Schema(description = "Severity level: LOW, MEDIUM, HIGH, CRITICAL")
-        String severity,
+        AlertSeverity severity,
 
         @Schema(description = "Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED")
-        String status,
+        AlertStatus status,
 
         @Schema(description = "Associated drone UUID")
         String droneId,

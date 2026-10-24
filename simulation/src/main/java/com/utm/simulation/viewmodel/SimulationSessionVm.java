@@ -1,5 +1,6 @@
 package com.utm.simulation.viewmodel;
 
+import com.utm.simulation.model.enumeration.SimulationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -12,7 +13,7 @@ public record SimulationSessionVm(
 
                 @Schema(description = "Drone hardware ID", example = "drone-sim-01") String droneId,
 
-                @Schema(description = "Current lifecycle status: running, paused, stopped, completed", example = "running") String status,
+                @Schema(description = "Current lifecycle status: running, paused, stopped, completed", example = "running") SimulationStatus status,
 
                 @Schema(description = "Current simulated speed in m/s", example = "15.0") Double speed,
 

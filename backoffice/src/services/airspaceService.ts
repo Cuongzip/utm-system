@@ -3,6 +3,7 @@ import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     AirspaceZone,
     AirspaceZoneListResponse,
+    AirspaceQueryParams,
     CreateAirspaceZonePayload,
     UpdateAirspaceZonePayload,
     CheckPathPayload,
@@ -11,13 +12,7 @@ import type {
     CheckPointResult,
 } from "@/types";
 
-export interface GetZonesParams {
-    hubId?: string;
-    zoneType?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-}
+export type GetZonesParams = AirspaceQueryParams;
 
 export const airspaceService = {
     getZones: async (params?: GetZonesParams): Promise<AirspaceZoneListResponse> => {

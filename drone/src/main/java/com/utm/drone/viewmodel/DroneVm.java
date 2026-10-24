@@ -1,6 +1,7 @@
 package com.utm.drone.viewmodel;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.utm.drone.model.enumeration.DroneStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
@@ -33,7 +34,7 @@ public record DroneVm(
         Double maxPayload,
 
         @Schema(description = "Current operational status", example = "available")
-        String status,
+        DroneStatus status,
 
         @Schema(description = "Enriched details of the owner organization")
         OrganizationBriefVm owner,

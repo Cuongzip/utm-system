@@ -93,4 +93,14 @@ export default defineConfig({
             client: "zod",
         },
     },
+    mission: {
+        input: {
+            target: "http://localhost:8081/mission/v3/api-docs",
+            override: { transformer },
+        },
+        output: {
+            target: "src/generated/mission.ts",
+            client: "zod",
+        },
+    },
 });

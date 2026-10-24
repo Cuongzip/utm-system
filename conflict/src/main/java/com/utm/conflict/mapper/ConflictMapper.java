@@ -29,10 +29,6 @@ public abstract class ConflictMapper {
 
     @Mapping(target = "location", source = "entity", qualifiedByName = "mapLocation")
     @Mapping(target = "resolutionActions", source = "resolutionActions", qualifiedByName = "mapResolutionActions")
-    @Mapping(target = "conflictType", source = "conflictType", qualifiedByName = "mapConflictType")
-    @Mapping(target = "severity", source = "severity", qualifiedByName = "mapSeverity")
-    @Mapping(target = "status", source = "status", qualifiedByName = "mapStatus")
-    @Mapping(target = "resolutionStrategy", source = "resolutionStrategy", qualifiedByName = "mapResolutionStrategy")
     public abstract ConflictVm toVm(Conflict entity);
 
     public abstract List<ConflictVm> toVmList(List<Conflict> entities);
@@ -81,25 +77,5 @@ public abstract class ConflictMapper {
         } catch (Exception ex) {
             return Collections.singletonMap("raw", resolutionActionsJson);
         }
-    }
-
-    @Named("mapConflictType")
-    protected String mapConflictType(ConflictType type) {
-        return type != null ? type.getValue() : null;
-    }
-
-    @Named("mapSeverity")
-    protected String mapSeverity(ConflictSeverity severity) {
-        return severity != null ? severity.getValue() : null;
-    }
-
-    @Named("mapStatus")
-    protected String mapStatus(ConflictStatus status) {
-        return status != null ? status.getValue() : null;
-    }
-
-    @Named("mapResolutionStrategy")
-    protected String mapResolutionStrategy(ResolutionStrategy strategy) {
-        return strategy != null ? strategy.getValue() : null;
     }
 }

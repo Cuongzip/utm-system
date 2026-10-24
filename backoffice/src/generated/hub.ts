@@ -42,7 +42,10 @@ export const getHubByIdResponse = zod
             .describe("WGS84 Geographical coordinates"),
         altitudeMsl: zod.number().optional().describe("Altitude MSL in meters (m)"),
         airspaceRadius: zod.number().optional().describe("Airspace protection radius in meters"),
-        status: zod.string().optional().describe("Current operational status of the Hub"),
+        status: zod
+            .enum(["active", "inactive", "maintenance"])
+            .optional()
+            .describe("Current operational status of the Hub"),
         availableDronesCount: zod
             .number()
             .optional()
@@ -109,7 +112,10 @@ export const updateHubResponse = zod
             .describe("WGS84 Geographical coordinates"),
         altitudeMsl: zod.number().optional().describe("Altitude MSL in meters (m)"),
         airspaceRadius: zod.number().optional().describe("Airspace protection radius in meters"),
-        status: zod.string().optional().describe("Current operational status of the Hub"),
+        status: zod
+            .enum(["active", "inactive", "maintenance"])
+            .optional()
+            .describe("Current operational status of the Hub"),
         availableDronesCount: zod
             .number()
             .optional()
@@ -192,7 +198,7 @@ export const getHubsResponse = zod
                             .optional()
                             .describe("Airspace protection radius in meters"),
                         status: zod
-                            .string()
+                            .enum(["active", "inactive", "maintenance"])
                             .optional()
                             .describe("Current operational status of the Hub"),
                         availableDronesCount: zod

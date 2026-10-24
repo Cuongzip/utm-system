@@ -19,3 +19,18 @@ export function formatCoordinates(lat: number, lon: number): string {
 export function formatAltitude(altitudeMeters: number): string {
     return `${Math.round(altitudeMeters)} m`;
 }
+
+export function formatDate(val?: string | Date): string {
+    if (!val) return "—";
+    try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return String(val);
+        return d.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+        });
+    } catch {
+        return String(val);
+    }
+}

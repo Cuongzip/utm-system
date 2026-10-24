@@ -1,14 +1,17 @@
 import { apiClient } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { Hub, HubListResponse, CreateHubPayload, UpdateHubPayload } from "@/types";
+import type {
+    Hub,
+    HubListResponse,
+    CreateHubPayload,
+    UpdateHubPayload,
+    HubQueryParams,
+} from "@/types";
+
+export type GetHubsParams = HubQueryParams;
 
 export const hubService = {
-    getHubs: async (params?: {
-        search?: string;
-        status?: string;
-        limit?: number;
-        offset?: number;
-    }): Promise<HubListResponse> => {
+    getHubs: async (params?: GetHubsParams): Promise<HubListResponse> => {
         const searchParams = new URLSearchParams();
         if (params?.search) searchParams.set("search", params.search);
         if (params?.status) searchParams.set("status", params.status);
