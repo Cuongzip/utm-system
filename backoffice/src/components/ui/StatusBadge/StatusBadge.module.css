@@ -1,38 +1,78 @@
 .badge {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 2px 8px;
-    border-radius: 9999px;
+    padding: 2.5px 9px;
     font-size: 11px;
     font-weight: 600;
     text-transform: capitalize;
     line-height: 1.4;
     white-space: nowrap;
+    letter-spacing: 0.02em;
+    clip-path: polygon(
+        4px 0,
+        calc(100% - 4px) 0,
+        100% 4px,
+        100% calc(100% - 4px),
+        calc(100% - 4px) 100%,
+        4px 100%,
+        0 calc(100% - 4px),
+        0 4px
+    );
+}
+
+.badge::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    clip-path: polygon(
+        3.5px 0,
+        calc(100% - 3.5px) 0,
+        100% 3.5px,
+        100% calc(100% - 3.5px),
+        calc(100% - 3.5px) 100%,
+        3.5px 100%,
+        0 calc(100% - 3.5px),
+        0 3.5px
+    );
+    z-index: 0;
+}
+
+.badge > * {
+    position: relative;
+    z-index: 1;
 }
 
 .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 9999px;
+    width: 5px;
+    height: 5px;
+    border-radius: 0.5px;
+    transform: rotate(45deg);
     flex-shrink: 0;
 }
 
 .online {
-    background-color: var(--color-status-online-bg);
+    background-color: var(--color-status-online-border);
     color: var(--color-status-online-text);
-    border: 1px solid var(--color-status-online-border);
+}
+
+.online::before {
+    background-color: var(--color-status-online-bg);
 }
 
 .online .dot {
     background-color: var(--color-status-online);
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.25);
 }
 
 .offline {
-    background-color: var(--color-status-offline-bg);
+    background-color: var(--color-status-offline-border);
     color: var(--color-status-offline-text);
-    border: 1px solid var(--color-status-offline-border);
+}
+
+.offline::before {
+    background-color: var(--color-status-offline-bg);
 }
 
 .offline .dot {
@@ -40,9 +80,12 @@
 }
 
 .connecting {
-    background-color: var(--color-status-connecting-bg);
+    background-color: var(--color-status-connecting-border);
     color: var(--color-status-connecting-text);
-    border: 1px solid var(--color-status-connecting-border);
+}
+
+.connecting::before {
+    background-color: var(--color-status-connecting-bg);
 }
 
 .connecting .dot {
@@ -50,9 +93,12 @@
 }
 
 .alert {
-    background-color: var(--color-status-alert-bg);
+    background-color: var(--color-status-alert-border);
     color: var(--color-status-alert-text);
-    border: 1px solid var(--color-status-alert-border);
+}
+
+.alert::before {
+    background-color: var(--color-status-alert-bg);
 }
 
 .alert .dot {
@@ -60,11 +106,29 @@
 }
 
 .inFlight {
-    background-color: var(--color-surface-card);
+    background-color: var(--color-border-strong);
     color: var(--color-border-dark);
-    border: 1px solid var(--color-border-strong);
+}
+
+.inFlight::before {
+    background-color: var(--color-surface-card);
 }
 
 .inFlight .dot {
     background-color: var(--color-border-dark);
+}
+
+.rounded {
+    clip-path: none;
+    border-radius: 9999px;
+    border: 1px solid;
+}
+
+.rounded::before {
+    display: none;
+}
+
+.rounded .dot {
+    border-radius: 9999px;
+    transform: none;
 }

@@ -1,0 +1,116 @@
+.inspectorWrapper {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 30;
+    clip-path: var(--chamfer-clip-sm);
+    background-color: rgba(71, 85, 105, 0.45);
+    padding: 1px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease-in-out;
+}
+
+.inspectorWrapper.accentDefault {
+    background-color: rgba(71, 85, 105, 0.45);
+}
+
+.inspectorWrapper.accentCyan {
+    background-color: rgba(71, 85, 105, 0.55);
+}
+
+.inspectorWrapper.accentAmber {
+    background-color: rgba(245, 158, 11, 0.35);
+}
+
+.inspectorWrapper.accentRed {
+    background-color: rgba(239, 68, 68, 0.35);
+}
+
+.inspectorInner {
+    clip-path: polygon(
+        7px 0,
+        calc(100% - 7px) 0,
+        100% 7px,
+        100% calc(100% - 7px),
+        calc(100% - 7px) 100%,
+        7px 100%,
+        0 calc(100% - 7px),
+        0 7px
+    );
+    background-color: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 10px 16px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: relative;
+}
+
+.leftSection {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.titleRow {
+    font-size: 13.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.codeText {
+    font-family: var(--font-mono);
+    color: #cbd5e1;
+    letter-spacing: 0.2px;
+    font-weight: 600;
+}
+
+.titleText {
+    color: #e2e8f0;
+    font-weight: 600;
+}
+
+.metaRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 11px;
+    color: #94a3b8;
+    flex-wrap: wrap;
+}
+
+.metaItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.metaValue {
+    color: #f1f5f9;
+    font-family: var(--font-mono);
+    font-weight: 600;
+}
+
+.closeButton {
+    color: #94a3b8;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.closeButton:hover {
+    color: #ffffff;
+}

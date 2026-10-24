@@ -235,7 +235,10 @@ export function BaseCesiumMap({
                 className={`relative w-full overflow-hidden select-none ${className}`}
                 style={{ height }}
             >
-                <div ref={containerRef} className={`w-full h-full ${canvasClassName}`} />
+                <div
+                    ref={containerRef}
+                    className={`w-full h-full [&_.cesium-widget]:!absolute [&_.cesium-widget]:!inset-0 [&_.cesium-widget]:!w-full [&_.cesium-widget]:!h-full [&_.cesium-widget]:!overflow-hidden [&_.cesium-widget_canvas]:!w-full [&_.cesium-widget_canvas]:!h-full [&_.cesium-widget_canvas]:!block ${canvasClassName}`}
+                />
 
                 {!isLoaded && !mapError && (
                     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-slate-900/80 text-white backdrop-blur-xs">

@@ -22,10 +22,17 @@ interface StatusBadgeProps {
     status: StatusType;
     label?: string;
     showDot?: boolean;
+    shape?: "chamfer" | "rounded";
     className?: string;
 }
 
-export function StatusBadge({ status, label, showDot = true, className }: StatusBadgeProps) {
+export function StatusBadge({
+    status,
+    label,
+    showDot = true,
+    shape = "chamfer",
+    className,
+}: StatusBadgeProps) {
     const normalized = String(status || "")
         .toLowerCase()
         .replace(/[\s-]+/g, "_");
@@ -68,7 +75,14 @@ export function StatusBadge({ status, label, showDot = true, className }: Status
     const displayLabel = label || String(status || "").replace(/_/g, " ");
 
     return (
-        <span className={cn(styles.badge, variantClass, className)}>
+        <span
+            className={cn(
+                styles.badge,
+                variantClass,
+                shape === "rounded" && styles.rounded,
+                className
+            )}
+        >
             {showDot && <span className={styles.dot} />}
             <span>{displayLabel}</span>
         </span>
