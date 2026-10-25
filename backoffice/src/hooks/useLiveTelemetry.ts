@@ -79,35 +79,14 @@ export function useLiveTelemetry(flights: Flight[], options: UseLiveTelemetryOpt
                 if (!alive) return;
 
                 const newTelemetryMap: Record<string, TelemetryRecord> = {};
-                const flightsWithTelemetry: string[] = [];
 
                 results.forEach(({ flightId, latest }) => {
                     if (latest) {
                         newTelemetryMap[flightId] = latest;
-                        flightsWithTelemetry.push(flightId);
                     }
                 });
 
                 setTelemetryMap((prev) => ({ ...prev, ...newTelemetryMap }));
-
-                if (flightsWithTelemetry.length > 0) {
-                    const historyPromises = flightsWithTelemetry.map(async (fId) => {
-                        const history = await telemetryService.getHistoryByFlightId(fId);
-                        return { flightId: fId, history };
-                    });
-
-                    const historyResults = await Promise.all(historyPromises);
-                    if (!alive) return;
-
-                    const newHistoryMap: Record<string, TelemetryRecord[]> = {};
-                    historyResults.forEach(({ flightId, history }) => {
-                        if (history && history.length > 0) {
-                            newHistoryMap[flightId] = history;
-                        }
-                    });
-
-                    setTelemetryHistoryMap((prev) => ({ ...prev, ...newHistoryMap }));
-                }
             } catch (err) {
                 console.error("Error polling telemetry records:", err);
             } finally {

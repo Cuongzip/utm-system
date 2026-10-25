@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Waypoint, Hub } from "@/types";
-import { getTakeoffIconUri, getLandingIconUri, getWaypointIconUri } from "../mapIcons";
+import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
 
 export interface MissionLayerProps {
     waypoints?: Waypoint[];
@@ -52,20 +52,25 @@ export function MissionLayer({
                 const lat = departureHub.location.lat;
                 allPoints.push({ lng, lat });
 
+                const isSameHub = arrivalHub?.id === departureHub.id;
+                const labelText = isSameHub
+                    ? `HUB: ${departureHub.code || departureHub.name}`
+                    : `DEP: ${departureHub.code || departureHub.name}`;
+
                 const entity = viewer.entities.add({
                     id: depId,
                     name: `Departure: ${departureHub.name}`,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
                     billboard: {
-                        image: getTakeoffIconUri("#00a3bf"),
-                        width: 26,
-                        height: 26,
+                        image: getHubIconUri("#06b6d4", false),
+                        width: 28,
+                        height: 28,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: {
-                        text: `DEP: ${departureHub.code || departureHub.name}`,
+                        text: labelText,
                         font: "bold 10px monospace",
-                        fillColor: Cesium.Color.fromCssColorString("#00a3bf"),
+                        fillColor: Cesium.Color.fromCssColorString("#06b6d4"),
                         outlineColor: Cesium.Color.WHITE,
                         outlineWidth: 2,
                         pixelOffset: new Cesium.Cartesian2(0, -18),
@@ -90,15 +95,15 @@ export function MissionLayer({
                     name: `Arrival: ${arrivalHub.name}`,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
                     billboard: {
-                        image: getLandingIconUri("#f59e0b"),
-                        width: 26,
-                        height: 26,
+                        image: getHubIconUri("#06b6d4", false),
+                        width: 28,
+                        height: 28,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: {
                         text: `ARR: ${arrivalHub.code || arrivalHub.name}`,
                         font: "bold 10px monospace",
-                        fillColor: Cesium.Color.fromCssColorString("#f59e0b"),
+                        fillColor: Cesium.Color.fromCssColorString("#06b6d4"),
                         outlineColor: Cesium.Color.WHITE,
                         outlineWidth: 2,
                         pixelOffset: new Cesium.Cartesian2(0, -18),

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Flight } from "@/types";
-import { getTakeoffIconUri, getLandingIconUri } from "../mapIcons";
+import { getHubIconUri } from "../mapIcons";
 
 export interface FlightHubCoord {
     lat: number;
@@ -17,6 +17,8 @@ export interface FlightsLayerProps {
     selectedFlightId?: string | null;
     hubCoordsMap?: Map<string, FlightHubCoord>;
     autoFitBounds?: boolean;
+    focusOnSelected?: boolean;
+    activeOnly?: boolean;
 }
 
 const STATUS_COLOR_MAP: Record<string, string> = {
@@ -36,6 +38,8 @@ export function FlightsLayer({
     selectedFlightId,
     hubCoordsMap = new Map(),
     autoFitBounds = true,
+    focusOnSelected = true,
+    activeOnly = false,
 }: FlightsLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
@@ -59,21 +63,36 @@ export function FlightsLayer({
             let selectedCoords: number[][] | null = null;
             const allPoints: { lng: number; lat: number }[] = [];
 
-            for (const flight of flights) {
+            const targetFlights = activeOnly
+                ? flights.filter((f) => {
+                      const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
+                      return (
+                          s === "active" ||
+                          s === "in_flight" ||
+                          s === "diverted" ||
+                          s === "emergency_landing"
+                      );
+                  })
+                : flights;
+
+            for (const flight of targetFlights) {
                 let coordinates: number[][] = [];
 
+                let plannedRoute = flight.plannedRoute as any;
+                if (typeof plannedRoute === "string") {
+                    try {
+                        plannedRoute = JSON.parse(plannedRoute);
+                    } catch {
+                        plannedRoute = null;
+                    }
+                }
+
                 if (
-                    flight.plannedRoute?.coordinates &&
-                    Array.isArray(flight.plannedRoute.coordinates) &&
-                    flight.plannedRoute.coordinates.length >= 2
+                    plannedRoute?.coordinates &&
+                    Array.isArray(plannedRoute.coordinates) &&
+                    plannedRoute.coordinates.length >= 2
                 ) {
-                    coordinates = flight.plannedRoute.coordinates as number[][];
-                } else if (
-                    flight.actualRoute?.coordinates &&
-                    Array.isArray(flight.actualRoute.coordinates) &&
-                    flight.actualRoute.coordinates.length >= 2
-                ) {
-                    coordinates = flight.actualRoute.coordinates as number[][];
+                    coordinates = plannedRoute.coordinates as number[][];
                 } else if (flight.departureHubId && flight.arrivalHubId) {
                     const dep = hubCoordsMap.get(flight.departureHubId);
                     const arr = hubCoordsMap.get(flight.arrivalHubId);
@@ -137,27 +156,30 @@ export function FlightsLayer({
                     id: startPinId,
                     position: startPos,
                     billboard: {
-                        image: getTakeoffIconUri(isSelected ? "#00e5ff" : "#10b981"),
-                        width: isSelected ? 26 : 22,
-                        height: isSelected ? 26 : 22,
+                        image: getHubIconUri(isSelected ? "#00e5ff" : "#06b6d4", isSelected),
+                        width: isSelected ? 28 : 24,
+                        height: isSelected ? 28 : 24,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                 });
                 newEntityIds.push(startPinId);
 
                 const endPos = cartesianPositions[cartesianPositions.length - 1];
-                const endPinId = `flight-end-${flight.id}`;
-                viewer.entities.add({
-                    id: endPinId,
-                    position: endPos,
-                    billboard: {
-                        image: getLandingIconUri(isSelected ? "#00e5ff" : "#f59e0b"),
-                        width: isSelected ? 26 : 22,
-                        height: isSelected ? 26 : 22,
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
-                });
-                newEntityIds.push(endPinId);
+                const isRoundTrip = Cesium.Cartesian3.distance(startPos, endPos) < 1.0;
+                if (!isRoundTrip) {
+                    const endPinId = `flight-end-${flight.id}`;
+                    viewer.entities.add({
+                        id: endPinId,
+                        position: endPos,
+                        billboard: {
+                            image: getHubIconUri(isSelected ? "#00e5ff" : "#06b6d4", isSelected),
+                            width: isSelected ? 28 : 24,
+                            height: isSelected ? 28 : 24,
+                            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                        },
+                    });
+                    newEntityIds.push(endPinId);
+                }
 
                 const midIdx = Math.floor(cartesianPositions.length / 2);
                 const midPos = cartesianPositions[midIdx];
@@ -185,7 +207,12 @@ export function FlightsLayer({
 
             entityIdsRef.current = newEntityIds;
 
-            if (selectedFlightId && selectedCoords && selectedCoords.length >= 2) {
+            if (
+                focusOnSelected &&
+                selectedFlightId &&
+                selectedCoords &&
+                selectedCoords.length >= 2
+            ) {
                 let minLng = 180,
                     maxLng = -180,
                     minLat = 90,
@@ -261,7 +288,16 @@ export function FlightsLayer({
             }
             entityIdsRef.current = [];
         };
-    }, [viewer, isLoaded, flights, selectedFlightId, hubCoordsMap, autoFitBounds]);
+    }, [
+        viewer,
+        isLoaded,
+        flights,
+        selectedFlightId,
+        hubCoordsMap,
+        autoFitBounds,
+        focusOnSelected,
+        activeOnly,
+    ]);
 
     return null;
 }

@@ -100,7 +100,7 @@ export function LiveTelemetry({
                                             <div className="text-[10px] text-slate-500 font-mono mt-0.5">
                                                 {flight
                                                     ? `Flight ${flight.flightNumber || flight.id.slice(0, 8)}`
-                                                    : "No Flight Selected"}{" "}
+                                                    : "No Active Flight"}{" "}
                                                 • SN: {serialNumber}
                                             </div>
                                         </div>
@@ -138,7 +138,7 @@ export function LiveTelemetry({
                         <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 p-1">
                             {flights.length === 0 ? (
                                 <div className="p-4 text-center text-slate-400 text-xs">
-                                    No flights available
+                                    No active flights available
                                 </div>
                             ) : (
                                 flights.map((item) => {

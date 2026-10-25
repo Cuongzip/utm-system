@@ -12,8 +12,7 @@ export type GetFlightsParams = FlightQueryParams;
 
 export const flightService = {
     getAll: async (): Promise<Flight[]> => {
-        const res = await apiClient<FlightListResponse | Flight[]>(API_ENDPOINTS.FLIGHTS.BASE);
-        if (Array.isArray(res)) return res;
+        const res = await flightService.getFlights({ limit: 0 });
         return res.items || [];
     },
 

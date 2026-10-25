@@ -14,6 +14,7 @@ export interface LiveTelemetryLayerProps {
     onSelectFlight?: (flightId: string) => void;
     hubCoordsMap?: Map<string, FlightHubCoord>;
     autoFollowSelected?: boolean;
+    showPlannedRoute?: boolean;
 }
 
 export function LiveTelemetryLayer({
@@ -24,6 +25,7 @@ export function LiveTelemetryLayer({
     onSelectFlight,
     hubCoordsMap = new Map(),
     autoFollowSelected = true,
+    showPlannedRoute = false,
 }: LiveTelemetryLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
@@ -51,116 +53,6 @@ export function LiveTelemetryLayer({
             for (const flight of flights) {
                 const isSelected = selectedFlightId === flight.id;
                 const telemetry = telemetryMap[flight.id];
-                const history = telemetryHistoryMap[flight.id] || [];
-
-                let plannedCoords: number[][] = [];
-                if (
-                    flight.plannedRoute?.coordinates &&
-                    Array.isArray(flight.plannedRoute.coordinates) &&
-                    flight.plannedRoute.coordinates.length >= 2
-                ) {
-                    plannedCoords = flight.plannedRoute.coordinates as number[][];
-                } else if (flight.departureHubId && flight.arrivalHubId) {
-                    const dep = hubCoordsMap.get(flight.departureHubId);
-                    const arr = hubCoordsMap.get(flight.arrivalHubId);
-                    if (dep && arr) {
-                        const cruiseAlt = flight.cruisingAltitudeM || 120;
-                        plannedCoords = [
-                            [dep.lng, dep.lat, cruiseAlt],
-                            [arr.lng, arr.lat, cruiseAlt],
-                        ];
-                    }
-                }
-
-                if (plannedCoords.length >= 2) {
-                    const plannedCartesians = plannedCoords.map((pt) => {
-                        const lng = pt[0];
-                        const lat = pt[1];
-                        const alt = pt.length >= 3 ? pt[2] : flight.cruisingAltitudeM || 120;
-                        allPoints.push({ lng, lat });
-                        return Cesium.Cartesian3.fromDegrees(lng, lat, alt);
-                    });
-
-                    const plannedEntityId = `flight-planned-${flight.id}`;
-                    viewer.entities.add({
-                        id: plannedEntityId,
-                        name: `Planned: ${flight.flightNumber || flight.id.slice(0, 8)}`,
-                        polyline: {
-                            positions: plannedCartesians,
-                            width: isSelected ? 2.5 : 1.5,
-                            material: new Cesium.PolylineDashMaterialProperty({
-                                color: Cesium.Color.fromCssColorString(
-                                    isSelected ? "#38bdf8" : "#64748b"
-                                ),
-                                dashLength: 16.0,
-                            }),
-                            clampToGround: false,
-                        },
-                    });
-                    newEntityIds.push(plannedEntityId);
-                }
-
-                if (history.length >= 2 || (history.length >= 1 && telemetry)) {
-                    const historyCartesians: any[] = [];
-                    history.forEach((rec) => {
-                        if (typeof rec.longitude === "number" && typeof rec.latitude === "number") {
-                            const alt =
-                                typeof rec.altitude === "number" && rec.altitude > 0
-                                    ? rec.altitude
-                                    : 120;
-                            historyCartesians.push(
-                                Cesium.Cartesian3.fromDegrees(rec.longitude, rec.latitude, alt)
-                            );
-                            allPoints.push({ lng: rec.longitude, lat: rec.latitude });
-                        }
-                    });
-
-                    if (
-                        telemetry &&
-                        typeof telemetry.longitude === "number" &&
-                        typeof telemetry.latitude === "number"
-                    ) {
-                        const curAlt =
-                            typeof telemetry.altitude === "number" && telemetry.altitude > 0
-                                ? telemetry.altitude
-                                : 120;
-                        const lastPt = history[history.length - 1];
-                        if (
-                            !lastPt ||
-                            lastPt.longitude !== telemetry.longitude ||
-                            lastPt.latitude !== telemetry.latitude
-                        ) {
-                            historyCartesians.push(
-                                Cesium.Cartesian3.fromDegrees(
-                                    telemetry.longitude,
-                                    telemetry.latitude,
-                                    curAlt
-                                )
-                            );
-                        }
-                    }
-
-                    if (historyCartesians.length >= 2) {
-                        const historyEntityId = `flight-history-${flight.id}`;
-                        viewer.entities.add({
-                            id: historyEntityId,
-                            name: `History: ${flight.flightNumber || flight.id.slice(0, 8)}`,
-                            polyline: {
-                                positions: historyCartesians,
-                                width: isSelected ? 4.0 : 3.0,
-                                material: new Cesium.PolylineGlowMaterialProperty({
-                                    glowPower: 0.25,
-                                    taperPower: 1.0,
-                                    color: Cesium.Color.fromCssColorString(
-                                        isSelected ? "#00e5ff" : "#10b981"
-                                    ),
-                                }),
-                                clampToGround: false,
-                            },
-                        });
-                        newEntityIds.push(historyEntityId);
-                    }
-                }
 
                 if (
                     telemetry &&
@@ -282,16 +174,7 @@ export function LiveTelemetryLayer({
             }
             entityIdsRef.current = [];
         };
-    }, [
-        viewer,
-        isLoaded,
-        flights,
-        telemetryMap,
-        telemetryHistoryMap,
-        selectedFlightId,
-        hubCoordsMap,
-        autoFollowSelected,
-    ]);
+    }, [viewer, isLoaded, flights, telemetryMap, selectedFlightId, autoFollowSelected]);
 
     return null;
 }

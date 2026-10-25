@@ -10,7 +10,7 @@ import {
     RecentCommands,
     ActiveAlerts,
 } from "@/components/control-center";
-import { HubsLayer, LiveTelemetryLayer, type FlightHubCoord } from "@/components/map";
+import { HubsLayer, LiveTelemetryLayer, FlightsLayer, type FlightHubCoord } from "@/components/map";
 import { useLiveTelemetry } from "@/hooks";
 import { flightService, hubService } from "@/services";
 import type { Flight, Hub } from "@/types";
@@ -21,8 +21,7 @@ export default function ControlCenterPage() {
     const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const { telemetryMap, telemetryHistoryMap, activeTelemetryCount, isSocketConnected } =
-        useLiveTelemetry(flights);
+    const { telemetryMap, activeTelemetryCount, isSocketConnected } = useLiveTelemetry(flights);
 
     const loadFlightsAndHubs = useCallback(async () => {
         try {
@@ -31,14 +30,25 @@ export default function ControlCenterPage() {
                 hubService.getAll(),
             ]);
 
-            setFlights(fetchedFlights);
+            const activeFlights = fetchedFlights.filter((f) => {
+                const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
+                return (
+                    s === "active" ||
+                    s === "in_flight" ||
+                    s === "diverted" ||
+                    s === "emergency_landing"
+                );
+            });
+
+            setFlights(activeFlights);
             setHubs(fetchedHubs);
 
-            if (fetchedFlights.length > 0) {
-                const active = fetchedFlights.find(
-                    (f) => f.status === "active" || (f.status as string) === "in_flight"
+            if (activeFlights.length > 0) {
+                setSelectedFlightId((prev) =>
+                    prev && activeFlights.some((f) => f.id === prev) ? prev : activeFlights[0].id
                 );
-                setSelectedFlightId((prev) => prev || (active ? active.id : fetchedFlights[0].id));
+            } else {
+                setSelectedFlightId(null);
             }
         } catch (error) {
             console.error("Failed to load operations data:", error);
@@ -69,9 +79,7 @@ export default function ControlCenterPage() {
     const selectedFlight = flights.find((f) => f.id === selectedFlightId);
     const selectedTelemetry = selectedFlightId ? telemetryMap[selectedFlightId] : null;
 
-    const activeFlightsCount = flights.filter(
-        (f) => f.status === "active" || (f.status as string) === "in_flight"
-    ).length;
+    const activeFlightsCount = flights.length;
 
     return (
         <div className="p-8 space-y-6">
@@ -83,9 +91,7 @@ export default function ControlCenterPage() {
                     </span>
                     <span className="inline-flex items-center px-2.5 py-1 rounded border border-slate-300 bg-slate-100 text-slate-900 font-semibold">
                         <Navigation className="h-3.5 w-3.5 mr-1 text-slate-700 rotate-45" />
-                        {activeFlightsCount > 0
-                            ? `${activeFlightsCount} ACTIVE`
-                            : `${flights.length} FLIGHTS`}
+                        {activeFlightsCount > 0 ? `${activeFlightsCount} ACTIVE` : "0 ACTIVE"}
                     </span>
                     <span
                         className={`inline-flex items-center px-2.5 py-1 rounded border font-medium ${
@@ -115,21 +121,28 @@ export default function ControlCenterPage() {
                             const rawId = entityId
                                 .replace(/^drone-live-/, "")
                                 .replace(/^drone-heading-/, "")
-                                .replace(/^flight-planned-/, "")
-                                .replace(/^flight-history-/, "");
+                                .replace(/^flight-route-/, "")
+                                .replace(/^flight-start-/, "")
+                                .replace(/^flight-end-/, "")
+                                .replace(/^flight-label-/, "");
                             const found = flights.find((f) => f.id === rawId);
                             if (found) {
                                 setSelectedFlightId(found.id);
                             }
                         }}
                     >
+                        <FlightsLayer
+                            flights={flights}
+                            selectedFlightId={selectedFlightId}
+                            hubCoordsMap={hubCoordsMap}
+                            autoFitBounds={true}
+                            focusOnSelected={true}
+                        />
                         <LiveTelemetryLayer
                             flights={flights}
                             telemetryMap={telemetryMap}
-                            telemetryHistoryMap={telemetryHistoryMap}
                             selectedFlightId={selectedFlightId}
                             onSelectFlight={setSelectedFlightId}
-                            hubCoordsMap={hubCoordsMap}
                         />
                         <HubsLayer hubs={hubs} />
                     </TacticalMapPanel>
@@ -154,7 +167,7 @@ export default function ControlCenterPage() {
                     statusText={
                         selectedFlight
                             ? `${selectedFlight.flightNumber || selectedFlight.id.slice(0, 8)} • ${(selectedFlight.status || "ready").toUpperCase()}`
-                            : "Ready for control"
+                            : "No active flight"
                     }
                 />
                 <RecentCommands />
