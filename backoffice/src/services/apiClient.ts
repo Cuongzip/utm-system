@@ -23,10 +23,11 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
 
     if (!response.ok) {
         let errorData: unknown;
+        const text = await response.text();
         try {
-            errorData = await response.json();
+            errorData = JSON.parse(text);
         } catch {
-            errorData = await response.text();
+            errorData = text;
         }
         throw new ApiError(
             response.status,

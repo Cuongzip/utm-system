@@ -6,3 +6,4 @@ export * from "./conflictService";
 export * from "./connectivityService";
 export * from "./hubService";
 export * from "./missionService";
+export * from "./telemetryService";

@@ -54,4 +54,11 @@ export const API_ENDPOINTS = {
         REORDER_WAYPOINTS: (missionId: string) =>
             `/api/api/v1/missions/${missionId}/waypoints/reorder`,
     },
+    TELEMETRY: {
+        BASE: "/api/api/v1/telemetry",
+        BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}`,
+        LATEST_BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}/latest`,
+        BY_DRONE: (droneId: string) => `/api/api/v1/telemetry/drone/${droneId}`,
+        LATEST_BY_DRONE: (droneId: string) => `/api/api/v1/telemetry/drone/${droneId}/latest`,
+    },
 } as const;

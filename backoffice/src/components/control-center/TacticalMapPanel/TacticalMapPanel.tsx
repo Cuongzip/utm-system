@@ -19,9 +19,17 @@ export type MapMode = "globe" | "2d";
 
 interface TacticalMapPanelProps {
     initialMode?: MapMode;
+    children?: React.ReactNode;
+    onEntityClick?: (entityId: string) => void;
+    activeTelemetryCount?: number;
 }
 
-export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProps) {
+export function TacticalMapPanel({
+    initialMode = "globe",
+    children,
+    onEntityClick,
+    activeTelemetryCount = 0,
+}: TacticalMapPanelProps) {
     const [mapMode, setMapMode] = useState<MapMode>(initialMode);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -61,6 +69,13 @@ export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProp
             </div>
 
             <div className="absolute top-3 right-4 z-20 flex items-center gap-2 pointer-events-none">
+                {activeTelemetryCount > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-md bg-emerald-950/90 border border-emerald-600/80 px-2.5 py-1 text-xs font-mono font-semibold text-emerald-400 backdrop-blur-md shadow-md pointer-events-auto animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                        <span>LIVE TRACKING ({activeTelemetryCount})</span>
+                    </div>
+                )}
+
                 <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700/80 backdrop-blur-md shadow-md pointer-events-auto">
                     <button
                         type="button"
@@ -111,12 +126,15 @@ export function TacticalMapPanel({ initialMode = "globe" }: TacticalMapPanelProp
                     layerType="satellite"
                     height="100%"
                     hideToolbar
+                    onEntityClick={onEntityClick}
                     initialCoordinates={{
                         lng: 108.2208,
                         lat: 16.0544,
                         height: 45000.0,
                     }}
-                />
+                >
+                    {children}
+                </BaseCesiumMap>
             </div>
         </ChamferCard>
     );
