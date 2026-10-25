@@ -48,6 +48,10 @@ export function MissionWaypointsTab({
         selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.longitude`] : undefined;
     const altError =
         selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.altitude`] : undefined;
+    const actionsError =
+        selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.actions`] : undefined;
+    const conditionsError =
+        selectedIdx >= 0 ? fieldErrors[`waypoints.${selectedIdx}.conditions`] : undefined;
 
     const hasPositionErrors = Boolean(nameError || latError || lngError || altError);
 
@@ -97,25 +101,33 @@ export function MissionWaypointsTab({
                             type="button"
                             onClick={() => setWaypointSubTab("actions")}
                             className={cn(
-                                "py-1 rounded transition-colors cursor-pointer",
+                                "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1",
                                 waypointSubTab === "actions"
                                     ? "bg-[var(--color-surface-panel)] shadow-2xs text-[var(--color-text-primary)] font-bold"
-                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
+                                actionsError && "text-red-600"
                             )}
                         >
-                            Actions
+                            <span>Actions</span>
+                            {actionsError && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                            )}
                         </button>
                         <button
                             type="button"
                             onClick={() => setWaypointSubTab("conditions")}
                             className={cn(
-                                "py-1 rounded transition-colors cursor-pointer",
+                                "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1",
                                 waypointSubTab === "conditions"
                                     ? "bg-[var(--color-surface-panel)] shadow-2xs text-[var(--color-text-primary)] font-bold"
-                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
+                                conditionsError && "text-red-600"
                             )}
                         >
-                            Conditions
+                            <span>Conditions</span>
+                            {conditionsError && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                            )}
                         </button>
                     </div>
 
@@ -264,6 +276,12 @@ export function MissionWaypointsTab({
 
                     {waypointSubTab === "actions" && (
                         <div className="space-y-3 pt-1">
+                            {actionsError && (
+                                <div className="p-2.5 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                                    <span>{actionsError}</span>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label className="form-label">Hover Duration (s)</label>
                                 <input
@@ -315,6 +333,12 @@ export function MissionWaypointsTab({
 
                     {waypointSubTab === "conditions" && (
                         <div className="space-y-3 pt-1">
+                            {conditionsError && (
+                                <div className="p-2.5 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                                    <span>{conditionsError}</span>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label className="form-label">Max Wind Tolerance (m/s)</label>
                                 <input
@@ -382,10 +406,9 @@ export function MissionWaypointsTab({
                     ) : (
                         <div className="space-y-2">
                             {waypoints.map((wp, idx) => {
-                                const wpHasError =
-                                    fieldErrors[`waypoints.${idx}.name`] ||
-                                    fieldErrors[`waypoints.${idx}.latitude`] ||
-                                    fieldErrors[`waypoints.${idx}.longitude`];
+                                const wpHasError = Object.keys(fieldErrors).some((k) =>
+                                    k.startsWith(`waypoints.${idx}.`)
+                                );
 
                                 return (
                                     <div

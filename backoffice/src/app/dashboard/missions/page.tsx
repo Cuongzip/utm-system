@@ -177,7 +177,7 @@ export default function MissionsPage() {
             <MissionsTable
                 missions={filteredMissions}
                 loading={loading}
-                onSelectMission={(m) => router.push(`/dashboard/missions/new?edit=${m.id}`)}
+                onSelectMission={(m) => router.push(`/dashboard/missions/${m.id}`)}
                 onExecuteMission={handleExecute}
                 onDuplicateMission={handleDuplicate}
                 onDeleteMission={handleDelete}
