@@ -1,7 +1,7 @@
 "use client";
 
-import { Navigation } from "lucide-react";
-import { BaseCesiumMap, AirspaceLayer, MapInspector, MapCardLayout } from "@/components/map";
+import { Shield } from "lucide-react";
+import { TacticalMapContainer, AirspaceLayer, MapInspector } from "@/components/map";
 import type { AirspaceZone } from "@/types";
 
 interface AirspaceMapProps {
@@ -21,53 +21,54 @@ export function AirspaceMap({
     const activeZonesCount = zones.filter((z) => z.status === "active").length;
 
     return (
-        <MapCardLayout
-            icon={<Navigation className="w-4 h-4 text-[var(--color-border-dark)]" />}
+        <TacticalMapContainer
+            icon={<Shield className="w-4 h-4 text-cyan-400" />}
             title="AIRSPACE SECTOR MAP"
             badge={`${activeZonesCount} ${activeZonesCount === 1 ? "ZONE" : "ZONES"} ACTIVE`}
+            initialMode="3d"
+            onEntityClick={(entityId) => {
+                const found = zones.find((z) => z.id === entityId);
+                if (found && onSelectZone) {
+                    onSelectZone(found);
+                }
+            }}
+            inspector={
+                selectedZone ? (
+                    <MapInspector
+                        code={selectedZone.zoneType?.toUpperCase().replace(/_/g, " ")}
+                        title={selectedZone.name || "Unnamed Sector"}
+                        metaItems={[
+                            ...(selectedZone.hubId
+                                ? [
+                                      {
+                                          label: "Hub",
+                                          value:
+                                              hubMap.get(selectedZone.hubId) || selectedZone.hubId,
+                                      },
+                                  ]
+                                : []),
+                            {
+                                label: "Floor",
+                                value: "0m",
+                            },
+                            {
+                                label: "Ceiling",
+                                value: `${selectedZone.altitudeCeiling ?? 120}m`,
+                            },
+                            {
+                                label: "Status",
+                                value: selectedZone.status || "active",
+                            },
+                        ]}
+                        accentColor={selectedZone.zoneType === "no_fly_zone" ? "red" : "default"}
+                        onClose={() => onSelectZone?.(null)}
+                        closeTooltip="Close sector inspector"
+                    />
+                ) : null
+            }
         >
-            <BaseCesiumMap
-                mode="2d"
-                layerType="street"
-                loadingText="Loading airspace satellite map..."
-                onEntityClick={(entityId) => {
-                    const found = zones.find((z) => z.id === entityId);
-                    if (found && onSelectZone) {
-                        onSelectZone(found);
-                    }
-                }}
-            >
-                <AirspaceLayer zones={zones} selectedZoneId={selectedZoneId} />
-            </BaseCesiumMap>
-
-            {selectedZone && (
-                <MapInspector
-                    code={selectedZone.zoneType?.toUpperCase().replace(/_/g, " ")}
-                    title={selectedZone.name || "Unnamed Sector"}
-                    metaItems={[
-                        ...(selectedZone.hubId
-                            ? [
-                                  {
-                                      label: "Hub",
-                                      value: hubMap.get(selectedZone.hubId) || selectedZone.hubId,
-                                  },
-                              ]
-                            : []),
-                        {
-                            label: "Ceiling",
-                            value: `${selectedZone.altitudeCeiling ?? 120}m`,
-                        },
-                        {
-                            label: "Status",
-                            value: selectedZone.status || "active",
-                        },
-                    ]}
-                    accentColor="default"
-                    onClose={() => onSelectZone?.(null)}
-                    closeTooltip="Close sector inspector"
-                />
-            )}
-        </MapCardLayout>
+            <AirspaceLayer zones={zones} selectedZoneId={selectedZoneId} />
+        </TacticalMapContainer>
     );
 }
 

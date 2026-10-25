@@ -1,7 +1,7 @@
 "use client";
 
 import { Navigation } from "lucide-react";
-import { BaseCesiumMap, HubsLayer, MapInspector, MapCardLayout } from "@/components/map";
+import { TacticalMapContainer, HubsLayer, MapInspector } from "@/components/map";
 import type { Hub } from "@/types";
 
 interface HubsMapProps {
@@ -14,49 +14,44 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
     const selectedHub = hubs.find((h) => h.id === selectedHubId);
 
     return (
-        <MapCardLayout
-            icon={<Navigation className="w-4 h-4 text-[var(--color-border-dark)]" />}
+        <TacticalMapContainer
+            icon={<Navigation className="w-4 h-4 text-cyan-400" />}
             title="VERTIPORT AIRSPACE MAP"
             badge={`${hubs.length} ${hubs.length === 1 ? "HUB" : "HUBS"} ACTIVE`}
+            onEntityClick={(entityId) => {
+                const found = hubs.find((h) => h.id === entityId);
+                if (found && onSelectHub) {
+                    onSelectHub(found);
+                }
+            }}
+            inspector={
+                selectedHub ? (
+                    <MapInspector
+                        code={selectedHub.code}
+                        title={selectedHub.name}
+                        metaItems={[
+                            {
+                                label: "Lat",
+                                value: (selectedHub.location?.lat ?? 0).toFixed(4),
+                            },
+                            {
+                                label: "Lng",
+                                value: (selectedHub.location?.lng ?? 0).toFixed(4),
+                            },
+                            {
+                                label: "Radius",
+                                value: `${selectedHub.airspaceRadius || 5000}m`,
+                            },
+                        ]}
+                        accentColor="default"
+                        onClose={() => onSelectHub?.(null as unknown as Hub)}
+                        closeTooltip="Close hub inspector"
+                    />
+                ) : null
+            }
         >
-            <BaseCesiumMap
-                mode="2d"
-                layerType="street"
-                loadingText="Loading airspace satellite map..."
-                onEntityClick={(entityId) => {
-                    const found = hubs.find((h) => h.id === entityId);
-                    if (found && onSelectHub) {
-                        onSelectHub(found);
-                    }
-                }}
-            >
-                <HubsLayer hubs={hubs} selectedHubId={selectedHubId} />
-            </BaseCesiumMap>
-
-            {selectedHub && (
-                <MapInspector
-                    code={selectedHub.code}
-                    title={selectedHub.name}
-                    metaItems={[
-                        {
-                            label: "Lat",
-                            value: (selectedHub.location?.lat ?? 0).toFixed(4),
-                        },
-                        {
-                            label: "Lng",
-                            value: (selectedHub.location?.lng ?? 0).toFixed(4),
-                        },
-                        {
-                            label: "Radius",
-                            value: `${selectedHub.airspaceRadius || 5000}m`,
-                        },
-                    ]}
-                    accentColor="default"
-                    onClose={() => onSelectHub?.(null as unknown as Hub)}
-                    closeTooltip="Close hub inspector"
-                />
-            )}
-        </MapCardLayout>
+            <HubsLayer hubs={hubs} selectedHubId={selectedHubId} />
+        </TacticalMapContainer>
     );
 }
 

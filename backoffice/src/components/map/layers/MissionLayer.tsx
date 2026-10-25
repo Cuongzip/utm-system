@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Waypoint, Hub } from "@/types";
+import { getTakeoffIconUri, getLandingIconUri, getWaypointIconUri } from "../mapIcons";
 
 export interface MissionLayerProps {
     waypoints?: Waypoint[];
@@ -55,11 +56,10 @@ export function MissionLayer({
                     id: depId,
                     name: `Departure: ${departureHub.name}`,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
-                    point: {
-                        pixelSize: 10,
-                        color: Cesium.Color.fromCssColorString("#00a3bf"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getTakeoffIconUri("#00a3bf"),
+                        width: 26,
+                        height: 26,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: {
@@ -89,11 +89,10 @@ export function MissionLayer({
                     id: arrId,
                     name: `Arrival: ${arrivalHub.name}`,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
-                    point: {
-                        pixelSize: 10,
-                        color: Cesium.Color.fromCssColorString("#f59e0b"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getLandingIconUri("#f59e0b"),
+                        width: 26,
+                        height: 26,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: {
@@ -188,9 +187,10 @@ export function MissionLayer({
 
             sortedWaypoints.forEach((wp, idx) => {
                 const wpId = `wp-${wp.id || wp.tempId || idx}`;
-                const isSelected =
+                const isSelected = Boolean(
                     (selectedWaypointId && wp.id === selectedWaypointId) ||
-                    (selectedWaypointId && wp.tempId === selectedWaypointId);
+                    (selectedWaypointId && wp.tempId === selectedWaypointId)
+                );
                 const isStart = idx === 0;
                 const isEnd = idx === sortedWaypoints.length - 1;
 
@@ -212,25 +212,22 @@ export function MissionLayer({
                         wp.latitude ?? 0,
                         wp.altitude ?? 50
                     ),
-                    point: {
-                        pixelSize: isSelected ? 22 : 18,
-                        color: pinColor,
-                        outlineColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#f59e0b")
-                            : Cesium.Color.WHITE,
-                        outlineWidth: isSelected ? 3 : 2,
+                    billboard: {
+                        image: getWaypointIconUri(seqNum, isSelected),
+                        width: isSelected ? 30 : 24,
+                        height: isSelected ? 30 : 24,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: {
                         text: labelText,
                         font: isSelected ? "bold 11px monospace" : "600 10px monospace",
                         fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#0f172a")
-                            : Cesium.Color.fromCssColorString("#334155"),
+                            ? Cesium.Color.fromCssColorString("#00e5ff")
+                            : Cesium.Color.fromCssColorString("#0f172a"),
                         outlineColor: Cesium.Color.WHITE,
                         outlineWidth: 3,
                         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                        pixelOffset: new Cesium.Cartesian2(0, -20),
+                        pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                 });

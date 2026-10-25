@@ -3,10 +3,9 @@
 import { PlaneTakeoff } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
 import {
-    BaseCesiumMap,
+    TacticalMapContainer,
     FlightsLayer,
     MapInspector,
-    MapCardLayout,
     type FlightHubCoord,
 } from "@/components/map";
 import type { Flight } from "@/types";
@@ -63,54 +62,52 @@ export function FlightsMap({
         : "—";
 
     return (
-        <MapCardLayout
-            icon={<PlaneTakeoff className="w-4 h-4 text-[var(--color-border-dark)]" />}
+        <TacticalMapContainer
+            icon={<PlaneTakeoff className="w-4 h-4 text-cyan-400" />}
             title="FLIGHT TRAJECTORY MAP"
             badge={`${activeFlightsCount} ${activeFlightsCount === 1 ? "FLIGHT" : "FLIGHTS"} ACTIVE`}
+            onEntityClick={(entityId) => {
+                const rawId = entityId
+                    .replace(/^flight-route-/, "")
+                    .replace(/^flight-start-/, "")
+                    .replace(/^flight-end-/, "")
+                    .replace(/^flight-label-/, "");
+                const found = flights.find((f) => f.id === rawId);
+                if (found && onSelectFlight) {
+                    onSelectFlight(found);
+                }
+            }}
+            inspector={
+                selectedFlight ? (
+                    <MapInspector
+                        code={selectedFlight.flightNumber || selectedFlight.id.slice(0, 8)}
+                        badge={
+                            <StatusBadge
+                                status={selectedFlight.status || "planned"}
+                                showDot={true}
+                            />
+                        }
+                        metaItems={[
+                            { label: "Drone", value: droneName },
+                            { label: "Route", value: `${depName} → ${arrName}` },
+                            {
+                                label: "Altitude",
+                                value: `${selectedFlight.cruisingAltitudeM ?? 120}m`,
+                            },
+                        ]}
+                        accentColor="default"
+                        onClose={() => onSelectFlight?.(null)}
+                        closeTooltip="Close flight inspector"
+                    />
+                ) : null
+            }
         >
-            <BaseCesiumMap
-                mode="2d"
-                layerType="street"
-                loadingText="Loading flight trajectory map..."
-                onEntityClick={(entityId) => {
-                    const rawId = entityId
-                        .replace(/^flight-route-/, "")
-                        .replace(/^flight-start-/, "")
-                        .replace(/^flight-end-/, "")
-                        .replace(/^flight-label-/, "");
-                    const found = flights.find((f) => f.id === rawId);
-                    if (found && onSelectFlight) {
-                        onSelectFlight(found);
-                    }
-                }}
-            >
-                <FlightsLayer
-                    flights={flights}
-                    selectedFlightId={selectedFlightId}
-                    hubCoordsMap={hubCoordsMap}
-                />
-            </BaseCesiumMap>
-
-            {selectedFlight && (
-                <MapInspector
-                    code={selectedFlight.flightNumber || selectedFlight.id.slice(0, 8)}
-                    badge={
-                        <StatusBadge status={selectedFlight.status || "planned"} showDot={true} />
-                    }
-                    metaItems={[
-                        { label: "Drone", value: droneName },
-                        { label: "Route", value: `${depName} → ${arrName}` },
-                        {
-                            label: "Altitude",
-                            value: `${selectedFlight.cruisingAltitudeM ?? 120}m`,
-                        },
-                    ]}
-                    accentColor="default"
-                    onClose={() => onSelectFlight?.(null)}
-                    closeTooltip="Close flight inspector"
-                />
-            )}
-        </MapCardLayout>
+            <FlightsLayer
+                flights={flights}
+                selectedFlightId={selectedFlightId}
+                hubCoordsMap={hubCoordsMap}
+            />
+        </TacticalMapContainer>
     );
 }
 

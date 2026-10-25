@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Hub } from "@/types";
+import { getHubIconUri } from "../mapIcons";
 
 export interface HubsLayerProps {
     hubs: Hub[];
@@ -42,19 +43,16 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                 const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
                 const stackIndex = coordCounter[coordKey] || 0;
                 coordCounter[coordKey] = stackIndex + 1;
-                const yOffset = -14 - stackIndex * 15;
+                const yOffset = -20 - stackIndex * 15;
 
                 const entity = viewer.entities.add({
                     id: hub.id,
                     name: hub.name,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
-                    point: {
-                        pixelSize: isSelected ? 12 : 8,
-                        color: isSelected
-                            ? Cesium.Color.fromCssColorString("#0f172a")
-                            : Cesium.Color.fromCssColorString("#334155"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getHubIconUri(isSelected ? "#00e5ff" : "#06b6d4", isSelected),
+                        width: isSelected ? 34 : 28,
+                        height: isSelected ? 34 : 28,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: {
@@ -62,8 +60,8 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                         font: isSelected ? "bold 12px monospace" : "600 11px monospace",
                         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                         fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#0f172a")
-                            : Cesium.Color.fromCssColorString("#334155"),
+                            ? Cesium.Color.fromCssColorString("#00e5ff")
+                            : Cesium.Color.fromCssColorString("#0f172a"),
                         outlineColor: Cesium.Color.WHITE,
                         outlineWidth: 3,
                         showBackground: false,

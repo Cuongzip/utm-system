@@ -421,7 +421,7 @@ export function MissionMapEditor({
                 <div className="relative flex-1 w-full min-h-[420px] overflow-hidden bg-slate-100">
                     <BaseCesiumMap
                         mode="2d"
-                        layerType="street"
+                        layerType="satellite"
                         loadingText="Loading mission tactical canvas..."
                     >
                         <MissionLayer

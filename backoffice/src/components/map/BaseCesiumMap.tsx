@@ -29,12 +29,12 @@ export interface BaseCesiumMapProps {
 const DEFAULT_COORDINATES: MapCoordinates = {
     lng: 108.2208,
     lat: 16.0544,
-    height: 2500000.0,
+    height: 45000.0,
 };
 
 export function BaseCesiumMap({
-    mode = "2d",
-    layerType = "street",
+    mode = "3d",
+    layerType = "satellite",
     height = "100%",
     hideToolbar = true,
     initialCoordinates = DEFAULT_COORDINATES,

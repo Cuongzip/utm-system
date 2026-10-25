@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Flight, TelemetryRecord } from "@/types";
 import type { FlightHubCoord } from "./FlightsLayer";
+import { getDroneIconUri } from "../mapIcons";
 
 export interface LiveTelemetryLayerProps {
     flights: Flight[];
@@ -185,19 +186,23 @@ export function LiveTelemetryLayer({
                         focusedDronePos = { lng: droneLng, lat: droneLat, alt: droneAlt };
                     }
 
+                    const droneHeading = telemetry.heading || 0;
+                    const hasAlert =
+                        telemetry.batteryPercentage !== undefined &&
+                        telemetry.batteryPercentage < 20;
+                    const droneColor = hasAlert ? "#ef4444" : isSelected ? "#00e5ff" : "#10b981";
+
                     const droneEntityId = `drone-live-${flight.id}`;
                     viewer.entities.add({
                         id: droneEntityId,
                         name:
                             flight.flightNumber || `Drone ${flight.droneId?.slice(0, 8) || "UAV"}`,
                         position: dronePosCartesian,
-                        point: {
-                            pixelSize: isSelected ? 16 : 12,
-                            color: Cesium.Color.fromCssColorString(
-                                isSelected ? "#00e5ff" : "#10b981"
-                            ),
-                            outlineColor: Cesium.Color.WHITE,
-                            outlineWidth: 3,
+                        billboard: {
+                            image: getDroneIconUri(droneColor, isSelected ? "#00e5ff" : "#ffffff"),
+                            width: isSelected ? 34 : 28,
+                            height: isSelected ? 34 : 28,
+                            rotation: -Cesium.Math.toRadians(droneHeading),
                             disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         },
                         label: {
@@ -208,7 +213,7 @@ export function LiveTelemetryLayer({
                             outlineWidth: 2,
                             style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                             verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                            pixelOffset: new Cesium.Cartesian2(0, -14),
+                            pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
                             showBackground: true,
                             backgroundColor: isSelected
                                 ? new Cesium.Color(0.02, 0.15, 0.25, 0.9)

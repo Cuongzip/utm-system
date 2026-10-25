@@ -8,3 +8,6 @@ export * from "./layers/MissionLayer";
 export * from "./layers/LiveTelemetryLayer";
 export * from "./MapInspector";
 export * from "./MapCardLayout";
+export * from "./TacticalMapContainer";
+export * from "./mapIcons";
+export * from "./mapTokens";

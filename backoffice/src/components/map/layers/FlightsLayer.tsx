@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Flight } from "@/types";
+import { getTakeoffIconUri, getLandingIconUri } from "../mapIcons";
 
 export interface FlightHubCoord {
     lat: number;
@@ -135,11 +136,11 @@ export function FlightsLayer({
                 viewer.entities.add({
                     id: startPinId,
                     position: startPos,
-                    point: {
-                        pixelSize: isSelected ? 10 : 8,
-                        color: Cesium.Color.fromCssColorString("#10b981"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getTakeoffIconUri(isSelected ? "#00e5ff" : "#10b981"),
+                        width: isSelected ? 26 : 22,
+                        height: isSelected ? 26 : 22,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                 });
                 newEntityIds.push(startPinId);
@@ -149,11 +150,11 @@ export function FlightsLayer({
                 viewer.entities.add({
                     id: endPinId,
                     position: endPos,
-                    point: {
-                        pixelSize: isSelected ? 10 : 8,
-                        color: Cesium.Color.fromCssColorString("#00a3bf"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getLandingIconUri(isSelected ? "#00e5ff" : "#f59e0b"),
+                        width: isSelected ? 26 : 22,
+                        height: isSelected ? 26 : 22,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                 });
                 newEntityIds.push(endPinId);

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { AirspaceZone } from "@/types";
+import { MAP_TOKENS } from "../mapTokens";
 
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
@@ -11,10 +12,10 @@ export interface AirspaceLayerProps {
 }
 
 const TYPE_COLOR_MAP: Record<string, string> = {
-    no_fly_zone: "#ef4444",
-    restricted: "#f59e0b",
-    hub_corridor: "#06b6d4",
-    warning: "#eab308",
+    no_fly_zone: MAP_TOKENS.colors.airspace.no_fly_zone,
+    restricted: MAP_TOKENS.colors.airspace.restricted,
+    hub_corridor: MAP_TOKENS.colors.airspace.hub_corridor,
+    warning: MAP_TOKENS.colors.airspace.warning,
 };
 
 export function AirspaceLayer({
@@ -78,6 +79,12 @@ export function AirspaceLayer({
                 const zoneTypeKey = zone.zoneType || "warning";
                 const baseColor = TYPE_COLOR_MAP[zoneTypeKey] || "#64748b";
 
+                const floor = 0;
+                const ceiling =
+                    zone.altitudeCeiling && zone.altitudeCeiling > floor
+                        ? zone.altitudeCeiling
+                        : 150;
+
                 const entity = viewer.entities.add({
                     id: zone.id,
                     name: zone.name,
@@ -88,34 +95,39 @@ export function AirspaceLayer({
                         material: isSelected
                             ? Cesium.Color.fromAlpha(
                                   Cesium.Color.fromCssColorString(baseColor),
-                                  0.28
+                                  0.32
                               )
                             : Cesium.Color.fromAlpha(
                                   Cesium.Color.fromCssColorString(baseColor),
-                                  0.12
+                                  0.16
                               ),
                         outline: true,
                         outlineColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#0f172a")
+                            ? Cesium.Color.fromCssColorString("#ffffff")
                             : Cesium.Color.fromAlpha(
                                   Cesium.Color.fromCssColorString(baseColor),
-                                  0.6
+                                  0.8
                               ),
-                        outlineWidth: isSelected ? 2 : 1,
-                        height: 0,
+                        outlineWidth: isSelected ? 2.5 : 1.5,
+                        height: floor,
+                        extrudedHeight: ceiling,
                     },
-                    position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 0),
+                    position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, ceiling + 15),
                     label: {
-                        text: zone.name || zone.id,
+                        text: `${zone.name || zone.id} (${floor}-${ceiling}m)`,
                         font: isSelected ? "bold 12px monospace" : "600 11px monospace",
                         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                         fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#0f172a")
-                            : Cesium.Color.fromCssColorString("#334155"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 3,
-                        showBackground: false,
-                        verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                            ? Cesium.Color.fromCssColorString("#ffffff")
+                            : Cesium.Color.fromCssColorString("#0f172a"),
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        showBackground: true,
+                        backgroundColor: isSelected
+                            ? new Cesium.Color(0.02, 0.15, 0.25, 0.9)
+                            : new Cesium.Color(0.95, 0.96, 0.98, 0.9),
+                        backgroundPadding: new Cesium.Cartesian2(6, 3),
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
                         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1500000),
