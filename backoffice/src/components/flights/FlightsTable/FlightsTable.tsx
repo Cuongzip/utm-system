@@ -18,6 +18,7 @@ import {
     TableEmpty,
 } from "@/components/ui";
 import type { Flight } from "@/types";
+import { formatDateTime } from "@/utils";
 
 export interface FlightsTableProps {
     flights: Flight[];
@@ -31,23 +32,6 @@ export interface FlightsTableProps {
     onNewFlight?: () => void;
     hubMap?: Map<string, string>;
     droneMap?: Map<string, string>;
-}
-
-function formatDeparture(val?: string | Date): string {
-    if (!val) return "—";
-    try {
-        const d = new Date(val);
-        if (isNaN(d.getTime())) return String(val);
-        return d.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-        });
-    } catch {
-        return String(val);
-    }
 }
 
 export function FlightsTable({
@@ -181,8 +165,9 @@ export function FlightsTable({
                                         ? hubMap.get(flight.arrivalHubId) || flight.arrivalHubId
                                         : "—");
 
-                                const departureTime = formatDeparture(
-                                    (flight as any).plannedDeparture || flight.scheduledDeparture
+                                const departureTime = formatDateTime(
+                                    (flight as any).plannedDeparture || flight.scheduledDeparture,
+                                    "MMM dd, HH:mm"
                                 );
 
                                 return (

@@ -3,6 +3,7 @@
 import { WifiOff, Activity, Trash2, Loader2 } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
 import type { DeviceRegistration } from "@/types";
+import { formatRelativeTime } from "@/utils";
 import styles from "./ConnectedDevicesPanel.module.css";
 
 interface ConnectedDevicesPanelProps {
@@ -129,7 +130,7 @@ export function ConnectedDevicesPanel({
                                         </td>
                                         <td className={`${styles.td} text-[12px] text-[#64748b]`}>
                                             {device.lastSeenAt
-                                                ? new Date(device.lastSeenAt).toLocaleTimeString()
+                                                ? formatRelativeTime(device.lastSeenAt)
                                                 : "Never"}
                                         </td>
                                         <td className={`${styles.td} text-right`}>

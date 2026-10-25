@@ -1,14 +1,51 @@
-export function formatDateTime(isoString?: string): string {
-    if (!isoString) return "--";
+import { format, isValid, formatDistanceToNow } from "date-fns";
+
+export function toValidDate(val?: string | Date | number | null): Date | null {
+    if (!val) return null;
+    const d = val instanceof Date ? val : new Date(val);
+    return isValid(d) ? d : null;
+}
+
+export function formatDate(val?: string | Date | number | null, pattern = "MMM dd, yyyy"): string {
+    const d = toValidDate(val);
+    if (!d) return "—";
     try {
-        const d = new Date(isoString);
-        return d.toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-        });
+        return format(d, pattern);
     } catch {
-        return isoString;
+        return "—";
+    }
+}
+
+export function formatDateTime(
+    val?: string | Date | number | null,
+    pattern = "MMM dd, yyyy HH:mm:ss"
+): string {
+    const d = toValidDate(val);
+    if (!d) return "--";
+    try {
+        return format(d, pattern);
+    } catch {
+        return String(val);
+    }
+}
+
+export function formatTime(val?: string | Date | number | null, pattern = "HH:mm:ss"): string {
+    const d = toValidDate(val);
+    if (!d) return "--";
+    try {
+        return format(d, pattern);
+    } catch {
+        return String(val);
+    }
+}
+
+export function formatRelativeTime(val?: string | Date | number | null): string {
+    const d = toValidDate(val);
+    if (!d) return "—";
+    try {
+        return formatDistanceToNow(d, { addSuffix: true });
+    } catch {
+        return "—";
     }
 }
 
@@ -18,19 +55,4 @@ export function formatCoordinates(lat: number, lon: number): string {
 
 export function formatAltitude(altitudeMeters: number): string {
     return `${Math.round(altitudeMeters)} m`;
-}
-
-export function formatDate(val?: string | Date): string {
-    if (!val) return "—";
-    try {
-        const d = new Date(val);
-        if (isNaN(d.getTime())) return String(val);
-        return d.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-        });
-    } catch {
-        return String(val);
-    }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, CustomSelect } from "@/components/ui";
+import { Modal, CustomSelect, FormInput, CoordinatesInput } from "@/components/ui";
 import {
     cn,
     parseApiError,
@@ -127,164 +127,92 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
             submitText={hubToEdit ? "Save Changes" : "Create Hub"}
             loadingText={hubToEdit ? "Saving..." : "Creating..."}
         >
-            <div className="form-group">
-                <label className="form-label" htmlFor="hubCode">
-                    Code *
-                </label>
-                <input
-                    id="hubCode"
-                    type="text"
-                    disabled={!!hubToEdit}
-                    value={code}
+            <FormInput
+                id="hubCode"
+                label="Code"
+                required
+                disabled={!!hubToEdit}
+                value={code}
+                onChange={(e) => {
+                    setCode(e.target.value);
+                    clearFieldError("code");
+                }}
+                placeholder="e.g. HUB-001"
+                error={fieldErrors.code}
+            />
+
+            <FormInput
+                id="hubName"
+                label="Name"
+                required
+                value={name}
+                onChange={(e) => {
+                    setName(e.target.value);
+                    clearFieldError("name");
+                }}
+                placeholder="Hub name"
+                error={fieldErrors.name}
+            />
+
+            <CoordinatesInput
+                lat={lat}
+                lng={lng}
+                onLatChange={(v) => {
+                    setLat(v);
+                    clearFieldError("lat", "location.lat");
+                }}
+                onLngChange={(v) => {
+                    setLng(v);
+                    clearFieldError("lng", "location.lng");
+                }}
+                latError={fieldErrors.lat || fieldErrors["location.lat"]}
+                lngError={fieldErrors.lng || fieldErrors["location.lng"]}
+            />
+
+            <div className="form-row-2">
+                <FormInput
+                    id="airspaceRadius"
+                    label="Radius (m)"
+                    required
+                    type="number"
+                    step="any"
+                    value={airspaceRadius}
                     onChange={(e) => {
-                        setCode(e.target.value);
-                        clearFieldError("code");
+                        setAirspaceRadius(e.target.value);
+                        clearFieldError("airspaceRadius");
                     }}
-                    placeholder="e.g. HUB-001"
-                    className={cn("form-input", fieldErrors.code && "form-input-error")}
+                    placeholder="5000"
+                    error={fieldErrors.airspaceRadius}
                 />
-                {fieldErrors.code && <span className="form-error-msg">{fieldErrors.code}</span>}
-            </div>
 
-            <div className="form-group">
-                <label className="form-label" htmlFor="hubName">
-                    Name *
-                </label>
-                <input
-                    id="hubName"
-                    type="text"
-                    value={name}
+                <FormInput
+                    id="altitudeMsl"
+                    label="Ceiling / Altitude MSL (m)"
+                    type="number"
+                    step="any"
+                    value={altitudeMsl}
                     onChange={(e) => {
-                        setName(e.target.value);
-                        clearFieldError("name");
+                        setAltitudeMsl(e.target.value);
+                        clearFieldError("altitudeMsl");
                     }}
-                    placeholder="Hub name"
-                    className={cn("form-input", fieldErrors.name && "form-input-error")}
+                    placeholder="400"
+                    error={fieldErrors.altitudeMsl}
                 />
-                {fieldErrors.name && <span className="form-error-msg">{fieldErrors.name}</span>}
             </div>
 
             <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="latitude">
-                        Latitude *
-                    </label>
-                    <input
-                        id="latitude"
-                        type="number"
-                        step="any"
-                        value={lat}
-                        onChange={(e) => {
-                            setLat(e.target.value);
-                            clearFieldError("lat", "location.lat");
-                        }}
-                        placeholder="e.g. 37.9838"
-                        className={cn(
-                            "form-input",
-                            (fieldErrors.lat || fieldErrors["location.lat"]) && "form-input-error"
-                        )}
-                    />
-                    {(fieldErrors.lat || fieldErrors["location.lat"]) && (
-                        <span className="form-error-msg">
-                            {fieldErrors.lat || fieldErrors["location.lat"]}
-                        </span>
-                    )}
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label" htmlFor="longitude">
-                        Longitude *
-                    </label>
-                    <input
-                        id="longitude"
-                        type="number"
-                        step="any"
-                        value={lng}
-                        onChange={(e) => {
-                            setLng(e.target.value);
-                            clearFieldError("lng", "location.lng");
-                        }}
-                        placeholder="e.g. 23.7275"
-                        className={cn(
-                            "form-input",
-                            (fieldErrors.lng || fieldErrors["location.lng"]) && "form-input-error"
-                        )}
-                    />
-                    {(fieldErrors.lng || fieldErrors["location.lng"]) && (
-                        <span className="form-error-msg">
-                            {fieldErrors.lng || fieldErrors["location.lng"]}
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="airspaceRadius">
-                        Radius (m) *
-                    </label>
-                    <input
-                        id="airspaceRadius"
-                        type="number"
-                        step="any"
-                        value={airspaceRadius}
-                        onChange={(e) => {
-                            setAirspaceRadius(e.target.value);
-                            clearFieldError("airspaceRadius");
-                        }}
-                        placeholder="5000"
-                        className={cn(
-                            "form-input",
-                            fieldErrors.airspaceRadius && "form-input-error"
-                        )}
-                    />
-                    {fieldErrors.airspaceRadius && (
-                        <span className="form-error-msg">{fieldErrors.airspaceRadius}</span>
-                    )}
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label" htmlFor="altitudeMsl">
-                        Ceiling / Altitude MSL (m)
-                    </label>
-                    <input
-                        id="altitudeMsl"
-                        type="number"
-                        step="any"
-                        value={altitudeMsl}
-                        onChange={(e) => {
-                            setAltitudeMsl(e.target.value);
-                            clearFieldError("altitudeMsl");
-                        }}
-                        placeholder="400"
-                        className={cn("form-input", fieldErrors.altitudeMsl && "form-input-error")}
-                    />
-                    {fieldErrors.altitudeMsl && (
-                        <span className="form-error-msg">{fieldErrors.altitudeMsl}</span>
-                    )}
-                </div>
-            </div>
-
-            <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="timezone">
-                        Timezone
-                    </label>
-                    <input
-                        id="timezone"
-                        type="text"
-                        value={timezone}
-                        onChange={(e) => {
-                            setTimezone(e.target.value);
-                            clearFieldError("timezone");
-                        }}
-                        placeholder="UTC"
-                        className={cn("form-input", fieldErrors.timezone && "form-input-error")}
-                    />
-                    {fieldErrors.timezone && (
-                        <span className="form-error-msg">{fieldErrors.timezone}</span>
-                    )}
-                </div>
+                <FormInput
+                    id="timezone"
+                    label="Timezone"
+                    type="text"
+                    value={timezone}
+                    onChange={(e) => {
+                        setTimezone(e.target.value);
+                        clearFieldError("timezone");
+                    }}
+                    placeholder="UTC"
+                    error={fieldErrors.timezone}
+                />
 
                 {hubToEdit && (
                     <div className="form-group">

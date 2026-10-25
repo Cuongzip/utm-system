@@ -1,36 +1,35 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DronesTable, RegisterDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
+import { useCrudList } from "@/hooks";
 import type { Drone, DroneRegistrationPayload } from "@/types";
 
 export default function DronesPage() {
-    const [drones, setDrones] = useState<Drone[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-    const [selectedDrone, setSelectedDrone] = useState<Drone | null>(null);
+    const fetchDrones = useCallback(() => droneService.getDrones(), []);
+    const deleteDrone = useCallback((id: string) => droneService.deleteDrone(id), []);
 
-    const fetchDrones = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await droneService.getDrones();
-            setDrones(res.items || []);
-            setError(null);
-        } catch {
-            setError("Failed to fetch drone fleet");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchDrones();
-    }, [fetchDrones]);
+    const {
+        items: drones,
+        loading,
+        error,
+        setError,
+        refresh,
+        isModalOpen: isRegisterOpen,
+        itemToEdit: selectedDrone,
+        openCreateModal,
+        openEditModal,
+        closeModal,
+        handleDelete: handleDeleteDrone,
+    } = useCrudList<Drone>({
+        fetchFn: fetchDrones,
+        deleteFn: deleteDrone,
+        entityName: "Drone",
+    });
 
     const handleSaveDrone = async (payload: DroneRegistrationPayload, id?: string) => {
         try {
@@ -41,40 +40,17 @@ export default function DronesPage() {
                 await droneService.createDrone(payload);
                 toast.success("Drone registered successfully");
             }
-            await fetchDrones();
+            await refresh();
         } catch (err: unknown) {
             toast.error("Failed to save drone");
             throw err;
         }
     };
 
-    const handleDeleteDrone = async (id: string) => {
-        try {
-            await droneService.deleteDrone(id);
-            toast.success("Drone deleted successfully");
-            await fetchDrones();
-        } catch {
-            toast.error("Failed to delete drone");
-            setError("Failed to delete drone");
-        }
-    };
-
-    const handleEditDrone = (drone: Drone) => {
-        setSelectedDrone(drone);
-        setIsRegisterOpen(true);
-    };
-
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="DRONES">
-                <ChamferButton
-                    variant="dark"
-                    size="sm"
-                    onClick={() => {
-                        setSelectedDrone(null);
-                        setIsRegisterOpen(true);
-                    }}
-                >
+                <ChamferButton variant="dark" size="sm" onClick={openCreateModal}>
                     <Plus className="w-4 h-4 text-white" />
                     <span>Register Drone</span>
                 </ChamferButton>
@@ -85,17 +61,14 @@ export default function DronesPage() {
             <DronesTable
                 drones={drones}
                 loading={loading}
-                onEditDrone={handleEditDrone}
+                onEditDrone={openEditModal}
                 onDeleteDrone={handleDeleteDrone}
             />
 
             <RegisterDroneModal
                 isOpen={isRegisterOpen}
                 droneToEdit={selectedDrone}
-                onClose={() => {
-                    setIsRegisterOpen(false);
-                    setSelectedDrone(null);
-                }}
+                onClose={closeModal}
                 onSubmit={handleSaveDrone}
             />
         </div>

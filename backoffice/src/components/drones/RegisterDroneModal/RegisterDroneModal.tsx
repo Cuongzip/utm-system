@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, CustomSelect } from "@/components/ui";
+import { Modal, CustomSelect, FormInput } from "@/components/ui";
 import { hubService } from "@/services/hubService";
 import {
     cn,
@@ -112,69 +112,45 @@ export function RegisterDroneModal({
             submitText={droneToEdit ? "Save Changes" : "Register Drone"}
             loadingText="Saving..."
         >
-            <div className="form-group">
-                <label className="form-label" htmlFor="registrationNumber">
-                    Registration Number *
-                </label>
-                <input
-                    id="registrationNumber"
-                    type="text"
-                    value={registrationNumber}
-                    onChange={(e) => {
-                        setRegistrationNumber(e.target.value);
-                        clearFieldError("registrationNumber");
-                    }}
-                    placeholder="e.g. DRN-001"
-                    className={cn(
-                        "form-input",
-                        fieldErrors.registrationNumber && "form-input-error"
-                    )}
-                />
-                {fieldErrors.registrationNumber && (
-                    <span className="form-error-msg">{fieldErrors.registrationNumber}</span>
-                )}
-            </div>
+            <FormInput
+                id="registrationNumber"
+                label="Registration Number"
+                required
+                value={registrationNumber}
+                onChange={(e) => {
+                    setRegistrationNumber(e.target.value);
+                    clearFieldError("registrationNumber");
+                }}
+                placeholder="e.g. DRN-001"
+                error={fieldErrors.registrationNumber}
+            />
 
             <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="manufacturer">
-                        Manufacturer *
-                    </label>
-                    <input
-                        id="manufacturer"
-                        type="text"
-                        value={manufacturer}
-                        onChange={(e) => {
-                            setManufacturer(e.target.value);
-                            clearFieldError("manufacturer");
-                        }}
-                        placeholder="e.g. DJI"
-                        className={cn("form-input", fieldErrors.manufacturer && "form-input-error")}
-                    />
-                    {fieldErrors.manufacturer && (
-                        <span className="form-error-msg">{fieldErrors.manufacturer}</span>
-                    )}
-                </div>
+                <FormInput
+                    id="manufacturer"
+                    label="Manufacturer"
+                    required
+                    value={manufacturer}
+                    onChange={(e) => {
+                        setManufacturer(e.target.value);
+                        clearFieldError("manufacturer");
+                    }}
+                    placeholder="e.g. DJI"
+                    error={fieldErrors.manufacturer}
+                />
 
-                <div className="form-group">
-                    <label className="form-label" htmlFor="model">
-                        Model *
-                    </label>
-                    <input
-                        id="model"
-                        type="text"
-                        value={model}
-                        onChange={(e) => {
-                            setModel(e.target.value);
-                            clearFieldError("model");
-                        }}
-                        placeholder="e.g. Matrice 300 RTK"
-                        className={cn("form-input", fieldErrors.model && "form-input-error")}
-                    />
-                    {fieldErrors.model && (
-                        <span className="form-error-msg">{fieldErrors.model}</span>
-                    )}
-                </div>
+                <FormInput
+                    id="model"
+                    label="Model"
+                    required
+                    value={model}
+                    onChange={(e) => {
+                        setModel(e.target.value);
+                        clearFieldError("model");
+                    }}
+                    placeholder="e.g. Matrice 300 RTK"
+                    error={fieldErrors.model}
+                />
             </div>
 
             <div className="form-group">
@@ -202,50 +178,35 @@ export function RegisterDroneModal({
             </div>
 
             <div className="form-row-2">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="batteryCapacityWh">
-                        Battery Capacity (Wh) *
-                    </label>
-                    <input
-                        id="batteryCapacityWh"
-                        type="number"
-                        step="any"
-                        value={batteryCapacityWh}
-                        onChange={(e) => {
-                            setBatteryCapacityWh(e.target.value);
-                            clearFieldError("batteryCapacityWh");
-                        }}
-                        placeholder="e.g. 300"
-                        className={cn(
-                            "form-input",
-                            fieldErrors.batteryCapacityWh && "form-input-error"
-                        )}
-                    />
-                    {fieldErrors.batteryCapacityWh && (
-                        <span className="form-error-msg">{fieldErrors.batteryCapacityWh}</span>
-                    )}
-                </div>
+                <FormInput
+                    id="batteryCapacityWh"
+                    label="Battery Capacity (Wh)"
+                    required
+                    type="number"
+                    step="any"
+                    value={batteryCapacityWh}
+                    onChange={(e) => {
+                        setBatteryCapacityWh(e.target.value);
+                        clearFieldError("batteryCapacityWh");
+                    }}
+                    placeholder="e.g. 300"
+                    error={fieldErrors.batteryCapacityWh}
+                />
 
-                <div className="form-group">
-                    <label className="form-label" htmlFor="maxPayload">
-                        Max Payload (kg) *
-                    </label>
-                    <input
-                        id="maxPayload"
-                        type="number"
-                        step="any"
-                        value={maxPayload}
-                        onChange={(e) => {
-                            setMaxPayload(e.target.value);
-                            clearFieldError("maxPayload");
-                        }}
-                        placeholder="e.g. 5"
-                        className={cn("form-input", fieldErrors.maxPayload && "form-input-error")}
-                    />
-                    {fieldErrors.maxPayload && (
-                        <span className="form-error-msg">{fieldErrors.maxPayload}</span>
-                    )}
-                </div>
+                <FormInput
+                    id="maxPayload"
+                    label="Max Payload (kg)"
+                    required
+                    type="number"
+                    step="any"
+                    value={maxPayload}
+                    onChange={(e) => {
+                        setMaxPayload(e.target.value);
+                        clearFieldError("maxPayload");
+                    }}
+                    placeholder="e.g. 5"
+                    error={fieldErrors.maxPayload}
+                />
             </div>
         </Modal>
     );

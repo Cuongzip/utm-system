@@ -12,6 +12,7 @@ import {
 } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { hubService } from "@/services/hubService";
+import { useCrudList } from "@/hooks";
 import type {
     AirspaceZone,
     CreateAirspaceZonePayload,
@@ -20,37 +21,48 @@ import type {
 } from "@/types";
 
 export default function AirspacePage() {
-    const [zones, setZones] = useState<AirspaceZone[]>([]);
     const [hubs, setHubs] = useState<Hub[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isBriefingOpen, setIsBriefingOpen] = useState(false);
-    const [selectedZone, setSelectedZone] = useState<AirspaceZone | null>(null);
-    const [highlightedZoneId, setHighlightedZoneId] = useState<string | null>(null);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
+    const fetchZones = useCallback(() => airspaceService.getZones({ limit: 0 }), []);
+    const deleteZone = useCallback((id: string) => airspaceService.deleteZone(id), []);
+
+    const {
+        items: zones,
+        loading,
+        error,
+        setError,
+        refresh: refreshZones,
+        isModalOpen: isAddModalOpen,
+        itemToEdit: selectedZone,
+        openCreateModal,
+        openEditModal,
+        closeModal,
+        highlightedId: highlightedZoneId,
+        handleSelect: handleSelectZone,
+        handleDelete: handleDeleteZone,
+    } = useCrudList<AirspaceZone>({
+        fetchFn: fetchZones,
+        deleteFn: deleteZone,
+        entityName: "Airspace zone",
+    });
+
+    const fetchHubs = useCallback(async () => {
         try {
-            const [zonesRes, hubsRes] = await Promise.all([
-                airspaceService.getZones({ limit: 0 }),
-                hubService.getHubs({ limit: 0 }),
-            ]);
-
-            setZones(zonesRes.items || []);
-            setHubs(hubsRes.items || []);
-            setError(null);
+            const res = await hubService.getHubs({ limit: 0 });
+            setHubs(res.items || []);
         } catch {
-            setError("Failed to fetch airspace sectors and geofence data");
-        } finally {
-            setLoading(false);
+            setHubs([]);
         }
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchHubs();
+    }, [fetchHubs]);
+
+    const handleRefreshAll = useCallback(async () => {
+        await Promise.all([refreshZones(), fetchHubs()]);
+    }, [refreshZones, fetchHubs]);
 
     const hubMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -72,34 +84,11 @@ export default function AirspacePage() {
                 await airspaceService.createZone(payload as CreateAirspaceZonePayload);
                 toast.success("Airspace zone created successfully");
             }
-            await fetchData();
+            await refreshZones();
         } catch (err: unknown) {
             toast.error("Failed to save airspace zone");
             throw err;
         }
-    };
-
-    const handleDeleteZone = async (id: string) => {
-        try {
-            await airspaceService.deleteZone(id);
-            if (highlightedZoneId === id) {
-                setHighlightedZoneId(null);
-            }
-            toast.success("Airspace zone deleted successfully");
-            await fetchData();
-        } catch {
-            toast.error("Failed to delete airspace zone");
-            setError("Failed to delete airspace zone");
-        }
-    };
-
-    const handleEditZone = (zone: AirspaceZone) => {
-        setSelectedZone(zone);
-        setIsAddModalOpen(true);
-    };
-
-    const handleSelectZone = (zone: AirspaceZone | null) => {
-        setHighlightedZoneId(zone ? zone.id : null);
     };
 
     return (
@@ -110,19 +99,12 @@ export default function AirspacePage() {
                     <span>Pre-Flight Check</span>
                 </OutlineButton>
 
-                <OutlineButton size="sm" onClick={fetchData}>
+                <OutlineButton size="sm" onClick={handleRefreshAll}>
                     <RotateCw className="w-3.5 h-3.5 text-[#334155]" />
                     <span>Refresh</span>
                 </OutlineButton>
 
-                <ChamferButton
-                    variant="dark"
-                    size="sm"
-                    onClick={() => {
-                        setSelectedZone(null);
-                        setIsAddModalOpen(true);
-                    }}
-                >
+                <ChamferButton variant="dark" size="sm" onClick={openCreateModal}>
                     <Plus className="w-4 h-4 text-white" />
                     <span>Add Zone</span>
                 </ChamferButton>
@@ -136,7 +118,7 @@ export default function AirspacePage() {
                     loading={loading}
                     selectedZoneId={highlightedZoneId}
                     onSelectZone={handleSelectZone}
-                    onEditZone={handleEditZone}
+                    onEditZone={openEditModal}
                     onDeleteZone={handleDeleteZone}
                     hubMap={hubMap}
                 />
@@ -155,10 +137,7 @@ export default function AirspacePage() {
                 isOpen={isAddModalOpen}
                 zoneToEdit={selectedZone}
                 hubs={hubs}
-                onClose={() => {
-                    setIsAddModalOpen(false);
-                    setSelectedZone(null);
-                }}
+                onClose={closeModal}
                 onSubmit={handleSaveZone}
             />
 

@@ -16,3 +16,5 @@ export * from "./Table";
 export * from "./Popover";
 export * from "./Calendar";
 export * from "./DateTimePicker";
+export * from "./FormInput/FormInput";
+export * from "./CoordinatesInput/CoordinatesInput";

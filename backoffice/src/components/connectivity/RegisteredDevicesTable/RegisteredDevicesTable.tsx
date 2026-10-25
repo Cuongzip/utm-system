@@ -12,6 +12,7 @@ import {
     Tooltip,
 } from "@/components/ui";
 import type { DeviceRegistration, DeviceConnectionStatus } from "@/types";
+import { formatDateTime, formatRelativeTime } from "@/utils";
 import styles from "./RegisteredDevicesTable.module.css";
 
 interface RegisteredDevicesTableProps {
@@ -187,7 +188,7 @@ export function RegisteredDevicesTable({
                                                 className={`${styles.td} text-[12px] text-[#64748b]`}
                                             >
                                                 {device.lastSeenAt
-                                                    ? new Date(device.lastSeenAt).toLocaleString()
+                                                    ? `${formatDateTime(device.lastSeenAt, "MMM dd, HH:mm")} (${formatRelativeTime(device.lastSeenAt)})`
                                                     : "Never"}
                                             </td>
                                             <td className={`${styles.td} text-right`}>

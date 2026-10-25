@@ -1,37 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
+import { useCrudList } from "@/hooks";
 import type { Hub, CreateHubPayload, UpdateHubPayload } from "@/types";
 
 export default function HubsPage() {
-    const [hubs, setHubs] = useState<Hub[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
-    const [highlightedHubId, setHighlightedHubId] = useState<string | null>(null);
+    const fetchHubs = useCallback(() => hubService.getHubs({ limit: 0 }), []);
+    const deleteHub = useCallback((id: string) => hubService.deleteHub(id), []);
 
-    const fetchHubs = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await hubService.getHubs({ limit: 0 });
-            setHubs(res.items || []);
-            setError(null);
-        } catch {
-            setError("Failed to fetch vertiport hubs");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchHubs();
-    }, [fetchHubs]);
+    const {
+        items: hubs,
+        loading,
+        error,
+        setError,
+        refresh,
+        isModalOpen,
+        itemToEdit: selectedHub,
+        openCreateModal,
+        openEditModal,
+        closeModal,
+        highlightedId: highlightedHubId,
+        handleSelect: handleSelectHub,
+        handleDelete: handleDeleteHub,
+    } = useCrudList<Hub>({
+        fetchFn: fetchHubs,
+        deleteFn: deleteHub,
+        entityName: "Vertiport hub",
+    });
 
     const handleSaveHub = async (payload: CreateHubPayload | UpdateHubPayload, id?: string) => {
         try {
@@ -42,47 +42,17 @@ export default function HubsPage() {
                 await hubService.createHub(payload as CreateHubPayload);
                 toast.success("Vertiport hub created successfully");
             }
-            await fetchHubs();
+            await refresh();
         } catch (err: unknown) {
             toast.error("Failed to save hub");
             throw err;
         }
     };
 
-    const handleDeleteHub = async (id: string) => {
-        try {
-            await hubService.deleteHub(id);
-            if (highlightedHubId === id) {
-                setHighlightedHubId(null);
-            }
-            toast.success("Vertiport hub deleted successfully");
-            await fetchHubs();
-        } catch {
-            toast.error("Failed to delete hub");
-            setError("Failed to delete hub");
-        }
-    };
-
-    const handleEditHub = (hub: Hub) => {
-        setSelectedHub(hub);
-        setIsModalOpen(true);
-    };
-
-    const handleSelectHub = (hub: Hub | null) => {
-        setHighlightedHubId(hub ? hub.id : null);
-    };
-
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="HUBS">
-                <ChamferButton
-                    variant="dark"
-                    size="sm"
-                    onClick={() => {
-                        setSelectedHub(null);
-                        setIsModalOpen(true);
-                    }}
-                >
+                <ChamferButton variant="dark" size="sm" onClick={openCreateModal}>
                     <Plus className="w-4 h-4 text-white" />
                     <span>Add Hub</span>
                 </ChamferButton>
@@ -96,7 +66,7 @@ export default function HubsPage() {
                     loading={loading}
                     selectedHubId={highlightedHubId}
                     onSelectHub={handleSelectHub}
-                    onEditHub={handleEditHub}
+                    onEditHub={openEditModal}
                     onDeleteHub={handleDeleteHub}
                 />
 
@@ -112,10 +82,7 @@ export default function HubsPage() {
             <AddHubModal
                 isOpen={isModalOpen}
                 hubToEdit={selectedHub}
-                onClose={() => {
-                    setIsModalOpen(false);
-                    setSelectedHub(null);
-                }}
+                onClose={closeModal}
                 onSubmit={handleSaveHub}
             />
         </div>

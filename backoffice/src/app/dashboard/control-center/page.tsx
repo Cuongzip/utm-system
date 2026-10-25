@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/ui";
 import { Building2, Navigation, Radio } from "lucide-react";
 import {
@@ -11,18 +11,18 @@ import {
     ActiveAlerts,
 } from "@/components/control-center";
 import { HubsLayer, LiveTelemetryLayer, type FlightHubCoord } from "@/components/map";
-import { flightService, hubService, telemetryService } from "@/services";
-import type { Flight, Hub, TelemetryRecord } from "@/types";
+import { useLiveTelemetry } from "@/hooks";
+import { flightService, hubService } from "@/services";
+import type { Flight, Hub } from "@/types";
 
 export default function ControlCenterPage() {
     const [flights, setFlights] = useState<Flight[]>([]);
     const [hubs, setHubs] = useState<Hub[]>([]);
     const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
-    const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryRecord>>({});
-    const [telemetryHistoryMap, setTelemetryHistoryMap] = useState<
-        Record<string, TelemetryRecord[]>
-    >({});
     const [isLoading, setIsLoading] = useState(true);
+
+    const { telemetryMap, telemetryHistoryMap, activeTelemetryCount, isSocketConnected } =
+        useLiveTelemetry(flights);
 
     const loadFlightsAndHubs = useCallback(async () => {
         try {
@@ -66,78 +66,6 @@ export default function ControlCenterPage() {
         return map;
     }, [hubs]);
 
-    const isPollingRef = useRef(false);
-    useEffect(() => {
-        if (flights.length === 0) return;
-
-        let alive = true;
-
-        const pollTelemetry = async () => {
-            if (isPollingRef.current) return;
-            isPollingRef.current = true;
-
-            try {
-                const promises = flights.map(async (flight) => {
-                    const latest = await telemetryService.getLatestByFlightId(flight.id);
-                    if (!latest && flight.droneId) {
-                        return {
-                            flightId: flight.id,
-                            latest: await telemetryService.getLatestByDroneId(flight.droneId),
-                        };
-                    }
-                    return { flightId: flight.id, latest };
-                });
-
-                const results = await Promise.all(promises);
-                if (!alive) return;
-
-                const newTelemetryMap: Record<string, TelemetryRecord> = {};
-                const flightsWithTelemetry: string[] = [];
-
-                results.forEach(({ flightId, latest }) => {
-                    if (latest) {
-                        newTelemetryMap[flightId] = latest;
-                        flightsWithTelemetry.push(flightId);
-                    }
-                });
-
-                setTelemetryMap((prev) => ({ ...prev, ...newTelemetryMap }));
-
-                if (flightsWithTelemetry.length > 0) {
-                    const historyPromises = flightsWithTelemetry.map(async (fId) => {
-                        const history = await telemetryService.getHistoryByFlightId(fId);
-                        return { flightId: fId, history };
-                    });
-
-                    const historyResults = await Promise.all(historyPromises);
-                    if (!alive) return;
-
-                    const newHistoryMap: Record<string, TelemetryRecord[]> = {};
-                    historyResults.forEach(({ flightId, history }) => {
-                        if (history && history.length > 0) {
-                            newHistoryMap[flightId] = history;
-                        }
-                    });
-
-                    setTelemetryHistoryMap((prev) => ({ ...prev, ...newHistoryMap }));
-                }
-            } catch (err) {
-                console.error("Error polling telemetry records:", err);
-            } finally {
-                isPollingRef.current = false;
-            }
-        };
-
-        pollTelemetry();
-        const intervalId = setInterval(pollTelemetry, 1000);
-
-        return () => {
-            alive = false;
-            clearInterval(intervalId);
-        };
-    }, [flights]);
-
-    const activeTelemetryCount = Object.keys(telemetryMap).length;
     const selectedFlight = flights.find((f) => f.id === selectedFlightId);
     const selectedTelemetry = selectedFlightId ? telemetryMap[selectedFlightId] : null;
 
@@ -163,13 +91,17 @@ export default function ControlCenterPage() {
                         className={`inline-flex items-center px-2.5 py-1 rounded border font-medium ${
                             activeTelemetryCount > 0
                                 ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold animate-pulse"
-                                : "border-slate-200 bg-slate-50 text-slate-600"
+                                : isSocketConnected
+                                  ? "border-sky-300 bg-sky-50 text-sky-700 font-medium"
+                                  : "border-slate-200 bg-slate-50 text-slate-600"
                         }`}
                     >
                         <Radio className="h-3.5 w-3.5 mr-1 text-emerald-600" />
                         {activeTelemetryCount > 0
-                            ? `${activeTelemetryCount} TELEMETRY LIVE`
-                            : "TELEMETRY STANDBY"}
+                            ? `${activeTelemetryCount} TELEMETRY LIVE${isSocketConnected ? " (WS)" : ""}`
+                            : isSocketConnected
+                              ? "WS CONNECTED • STANDBY"
+                              : "TELEMETRY STANDBY"}
                     </span>
                 </div>
             </PageHeader>
