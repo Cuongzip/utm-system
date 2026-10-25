@@ -1,8 +1,6 @@
 package com.utm.mission.mapper;
 
 import com.utm.mission.model.Mission;
-import com.utm.mission.model.enumeration.MissionScheduleType;
-import com.utm.mission.model.enumeration.MissionStatus;
 import com.utm.mission.viewmodel.MissionBriefVm;
 import com.utm.mission.viewmodel.MissionPostVm;
 import com.utm.mission.viewmodel.MissionPutVm;
@@ -18,11 +16,8 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import java.util.List;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        uses = {WaypointMapper.class},
-        builder = @Builder(disableBuilder = true)
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {
+        WaypointMapper.class }, builder = @Builder(disableBuilder = true))
 public interface MissionMapper {
 
     @Mapping(target = "id", ignore = true)

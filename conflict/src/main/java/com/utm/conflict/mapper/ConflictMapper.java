@@ -6,7 +6,6 @@ import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ConflictType;
-import com.utm.conflict.model.enumeration.ResolutionStrategy;
 import com.utm.conflict.viewmodel.ConflictVm;
 import com.utm.conflict.viewmodel.LocationVm;
 import org.mapstruct.Mapper;

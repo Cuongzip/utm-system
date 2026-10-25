@@ -2,7 +2,6 @@ package com.utm.simulation.mapper;
 
 import com.utm.simulation.model.SimulationEvent;
 import com.utm.simulation.model.SimulationSession;
-import com.utm.simulation.model.enumeration.SimulationStatus;
 import com.utm.simulation.viewmodel.SimulationEventVm;
 import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
 import com.utm.simulation.viewmodel.SimulationSessionVm;

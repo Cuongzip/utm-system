@@ -2,15 +2,20 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/ui";
-import { Building2, Navigation, Radio } from "lucide-react";
+import { Building2, Navigation, Radio, Crosshair } from "lucide-react";
 import {
-    TacticalMapPanel,
     LiveTelemetry,
     FlightControl,
     RecentCommands,
     ActiveAlerts,
 } from "@/components/control-center";
-import { HubsLayer, LiveTelemetryLayer, FlightsLayer, type FlightHubCoord } from "@/components/map";
+import {
+    HubsLayer,
+    LiveTelemetryLayer,
+    FlightsLayer,
+    TacticalMapContainer,
+    type FlightHubCoord,
+} from "@/components/map";
 import { useLiveTelemetry } from "@/hooks";
 import { flightService, hubService } from "@/services";
 import type { Flight, Hub } from "@/types";
@@ -114,9 +119,13 @@ export default function ControlCenterPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                    <TacticalMapPanel
-                        initialMode="globe"
-                        activeTelemetryCount={activeTelemetryCount}
+                    <TacticalMapContainer
+                        icon={<Crosshair className="w-4 h-4 text-cyan-400" />}
+                        title="LIVE OPERATIONS TRACKING"
+                        activeCount={activeTelemetryCount}
+                        initialMode="3d"
+                        initialLayerType="satellite"
+                        className="h-[540px]"
                         onEntityClick={(entityId) => {
                             const rawId = entityId
                                 .replace(/^drone-live-/, "")
@@ -145,7 +154,7 @@ export default function ControlCenterPage() {
                             onSelectFlight={setSelectedFlightId}
                         />
                         <HubsLayer hubs={hubs} />
-                    </TacticalMapPanel>
+                    </TacticalMapContainer>
                 </div>
 
                 <div className="lg:col-span-4">

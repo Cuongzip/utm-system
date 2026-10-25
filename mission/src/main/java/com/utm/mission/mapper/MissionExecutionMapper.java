@@ -1,14 +1,12 @@
 package com.utm.mission.mapper;
 
 import com.utm.mission.model.MissionExecution;
-import com.utm.mission.model.enumeration.ExecutionStatus;
 import com.utm.mission.viewmodel.MissionExecutePostVm;
 import com.utm.mission.viewmodel.MissionExecutionVm;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
-import org.mapstruct.Named;
 
 import java.util.List;
 

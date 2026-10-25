@@ -1,7 +1,6 @@
 package com.utm.connectivity.mapper;
 
 import com.utm.connectivity.model.DeviceRegistration;
-import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
 import com.utm.connectivity.viewmodel.DroneBriefVm;

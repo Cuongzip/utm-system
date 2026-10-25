@@ -2,8 +2,6 @@ package com.utm.organization.mapper;
 
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.organization.model.Organization;
-import com.utm.organization.model.enumeration.OrganizationStatus;
-import com.utm.organization.model.enumeration.OrganizationType;
 import com.utm.organization.viewmodel.OrganizationPostVm;
 import com.utm.organization.viewmodel.OrganizationPutVm;
 import com.utm.organization.viewmodel.OrganizationVm;

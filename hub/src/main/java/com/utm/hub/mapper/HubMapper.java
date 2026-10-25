@@ -2,7 +2,6 @@ package com.utm.hub.mapper;
 
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.Location;
-import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.viewmodel.HubPostVm;
 import com.utm.hub.viewmodel.HubPutVm;
 import com.utm.hub.viewmodel.HubVm;

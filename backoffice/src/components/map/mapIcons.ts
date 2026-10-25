@@ -31,24 +31,6 @@ export function getHubIconUri(color: string = "#06b6d4", isSelected: boolean = f
     return createSvgDataUri(svg);
 }
 
-export function getTakeoffIconUri(color: string = "#10b981"): string {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-  <circle cx="14" cy="14" r="13" fill="#0f172a" fill-opacity="0.9" stroke="${color}" stroke-width="2"/>
-  <path d="M7 19L21 19" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-  <path d="M14 16L14 7M14 7L10 11M14 7L18 11" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-    return createSvgDataUri(svg);
-}
-
-export function getLandingIconUri(color: string = "#f59e0b"): string {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-  <circle cx="14" cy="14" r="13" fill="#0f172a" fill-opacity="0.9" stroke="${color}" stroke-width="2"/>
-  <path d="M7 19L21 19" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-  <path d="M14 8L14 17M14 17L10 13M14 17L18 13" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-    return createSvgDataUri(svg);
-}
-
 export function getWaypointIconUri(index: number, isSelected: boolean = false): string {
     const color = isSelected ? "#00e5ff" : "#38bdf8";
     const bg = isSelected ? "#003248" : "#0f172a";

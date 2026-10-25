@@ -1,6 +1,3 @@
-export * from "./TacticalMapPanel";
-export { default as TacticalMapPanel } from "./TacticalMapPanel";
-
 export * from "./LiveTelemetry";
 export { default as LiveTelemetry } from "./LiveTelemetry";
 

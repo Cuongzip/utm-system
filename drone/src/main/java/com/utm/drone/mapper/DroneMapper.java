@@ -1,7 +1,6 @@
 package com.utm.drone.mapper;
 
 import com.utm.drone.model.Drone;
-import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.viewmodel.DeviceRegistrationBriefVm;
 import com.utm.drone.viewmodel.DronePostVm;
 import com.utm.drone.viewmodel.DronePutVm;

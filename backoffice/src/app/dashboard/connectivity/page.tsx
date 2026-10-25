@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { PageHeader, ChamferButton, OutlineButton } from "@/components/ui";
+import { PageHeader, ChamferButton, OutlineButton, AlertBanner } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
 import {
-    ConnectivityAlert,
     ConnectivityMetrics,
     ConnectivityTabs,
     ConnectivitySubTab,
@@ -93,7 +92,7 @@ export default function ConnectivityPage() {
                 </ChamferButton>
             </PageHeader>
 
-            {error && <ConnectivityAlert message={error} onDismiss={() => setError(null)} />}
+            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
             <ConnectivityMetrics
                 totalDevices={totalCount}
