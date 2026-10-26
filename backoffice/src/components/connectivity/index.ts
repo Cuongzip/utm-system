@@ -5,4 +5,4 @@ export * from "./CommandQueue";
 export * from "./ConnectedDevicesPanel";
 export * from "./RegisteredDevicesTable";
 export * from "./TelemetryModesPanel";
-export * from "./RegisterDeviceModal";
+export * from "./AddDeviceModal";

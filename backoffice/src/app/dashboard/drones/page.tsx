@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { DronesTable, RegisterDroneModal } from "@/components/drones";
+import { DronesTable, AddDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
@@ -71,7 +71,7 @@ export default function DronesPage() {
                 onDeleteDrone={handleDeleteDrone}
             />
 
-            <RegisterDroneModal
+            <AddDroneModal
                 isOpen={isRegisterOpen}
                 droneToEdit={selectedDrone}
                 onClose={closeModal}

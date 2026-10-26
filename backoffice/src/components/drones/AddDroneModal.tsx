@@ -10,19 +10,16 @@ import { parseApiError } from "@/utils";
 import { createDroneBody } from "@/generated";
 import type { Drone, DroneRegistrationPayload } from "@/types";
 
-interface RegisterDroneModalProps {
+export interface AddDroneModalProps {
     isOpen: boolean;
     droneToEdit?: Drone | null;
     onClose: () => void;
     onSubmit: (payload: DroneRegistrationPayload, id?: string) => Promise<void>;
 }
 
-export function RegisterDroneModal({
-    isOpen,
-    droneToEdit,
-    onClose,
-    onSubmit,
-}: RegisterDroneModalProps) {
+export type RegisterDroneModalProps = AddDroneModalProps;
+
+export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDroneModalProps) {
     const { data: hubs = [] } = useHubsAll();
     const [loading, setLoading] = useState(false);
 
@@ -184,4 +181,5 @@ export function RegisterDroneModal({
     );
 }
 
-export default RegisterDroneModal;
+export const RegisterDroneModal = AddDroneModal;
+export default AddDroneModal;

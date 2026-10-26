@@ -1,2 +1,2 @@
 export * from "./DronesTable";
-export * from "./RegisterDroneModal";
+export * from "./AddDroneModal";

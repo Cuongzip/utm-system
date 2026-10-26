@@ -1,3 +1,3 @@
-export * from "./HubsTable/HubsTable";
-export * from "./AddHubModal/AddHubModal";
-export * from "./HubsMap/HubsMap";
+export * from "./HubsTable";
+export * from "./AddHubModal";
+export * from "./HubsMap";

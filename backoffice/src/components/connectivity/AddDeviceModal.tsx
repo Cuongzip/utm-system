@@ -9,13 +9,15 @@ import { parseApiError } from "@/utils";
 import { registerDeviceBody } from "@/generated";
 import type { DeviceRegistrationPayload } from "@/types";
 
-interface RegisterDeviceModalProps {
+export interface AddDeviceModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (payload: DeviceRegistrationPayload) => Promise<void>;
 }
 
-export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDeviceModalProps) {
+export type RegisterDeviceModalProps = AddDeviceModalProps;
+
+export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProps) {
     const [loading, setLoading] = useState(false);
 
     const {
@@ -106,4 +108,5 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
     );
 }
 
-export default RegisterDeviceModal;
+export const RegisterDeviceModal = AddDeviceModal;
+export default AddDeviceModal;

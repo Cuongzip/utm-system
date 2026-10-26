@@ -14,7 +14,7 @@ import {
     ConnectedDevicesPanel,
     RegisteredDevicesTable,
     TelemetryModesPanel,
-    RegisterDeviceModal,
+    AddDeviceModal,
 } from "@/components/connectivity";
 import { connectivityService } from "@/services/connectivityService";
 import { QUERY_KEYS } from "@/hooks";
@@ -191,7 +191,7 @@ export default function ConnectivityPage() {
                 />
             )}
 
-            <RegisterDeviceModal
+            <AddDeviceModal
                 isOpen={isRegisterOpen}
                 onClose={() => setIsRegisterOpen(false)}
                 onSubmit={handleRegisterDevice}
