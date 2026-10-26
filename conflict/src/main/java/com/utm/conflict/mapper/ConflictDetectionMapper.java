@@ -32,8 +32,10 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "locationLon", source = "midLon")
     @Mapping(target = "altitude", source = "midAlt")
     @Mapping(target = "separationDistance", source = "distHoriz")
+    @Mapping(target = "minSeparationDistance", source = "distHoriz")
     @Mapping(target = "verticalSeparation", source = "distVert")
     @Mapping(target = "timeToConflictSec", source = "timeToConflict")
+    @Mapping(target = "maxSeverity", source = "severity")
     @Mapping(target = "description", expression = "java(String.format(\"Loss of separation between flight %s and %s (horiz: %.1fm, vert: %.1fm)\", primaryFlight != null ? primaryFlight.flightNumber() : \"unknown\", secondaryFlight != null ? secondaryFlight.flightNumber() : \"unknown\", distHoriz, distVert))")
     @Mapping(target = "resolutionStrategy", ignore = true)
     @Mapping(target = "resolutionActions", ignore = true)
@@ -57,6 +59,42 @@ public interface ConflictDetectionMapper {
             Integer timeToConflict
     );
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "primaryFlightId", source = "flight.id")
+    @Mapping(target = "secondaryFlightId", ignore = true)
+    @Mapping(target = "conflictType", source = "conflictType")
+    @Mapping(target = "severity", source = "severity")
+    @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
+    @Mapping(target = "hubId", source = "flight.departureHubId")
+    @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
+    @Mapping(target = "detectionMethod", constant = "airspace_geofence_check")
+    @Mapping(target = "locationLat", source = "lat")
+    @Mapping(target = "locationLon", source = "lon")
+    @Mapping(target = "altitude", source = "alt")
+    @Mapping(target = "separationDistance", ignore = true)
+    @Mapping(target = "minSeparationDistance", ignore = true)
+    @Mapping(target = "verticalSeparation", ignore = true)
+    @Mapping(target = "timeToConflictSec", constant = "0")
+    @Mapping(target = "maxSeverity", source = "severity")
+    @Mapping(target = "description", source = "description")
+    @Mapping(target = "resolutionStrategy", ignore = true)
+    @Mapping(target = "resolutionActions", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
+    @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    Conflict toSingleFlightConflict(
+            FlightBriefVm flight,
+            ConflictType conflictType,
+            ConflictSeverity severity,
+            Double lat,
+            Double lon,
+            Double alt,
+            String description
+    );
+
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "primaryFlightId", ignore = true)
@@ -75,13 +113,15 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
-    @Mapping(target = "separationDistance", expression = "java(Math.min(target.getSeparationDistance(), distHoriz))")
+    @Mapping(target = "separationDistance", source = "distHoriz")
+    @Mapping(target = "minSeparationDistance", expression = "java(target.getMinSeparationDistance() == null ? distHoriz : Math.min(target.getMinSeparationDistance(), distHoriz))")
     @Mapping(target = "verticalSeparation", source = "distVert")
     @Mapping(target = "locationLat", source = "midLat")
     @Mapping(target = "locationLon", source = "midLon")
     @Mapping(target = "altitude", source = "midAlt")
     @Mapping(target = "timeToConflictSec", source = "timeToConflict")
     @Mapping(target = "severity", source = "severity")
+    @Mapping(target = "maxSeverity", expression = "java(target.getMaxSeverity() == null ? severity : (severity.ordinal() < target.getMaxSeverity().ordinal() ? severity : target.getMaxSeverity()))")
     void updateSeparation(
             @MappingTarget Conflict target,
             Double midLat,
@@ -109,8 +149,10 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "locationLon", ignore = true)
     @Mapping(target = "altitude", ignore = true)
     @Mapping(target = "separationDistance", ignore = true)
+    @Mapping(target = "minSeparationDistance", ignore = true)
     @Mapping(target = "verticalSeparation", ignore = true)
     @Mapping(target = "timeToConflictSec", ignore = true)
+    @Mapping(target = "maxSeverity", ignore = true)
     @Mapping(target = "description", ignore = true)
     @Mapping(target = "resolutionActions", ignore = true)
     @Mapping(target = "createdOn", ignore = true)

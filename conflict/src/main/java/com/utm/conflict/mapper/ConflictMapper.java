@@ -36,6 +36,8 @@ public abstract class ConflictMapper {
     @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
     @Mapping(target = "conflictType", expression = "java(mapConflictTypeFromPost(postVm.conflictType()))")
     @Mapping(target = "severity", expression = "java(mapSeverityFromPost(postVm.severity()))")
+    @Mapping(target = "maxSeverity", expression = "java(mapSeverityFromPost(postVm.severity()))")
+    @Mapping(target = "minSeparationDistance", source = "postVm.separationDistance")
     @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
     @Mapping(target = "detectionMethod", constant = "automated_conformance")
     @Mapping(target = "resolutionStrategy", ignore = true)

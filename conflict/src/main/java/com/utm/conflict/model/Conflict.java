@@ -77,8 +77,15 @@ public class Conflict extends AbstractAuditEntity {
     @Column(name = "separation_distance")
     private Double separationDistance;
 
+    @Column(name = "min_separation_distance")
+    private Double minSeparationDistance;
+
     @Column(name = "vertical_separation")
     private Double verticalSeparation;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "max_severity", length = 20)
+    private ConflictSeverity maxSeverity;
 
     @Column(name = "time_to_conflict_sec")
     private Integer timeToConflictSec;

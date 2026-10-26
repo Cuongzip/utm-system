@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -84,7 +85,7 @@ public class AlertsController {
         return ResponseEntity.ok(alertService.getAlertById(id));
     }
 
-    @PostMapping("/{id}/acknowledge")
+    @RequestMapping(value = "/{id}/acknowledge", method = {RequestMethod.POST, RequestMethod.PATCH})
     @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(summary = "Acknowledge alert", description = "Record operator acknowledgment indicating that the alert has been seen and is under supervision.")
     @ApiResponses(value = {
@@ -99,7 +100,7 @@ public class AlertsController {
         return ResponseEntity.ok(alertService.acknowledgeAlert(id, acknowledgeVm));
     }
 
-    @PostMapping("/{id}/resolve")
+    @RequestMapping(value = "/{id}/resolve", method = {RequestMethod.POST, RequestMethod.PATCH})
     @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @Operation(summary = "Resolve alert", description = "Mark safety issue as resolved and safe separation or nominal corridor state restored.")
     @ApiResponses(value = {

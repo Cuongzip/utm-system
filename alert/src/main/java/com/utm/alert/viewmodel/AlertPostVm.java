@@ -1,9 +1,11 @@
 package com.utm.alert.viewmodel;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Payload to publish or trigger an operational alert")
 public record AlertPostVm(
         @Schema(description = "Type of alert: LATERAL_CORRIDOR_BREACH, VERTICAL_ALTITUDE_BREACH, 3D_VOLUME_BREACH, C2_LINK_LOST, BATTERY_LOW, etc.", example = "LATERAL_CORRIDOR_BREACH")

@@ -7,6 +7,9 @@ import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ConflictType;
 import com.utm.conflict.repository.ConflictRepository;
+import com.utm.conflict.viewmodel.AirspaceCheckPostVm;
+import com.utm.conflict.viewmodel.AirspaceCheckResponseVm;
+import com.utm.conflict.viewmodel.AlertTriggerPostVm;
 import com.utm.conflict.viewmodel.ConflictScanResultVm;
 import com.utm.conflict.viewmodel.FlightBriefVm;
 import com.utm.conflict.viewmodel.FlightListBriefVm;
@@ -14,6 +17,7 @@ import com.utm.conflict.viewmodel.TelemetryBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +41,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             ConflictStatus.RESOLVING);
 
     private final ConflictRepository conflictRepository;
+    private final ConflictSnapshotService conflictSnapshotService;
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
     private final ConflictDetectionMapper conflictDetectionMapper;
@@ -72,14 +77,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     @Transactional
     public ConflictScanResultVm runConflictScan() {
         List<FlightBriefVm> activeFlights = fetchActiveFlights();
-        if (activeFlights.isEmpty() || activeFlights.size() < 2) {
-            return conflictDetectionMapper.toScanResultVm(
-                    activeFlights.size(),
-                    0,
-                    0,
-                    0,
-                    0,
-                    ZonedDateTime.now());
+        if (activeFlights.isEmpty()) {
+            return conflictDetectionMapper.toScanResultVm(0, 0, 0, 0, 0, ZonedDateTime.now());
         }
 
         List<FlightWithTelemetry> flightDataList = new ArrayList<>();
@@ -96,78 +95,150 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         int existingConflictsUpdated = 0;
         int resolvedConflictsCount = 0;
 
-        for (int i = 0; i < flightDataList.size(); i++) {
-            for (int j = i + 1; j < flightDataList.size(); j++) {
-                evaluatedPairs++;
-                FlightWithTelemetry f1 = flightDataList.get(i);
-                FlightWithTelemetry f2 = flightDataList.get(j);
+        for (FlightWithTelemetry ft : flightDataList) {
+            AirspaceCheckResponseVm airspaceCheck = checkAirspaceCompliance(ft.telemetry());
+            if (airspaceCheck != null && !airspaceCheck.safe()) {
+                List<Conflict> existingSingleConflicts = conflictRepository
+                        .findByPrimaryFlightIdAndStatusIn(ft.flight().id(), ACTIVE_STATUSES)
+                        .stream()
+                        .filter(c -> c.getSecondaryFlightId() == null)
+                        .toList();
 
-                double distHoriz = calculateHaversineDistance(
-                        f1.telemetry().latitude(), f1.telemetry().longitude(),
-                        f2.telemetry().latitude(), f2.telemetry().longitude());
-                double distVert = Math.abs(f1.telemetry().altitude() - f2.telemetry().altitude());
+                if (existingSingleConflicts.isEmpty()) {
+                    Conflict singleConflict = conflictDetectionMapper.toSingleFlightConflict(
+                            ft.flight(),
+                            ConflictType.AIRSPACE_BREACH,
+                            ConflictSeverity.CRITICAL,
+                            ft.telemetry().latitude(),
+                            ft.telemetry().longitude(),
+                            ft.telemetry().altitude(),
+                            String.format("Airspace breach detected for flight %s into restricted zone",
+                                    ft.flight().flightNumber()));
+                    singleConflict = conflictRepository.save(singleConflict);
 
-                double tcpa = calculateTcpa(f1.telemetry(), f2.telemetry());
-                boolean isSeparationLoss = (distHoriz < horizontalThresholdM) && (distVert < verticalThresholdM);
-                boolean isPredictedLoss = (tcpa > 0.0 && tcpa < 120.0) && (distVert < verticalThresholdM)
-                        && (distHoriz < 250.0);
+                    conflictSnapshotService.recordSnapshot(
+                            singleConflict,
+                            ft.telemetry().latitude(), ft.telemetry().longitude(), ft.telemetry().altitude(),
+                            null, null, null,
+                            0.0, 0.0, 0, ConflictSeverity.CRITICAL);
+                    newConflictsDetected++;
 
-                List<Conflict> activeConflicts = conflictRepository.findActiveBetweenFlights(
-                        f1.flight().id(), f2.flight().id(), ACTIVE_STATUSES);
+                    triggerAlert(
+                            ft.flight().droneId(),
+                            ft.flight().id(),
+                            "AIRSPACE_BREACH",
+                            "CRITICAL",
+                            "Flight breached restricted airspace zone",
+                            ft.telemetry().altitude(),
+                            120.0);
+                    log.warn("SINGLE-FLIGHT CONFLICT DETECTED: Flight {} ({}) breached airspace zone",
+                            ft.flight().flightNumber(), ft.flight().id());
+                }
+            }
+        }
 
-                if (isSeparationLoss || isPredictedLoss) {
-                    ConflictSeverity severity = determineSeverity(distHoriz, distVert);
-                    ConflictType conflictType = determineConflictType(f1.telemetry().heading(),
-                            f2.telemetry().heading());
-                    double midLat = (f1.telemetry().latitude() + f2.telemetry().latitude()) / 2.0;
-                    double midLon = (f1.telemetry().longitude() + f2.telemetry().longitude()) / 2.0;
-                    double midAlt = (f1.telemetry().altitude() + f2.telemetry().altitude()) / 2.0;
-                    int timeToConflict = Math.max(0, (int) Math.round(tcpa));
+        if (flightDataList.size() >= 2) {
+            for (int i = 0; i < flightDataList.size(); i++) {
+                for (int j = i + 1; j < flightDataList.size(); j++) {
+                    evaluatedPairs++;
+                    FlightWithTelemetry f1 = flightDataList.get(i);
+                    FlightWithTelemetry f2 = flightDataList.get(j);
 
-                    if (!activeConflicts.isEmpty()) {
-                        for (Conflict existing : activeConflicts) {
-                            conflictDetectionMapper.updateSeparation(
-                                    existing, midLat, midLon, midAlt, distHoriz, distVert, timeToConflict, severity);
-                            conflictRepository.save(existing);
-                            existingConflictsUpdated++;
+                    double distHoriz = calculateHaversineDistance(
+                            f1.telemetry().latitude(), f1.telemetry().longitude(),
+                            f2.telemetry().latitude(), f2.telemetry().longitude());
+                    double distVert = Math.abs(f1.telemetry().altitude() - f2.telemetry().altitude());
+
+                    double tcpa = calculateTcpa(f1.telemetry(), f2.telemetry());
+                    boolean isSeparationLoss = (distHoriz < horizontalThresholdM) && (distVert < verticalThresholdM);
+                    boolean isPredictedLoss = (tcpa > 0.0 && tcpa < 120.0) && (distVert < verticalThresholdM)
+                            && (distHoriz < 250.0);
+
+                    List<Conflict> activeConflicts = conflictRepository.findActiveBetweenFlights(
+                            f1.flight().id(), f2.flight().id(), ACTIVE_STATUSES);
+
+                    if (isSeparationLoss || isPredictedLoss) {
+                        ConflictSeverity severity = determineSeverity(distHoriz, distVert);
+                        ConflictType conflictType = determineConflictType(f1.telemetry().heading(),
+                                f2.telemetry().heading());
+                        double midLat = (f1.telemetry().latitude() + f2.telemetry().latitude()) / 2.0;
+                        double midLon = (f1.telemetry().longitude() + f2.telemetry().longitude()) / 2.0;
+                        double midAlt = (f1.telemetry().altitude() + f2.telemetry().altitude()) / 2.0;
+                        int timeToConflict = Math.max(0, (int) Math.round(tcpa));
+
+                        if (!activeConflicts.isEmpty()) {
+                            for (Conflict existing : activeConflicts) {
+                                conflictDetectionMapper.updateSeparation(
+                                        existing, midLat, midLon, midAlt, distHoriz, distVert, timeToConflict,
+                                        severity);
+                                conflictRepository.save(existing);
+
+                                conflictSnapshotService.recordSnapshot(
+                                        existing,
+                                        f1.telemetry().latitude(), f1.telemetry().longitude(),
+                                        f1.telemetry().altitude(),
+                                        f2.telemetry().latitude(), f2.telemetry().longitude(),
+                                        f2.telemetry().altitude(),
+                                        distHoriz, distVert, timeToConflict, severity);
+                                existingConflictsUpdated++;
+                            }
+                        } else {
+                            String hubId = f1.flight().departureHubId() != null
+                                    ? f1.flight().departureHubId()
+                                    : f2.flight().departureHubId();
+
+                            Conflict newConflict = conflictDetectionMapper.toEntity(
+                                    f1.flight(),
+                                    f2.flight(),
+                                    conflictType,
+                                    severity,
+                                    hubId,
+                                    midLat,
+                                    midLon,
+                                    midAlt,
+                                    distHoriz,
+                                    distVert,
+                                    timeToConflict);
+
+                            newConflict = conflictRepository.save(newConflict);
+
+                            conflictSnapshotService.recordSnapshot(
+                                    newConflict,
+                                    f1.telemetry().latitude(), f1.telemetry().longitude(), f1.telemetry().altitude(),
+                                    f2.telemetry().latitude(), f2.telemetry().longitude(), f2.telemetry().altitude(),
+                                    distHoriz, distVert, timeToConflict, severity);
+                            newConflictsDetected++;
+
+                            if (severity == ConflictSeverity.CRITICAL || severity == ConflictSeverity.HIGH) {
+                                triggerAlert(
+                                        f1.flight().droneId(),
+                                        f1.flight().id(),
+                                        "CONFLICT_PROXIMITY",
+                                        severity.getValue(),
+                                        String.format("Loss of separation with flight %s (%.1fm)",
+                                                f2.flight().flightNumber(), distHoriz),
+                                        distHoriz,
+                                        horizontalThresholdM);
+                            }
+
+                            log.warn(
+                                    "CONFLICT DETECTED: [{} - {}] Between Flight {} ({}) and Flight {} ({}) - Dist: {}m, Vert: {}m",
+                                    conflictType.getValue(), severity.getValue(),
+                                    f1.flight().flightNumber(), f1.flight().id(),
+                                    f2.flight().flightNumber(), f2.flight().id(),
+                                    Math.round(distHoriz), Math.round(distVert));
                         }
-                    } else {
-                        String hubId = f1.flight().departureHubId() != null
-                                ? f1.flight().departureHubId()
-                                : f2.flight().departureHubId();
-
-                        Conflict newConflict = conflictDetectionMapper.toEntity(
-                                f1.flight(),
-                                f2.flight(),
-                                conflictType,
-                                severity,
-                                hubId,
-                                midLat,
-                                midLon,
-                                midAlt,
-                                distHoriz,
-                                distVert,
-                                timeToConflict);
-
-                        conflictRepository.save(newConflict);
-                        newConflictsDetected++;
-                        log.warn(
-                                "CONFLICT DETECTED: [{} - {}] Between Flight {} ({}) and Flight {} ({}) - Dist: {}m, Vert: {}m",
-                                conflictType.getValue(), severity.getValue(),
-                                f1.flight().flightNumber(), f1.flight().id(),
-                                f2.flight().flightNumber(), f2.flight().id(),
-                                Math.round(distHoriz), Math.round(distVert));
-                    }
-                } else if (!activeConflicts.isEmpty()) {
-                    // Safe buffer reached (horizontal > 200m or vertical > 40m)
-                    if (distHoriz > (horizontalThresholdM + 50.0) || distVert > (verticalThresholdM + 10.0)) {
-                        for (Conflict existing : activeConflicts) {
-                            conflictDetectionMapper.resolveConflictAuto(existing, "SYSTEM_AUTO");
-                            conflictRepository.save(existing);
-                            resolvedConflictsCount++;
-                            log.info(
-                                    "CONFLICT AUTO-RESOLVED: Conflict {} cleared safe separation buffer (dist: {}m, vert: {}m)",
-                                    existing.getId(), Math.round(distHoriz), Math.round(distVert));
+                    } else if (!activeConflicts.isEmpty()) {
+                        // Safe buffer reached (horizontal > 200m or vertical > 40m)
+                        if (distHoriz > (horizontalThresholdM + 50.0) || distVert > (verticalThresholdM + 10.0)) {
+                            for (Conflict existing : activeConflicts) {
+                                conflictDetectionMapper.resolveConflictAuto(existing, "SYSTEM_AUTO");
+                                conflictRepository.save(existing);
+                                resolvedConflictsCount++;
+                                log.info(
+                                        "CONFLICT AUTO-RESOLVED: Conflict {} cleared safe separation buffer (dist: {}m, vert: {}m)",
+                                        existing.getId(), Math.round(distHoriz), Math.round(distVert));
+                            }
                         }
                     }
                 }
@@ -211,6 +282,68 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         } catch (Exception ex) {
             log.debug("No latest telemetry record for flight {}: {}", flightId, ex.getMessage());
             return null;
+        }
+    }
+
+    private AirspaceCheckResponseVm checkAirspaceCompliance(TelemetryBriefVm telemetry) {
+        if (serviceUrlConfig.airspace() == null || serviceUrlConfig.airspace().isBlank()) {
+            return null;
+        }
+        try {
+            String baseUrl = serviceUrlConfig.airspace();
+            String basePath = (baseUrl != null && baseUrl.endsWith("/airspace")) ? "" : "/airspace";
+            String url = baseUrl + basePath + "/api/v1/airspace/check";
+            return restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new AirspaceCheckPostVm(telemetry.latitude(), telemetry.longitude(), telemetry.altitude()))
+                    .retrieve()
+                    .body(AirspaceCheckResponseVm.class);
+        } catch (Exception ex) {
+            log.debug("Airspace compliance check failed for telemetry [lat={}, lon={}, alt={}]: {}",
+                    telemetry.latitude(), telemetry.longitude(), telemetry.altitude(), ex.getMessage());
+            return null;
+        }
+    }
+
+    private void triggerAlert(
+            String droneId,
+            String flightId,
+            String alertType,
+            String severity,
+            String message,
+            Double breachValue,
+            Double thresholdValue) {
+        if (serviceUrlConfig.alert() == null || serviceUrlConfig.alert().isBlank()) {
+            return;
+        }
+        try {
+            String baseUrl = serviceUrlConfig.alert();
+            String basePath = (baseUrl != null && baseUrl.endsWith("/alert")) ? "" : "/alert";
+            String url = baseUrl + basePath + "/api/v1/alerts";
+            String detailsJson = (breachValue != null || thresholdValue != null)
+                    ? String.format(java.util.Locale.US, "{\"breachValue\": %.2f, \"thresholdValue\": %.2f}",
+                            breachValue != null ? breachValue : 0.0, thresholdValue != null ? thresholdValue : 0.0)
+                    : null;
+            AlertTriggerPostVm payload = new AlertTriggerPostVm(
+                    alertType,
+                    severity,
+                    flightId,
+                    droneId,
+                    null,
+                    message,
+                    detailsJson
+            );
+            restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Triggered operational alert [{}] for flight '{}' in alert service", alertType, flightId);
+        } catch (Exception ex) {
+            log.warn("Failed to trigger operational alert in alert service for flight '{}': {}", flightId,
+                    ex.getMessage());
         }
     }
 

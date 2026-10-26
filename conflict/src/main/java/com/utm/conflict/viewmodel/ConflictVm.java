@@ -46,8 +46,14 @@ public record ConflictVm(
         @Schema(description = "Measured horizontal separation distance in meters", example = "85.4")
         Double separationDistance,
 
+        @Schema(description = "Minimum horizontal separation distance recorded during conflict", example = "42.1")
+        Double minSeparationDistance,
+
         @Schema(description = "Measured vertical separation distance in meters", example = "12.0")
         Double verticalSeparation,
+
+        @Schema(description = "Highest severity reached during conflict lifecycle", example = "CRITICAL")
+        ConflictSeverity maxSeverity,
 
         @Schema(description = "Calculated time to closest point of approach / conflict in seconds", example = "45")
         Integer timeToConflictSec,

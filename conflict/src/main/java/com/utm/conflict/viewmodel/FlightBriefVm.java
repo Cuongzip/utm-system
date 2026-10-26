@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public record FlightBriefVm(
         String id,
         String flightNumber,
+        String droneId,
         String departureHubId
 ) {
 }

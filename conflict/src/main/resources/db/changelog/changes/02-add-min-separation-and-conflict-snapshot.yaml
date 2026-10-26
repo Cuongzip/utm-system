@@ -1,0 +1,93 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-add-min-separation-and-conflict-snapshot
+      author: drops-utm
+      changes:
+        - addColumn:
+            tableName: conflict
+            columns:
+              - column:
+                  name: min_separation_distance
+                  type: double precision
+              - column:
+                  name: max_severity
+                  type: varchar(20)
+
+        - createTable:
+            tableName: conflict_snapshot
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: conflict_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_snapshot_conflict
+                    references: conflict(id)
+                    deleteCascade: true
+              - column:
+                  name: recorded_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: primary_lat
+                  type: double precision
+              - column:
+                  name: primary_lon
+                  type: double precision
+              - column:
+                  name: primary_alt
+                  type: double precision
+              - column:
+                  name: secondary_lat
+                  type: double precision
+              - column:
+                  name: secondary_lon
+                  type: double precision
+              - column:
+                  name: secondary_alt
+                  type: double precision
+              - column:
+                  name: separation_distance
+                  type: double precision
+              - column:
+                  name: vertical_separation
+                  type: double precision
+              - column:
+                  name: time_to_conflict_sec
+                  type: integer
+              - column:
+                  name: severity
+                  type: varchar(20)
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+
+        - createIndex:
+            tableName: conflict_snapshot
+            indexName: idx_snapshot_conflict_id
+            columns:
+              - column:
+                  name: conflict_id
+
+        - createIndex:
+            tableName: conflict_snapshot
+            indexName: idx_snapshot_recorded_at
+            columns:
+              - column:
+                  name: recorded_at

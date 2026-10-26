@@ -19,10 +19,11 @@
 6. [Module 6: Drones (Thực thể `Drone`)](#6-module-drones-thực-thể-drone)
 7. [Module 7: Missions & Waypoints (Thực thể `Mission`, `Waypoint`)](#7-module-missions--waypoints-thực-thể-mission--waypoint)
 8. [Module 8: Flights & Executions (Thực thể `Flight`, `MissionExecution`)](#8-module-flights--executions-thực-thể-flight--missionexecution)
-9. [Module 9: Conflicts (Thực thể `Conflict`)](#9-module-conflicts-thực-thể-conflict)
+9. [Module 9: Conflicts (Thực thể `Conflict`, `ConflictSnapshot`)](#9-module-conflicts-thực-thể-conflict)
 10. [Module 10: Telemetry (Thực thể `FlightTelemetry`)](#10-module-telemetry-thực-thể-flighttelemetry)
 11. [Module 11: Simulation & Telemetry Generator (Thực thể `SimulationSession`)](#11-module-simulation--telemetry-generator-thực-thể-simulationsession)
-12. [Sơ Đồ Tuần Tự Toàn Trình (End-to-End Sequence)](#12-sơ-đồ-tuần-tự-toàn-trình)
+12. [Module 12: Alerts & Operational Safety (Thực thể `Alert`)](#12-module-alerts--operational-safety-thực-thể-alert)
+13. [Sơ Đồ Tuần Tự Toàn Trình (End-to-End Sequence)](#13-sơ-đồ-tuần-tự-toàn-trình)
 
 ---
 
@@ -1074,69 +1075,152 @@ Hệ thống thiết lập tiến trình Watchdog chạy ngầm độc lập (`@
 
 ---
 
-## 9. MODULE CONFLICTS (Thực thể: `Conflict`)
+## 9. MODULE CONFLICTS (Thực thể: `Conflict`, `ConflictSnapshot`)
 
-Phát hiện, cảnh báo và giải quyết nguy cơ va chạm không gian 4D (Spatial-Temporal Deconfliction).
+Phát hiện, cảnh báo, ghi vết hộp đen (Audit Trail / Blackbox Replay) và giải quyết nguy cơ va chạm không gian 4D (Spatial-Temporal Deconfliction) cho cả **Chuyến bay đơn lẻ (Single-Flight Airspace/Geofence Breach)** và **Cặp chuyến bay hội tụ (Multi-Flight Loss of Separation)**.
 
-### 9.1 Cấu Trúc Bảng Dữ Liệu (`conflicts`)
+### 9.1 Cấu Trúc Bảng Dữ Liệu
+
+#### 9.1.1 Bảng Thực Thể Sự Cố Chính (`conflicts`)
+> **Nguyên tắc gom nhóm sự cố (Incident-Centric Tracking)**:  
+> Khi xảy ra nguy cơ va chạm hoặc vi phạm kéo dài nhiều chu kỳ quét (5 giây/lần), hệ thống **duy trì 1 bản ghi sự cố duy nhất** ở trạng thái `DETECTED` / `ACKNOWLEDGED`. Mọi thay đổi về khoảng cách cực cận (CPA) và mức độ nguy hiểm cao nhất được đồng bộ vào bản ghi cha này để tránh làm rác màn hình điều hành ATC Radar.
 
 | Tên Cột | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `id` | `uuid` | `string` | **PK** | Định danh sự cố xung đột |
-| `conflict_type` | `varchar(50)` | `ConflictType` | NOT NULL | Loại vi phạm an toàn |
-| `severity` | `varchar(50)` | `ConflictSeverity` | NOT NULL | Mức độ nghiêm trọng |
-| `primary_flight_id` | `uuid` | `string` | **FK** -> `flights.id` | Chuyến bay chủ thể |
-| `secondary_flight_id` | `uuid` | `string` | **FK** -> `flights.id`, NULLABLE | Chuyến bay đối phương (hoặc chướng ngại) |
-| `detected_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm phát hiện |
-| `resolution_strategy` | `varchar(100)`| `ResolutionStrategy` | NULLABLE | Chiến lược né tránh áp dụng |
-| `status` | `varchar(50)` | `ConflictStatus` | NOT NULL, Default: `'detected'` | Trạng thái xử lý sự cố |
+| `id` | `uuid` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh duy nhất sự cố xung đột |
+| `conflict_type` | `varchar(50)` | `ConflictType` | NOT NULL | Loại vi phạm: đơn chuyến bay hoặc giữa 2 chuyến bay |
+| `severity` | `varchar(50)` | `ConflictSeverity` | NOT NULL | Mức độ nghiêm trọng tức thời |
+| `max_severity` | `varchar(50)` | `ConflictSeverity` | NOT NULL | Mức độ nghiêm trọng cao nhất từng đạt tới trong sự cố |
+| `status` | `varchar(50)` | `ConflictStatus` | NOT NULL, Default: `'detected'` | Trạng thái: `detected`, `notified`, `acknowledged`, `resolving`, `resolved`, `dismissed` |
+| `primary_flight_id` | `uuid` | `string` | **FK** -> `flights.id`, NOT NULL | Chuyến bay chủ thể vi phạm hoặc liên quan |
+| `secondary_flight_id` | `uuid` | `string \| null`| **FK** -> `flights.id`, NULLABLE | Chuyến bay đối phương (NULL nếu là vi phạm đơn chuyến: cấm bay, trần bay, geofence) |
+| `hub_id` | `uuid` | `string \| null`| **FK** -> `hubs.id`, NULLABLE | Trạm điều phối kiểm soát khu vực xảy ra xung đột |
+| `detection_method` | `varchar(50)` | `string` | NOT NULL | Phương pháp phát hiện: `GEOMETRIC_PROXIMITY`, `TCPA_PREDICTIVE`, `AIRSPACE_GEOFENCE_CHECK` |
+| `location_lat` | `numeric(10, 7)`| `number` | NOT NULL | Vĩ độ tâm điểm xung đột hoặc vị trí vi phạm |
+| `location_lon` | `numeric(10, 7)`| `number` | NOT NULL | Kinh độ tâm điểm xung đột |
+| `altitude` | `numeric(8, 2)` | `number` | NOT NULL | Độ cao tại điểm xung đột (mét MSL) |
+| `separation_distance` | `numeric(8, 2)` | `number` | NOT NULL | Khoảng cách ngang tức thời giữa 2 vật thể / tới biên (mét) |
+| `vertical_separation` | `numeric(8, 2)` | `number` | NOT NULL | Khoảng cách đứng tức thời (mét) |
+| `min_separation_distance` | `numeric(8, 2)`| `number` | NOT NULL | Khoảng cách gần nhất (CPA - Closest Point of Approach) từng ghi nhận |
+| `time_to_conflict_sec`| `integer` | `number` | NOT NULL, Default: `0` | Thời gian ước tính va chạm TCPA (giây, = 0 nếu đã vi phạm trực tiếp) |
+| `description` | `text` | `string \| null`| NULLABLE | Mô tả chi tiết cảnh báo xung đột |
+| `resolution_strategy` | `varchar(100)`| `ResolutionStrategy \| null`| NULLABLE | Chiến lược can thiệp né tránh áp dụng |
+| `resolution_actions` | `text` | `string \| null`| NULLABLE | Chi tiết lệnh điều khiển đã ban hành (JSON string) |
+| `detected_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm bắt đầu phát hiện sự cố |
+| `resolved_at` | `timestamptz` | `Date \| null` | NULLABLE | Thời điểm kết thúc hoặc tự động giải tỏa xung đột |
+| `resolved_by` | `varchar(100)`| `string \| null`| NULLABLE | Người giải quyết (`atc_username` hoặc `'SYSTEM_AUTO'`) |
 
-### 9.2 Các Enum
+---
+
+#### 9.1.2 Bảng Lịch Sử Diễn Biến Xung Đột (`conflict_snapshots`)
+> **Giải quyết bài toán mất lịch sử (Continuous Flight Recorder / Blackbox)**:  
+> Mỗi chu kỳ quét định kỳ 5 giây, nếu xung đột vẫn đang tiếp diễn, hệ thống tự động ghi 1 bản ghi Snapshot vào bảng này. Cho phép kiểm soát viên hoặc cơ quan điều tra tai nạn bay tua lại toàn bộ diễn biến (Trajectory Replay) và vẽ biểu đồ khoảng cách biến thiên theo thời gian.
+
+| Tên Cột | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh bản ghi chụp nhanh |
+| `conflict_id` | `uuid` | `string` | NOT NULL, **FK** -> `conflicts.id` (ON DELETE CASCADE) | Khóa ngoại liên kết sự cố xung đột chính |
+| `recorded_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm lấy mẫu dữ liệu viễn trắc |
+| `primary_lat` | `numeric(10, 7)`| `number` | NOT NULL | Tọa độ vĩ độ tức thời của drone chủ thể |
+| `primary_lon` | `numeric(10, 7)`| `number` | NOT NULL | Tọa độ kinh độ tức thời của drone chủ thể |
+| `primary_alt` | `numeric(8, 2)` | `number` | NOT NULL | Độ cao tức thời của drone chủ thể |
+| `secondary_lat` | `numeric(10, 7)`| `number \| null`| NULLABLE | Vĩ độ của drone đối phương (nếu có) |
+| `secondary_lon` | `numeric(10, 7)`| `number \| null`| NULLABLE | Kinh độ của drone đối phương (nếu có) |
+| `secondary_alt` | `numeric(8, 2)` | `number \| null`| NULLABLE | Độ cao của drone đối phương (nếu có) |
+| `separation_distance` | `numeric(8, 2)` | `number` | NOT NULL | Khoảng cách ngang đo được tại thời điểm lấy mẫu (mét) |
+| `vertical_separation` | `numeric(8, 2)` | `number` | NOT NULL | Khoảng cách đứng đo được tại thời điểm lấy mẫu (mét) |
+| `time_to_conflict_sec`| `integer` | `number` | NOT NULL | Giá trị TCPA tại thời điểm chụp mẫu (giây) |
+| `severity` | `varchar(50)` | `ConflictSeverity` | NOT NULL | Mức độ nguy cấp tại thời điểm chụp mẫu |
+
+---
+
+### 9.2 Các Enum & Quy Ước Phân Loại
 
 ```typescript
-export type ConflictType = 'loss_of_separation' | 'airspace_breach' | 'terrain_proximity' | 'geofence_violation';
-// 'loss_of_separation': Khoảng cách an toàn giữa 2 drone < 30 mét
-// 'airspace_breach': Xâm phạm vùng trời cấm bay
-// 'terrain_proximity': Bay quá gần chướng ngại vật mặt đất / tòa nhà
-// 'geofence_violation': Vượt ra ngoài hành lang bay cho phép
+export type ConflictType =
+  // Nhóm 1: Sự cố Đơn chuyến bay (Single-Flight Incident: secondary_flight_id = null)
+  | 'geofence_violation'      // Drone bay vượt ra ngoài hành lang bay được cấp phép
+  | 'airspace_breach'         // Drone bay xâm nhập vùng cấm bay (No-Fly Zone) hoặc vượt trần độ cao
+  | 'terrain_proximity'       // Drone bay quá sát mặt đất / chướng ngại vật nhân tạo
+  
+  // Nhóm 2: Sự cố Đa chuyến bay (Multi-Flight Incident: giữa 2 drone)
+  | 'loss_of_separation'      // Vi phạm cự ly an toàn (ngang < 150m, đứng < 30m)
+  | 'separation_minimum'      // Tiếp cận ngưỡng tối thiểu cho phép
+  | 'head_on'                 // Đối đầu trực diện (góc lệch mũi bay heading delta >= 140°)
+  | 'convergence';            // Quỹ đạo giao cắt hội tụ (góc lệch mũi bay heading delta >= 45°)
 
-export type ConflictSeverity = 'warning' | 'critical' | 'emergency';
+export type ConflictSeverity = 'low' | 'medium' | 'high' | 'critical';
+// 'critical': Ngang < 50m VÀ Đứng < 15m (Nguy cơ va chạm cực kỳ cấp bách)
+// 'high':     Ngang < 100m VÀ Đứng < 25m
+// 'medium':   Ngang < 150m VÀ Đứng < 30m (Mất phân cách tối thiểu tiêu chuẩn)
+// 'low':      Dự báo TCPA < 120s nhưng chưa chạm ngưỡng phân cách tức thời
+
+export type ConflictStatus = 'detected' | 'notified' | 'acknowledged' | 'resolving' | 'resolved' | 'dismissed';
 export type ResolutionStrategy = 'hover' | 'reroute' | 'divert_altitude' | 'return_to_base' | 'speed_adjustment';
-export type ConflictStatus = 'detected' | 'acknowledged' | 'resolving' | 'resolved' | 'dismissed';
 ```
 
-### 9.3 Chi Tiết Từng Endpoint
+---
 
-#### 9.3.1 `GET /conflicts`
-* **Input (Query)**: `?status=detected&severity=critical`
+### 9.3 Cơ Chế Giám Sát & Vòng Đời Tự Động (Watchdog Lifecycle)
+
+Tiến trình Watchdog chạy ngầm định kỳ 5 giây/lần bên trong service `conflict`:
+1. **Quét đơn chuyến bay (Single-Flight Airspace / Geofence Check)**:
+   - Thu thập tọa độ GPS và cao độ tức thời của từng chuyến bay `status = active`.
+   - Đối chiếu với ranh giới vùng cấm bay (`AirspaceZone`) và trần bay cho phép.
+   - Nếu vi phạm: Kiểm tra sự cố active của chuyến bay. Nếu chưa có -> Tạo mới `Conflict` (`secondary_flight_id = null`). Nếu đã có -> Chèn `ConflictSnapshot` và cập nhật vị trí mới.
+   - Nếu drone đã hạ độ cao hoặc bay ra khỏi vùng cấm -> Tự động chuyển `status = resolved` (`resolved_by = 'SYSTEM_AUTO'`).
+
+2. **Quét đa chuyến bay (Multi-Flight Pairwise Loss-of-Separation)**:
+   - Duyệt tất cả các cặp chuyến bay đồng thời đang bay (`f1`, `f2`).
+   - Tính toán cự ly không gian 3D Haversine và thời gian tiếp cận gần nhất (TCPA).
+   - Nếu `distHoriz < 150m` VÀ `distVert < 30m`:
+     - Nếu đã có Conflict active giữa `f1` và `f2` -> **Chèn thêm 1 bản ghi `ConflictSnapshot`**, đồng thời cập nhật `min_separation_distance = min(cũ, mới)` và cập nhật `severity`.
+     - Nếu chưa có Conflict active -> **Tạo mới 1 bản ghi `Conflict` cha** với `status = 'detected'`.
+   - Nếu khoảng cách an toàn đã được phục hồi (`distHoriz > 200m` hoặc `distVert > 40m`):
+     - Tự động đóng sự cố: `status = 'resolved'`, `resolved_at = now()`, `resolved_by = 'SYSTEM_AUTO'`.
+
+---
+
+### 9.4 Chi Tiết Từng Endpoint
+
+#### 9.4.1 `GET /conflicts`
+* **Input (Query)**: `?status=detected&severity=critical&flightId=uuid&pageNo=0&pageSize=20`
 * **Logic xử lý chi tiết**:
-  1. Lấy danh sách các sự cố xung đột theo bộ lọc trạng thái và mức độ nghiêm trọng.
+  1. Hỗ trợ lọc theo trạng thái (`status`), mức độ (`severity`), và chuyến bay liên quan (`flightId`).
+  2. Sắp xếp mặc định: các xung đột có mức độ `critical` lên trên và theo thời gian phát hiện giảm dần (`detected_at DESC`).
+* **Output**: `200 OK` -> `{ items: Conflict[], total: number }`.
+
+#### 9.4.2 `GET /conflicts/active`
+* **Logic xử lý chi tiết**:
+  1. Truy vấn các sự cố đang có hiệu lực (`status IN ('detected', 'notified', 'acknowledged', 'resolving')`).
+  2. Nạp kèm tọa độ tâm điểm và thông tin tóm tắt của các chuyến bay liên đới. Phục vụ hiển thị cảnh báo đỏ nhấp nháy trên Tactical Radar Map của Backoffice.
 * **Output**: `200 OK` -> `Conflict[]`.
 
-#### 9.3.2 `GET /conflicts/active`
-* **Logic xử lý chi tiết**:
-  1. Truy vấn toàn bộ các xung đột đang ở trạng thái `status IN ('detected', 'acknowledged', 'resolving')`.
-  2. Sắp xếp ưu tiên: mức độ `'emergency'` lên hàng đầu, tiếp theo là `'critical'`, rồi đến `'warning'`.
-  3. Dùng để hiển thị danh sách cảnh báo màu đỏ/cam nhấp nháy trên màn hình radar của ATC.
-* **Output**: `200 OK` -> `Conflict[]`.
-
-#### 9.3.3 `GET /conflicts/:id`
+#### 9.4.3 `GET /conflicts/:id`
 * **Input (Params)**: `id: UUID`
 * **Logic xử lý chi tiết**:
-  1. Validate định dạng UUID của `id`.
-  2. Truy vấn chi tiết xung đột, nạp kèm thông tin của cả 2 chuyến bay (`primaryFlight`, `secondaryFlight`).
+  1. Truy vấn chi tiết xung đột theo `id`. Nạp kèm thông tin chuyến bay chủ thể `primaryFlight` và chuyến bay đối phương `secondaryFlight` (nếu có).
 * **Output**: `200 OK` -> `Conflict`.
 
-#### 9.3.4 `POST /conflicts/:id/acknowledge`
+#### 9.4.4 `GET /conflicts/:id/snapshots`
+* **Chỉ định role**: `atc, pilot, admin`
+* **Input (Params)**: `id: UUID`
+* **Logic xử lý chi tiết**:
+  1. Truy vấn toàn bộ danh sách `ConflictSnapshot` thuộc về sự cố `conflict_id = :id`.
+  2. Sắp xếp theo thứ tự thời gian tăng dần (`recorded_at ASC`).
+  3. Cung cấp dữ liệu chuỗi thời gian cho giao diện Backoffice vẽ đồ thị biến thiên cự ly tiếp cận (CPA graph) và tính năng tua lại đường bay né nhau (Playback/Replay).
+* **Output**: `200 OK` -> `ConflictSnapshot[]`.
+
+#### 9.4.5 `POST /conflicts/:id/acknowledge`
 * **Chỉ định role**: `atc, admin`
 * **Input (Params)**: `id: UUID`
 * **Logic xử lý chi tiết**:
-  1. Tìm sự cố theo `id`. Kiểm tra `status === 'detected'`.
-  2. Cập nhật `status = 'acknowledged'`. Ghi nhận kiểm soát viên không lưu đã nắm bắt được sự cố.
-  3. Phát sự kiện WebSocket `conflict_acknowledged`.
+  1. Tìm sự cố theo `id`. Kiểm tra trạng thái hiện tại là `detected` hoặc `notified`.
+  2. Cập nhật `status = 'acknowledged'`. Ghi nhận thời điểm và kiểm soát viên tiếp nhận.
+  3. Phát sự kiện WebSocket lên kênh `/topic/alerts/critical` thông báo xung đột đã được tiếp nhận xử lý.
 * **Output**: `200 OK` -> `Conflict`.
 
-#### 9.3.5 `POST /conflicts/:id/resolve`
+#### 9.4.6 `POST /conflicts/:id/resolve`
 * **Chỉ định role**: `atc, admin`
 * **Input (Params + Body)**:
   - `id: UUID`
@@ -1144,19 +1228,20 @@ export type ConflictStatus = 'detected' | 'acknowledged' | 'resolving' | 'resolv
     ```json
     {
       "strategy": "divert_altitude",
+      "resolutionNotes": "Yêu cầu Flight-001 hạ độ cao xuống 60m, Flight-002 giữ nguyên 100m",
       "actions": {
-        "flight1NewAltitude": 60,
-        "flight2MaintainAltitude": 100
+        "flight1Command": { "action": "CHANGE_ALTITUDE", "targetAltitudeM": 60.0 },
+        "flight2Command": { "action": "MAINTAIN_ALTITUDE", "targetAltitudeM": 100.0 }
       }
     }
     ```
 * **Logic xử lý chi tiết**:
   1. Tìm kiếm sự cố xung đột theo `id`.
-  2. Cập nhật `Conflict.resolution_strategy = body.strategy`.
-  3. Cập nhật `Conflict.status = 'resolved'`.
-  4. **Gửi lệnh can thiệp tức thì**: Đẩy lệnh phân tách khẩn cấp qua Socket xuống các thiết bị Drone liên quan (ví dụ: Drone 1 giảm độ cao xuống 60m, Drone 2 giữ nguyên 100m).
-  5. Phát sự kiện WebSocket `conflict_resolved` để gỡ bỏ cảnh báo đỏ trên bản đồ.
-* **Output**: `200 OK` -> `Conflict` sau khi giải quyết.
+  2. Cập nhật `resolution_strategy = body.strategy`, `resolution_actions = JSON.stringify(body.actions)`, `resolution_notes = body.resolutionNotes`.
+  3. Cập nhật `status = 'resolved'`, `resolved_at = now()`, `resolved_by = currentUser.username`.
+  4. **Ban hành lệnh can thiệp tức thì**: Gửi chỉ thị điều khiển qua Module Connectivity/Drone để drone thực hiện hành động né tránh.
+  5. Đồng thời gửi thông báo sang Module Alerts để đóng cảnh báo liên đới.
+* **Output**: `200 OK` -> `Conflict` sau khi giải quyết thành công.
 
 ---
 
@@ -1622,9 +1707,158 @@ flowchart TD
 
 ---
 
-## 12. SƠ ĐỒ TUẦN TỰ TOÀN TRÌNH
+## 12. MODULE ALERTS & OPERATIONAL SAFETY (Thực thể: `Alert`)
 
-Sơ đồ tuần tự thể hiện sự phối hợp chặt chẽ giữa các vai trò người dùng, các module nghiệp vụ, cơ chế giám sát 4D tuân thủ hành lang bay độc lập và luồng viễn trắc thời gian thực từ cả **Drone IoT Phần Cứng** hoặc **Bộ Giả Lập Mô Phỏng (Simulation Engine)**:
+Tiếp nhận, chuẩn hóa, phân loại mức độ rủi ro, quản lý vòng đời (Acknowledge / Resolve) và phát sóng cảnh báo khẩn cấp tức thời (Real-time Safety Alerting) phục vụ giám sát không lưu và trung tâm điều hành bay (Tactical Control Center).
+
+> **Nguyên tắc gom luồng an toàn hợp nhất (Unified Operational Safety Hub)**:  
+> Module Alerts hoạt động như một Trung tâm An toàn Tác chiến tập trung. Bất kỳ sự cố nào phát sinh từ các phân hệ khác (Telemetry phát hiện tụt pin/mất sóng C2, Flight phát hiện lệch hành lang 4D, Conflict phát hiện nguy cơ va chạm CPA, hay Hub báo trạm sạc quá tải) đều gửi thông điệp chuẩn hóa về Module Alerts để ghi nhật ký tập trung và bắn cảnh báo WebSocket tới người trực ban.
+
+### 12.1 Cấu Trúc Bảng Dữ Liệu (`alerts` / `alert`)
+
+| Tên Cột (DB Column) | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `uuid` / `varchar(36)` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh duy nhất của cảnh báo |
+| `alert_type` | `varchar(50)` | `AlertType` | NOT NULL | Mã định danh loại sự cố vi phạm |
+| `severity` | `varchar(20)` | `AlertSeverity` | NOT NULL, Default: `'HIGH'` | Mức độ nguy cấp: `INFO`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
+| `status` | `varchar(30)` | `AlertStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái: `ACTIVE`, `ACKNOWLEDGED`, `RESOLVED`, `CANCELLED` |
+| `drone_id` | `varchar(36)` | `string \| null` | NULLABLE, **FK** -> `drones.id` | Drone liên đới phát sinh sự cố |
+| `flight_id` | `varchar(36)` | `string \| null` | NULLABLE, **FK** -> `flights.id` | Chuyến bay đang diễn ra sự cố |
+| `hub_id` | `varchar(36)` | `string \| null` | NULLABLE, **FK** -> `hubs.id` | Trạm vertiport hoặc khu vực không phận phụ trách |
+| `message` | `text` | `string` | NOT NULL | Nội dung tóm tắt cảnh báo hiển thị trên giao diện |
+| `details_json` | `text` | `string \| null` | NULLABLE | Dữ liệu đo đạc chi tiết (JSON string: pin %, tọa độ, cự ly lệch,...) |
+| `acknowledged` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đánh dấu kiểm soát viên / phi công đã đọc và tiếp nhận |
+| `acknowledged_at` | `timestamptz` | `Date \| null` | NULLABLE | Thời điểm xác nhận tiếp nhận cảnh báo |
+| `acknowledged_by` | `varchar(100)` | `string \| null` | NULLABLE | Định danh người dùng hoặc vai trò đã bấm Acknowledge |
+| `resolved` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đánh dấu sự cố đã được can thiệp xử lý an toàn xong |
+| `resolved_at` | `timestamptz` | `Date \| null` | NULLABLE | Thời điểm đóng sự cố cảnh báo |
+| `resolved_by` | `varchar(100)` | `string \| null` | NULLABLE | Người giải quyết hoặc hệ thống tự động (`'SYSTEM_AUTO'`) |
+| `resolution_notes`| `text` | `string \| null` | NULLABLE | Ghi chú biện pháp can thiệp đã thực thi (RTH, hạ cánh, đổi trần bay) |
+| `created_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm sự cố được khởi tạo |
+
+### 12.2 Các Enum Chuẩn Hóa
+
+```typescript
+export type AlertType =
+  // Nhóm 1: Vi phạm hành lang & Trần bay (Airspace & Conformance)
+  | 'LATERAL_CORRIDOR_BREACH'     // Chệch sang 2 bên hành lang bay > bán kính cho phép
+  | 'VERTICAL_ALTITUDE_BREACH'    // Bay vượt quá trần bay hoặc dưới sàn an toàn
+  | '3D_VOLUME_BREACH'            // Vượt ra khỏi hộp thể tích không phận 3D được cấp
+  | 'GEOFENCE_BREACH'             // Xâm nhập vùng cấm bay No-Fly Zone
+  
+  // Nhóm 2: Mất liên lạc & Viễn trắc (Connectivity & Telemetry Loss)
+  | 'C2_LINK_LOST'                // Mất tín hiệu điều khiển chỉ huy Command & Control > 15s
+  | 'C2_LINK_LOST_CONTINGENT'     // Mất tín hiệu kéo dài > 90s, rơi vào tình trạng khẩn cấp
+  | 'NO_TELEMETRY_STREAM'         // Không nhận được dữ liệu viễn trắc trong thời gian quy định
+  | 'RECOVERY_CONFORMANT'         // Drone đã tự bay trở lại hành lang an toàn
+  
+  // Nhóm 3: Năng lượng & Phần cứng (Hardware & Battery)
+  | 'BATTERY_LOW'                 // Dung lượng pin dưới 20%
+  | 'BATTERY_CRITICAL'            // Dung lượng pin dưới 10%, buộc hạ cánh khẩn cấp
+  | 'SYSTEM_FAULT'                // Trục trặc động cơ, cảm biến IMU, hoặc mất vệ tinh GPS
+  
+  // Nhóm 4: Xung đột & Thời tiết (Tactical Conflict & Weather)
+  | 'CONFLICT_PROXIMITY'          // Nguy cơ va chạm với drone khác dưới khoảng cách an toàn
+  | 'WEATHER_HAZARD'              // Gió giật, bão hoặc mưa to vượt ngưỡng chịu tải của drone
+  | 'MANUAL_ALERT'                // Cảnh báo do kiểm soát viên phát thủ công
+  | 'OTHER';
+
+export type AlertSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+// 'CRITICAL': Tụt pin < 10%, Mất C2 > 90s, Xung đột cận kề CPA < 50m (Bật còi báo động đỏ, ưu tiên can thiệp tức thì)
+// 'HIGH':     Lệch hành lang bay, Mất C2 > 15s, Vi phạm vùng cấm NFZ
+// 'MEDIUM':   Pin < 20%, Tiếp cận biên geofence < 100m
+// 'LOW' / 'INFO': Thông báo phục hồi an toàn, thông tin thời tiết tham khảo
+
+export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED' | 'CANCELLED';
+```
+
+### 12.3 Chi Tiết Từng Endpoint
+
+#### 12.3.1 `POST /alerts`
+* **Mô tả**: Tiếp nhận cảnh báo mới do các microservices khác (`telemetry`, `flight`, `conflict`, `hub`) hoặc do Operator tạo.
+* **Input (Body)**:
+  ```json
+  {
+    "alertType": "BATTERY_CRITICAL",
+    "severity": "CRITICAL",
+    "droneId": "d0e12345-6789-abcd-ef01-23456789abcd",
+    "flightId": "f1e23456-7890-abcd-ef01-23456789abcd",
+    "hubId": "h1e34567-8901-abcd-ef01-23456789abcd",
+    "message": "Cảnh báo khẩn cấp: Pin Drone-001 tụt xuống còn 8%. Nguy cơ rớt nguồn!",
+    "detailsJson": "{\"battery\": 8, \"voltage\": 10.1, \"currentAltitude\": 85.4}"
+  }
+  ```
+* **Logic xử lý chi tiết**:
+  1. Validate `alertType`, `severity`, và `message`.
+  2. Khởi tạo bản ghi với `status = 'ACTIVE'`, `acknowledged = false`, `resolved = false`, `createdAt = now()`.
+  3. Lưu bản ghi vào bảng `alerts`.
+  4. **Phát sóng Realtime STOMP WebSocket**:
+     - Gửi gói tin cảnh báo tới destination `/topic/alerts/critical` (để mọi màn hình Control Center nhận diện ngay lập tức).
+     - Nếu có `flightId`, phát thêm tới `/topic/alerts/flight/:flightId`.
+* **Output**: `201 Created` -> `AlertVm`.
+
+#### 12.3.2 `GET /alerts`
+* **Input (Query)**: `?droneId=uuid&flightId=uuid&severity=CRITICAL&status=ACTIVE&acknowledged=false&resolved=false&pageNo=0&pageSize=20`
+* **Logic xử lý chi tiết**:
+  1. Lọc linh hoạt theo các tiêu chí: `droneId`, `flightId`, `severity`, `status`, `acknowledged`, `resolved`, `alertType`.
+  2. Sắp xếp theo thứ tự ưu tiên: `severity DESC`, `createdAt DESC`.
+* **Output**: `200 OK` -> `{ items: AlertVm[], total: number }`.
+
+#### 12.3.3 `GET /alerts/active`
+* **Logic xử lý chi tiết**:
+  1. Truy vấn nhanh toàn bộ cảnh báo chưa kết thúc (`resolved = false`).
+  2. Tối ưu cho component `ActiveAlerts` tại màn hình Tactical Control Center của Backoffice.
+* **Output**: `200 OK` -> `AlertVm[]`.
+
+#### 12.3.4 `GET /alerts/:id`
+* **Input (Params)**: `id: UUID`
+* **Logic xử lý chi tiết**:
+  1. Truy vấn chi tiết cảnh báo theo `id`.
+  2. Nạp kèm metadata chuyến bay và thông số thiết bị bay.
+* **Output**: `200 OK` -> `AlertVm`.
+
+#### 12.3.5 `PATCH /alerts/:id/acknowledge`
+* **Chỉ định role**: `atc, hub_operator, pilot, admin`
+* **Logic xử lý chi tiết**:
+  1. Tìm bản ghi cảnh báo theo `id`.
+  2. Cập nhật `acknowledged = true`, `acknowledgedAt = now()`, `acknowledgedBy = currentUser.username`.
+  3. Cập nhật `status = 'ACKNOWLEDGED'`.
+  4. Phát sự kiện WebSocket lên `/topic/alerts/critical` với trạng thái mới để cập nhật giao diện người dùng (chuyển viền đỏ nhấp nháy sang màu vàng đã tiếp nhận).
+* **Output**: `200 OK` -> `AlertVm`.
+
+#### 12.3.6 `PATCH /alerts/:id/resolve`
+* **Chỉ định role**: `atc, hub_operator, pilot, admin`
+* **Input (Body)**:
+  ```json
+  {
+    "resolutionNotes": "Phi công đã chuyển chế độ Return-To-Home, drone đã hạ cánh an toàn tại Pad-02"
+  }
+  ```
+* **Logic xử lý chi tiết**:
+  1. Tìm bản ghi cảnh báo theo `id`.
+  2. Cập nhật `resolved = true`, `resolvedAt = now()`, `resolvedBy = currentUser.username`, `resolutionNotes = body.resolutionNotes`.
+  3. Tự động set `acknowledged = true` nếu chưa bấm acknowledge trước đó.
+  4. Cập nhật `status = 'RESOLVED'`.
+  5. Phát sự kiện WebSocket gỡ bỏ cảnh báo khỏi bảng Active Alerts trên Control Center.
+* **Output**: `200 OK` -> `AlertVm`.
+
+---
+
+### 12.4 Đặc Tả Kênh WebSocket Realtime STOMP
+
+Hệ thống cung cấp kết nối WebSocket STOMP chuẩn (`/telemetry/ws`), cho phép Web UI Backoffice đăng ký lắng nghe (Subscribe):
+
+| Destination Kênh | Mục Đích Sử Dụng | Payload Gửi Xuống |
+| :--- | :--- | :--- |
+| `/topic/alerts/critical` | Bắn toàn bộ cảnh báo có mức độ `CRITICAL` / `HIGH` tới tất cả các bàn kiểm soát viên không lưu | `{ id, alertType, severity, status, message, droneId, flightId, createdAt }` |
+| `/topic/alerts/flight/{flightId}` | Bắn cảnh báo riêng cho một chuyến bay cụ thể khi đang mở chi tiết chuyến bay | Chi tiết sự cố của chuyến bay đang theo dõi |
+| `/topic/alerts/drone/{droneId}` | Bắn cảnh báo riêng cho trạm sạc hoặc thiết bị drone đang kết nối | Chi tiết cảnh báo phần cứng / pin |
+
+---
+
+## 13. SƠ ĐỒ TUẦN TỰ TOÀN TRÌNH (TÍCH HỢP ĐIỀU HÀNH, CONFLICT & ALERT)
+
+Sơ đồ tuần tự thể hiện sự phối hợp toàn diện giữa Người điều hành, Kiểm soát viên không lưu (ATC), các module nghiệp vụ, bộ phát hiện xung đột va chạm 4D (Conflict Watchdog) và trung tâm xử lý cảnh báo khẩn cấp (Alerts Hub):
 
 ```mermaid
 sequenceDiagram
@@ -1633,78 +1867,70 @@ sequenceDiagram
     actor ATC as Không Lưu UTM (Role: atc)
     participant MissionSvc as Module Missions
     participant FlightSvc as Module Flights (4D Conformance)
+    participant ConflictSvc as Module Conflicts (CPA Watchdog)
+    participant AlertSvc as Module Alerts & Safety
     participant SimEngine as Module Simulation (Virtual Drone)
-    participant TelemetrySvc as Module Telemetry
+    participant TelemetrySvc as Module Telemetry (STOMP WS)
     participant DroneDev as Drone Phần Cứng (IoT)
 
-    %% Bước 1: Khởi tạo nhiệm vụ
-    Admin->>MissionSvc: 1. POST /missions (Tạo nhiệm vụ draft)
-    Admin->>MissionSvc: 2. POST /missions/:id/waypoints (Thêm các điểm mốc 3D)
-    Admin->>MissionSvc: 3. POST /missions/:id/execute (Gán Drone A, Pilot B)
-    MissionSvc->>MissionSvc: Tạo MissionExecution (status: in_progress, index: 0)
-    MissionSvc->>FlightSvc: Tạo Flight (status: scheduled, authorization: pending, conformance: conforming)
-    
-    %% Bước 2: Duyệt cấp phép không lưu
-    Note over ATC,FlightSvc: Chỉ định role: atc, admin
-    ATC->>FlightSvc: 4. POST /flights/:id/authorize (Kiểm tra an toàn & Duyệt)
-    FlightSvc-->>ATC: authorizationStatus = APPROVED
-    
-    %% Bước 3: Ra lệnh cất cánh
-    Note over Admin,FlightSvc: Chỉ định role: pilot, hub_operator, admin
-    Admin->>FlightSvc: 5. POST /flights/:id/start
-    FlightSvc->>FlightSvc: Đổi Flight.status = ACTIVE
-    FlightSvc-->>DroneDev: Đẩy lệnh cất cánh ARM_AND_TAKEOFF (Nếu dùng drone thật)
+    %% Bước 1: Khởi tạo & Cấp phép nhiệm vụ
+    Admin->>MissionSvc: 1. POST /missions (Tạo nhiệm vụ & mốc 3D)
+    Admin->>MissionSvc: 2. POST /missions/:id/execute (Gán Drone A, Pilot B)
+    MissionSvc->>FlightSvc: Tạo Flight (status: scheduled, authorization: pending)
+    ATC->>FlightSvc: 3. POST /flights/:id/authorize (Duyệt kế hoạch bay)
+    Admin->>FlightSvc: 4. POST /flights/:id/start (Cất cánh -> Flight.status = ACTIVE)
 
-    %% Tùy chọn 3b: Khởi chạy mô phỏng bay ảo (Nếu không có drone thật)
-    opt Diễn tập / Kiểm thử với Simulation Engine (Flight-Centric)
-        Admin->>SimEngine: 5b. POST /simulation/sessions (flightId, speed=15.0, timeScale=1.0)
-        SimEngine->>FlightSvc: Trích xuất planned_route & drone_id từ Flight
-        SimEngine->>SimEngine: Chạy Physics Loop (10Hz/1Hz): preflight -> takeoff (10m) -> climb -> cruise
-    end
-    
-    %% Bước 4: Luồng viễn trắc sống & Giám sát tuân thủ 4D độc lập
-    loop Tần số định kỳ 1Hz: Phát viễn trắc sống
-        alt Drone thật phát viễn trắc
-            DroneDev->>TelemetrySvc: 6a. POST /telemetry (GPS, pin, tốc độ, heading)
-        else Simulation Engine sản sinh viễn trắc
-            SimEngine->>SimEngine: Tính vật lý, tiêu hao pin & cộng nhiễu Gauss Box-Muller
-            SimEngine->>TelemetrySvc: 6b. POST /telemetry (GPS, pin, tốc độ, heading kèm flightId, droneId)
+    %% Bước 2: Phát dữ liệu viễn trắc sống
+    loop Tần số 1Hz: Luồng viễn trắc thời gian thực
+        alt Drone thật gửi viễn trắc
+            DroneDev->>TelemetrySvc: 5a. POST /telemetry (GPS, pin, cao độ, speed)
+        else Simulation Engine giả lập viễn trắc
+            SimEngine->>TelemetrySvc: 5b. POST /telemetry (GPS, pin, cao độ kèm flightId)
         end
         TelemetrySvc->>TelemetrySvc: Lưu DB & Cập nhật In-memory Cache
-        TelemetrySvc-->>Admin: WebSocket phát sóng tọa độ mượt mà lên bản đồ
+        TelemetrySvc-->>Admin: WebSocket phát tọa độ hiển thị lên Cesium 3D
     end
 
-    loop Watchdog định kỳ 5s (Module Flight)
-        FlightSvc->>TelemetrySvc: 7. GET /telemetry/flight/:id/latest (Lấy GPS mới nhất từ cache)
-        TelemetrySvc-->>FlightSvc: Trả về tọa độ tức thời (lat, lon, alt, speed)
-        FlightSvc->>FlightSvc: 8. Tính sai số 4D (Cross-track vs plannedRoute & Vertical vs cruisingAlt)
-        alt Tín hiệu tốt và trong hành lang an toàn
-            FlightSvc->>FlightSvc: conformance_status = CONFORMING, nối vệt actual_route
-        else Mất tín hiệu > 30s hoặc Lệch hành lang > 15m
-            FlightSvc->>FlightSvc: conformance_status = NON_CONFORMING
-            FlightSvc-->>ATC: WebSocket cảnh báo chệch hành lang bay!
-        else Mất tín hiệu > 90s hoặc Vi phạm nghiêm trọng
-            FlightSvc->>FlightSvc: conformance_status = CONTINGENT
-            FlightSvc-->>ATC: WebSocket kích hoạt tình huống khẩn cấp (Emergency Alert)
+    %% Bước 3: Giám sát vi phạm hành lang & An toàn bay
+    loop Watchdog định kỳ 5s (Module Flight & Conformance)
+        FlightSvc->>TelemetrySvc: 6. Lấy telemetry tức thời mới nhất
+        FlightSvc->>FlightSvc: Đo sai số 4D (Cross-track & Vertical error)
+        opt Phát hiện pin yếu hoặc chệch hành lang nghiêm trọng
+            FlightSvc->>AlertSvc: 7. POST /alerts (BATTERY_CRITICAL hoặc LATERAL_CORRIDOR_BREACH)
+            AlertSvc->>AlertSvc: Lưu DB utm_alert (status: ACTIVE)
+            AlertSvc-->>TelemetrySvc: Đẩy thông điệp cảnh báo
+            TelemetrySvc-->>Admin: STOMP Broadcast /topic/alerts/critical (Hiển thị thẻ đỏ nhấp nháy)
+            TelemetrySvc-->>ATC: Còi báo động radar tác chiến
         end
     end
 
-    %% Tình huống cấy sự cố khẩn cấp
-    opt Cấy sự cố giả lập (Emergency Fault Injection)
-        ATC->>SimEngine: 8a. POST /simulation/sessions/:id/inject-scenario (battery_critical / motor_failure / comm_loss)
-        SimEngine->>SimEngine: Áp dụng hiệu ứng: tụt pin nhanh, trôi dạt tọa độ hoặc ngắt phát telemetry
-        SimEngine-->>ATC: WebSocket cảnh báo nguy cơ khẩn cấp (Emergency Alert)
+    %% Bước 4: Phát hiện xung đột va chạm 4D giữa các máy bay
+    loop Watchdog định kỳ 5s (Module Conflicts)
+        ConflictSvc->>FlightSvc: 8. Lấy danh sách các chuyến bay đang ACTIVE
+        ConflictSvc->>TelemetrySvc: 9. Lấy vị trí tức thời của các cặp drone
+        ConflictSvc->>ConflictSvc: 10. Tính toán khoảng cách 3D & thời gian va chạm TCPA
+        opt Khoảng cách ngang < 150m VÀ Khoảng cách đứng < 30m
+            ConflictSvc->>ConflictSvc: Tạo mới Conflict hoặc Ghi nhận ConflictSnapshot (lưu vết CPA)
+            ConflictSvc->>AlertSvc: 11. POST /alerts (CONFLICT_PROXIMITY, severity: CRITICAL)
+            AlertSvc-->>TelemetrySvc: Broadcast /topic/alerts/critical
+            TelemetrySvc-->>ATC: Cảnh báo mất phân cách nguy cấp giữa Flight-1 và Flight-2!
+        end
     end
+
+    %% Bước 5: Tiếp nhận & Can thiệp xử lý sự cố
+    Note over ATC,AlertSvc: Kiểm soát viên tiếp nhận sự cố
+    ATC->>AlertSvc: 12. PATCH /alerts/:id/acknowledge (Xác nhận đã nắm bắt)
+    AlertSvc-->>Admin: Cập nhật thẻ cảnh báo sang trạng thái ACKNOWLEDGED (vàng)
     
-    %% Bước 5: Hạ cánh và hoàn tất
-    alt Drone thật hạ cánh
-        DroneDev->>FlightSvc: 9a. Drone chạm đất an toàn tại Hub đích
-    else Simulation Engine hoàn tất lộ trình
-        SimEngine->>SimEngine: approach -> landing -> landed (alt <= 0)
-        SimEngine-->>FlightSvc: 9b. Session completed
-    end
-    Admin->>FlightSvc: 10. POST /flights/:id/complete
-    FlightSvc->>MissionSvc: Đổi Flight & MissionExecution = COMPLETED
-    FlightSvc->>MissionSvc: Đổi Drone.status = AVAILABLE, cập nhật Hub mới
-    FlightSvc-->>Admin: Nhiệm vụ hoàn thành an toàn!
+    ATC->>ConflictSvc: 13. POST /conflicts/:id/resolve (Ban hành lệnh né tránh: Divert Altitude)
+    ConflictSvc-->>DroneDev: Gửi chỉ thị khẩn cấp: Drone 1 hạ xuống 60m, Drone 2 giữ 100m
+    ConflictSvc->>AlertSvc: Cập nhật Alert.status = RESOLVED
+    AlertSvc-->>Admin: Tháo dỡ cảnh báo đỏ trên Control Center
+
+    %% Bước 6: Hạ cánh an toàn & Hoàn tất
+    DroneDev->>FlightSvc: 14. Drone chạm đất an toàn tại Hub đích
+    Admin->>FlightSvc: 15. POST /flights/:id/complete
+    FlightSvc->>MissionSvc: Đổi Flight & MissionExecution = COMPLETED, Drone = AVAILABLE
+    FlightSvc-->>Admin: Chuyến bay hoàn thành an toàn!
 ```
+
