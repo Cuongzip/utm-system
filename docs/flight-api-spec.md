@@ -23,7 +23,8 @@
 10. [Module 10: Telemetry (Thực thể `FlightTelemetry`)](#10-module-telemetry-thực-thể-flighttelemetry)
 11. [Module 11: Simulation & Telemetry Generator (Thực thể `SimulationSession`)](#11-module-simulation--telemetry-generator-thực-thể-simulationsession)
 12. [Module 12: Alerts & Operational Safety (Thực thể `Alert`)](#12-module-alerts--operational-safety-thực-thể-alert)
-13. [Sơ Đồ Tuần Tự Toàn Trình (End-to-End Sequence)](#13-sơ-đồ-tuần-tự-toàn-trình)
+13. [Module 13: Drone Commands & Control (Thực thể `DroneCommand`)](#13-module-drone-commands--control-thực-thể-dronecommand)
+14. [Sơ Đồ Tuần Tự Toàn Trình (End-to-End Sequence)](#14-sơ-đồ-tuần-tự-toàn-trình)
 
 ---
 
@@ -1856,7 +1857,133 @@ Hệ thống cung cấp kết nối WebSocket STOMP chuẩn (`/telemetry/ws`), c
 
 ---
 
-## 13. SƠ ĐỒ TUẦN TỰ TOÀN TRÌNH (TÍCH HỢP ĐIỀU HÀNH, CONFLICT & ALERT)
+## 13. MODULE DRONE COMMANDS & CONTROL (Thực thể: `DroneCommand`)
+
+Quản lý toàn bộ vòng đời phát lệnh, định tuyến, giám sát thực thi và xử lý timeout/hủy bỏ lệnh điều khiển can thiệp bay thời gian thực từ trạm điều hành (C2/GCS - Ground Control Station) xuống thiết bị Drone (UAS).
+
+### 13.1 Cấu Trúc Bảng Dữ Liệu (`drone_command`)
+
+| Tên Cột (DB Column) | Kiểu Dữ Liệu DB | Kiểu Java | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `varchar(36)` | `String` | **PK**, NOT NULL | Định danh duy nhất của lệnh điều khiển |
+| `drone_id` | `varchar(36)` | `String` | **FK** -> `drone.id`, NOT NULL | ID máy bay nhận lệnh điều khiển |
+| `flight_id` | `varchar(36)` | `String` | **FK** -> `flight.id`, NULLABLE | ID chuyến bay đang thực hiện lệnh (nếu có) |
+| `command_type` | `varchar(50)` | `CommandType` | NOT NULL | Loại lệnh điều khiển can thiệp bay |
+| `parameters` | `text` | `String` | NULLABLE | Tham số chi tiết của lệnh (JSON: tọa độ, độ cao, tốc độ, etc.) |
+| `status` | `varchar(50)` | `CommandStatus` | NOT NULL, Default: `'PENDING'` | Trạng thái vòng đời thực thi lệnh |
+| `issued_by` | `varchar(100)` | `String` | NOT NULL | User ID / Operator ban hành lệnh |
+| `issued_at` | `timestamptz` | `Instant` | NOT NULL, Default: `now()` | Thời điểm lệnh được khởi tạo và đưa vào hàng đợi |
+| `acknowledged_at` | `timestamptz` | `Instant` | NULLABLE | Thời điểm thiết bị Drone phản hồi đã nhận lệnh (ACK) |
+| `completed_at` | `timestamptz` | `Instant` | NULLABLE | Thời điểm lệnh hoàn tất thực thi hoặc bị hủy/thất bại |
+| `error_message` | `text` | `String` | NULLABLE | Chi tiết nguyên nhân nếu lệnh thất bại hoặc timeout |
+| `priority` | `int` | `Integer` | NOT NULL, Default: `2` | Mức độ ưu tiên của lệnh (0: Khẩn cấp nhất -> 3: Thấp) |
+| `timeout_ms` | `int` | `Integer` | NOT NULL, Default: `2000` | Thời hạn chờ phản hồi từ thiết bị (milliseconds) |
+| `retry_count` | `int` | `Integer` | NOT NULL, Default: `0` | Số lần đã retry gửi lệnh khi chưa nhận được ACK |
+| `max_retries` | `int` | `Integer` | NOT NULL, Default: `2` | Số lần retry tối đa cho phép |
+| `created_on` | `timestamptz` | `Instant` | NOT NULL, Default: `now()` | Thời gian tạo bản ghi |
+| `created_by` | `varchar(100)` | `String` | NULLABLE | Người tạo |
+| `last_modified_on`| `timestamptz` | `Instant` | NULLABLE | Thời gian chỉnh sửa gần nhất |
+| `last_modified_by`| `varchar(100)` | `String` | NULLABLE | Người chỉnh sửa |
+
+### 13.2 Các Enum & Ma Trận Cấu Hình Ưu Tiên (Priority & Timing Matrix)
+
+```java
+public enum CommandType {
+    TAKEOFF,          // Cất cánh lên độ cao an toàn
+    LAND,             // Hạ cánh tại vị trí hiện tại
+    RTL,              // Quay về căn cứ xuất phát (Return-to-Launch)
+    EMERGENCY_STOP,   // Ngắt động cơ khẩn cấp (Emergency Motor Kill)
+    PAUSE,            // Tạm dừng lộ trình bay
+    HOVER,            // Đứng yên giữ vị trí (Loiter / Hover)
+    RESUME,           // Tiếp tục lộ trình sau khi pause/hover
+    GOTO,             // Bay đến tọa độ chỉ định (lat, lng, alt)
+    SET_ALTITUDE,     // Đổi độ cao bay an toàn
+    UPDATE_MISSION,   // Cập nhật lại lộ trình waypoints mới
+    SET_HOME,         // Thiết lập lại vị trí Home Hub mới
+    CONFIGURE         // Cấu hình tham số bay phần cứng
+}
+
+public enum CommandStatus {
+    PENDING,          // Lệnh vừa khởi tạo, đang nằm trong hàng đợi
+    SENT,             // Lệnh đã được dispatch qua gateway/kết nối phần cứng
+    ACKNOWLEDGED,     // Thiết bị Drone đã phản hồi ACK nhận lệnh thành công
+    EXECUTING,        // Drone đang trong tiến trình thao tác lệnh
+    COMPLETED,        // Lệnh đã hoàn tất thành công
+    FAILED,           // Thất bại (lỗi phần cứng hoặc timeout sau max retries)
+    CANCELLED         // Bị hủy bởi Operator trước khi executing
+}
+```
+
+#### Ma Trận Phân Bổ Mức Độ Ưu Tiên (Priority Matrix theo chuẩn Drops-UTM)
+| Mức Ưu Tiên (`priority`) | Các Loại Lệnh Áp Dụng | Timeout Mặc Định (`timeout_ms`) | Số Lần Thử Lại Tối Đa (`max_retries`) |
+| :---: | :--- | :---: | :---: |
+| **0** (Khẩn cấp tối cao) | `EMERGENCY_STOP`, `LAND` | 500 ms | 3 lần |
+| **1** (Ưu tiên cao) | `RTL`, `HOVER`, `PAUSE` | 1000 ms | 2 lần |
+| **2** (Bình thường / Tác chiến) | `TAKEOFF`, `GOTO`, `SET_ALTITUDE`, `RESUME` | 2000 ms | 2 lần |
+| **3** (Tác vụ nền / Cấu hình) | `UPDATE_MISSION`, `SET_HOME`, `CONFIGURE` | 5000 ms | 1 lần |
+
+### 13.3 Mối Quan Hệ Liên Kết (Relationships)
+- **`Drone (1,n) ── receives_cmd ── (1,1) DroneCommand`**: Một drone có thể nhận nhiều lệnh điều khiển trong vòng đời.
+- **`Flight (0,n) ── issued_in_flight ── (0,1) DroneCommand`**: Lệnh có thể phát trong khi thực hiện một chuyến bay hoặc phát khi drone ở mặt đất.
+- **`User (0,n) ── issues_cmd ── (1,1) DroneCommand`**: Phi công hoặc kiểm soát viên ban hành lệnh.
+
+### 13.4 Logic Chi Tiết Các Endpoints (`/api/v1/drones/{droneId}/commands`)
+
+#### 13.4.1 `POST /api/v1/drones/{droneId}/commands`
+* **Chỉ định role**: `pilot, hub_operator, atc, admin`
+* **Mô tả**: Phát lệnh can thiệp điều khiển xuống Drone.
+* **Input (Path + Body)**:
+  - Path: `droneId: String / UUID`
+  - Body (`DroneCommandPostVm`):
+    ```json
+    {
+      "commandType": "RTL",
+      "flightId": "550e8400-e29b-41d4-a716-446655440000",
+      "parameters": "{\"speed\": 12.5, \"returnAltitude\": 80}",
+      "priority": 1,
+      "timeoutMs": 1000
+    }
+    ```
+* **Logic xử lý chi tiết**:
+  1. Kiểm tra Drone tồn tại trong cơ sở dữ liệu (`utm_drone`). Nếu không thấy -> ném lỗi `404 NotFoundException`.
+  2. Tự động xác định `priority`, `timeoutMs`, `maxRetries` theo ma trận nếu client không truyền.
+  3. Trích xuất ID người phát lệnh từ JWT Token qua `AuthenticationUtils.extractUserId()`.
+  4. Tạo bản ghi `DroneCommand` với trạng thái `PENDING`.
+  5. Tiến hành dispatch lệnh và mô phỏng chu trình chuyển đổi trạng thái: `PENDING` -> `SENT` -> `ACKNOWLEDGED` -> `EXECUTING` -> `COMPLETED`.
+* **Output**: `201 Created` -> `DroneCommandVm`.
+
+#### 13.4.2 `GET /api/v1/drones/{droneId}/commands`
+* **Chỉ định role**: Bất kỳ người dùng đã xác thực
+* **Mô tả**: Truy vấn lịch sử các lệnh đã ban hành cho Drone (phân trang và lọc theo trạng thái).
+* **Input (Path + Query)**:
+  - Path: `droneId: String / UUID`
+  - Query: `?status=EXECUTING&commandType=RTL&limit=20&offset=0`
+* **Output**: `200 OK` -> `DroneCommandListVm` (`items`, `totalElements`, `limit`, `offset`).
+
+#### 13.4.3 `GET /api/v1/drones/{droneId}/commands/{commandId}`
+* **Chỉ định role**: Bất kỳ người dùng đã xác thực
+* **Mô tả**: Xem chi tiết trạng thái tiến độ của một lệnh điều khiển cụ thể.
+* **Input**: `droneId: String / UUID`, `commandId: String / UUID`
+* **Output**: `200 OK` -> `DroneCommandVm`.
+
+#### 13.4.4 `POST /api/v1/drones/{droneId}/commands/{commandId}/cancel`
+* **Chỉ định role**: `pilot, hub_operator, atc, admin`
+* **Mô tả**: Hủy lệnh điều khiển đã phát nếu lệnh chưa bước vào giai đoạn thực thi (`EXECUTING`).
+* **Input**: `droneId: String / UUID`, `commandId: String / UUID`
+* **Logic xử lý**:
+  1. Tìm kiếm lệnh theo `commandId` và `droneId`. Nếu không tìm thấy -> ném lỗi `404 NotFoundException`.
+  2. Kiểm tra trạng thái: Nếu `status` khác `PENDING` và `SENT` -> ném lỗi `400 BadRequestException("Cannot cancel command that is already executing or completed")`.
+  3. Cập nhật `status = CANCELLED`, `completed_at = now()`.
+* **Output**: `200 OK` -> `DroneCommandVm`.
+
+#### 13.4.5 `GET /api/v1/drones/{droneId}/commands/active`
+* **Chỉ định role**: Bất kỳ người dùng đã xác thực
+* **Mô tả**: Lấy danh sách các lệnh đang hoạt động (chưa kết thúc: `PENDING`, `SENT`, `ACKNOWLEDGED`, `EXECUTING`).
+* **Output**: `200 OK` -> `List<DroneCommandVm>`.
+
+---
+
+## 14. SƠ ĐỒ TUẦN TỰ TOÀN TRÌNH (TÍCH HỢP ĐIỀU HÀNH, CONFLICT & ALERT)
 
 Sơ đồ tuần tự thể hiện sự phối hợp toàn diện giữa Người điều hành, Kiểm soát viên không lưu (ATC), các module nghiệp vụ, bộ phát hiện xung đột va chạm 4D (Conflict Watchdog) và trung tâm xử lý cảnh báo khẩn cấp (Alerts Hub):
 

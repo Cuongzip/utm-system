@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 01-create-drone-table
+      id: 01-create-drone-tables
       author: cuong
       changes:
         - createTable:
@@ -80,3 +80,114 @@ databaseChangeLog:
             columns:
               - column:
                   name: home_hub_id
+
+        - createTable:
+            tableName: drone_command
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: drone_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+              - column:
+                  name: command_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: parameters
+                  type: text
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "PENDING"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: issued_by
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: issued_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: acknowledged_at
+                  type: timestamp with time zone
+              - column:
+                  name: completed_at
+                  type: timestamp with time zone
+              - column:
+                  name: error_message
+                  type: text
+              - column:
+                  name: priority
+                  type: int
+                  defaultValueNumeric: 2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: timeout_ms
+                  type: int
+                  defaultValueNumeric: 2000
+                  constraints:
+                    nullable: false
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_retries
+                  type: int
+                  defaultValueNumeric: 2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            indexName: idx_drone_cmd_drone_id
+            tableName: drone_command
+            columns:
+              - column:
+                  name: drone_id
+        - createIndex:
+            indexName: idx_drone_cmd_flight_id
+            tableName: drone_command
+            columns:
+              - column:
+                  name: flight_id
+        - createIndex:
+            indexName: idx_drone_cmd_status
+            tableName: drone_command
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            indexName: idx_drone_cmd_issued_at
+            tableName: drone_command
+            columns:
+              - column:
+                  name: issued_at
