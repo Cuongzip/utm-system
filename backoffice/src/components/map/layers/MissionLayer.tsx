@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Waypoint, Hub } from "@/types";
 import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
+import { fitCameraToBounds } from "../cesiumUtils";
+import { buildMissionRoutePoints } from "@/components/missions";
 
 export interface MissionLayerProps {
     waypoints?: Waypoint[];
@@ -117,56 +119,12 @@ export function MissionLayer({
                 (a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)
             );
 
-            const hasDep =
-                departureHub?.location?.lat !== undefined &&
-                departureHub?.location?.lng !== undefined;
-            const depLat = departureHub?.location?.lat ?? 0;
-            const depLng = departureHub?.location?.lng ?? 0;
-
-            const hasArr =
-                arrivalHub?.location?.lat !== undefined && arrivalHub?.location?.lng !== undefined;
-            const arrLat = arrivalHub?.location?.lat ?? 0;
-            const arrLng = arrivalHub?.location?.lng ?? 0;
-
-            const routeCoords: { lng: number; lat: number; alt: number }[] = [];
-
-            if (hasDep) {
-                routeCoords.push({
-                    lng: depLng,
-                    lat: depLat,
-                    alt: 10,
-                });
-            }
-
-            sortedWaypoints.forEach((wp) => {
-                const lng = wp.longitude ?? 0;
-                const lat = wp.latitude ?? 0;
-                const alt = wp.altitude ?? 50;
-
-                const last = routeCoords[routeCoords.length - 1];
-                const isDup =
-                    last && Math.abs(last.lat - lat) < 0.0001 && Math.abs(last.lng - lng) < 0.0001;
-
-                if (!isDup) {
-                    routeCoords.push({ lng, lat, alt });
-                }
-            });
-
-            if (hasArr) {
-                const last = routeCoords[routeCoords.length - 1];
-                const isDup =
-                    last &&
-                    Math.abs(last.lat - arrLat) < 0.0001 &&
-                    Math.abs(last.lng - arrLng) < 0.0001;
-
-                if (!isDup) {
-                    routeCoords.push({
-                        lng: arrLng,
-                        lat: arrLat,
-                        alt: 10,
-                    });
-                }
-            }
+            const routePoints = buildMissionRoutePoints(waypoints, departureHub, arrivalHub);
+            const routeCoords = routePoints.map((pt) => ({
+                lng: pt.longitude,
+                lat: pt.latitude,
+                alt: pt.isDeparture || pt.isArrival ? 10 : pt.altitude,
+            }));
 
             if (routeCoords.length >= 2) {
                 const polylineId = "mission-polyline";
@@ -234,36 +192,16 @@ export function MissionLayer({
             entityIdsRef.current = newEntityIds;
 
             if (autoFitBounds && allPoints.length > 0) {
-                let minLat = 90,
-                    maxLat = -90,
-                    minLng = 180,
-                    maxLng = -180;
-
-                allPoints.forEach((p) => {
-                    if (p.lat < minLat) minLat = p.lat;
-                    if (p.lat > maxLat) maxLat = p.lat;
-                    if (p.lng < minLng) minLng = p.lng;
-                    if (p.lng > maxLng) maxLng = p.lng;
-                });
-
-                if (
-                    allPoints.length === 1 ||
-                    (maxLng - minLng < 0.001 && maxLat - minLat < 0.001)
-                ) {
+                if (allPoints.length === 1) {
                     viewer.camera.setView({
-                        destination: Cesium.Cartesian3.fromDegrees(minLng, minLat, 15000.0),
-                    });
-                } else {
-                    const latBuf = Math.max((maxLat - minLat) * 0.35, 0.02);
-                    const lngBuf = Math.max((maxLng - minLng) * 0.35, 0.02);
-                    viewer.camera.setView({
-                        destination: Cesium.Rectangle.fromDegrees(
-                            minLng - lngBuf,
-                            minLat - latBuf,
-                            maxLng + lngBuf,
-                            maxLat + latBuf
+                        destination: Cesium.Cartesian3.fromDegrees(
+                            allPoints[0].lng,
+                            allPoints[0].lat,
+                            15000.0
                         ),
                     });
+                } else {
+                    fitCameraToBounds(viewer, allPoints, { bufferRatio: 0.35, minBuffer: 0.02 });
                 }
             }
 

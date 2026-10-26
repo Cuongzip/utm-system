@@ -5,6 +5,7 @@ import { useCesium } from "../CesiumContext";
 import type { Flight, TelemetryRecord } from "@/types";
 import type { FlightHubCoord } from "./FlightsLayer";
 import { getDroneIconUri } from "../mapIcons";
+import { formatSpeed } from "@/utils";
 
 export interface LiveTelemetryLayerProps {
     flights: Flight[];
@@ -65,7 +66,6 @@ export function LiveTelemetryLayer({
                         typeof telemetry.altitude === "number" && telemetry.altitude > 0
                             ? telemetry.altitude
                             : 120;
-                    const droneSpeedKmh = Math.round((telemetry.speed || 0) * 3.6);
                     const dronePosCartesian = Cesium.Cartesian3.fromDegrees(
                         droneLng,
                         droneLat,
@@ -98,7 +98,7 @@ export function LiveTelemetryLayer({
                             disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         },
                         label: {
-                            text: `${flight.flightNumber || "DRONE"} • ${Math.round(droneAlt)}m • ${droneSpeedKmh}km/h`,
+                            text: `${flight.flightNumber || "DRONE"} • ${Math.round(droneAlt)}m • ${formatSpeed(telemetry.speed)}`,
                             font: "bold 11px monospace",
                             fillColor: Cesium.Color.WHITE,
                             outlineColor: Cesium.Color.BLACK,

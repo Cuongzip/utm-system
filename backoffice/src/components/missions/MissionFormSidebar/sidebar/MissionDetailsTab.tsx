@@ -3,7 +3,12 @@
 import React from "react";
 import { AlertCircle, ShieldCheck } from "lucide-react";
 import { CustomSelect, FormInput, type SelectOption } from "@/components/ui";
-import { cn } from "@/lib";
+import {
+    cn,
+    formatDistance,
+    estimateFlightDurationMinutes,
+    estimateBatteryPercentage,
+} from "@/utils";
 
 export interface MissionDetailsTabProps {
     name: string;
@@ -47,8 +52,8 @@ export function MissionDetailsTab({
     onClearFieldError,
 }: MissionDetailsTabProps) {
     const isFeasible = Boolean(departureHubId && waypointsCount > 0);
-    const estimatedMinutes = totalDistanceM > 0 ? Math.ceil(totalDistanceM / 1000 / 0.5) : 0;
-    const estimatedBatteryPct = Math.min(100, Math.ceil((totalDistanceM / 1000) * 4));
+    const estimatedMinutes = estimateFlightDurationMinutes(totalDistanceM);
+    const estimatedBatteryPct = estimateBatteryPercentage(totalDistanceM);
 
     return (
         <div className="space-y-4">
@@ -149,7 +154,7 @@ export function MissionDetailsTab({
                                     ROUTE FEASIBLE
                                 </span>
                                 <span className="text-[var(--color-text-primary)] font-bold">
-                                    {(totalDistanceM / 1000).toFixed(1)} km
+                                    {formatDistance(totalDistanceM)}
                                 </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-border-default)] text-[11px] font-mono">

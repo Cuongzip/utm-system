@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { AirspaceZone } from "@/types";
 import { MAP_TOKENS } from "../mapTokens";
+import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
@@ -165,11 +166,7 @@ export function AirspaceLayer({
                     }
                 }
             } else if (autoFitBounds && zones.length > 0) {
-                let minLat = 90,
-                    maxLat = -90,
-                    minLng = 180,
-                    maxLng = -180;
-                let hasPoints = false;
+                const points: { lat: number; lng: number }[] = [];
                 zones.forEach((z) => {
                     const outerRing = z.geometry?.coordinates?.[0];
                     if (Array.isArray(outerRing)) {
@@ -178,30 +175,14 @@ export function AirspaceLayer({
                                 const lng = point[0];
                                 const lat = point[1];
                                 if (typeof lng === "number" && typeof lat === "number") {
-                                    if (lat < minLat) minLat = lat;
-                                    if (lat > maxLat) maxLat = lat;
-                                    if (lng < minLng) minLng = lng;
-                                    if (lng > maxLng) maxLng = lng;
-                                    hasPoints = true;
+                                    points.push({ lat, lng });
                                 }
                             }
                         });
                     }
                 });
 
-                if (hasPoints) {
-                    const latBuf = Math.max((maxLat - minLat) * 0.4, 0.08);
-                    const lngBuf = Math.max((maxLng - minLng) * 0.4, 0.08);
-
-                    viewer.camera.setView({
-                        destination: Cesium.Rectangle.fromDegrees(
-                            minLng - lngBuf,
-                            minLat - latBuf,
-                            maxLng + lngBuf,
-                            maxLat + latBuf
-                        ),
-                    });
-                }
+                fitCameraToBounds(viewer, points, { bufferRatio: 0.4, minBuffer: 0.08 });
             }
 
             viewer.scene.requestRender();

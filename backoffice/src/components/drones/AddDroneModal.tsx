@@ -5,7 +5,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput } from "@/components/ui";
 import { useHubsAll } from "@/hooks";
-import { toast } from "sonner";
 import { parseApiError } from "@/utils";
 import { createDroneBody } from "@/generated";
 import type { Drone, DroneRegistrationPayload } from "@/types";
@@ -83,8 +82,6 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as any, { message: msg });
                 });
-            } else {
-                toast.error(parsed.message);
             }
         } finally {
             setLoading(false);

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Hub } from "@/types";
 import { getHubIconUri } from "../mapIcons";
+import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface HubsLayerProps {
     hubs: Hub[];
@@ -128,28 +129,7 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                         ),
                     });
                 } else if (valid.length > 1) {
-                    let minLat = 90,
-                        maxLat = -90,
-                        minLng = 180,
-                        maxLng = -180;
-                    valid.forEach((c) => {
-                        if (c.lat < minLat) minLat = c.lat;
-                        if (c.lat > maxLat) maxLat = c.lat;
-                        if (c.lng < minLng) minLng = c.lng;
-                        if (c.lng > maxLng) maxLng = c.lng;
-                    });
-
-                    const latBuf = Math.max((maxLat - minLat) * 0.4, 0.08);
-                    const lngBuf = Math.max((maxLng - minLng) * 0.4, 0.08);
-
-                    viewer.camera.setView({
-                        destination: Cesium.Rectangle.fromDegrees(
-                            minLng - lngBuf,
-                            minLat - latBuf,
-                            maxLng + lngBuf,
-                            maxLat + latBuf
-                        ),
-                    });
+                    fitCameraToBounds(viewer, valid, { bufferRatio: 0.4, minBuffer: 0.08 });
                 }
             }
 

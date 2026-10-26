@@ -56,3 +56,28 @@ export function formatCoordinates(lat: number, lon: number): string {
 export function formatAltitude(altitudeMeters: number): string {
     return `${Math.round(altitudeMeters)} m`;
 }
+
+export function formatSpeed(speedMps?: number | null): string {
+    if (speedMps === undefined || speedMps === null || isNaN(speedMps)) return "0 km/h";
+    return `${Math.round(speedMps * 3.6)} km/h`;
+}
+
+export function formatDistance(meters?: number | null, decimals = 1): string {
+    if (meters === undefined || meters === null || isNaN(meters)) return "0 m";
+    if (Math.abs(meters) >= 1000) {
+        return `${(meters / 1000).toFixed(decimals)} km`;
+    }
+    return `${Math.round(meters)} m`;
+}
+
+export function estimateFlightDurationMinutes(distanceMeters: number, cruiseSpeedKmh = 60): number {
+    if (!distanceMeters || distanceMeters <= 0) return 0;
+    const distanceKm = distanceMeters / 1000;
+    return Math.ceil((distanceKm / cruiseSpeedKmh) * 60);
+}
+
+export function estimateBatteryPercentage(distanceMeters: number, pctPerKm = 4): number {
+    if (!distanceMeters || distanceMeters <= 0) return 0;
+    const distanceKm = distanceMeters / 1000;
+    return Math.min(100, Math.ceil(distanceKm * pctPerKm));
+}

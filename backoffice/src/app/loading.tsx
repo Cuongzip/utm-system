@@ -1,4 +1,4 @@
-import { CompassLoader } from "@/components/CompassLoader";
+import { CompassLoader } from "@/components/ui";
 
 export default function Loading() {
     return (

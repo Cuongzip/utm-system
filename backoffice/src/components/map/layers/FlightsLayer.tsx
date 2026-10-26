@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Flight } from "@/types";
 import { getHubIconUri } from "../mapIcons";
+import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface FlightHubCoord {
     lat: number;
@@ -240,36 +241,16 @@ export function FlightsLayer({
                     duration: 0.8,
                 });
             } else if (autoFitBounds && allPoints.length > 0) {
-                let minLat = 90,
-                    maxLat = -90,
-                    minLng = 180,
-                    maxLng = -180;
-
-                allPoints.forEach((p) => {
-                    if (p.lat < minLat) minLat = p.lat;
-                    if (p.lat > maxLat) maxLat = p.lat;
-                    if (p.lng < minLng) minLng = p.lng;
-                    if (p.lng > maxLng) maxLng = p.lng;
-                });
-
-                if (
-                    allPoints.length === 1 ||
-                    (maxLng - minLng < 0.001 && maxLat - minLat < 0.001)
-                ) {
+                if (allPoints.length === 1) {
                     viewer.camera.setView({
-                        destination: Cesium.Cartesian3.fromDegrees(minLng, minLat, 25000.0),
-                    });
-                } else {
-                    const latBuf = Math.max((maxLat - minLat) * 0.4, 0.08);
-                    const lngBuf = Math.max((maxLng - minLng) * 0.4, 0.08);
-                    viewer.camera.setView({
-                        destination: Cesium.Rectangle.fromDegrees(
-                            minLng - lngBuf,
-                            minLat - latBuf,
-                            maxLng + lngBuf,
-                            maxLat + latBuf
+                        destination: Cesium.Cartesian3.fromDegrees(
+                            allPoints[0].lng,
+                            allPoints[0].lat,
+                            25000.0
                         ),
                     });
+                } else {
+                    fitCameraToBounds(viewer, allPoints, { bufferRatio: 0.4, minBuffer: 0.08 });
                 }
             }
 

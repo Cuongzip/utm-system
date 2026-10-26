@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Modal, CustomSelect, FormInput, CoordinatesInput } from "@/components/ui";
-import { toast } from "sonner";
 import { parseApiError } from "@/utils";
 import { updateHubBody } from "@/generated";
 import type { Hub, CreateHubPayload, UpdateHubPayload, HubStatus } from "@/types";
@@ -120,8 +119,6 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                     const mappedField = field.replace("location.", "") as keyof HubFormValues;
                     setError(mappedField as any, { message: msg });
                 });
-            } else {
-                toast.error(parsed.message);
             }
         } finally {
             setLoading(false);

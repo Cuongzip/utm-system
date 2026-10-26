@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { Modal, CustomSelect } from "@/components/ui";
 import {
     cn,
@@ -196,8 +195,6 @@ export function AddAirspaceModal({
             const parsed = parseApiError(err, "Failed to save airspace zone");
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 setFieldErrors(parsed.fieldErrors);
-            } else {
-                toast.error(parsed.message);
             }
         } finally {
             setLoading(false);

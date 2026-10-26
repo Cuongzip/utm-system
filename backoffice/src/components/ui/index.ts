@@ -18,3 +18,4 @@ export * from "./Calendar";
 export * from "./DateTimePicker";
 export * from "./FormInput/FormInput";
 export * from "./CoordinatesInput/CoordinatesInput";
+export * from "./CompassLoader";

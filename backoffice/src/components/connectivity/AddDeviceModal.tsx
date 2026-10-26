@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
 import { Modal, FormInput } from "@/components/ui";
 import { parseApiError } from "@/utils";
 import { registerDeviceBody } from "@/generated";
@@ -61,8 +60,6 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as any, { message: msg });
                 });
-            } else {
-                toast.error(parsed.message);
             }
         } finally {
             setLoading(false);

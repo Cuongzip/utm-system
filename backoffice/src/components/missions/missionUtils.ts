@@ -1,6 +1,6 @@
 import { addWaypointBody } from "@/generated/mission";
 import { calculateDistance, calculatePathDistance, interpolatePoint } from "@/utils/geo";
-import type { Hub, Waypoint, AddWaypointPayload } from "@/types";
+import type { Hub, Waypoint, AddWaypointPayload, ProfilePoint } from "@/types";
 import { missionService } from "@/services/missionService";
 import zod from "zod";
 
@@ -33,40 +33,87 @@ export function sanitizeWaypointForApi(
     };
 }
 
+export type MissionRoutePoint = ProfilePoint;
+
+export function buildMissionRoutePoints(
+    waypoints: Waypoint[],
+    departureHub?: Hub | null,
+    arrivalHub?: Hub | null,
+    defaultAltitude = 50
+): ProfilePoint[] {
+    const sorted = [...waypoints].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+    const pts: MissionRoutePoint[] = [];
+
+    const hasDep =
+        departureHub?.location?.lat !== undefined && departureHub?.location?.lng !== undefined;
+    const hasArr =
+        arrivalHub?.location?.lat !== undefined && arrivalHub?.location?.lng !== undefined;
+
+    if (hasDep) {
+        pts.push({
+            id: "hub-dep",
+            label: departureHub.code || "DEP",
+            altitude: 0,
+            latitude: departureHub.location!.lat,
+            longitude: departureHub.location!.lng,
+            isDeparture: true,
+        });
+    }
+
+    sorted.forEach((wp, idx) => {
+        const lat = wp.latitude ?? 0;
+        const lng = wp.longitude ?? 0;
+        const alt = wp.altitude ?? defaultAltitude;
+
+        const last = pts[pts.length - 1];
+        const isDup =
+            last &&
+            Math.abs(last.latitude - lat) < 0.0001 &&
+            Math.abs(last.longitude - lng) < 0.0001;
+
+        if (!isDup) {
+            pts.push({
+                id: String(wp.id || wp.tempId || idx),
+                label: String(wp.sequence ?? idx + 1),
+                altitude: alt,
+                latitude: lat,
+                longitude: lng,
+                waypoint: wp,
+            });
+        }
+    });
+
+    if (hasArr) {
+        const arrLat = arrivalHub.location!.lat;
+        const arrLng = arrivalHub.location!.lng;
+        const last = pts[pts.length - 1];
+        const isDup =
+            last &&
+            Math.abs(last.latitude - arrLat) < 0.0001 &&
+            Math.abs(last.longitude - arrLng) < 0.0001;
+
+        if (!isDup) {
+            pts.push({
+                id: "hub-arr",
+                label: arrivalHub.code || "ARR",
+                altitude: 0,
+                latitude: arrLat,
+                longitude: arrLng,
+                isArrival: true,
+            });
+        }
+    }
+
+    return pts;
+}
+
 export function calculateMissionDistance(
     waypoints: Waypoint[],
     departureHub?: Hub | null,
     arrivalHub?: Hub | null
 ): number {
-    const sorted = [...waypoints].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
-    const pts: { lat: number; lng: number }[] = [];
-
-    if (departureHub?.location?.lat !== undefined && departureHub?.location?.lng !== undefined) {
-        pts.push({
-            lat: departureHub.location.lat,
-            lng: departureHub.location.lng,
-        });
-    }
-
-    sorted.forEach((wp) => {
-        const lat = wp.latitude ?? 0;
-        const lng = wp.longitude ?? 0;
-        const last = pts[pts.length - 1];
-        if (!last || calculateDistance(last.lat, last.lng, lat, lng) > 15) {
-            pts.push({ lat, lng });
-        }
-    });
-
-    if (arrivalHub?.location?.lat !== undefined && arrivalHub?.location?.lng !== undefined) {
-        const arrLat = arrivalHub.location.lat;
-        const arrLng = arrivalHub.location.lng;
-        const last = pts[pts.length - 1];
-        if (!last || calculateDistance(last.lat, last.lng, arrLat, arrLng) > 15) {
-            pts.push({ lat: arrLat, lng: arrLng });
-        }
-    }
-
-    return calculatePathDistance(pts);
+    const route = buildMissionRoutePoints(waypoints, departureHub, arrivalHub);
+    return calculatePathDistance(route.map((p) => ({ lat: p.latitude, lng: p.longitude })));
 }
 
 export function generateHubToHubWaypoints(

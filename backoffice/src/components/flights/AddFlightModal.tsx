@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
 import { Modal, CustomSelect, DateTimePicker, FormInput } from "@/components/ui";
 import { parseApiError } from "@/utils";
 import { createFlightBody } from "@/generated";
@@ -107,8 +106,6 @@ export function AddFlightModal({
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as any, { message: msg });
                 });
-            } else {
-                toast.error(parsed.message);
             }
         } finally {
             setLoading(false);

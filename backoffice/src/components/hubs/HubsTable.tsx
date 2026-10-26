@@ -17,6 +17,7 @@ import {
     TableLoading,
     TableEmpty,
 } from "@/components/ui";
+import { formatDistance } from "@/utils";
 import type { Hub } from "@/types";
 
 interface HubsTableProps {
@@ -98,7 +99,7 @@ export function HubsTable({
                                 const isSelected = selectedHubId === hub.id;
                                 const availableDrones = hub.availableDronesCount ?? "—";
                                 const radius = hub.airspaceRadius
-                                    ? `${(hub.airspaceRadius / 1000).toFixed(1)} km`
+                                    ? formatDistance(hub.airspaceRadius)
                                     : "5.0 km";
 
                                 return (

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { Waypoint, Hub, ProfilePoint } from "@/types";
-import { calculateDistance } from "@/utils";
+import { calculateDistance, formatDistance } from "@/utils";
+import { buildMissionRoutePoints } from "./missionUtils";
 
 export interface AltitudeProfileProps {
     waypoints: Waypoint[];
@@ -46,79 +47,10 @@ export function AltitudeProfile({
         return () => observer.disconnect();
     }, []);
 
-    const sortedWaypoints = useMemo(
-        () => [...waypoints].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)),
-        [waypoints]
-    );
-
     const { minAlt, maxAlt, totalDistance, segments } = useMemo(() => {
-        if (sortedWaypoints.length === 0) {
+        const pts: ProfilePoint[] = buildMissionRoutePoints(waypoints, departureHub, arrivalHub);
+        if (pts.length === 0) {
             return { minAlt: 0, maxAlt: 100, totalDistance: 0, segments: [] };
-        }
-
-        const hasDep =
-            departureHub?.location?.lat !== undefined && departureHub?.location?.lng !== undefined;
-        const depLat = departureHub?.location?.lat ?? 0;
-        const depLng = departureHub?.location?.lng ?? 0;
-
-        const hasArr =
-            arrivalHub?.location?.lat !== undefined && arrivalHub?.location?.lng !== undefined;
-        const arrLat = arrivalHub?.location?.lat ?? 0;
-        const arrLng = arrivalHub?.location?.lng ?? 0;
-
-        const pts: ProfilePoint[] = [];
-
-        if (hasDep) {
-            pts.push({
-                id: "hub-dep",
-                label: departureHub.code || "DEP",
-                altitude: 0,
-                latitude: depLat,
-                longitude: depLng,
-                isDeparture: true,
-            });
-        }
-
-        sortedWaypoints.forEach((wp, idx) => {
-            const lat = wp.latitude ?? 0;
-            const lng = wp.longitude ?? 0;
-            const alt = wp.altitude ?? 50;
-
-            const last = pts[pts.length - 1];
-            const isDup =
-                last &&
-                Math.abs(last.latitude - lat) < 0.0001 &&
-                Math.abs(last.longitude - lng) < 0.0001;
-
-            if (!isDup) {
-                pts.push({
-                    id: String(wp.id || wp.tempId || idx),
-                    label: String(wp.sequence ?? idx + 1),
-                    altitude: alt,
-                    latitude: lat,
-                    longitude: lng,
-                    waypoint: wp,
-                });
-            }
-        });
-
-        if (hasArr) {
-            const last = pts[pts.length - 1];
-            const isDup =
-                last &&
-                Math.abs(last.latitude - arrLat) < 0.0001 &&
-                Math.abs(last.longitude - arrLng) < 0.0001;
-
-            if (!isDup) {
-                pts.push({
-                    id: "hub-arr",
-                    label: arrivalHub.code || "ARR",
-                    altitude: 0,
-                    latitude: arrLat,
-                    longitude: arrLng,
-                    isArrival: true,
-                });
-            }
         }
 
         let cumDistance = 0;
@@ -148,7 +80,7 @@ export function AltitudeProfile({
             totalDistance: cumDistance || 1,
             segments: segs,
         };
-    }, [sortedWaypoints, departureHub, arrivalHub]);
+    }, [waypoints, departureHub, arrivalHub]);
 
     if (waypoints.length === 0) {
         return (
@@ -200,7 +132,7 @@ export function AltitudeProfile({
                     ALTITUDE PROFILE
                 </span>
                 <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                    Distance: {(totalDistance / 1000).toFixed(1)} km
+                    Distance: {formatDistance(totalDistance)}
                 </span>
             </div>
 

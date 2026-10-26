@@ -10,3 +10,4 @@ export * from "./MapInspector";
 export * from "./TacticalMapContainer";
 export * from "./mapIcons";
 export * from "./mapTokens";
+export * from "./cesiumUtils";
