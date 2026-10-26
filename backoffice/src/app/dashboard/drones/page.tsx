@@ -6,7 +6,8 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DronesTable, RegisterDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
-import { useCrudList } from "@/hooks";
+import { useCrudList, QUERY_KEYS } from "@/hooks";
+import { useMutation } from "@tanstack/react-query";
 import type { Drone, DroneRegistrationPayload } from "@/types";
 
 export default function DronesPage() {
@@ -26,25 +27,30 @@ export default function DronesPage() {
         closeModal,
         handleDelete: handleDeleteDrone,
     } = useCrudList<Drone>({
+        queryKey: QUERY_KEYS.drones,
         fetchFn: fetchDrones,
         deleteFn: deleteDrone,
         entityName: "Drone",
     });
 
-    const handleSaveDrone = async (payload: DroneRegistrationPayload, id?: string) => {
-        try {
+    const saveDroneMutation = useMutation({
+        mutationFn: async ({ payload, id }: { payload: DroneRegistrationPayload; id?: string }) => {
             if (id) {
-                await droneService.updateDrone(id, payload);
-                toast.success("Drone updated successfully");
-            } else {
-                await droneService.createDrone(payload);
-                toast.success("Drone registered successfully");
+                return droneService.updateDrone(id, payload);
             }
-            await refresh();
-        } catch (err: unknown) {
-            toast.error("Failed to save drone");
-            throw err;
-        }
+            return droneService.createDrone(payload);
+        },
+        onSuccess: (_data, variables) => {
+            toast.success(
+                variables.id ? "Drone updated successfully" : "Drone registered successfully"
+            );
+            refresh();
+        },
+        meta: { defaultErrorMessage: "Failed to save drone" },
+    });
+
+    const handleSaveDrone = async (payload: DroneRegistrationPayload, id?: string) => {
+        await saveDroneMutation.mutateAsync({ payload, id });
     };
 
     return (

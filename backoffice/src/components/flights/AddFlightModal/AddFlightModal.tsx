@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Modal, CustomSelect, DateTimePicker } from "@/components/ui";
-import type { Flight, Drone, Hub } from "@/types";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { Modal, CustomSelect, DateTimePicker, FormInput } from "@/components/ui";
+import { parseApiError } from "@/utils";
+import { createFlightBody } from "@/generated";
+import type { Flight, Drone, Hub, CreateFlightPayload } from "@/types";
 
 export interface AddFlightModalProps {
     isOpen: boolean;
@@ -19,58 +24,59 @@ export function AddFlightModal({
     onClose,
     onSubmit,
 }: AddFlightModalProps) {
-    const [flightNumber, setFlightNumber] = useState("");
-    const [droneId, setDroneId] = useState("");
-    const [departureHubId, setDepartureHubId] = useState("");
-    const [arrivalHubId, setArrivalHubId] = useState("");
-    const [scheduledDeparture, setScheduledDeparture] = useState("");
-    const [scheduledArrival, setScheduledArrival] = useState("");
-    const [cruisingAltitudeM, setCruisingAltitudeM] = useState("120");
-    const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+        control,
+        setError,
+        formState: { errors },
+    } = useForm<CreateFlightPayload>({
+        resolver: zodResolver(createFlightBody) as any,
+        defaultValues: {
+            flightNumber: "",
+            droneId: "",
+            departureHubId: "",
+            arrivalHubId: "",
+            scheduledDeparture: "",
+            scheduledArrival: "",
+            cruisingAltitudeM: 120,
+            notes: "",
+        },
+    });
 
     useEffect(() => {
         if (isOpen) {
-            setFlightNumber("");
-            setDroneId(drones[0]?.id || "");
-            setDepartureHubId(hubs[0]?.id || "");
-            setArrivalHubId(hubs[1]?.id || hubs[0]?.id || "");
-
             const now = new Date();
             const depTime = new Date(now.getTime() + 30 * 60 * 1000);
             const arrTime = new Date(now.getTime() + 90 * 60 * 1000);
 
-            setScheduledDeparture(depTime.toISOString().slice(0, 16));
-            setScheduledArrival(arrTime.toISOString().slice(0, 16));
-            setCruisingAltitudeM("120");
-            setNotes("");
-            setError(null);
+            reset({
+                flightNumber: `DRP-${Math.floor(1000 + Math.random() * 9000)}`,
+                droneId: drones[0]?.id || "",
+                departureHubId: hubs[0]?.id || "",
+                arrivalHubId: hubs[1]?.id || hubs[0]?.id || "",
+                scheduledDeparture: depTime.toISOString(),
+                scheduledArrival: arrTime.toISOString(),
+                cruisingAltitudeM: 120,
+                notes: "",
+            });
         }
-    }, [isOpen, drones, hubs]);
+    }, [isOpen, drones, hubs, reset]);
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setError(null);
-
-        if (!droneId) {
-            setError("Please select an assigned drone");
+    const onFormSubmit = async (data: CreateFlightPayload) => {
+        if (data.departureHubId === data.arrivalHubId && hubs.length > 1) {
+            setError("arrivalHubId", {
+                message: "Departure and arrival vertiports must be different",
+            });
             return;
         }
 
-        if (!departureHubId || !arrivalHubId) {
-            setError("Please select both departure and arrival vertiports");
-            return;
-        }
-
-        if (departureHubId === arrivalHubId && hubs.length > 1) {
-            setError("Departure and arrival vertiports must be different for a transit route");
-            return;
-        }
-
-        const dep = hubs.find((h) => h.id === departureHubId);
-        const arr = hubs.find((h) => h.id === arrivalHubId);
-        const alt = Number(cruisingAltitudeM) || 120;
+        const dep = hubs.find((h) => h.id === data.departureHubId);
+        const arr = hubs.find((h) => h.id === data.arrivalHubId);
+        const alt = Number(data.cruisingAltitudeM) || 120;
 
         let plannedRoute: any = undefined;
         if (dep?.location && arr?.location) {
@@ -83,25 +89,27 @@ export function AddFlightModal({
             };
         }
 
-        const payload: Partial<Flight> = {
-            flightNumber: flightNumber.trim() || undefined,
-            droneId,
-            departureHubId,
-            arrivalHubId,
-            scheduledDeparture: new Date(scheduledDeparture).toISOString(),
-            scheduledArrival: new Date(scheduledArrival).toISOString(),
+        const payload: CreateFlightPayload = {
+            ...data,
+            flightNumber: data.flightNumber.trim(),
             cruisingAltitudeM: alt,
-            notes: notes.trim() || undefined,
+            notes: data.notes?.trim() || undefined,
             plannedRoute,
-            status: "planned",
         };
 
-        setLoading(true);
         try {
+            setLoading(true);
             await onSubmit(payload);
             onClose();
-        } catch (err: any) {
-            setError(err?.message || "Failed to create flight plan");
+        } catch (err: unknown) {
+            const parsed = parseApiError(err, "Failed to create flight plan");
+            if (Object.keys(parsed.fieldErrors).length > 0) {
+                Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
+                    setError(field as any, { message: msg });
+                });
+            } else {
+                toast.error(parsed.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -121,102 +129,161 @@ export function AddFlightModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="CREATE FLIGHT OPERATION"
-            maxWidth="540px"
-            onSubmit={handleSubmit}
+            title="Create Flight Operation"
+            maxWidth="560px"
+            onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
-            error={error}
             submitText="Register Flight Plan"
             loadingText="Registering..."
         >
-            <div className="flex flex-col gap-4">
-                <div className="form-group">
-                    <label className="form-label">Flight Number / Callsign (Optional)</label>
-                    <input
-                        type="text"
-                        value={flightNumber}
-                        onChange={(e) => setFlightNumber(e.target.value)}
-                        placeholder="Auto-generated (e.g. DRP-2026X)"
-                        className="form-input font-mono"
-                    />
-                </div>
+            <div className="flex flex-col gap-3">
+                <FormInput
+                    id="flightNumber"
+                    label="Flight Number / Callsign (Optional)"
+                    placeholder="Auto-generated (e.g. DRP-2026X)"
+                    className="font-mono"
+                    error={errors.flightNumber?.message}
+                    {...register("flightNumber")}
+                />
 
                 <div className="form-group">
-                    <label className="form-label">Assigned Drone</label>
+                    <label className="form-label" htmlFor="droneId">
+                        Assigned Drone <span className="text-red-500 ml-1">*</span>
+                    </label>
                     {droneOptions.length > 0 ? (
-                        <CustomSelect
-                            value={droneId}
-                            onValueChange={setDroneId}
-                            options={droneOptions}
+                        <Controller
+                            name="droneId"
+                            control={control}
+                            render={({ field }) => (
+                                <CustomSelect
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                    options={droneOptions}
+                                    error={Boolean(errors.droneId)}
+                                />
+                            )}
                         />
                     ) : (
                         <div className="text-xs text-amber-600 font-medium p-2 bg-amber-50 border border-amber-200 rounded">
                             No registered drones available. Please register a drone first.
                         </div>
                     )}
+                    {errors.droneId?.message && (
+                        <span className="form-error-msg">{errors.droneId.message}</span>
+                    )}
                 </div>
 
                 <div className="form-row-2">
                     <div className="form-group">
-                        <label className="form-label">Departure Vertiport</label>
-                        <CustomSelect
-                            value={departureHubId}
-                            onValueChange={setDepartureHubId}
-                            options={hubOptions}
+                        <label className="form-label" htmlFor="departureHubId">
+                            Departure Vertiport <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <Controller
+                            name="departureHubId"
+                            control={control}
+                            render={({ field }) => (
+                                <CustomSelect
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                    options={hubOptions}
+                                    error={Boolean(errors.departureHubId)}
+                                />
+                            )}
                         />
+                        {errors.departureHubId?.message && (
+                            <span className="form-error-msg">{errors.departureHubId.message}</span>
+                        )}
                     </div>
+
                     <div className="form-group">
-                        <label className="form-label">Arrival Vertiport</label>
-                        <CustomSelect
-                            value={arrivalHubId}
-                            onValueChange={setArrivalHubId}
-                            options={hubOptions}
+                        <label className="form-label" htmlFor="arrivalHubId">
+                            Arrival Vertiport <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <Controller
+                            name="arrivalHubId"
+                            control={control}
+                            render={({ field }) => (
+                                <CustomSelect
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                    options={hubOptions}
+                                    error={Boolean(errors.arrivalHubId)}
+                                />
+                            )}
                         />
+                        {errors.arrivalHubId?.message && (
+                            <span className="form-error-msg">{errors.arrivalHubId.message}</span>
+                        )}
                     </div>
                 </div>
 
                 <div className="form-row-2">
                     <div className="form-group">
-                        <label className="form-label">Scheduled Departure</label>
-                        <DateTimePicker
-                            value={scheduledDeparture}
-                            onChange={setScheduledDeparture}
-                            placeholder="Select departure"
+                        <label className="form-label" htmlFor="scheduledDeparture">
+                            Scheduled Departure <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <Controller
+                            name="scheduledDeparture"
+                            control={control}
+                            render={({ field }) => (
+                                <DateTimePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Select departure"
+                                    error={Boolean(errors.scheduledDeparture)}
+                                />
+                            )}
                         />
+                        {errors.scheduledDeparture?.message && (
+                            <span className="form-error-msg">
+                                {errors.scheduledDeparture.message}
+                            </span>
+                        )}
                     </div>
+
                     <div className="form-group">
-                        <label className="form-label">Scheduled Arrival</label>
-                        <DateTimePicker
-                            value={scheduledArrival}
-                            onChange={setScheduledArrival}
-                            placeholder="Select arrival"
+                        <label className="form-label" htmlFor="scheduledArrival">
+                            Scheduled Arrival <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <Controller
+                            name="scheduledArrival"
+                            control={control}
+                            render={({ field }) => (
+                                <DateTimePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Select arrival"
+                                    error={Boolean(errors.scheduledArrival)}
+                                />
+                            )}
                         />
+                        {errors.scheduledArrival?.message && (
+                            <span className="form-error-msg">
+                                {errors.scheduledArrival.message}
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                <div className="form-group">
-                    <label className="form-label">Cruising Altitude (Meters AGL)</label>
-                    <input
-                        type="number"
-                        min="20"
-                        max="500"
-                        value={cruisingAltitudeM}
-                        onChange={(e) => setCruisingAltitudeM(e.target.value)}
-                        required
-                        className="form-input font-mono"
-                    />
-                </div>
+                <FormInput
+                    id="cruisingAltitudeM"
+                    label="Cruising Altitude (Meters AGL)"
+                    type="number"
+                    min="20"
+                    max="500"
+                    required
+                    className="font-mono"
+                    error={errors.cruisingAltitudeM?.message}
+                    {...register("cruisingAltitudeM", { valueAsNumber: true })}
+                />
 
-                <div className="form-group">
-                    <label className="form-label">Notes & Remarks (Optional)</label>
-                    <input
-                        type="text"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Corridor routing or weather notes"
-                        className="form-input"
-                    />
-                </div>
+                <FormInput
+                    id="notes"
+                    label="Notes & Remarks (Optional)"
+                    placeholder="Corridor routing or weather notes"
+                    error={errors.notes?.message}
+                    {...register("notes")}
+                />
             </div>
         </Modal>
     );

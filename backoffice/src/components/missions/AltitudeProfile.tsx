@@ -126,10 +126,8 @@ export function AltitudeProfile({
             if (i > 0) {
                 const prev = pts[i - 1];
                 const dist = calculateDistance(
-                    prev.latitude,
-                    prev.longitude,
-                    pt.latitude,
-                    pt.longitude
+                    { lat: prev.latitude, lng: prev.longitude },
+                    { lat: pt.latitude, lng: pt.longitude }
                 );
                 cumDistance += dist;
             }

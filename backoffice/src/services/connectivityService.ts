@@ -1,37 +1,19 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     DeviceRegistration,
     DeviceRegistrationListResponse,
     DeviceRegistrationPayload,
+    DeviceQueryParams,
 } from "@/types";
 
+export type GetDevicesParams = DeviceQueryParams;
+
 export const connectivityService = {
-    getDevices: async (params?: {
-        connectionStatus?: string;
-        search?: string;
-        limit?: number;
-        offset?: number;
-    }): Promise<DeviceRegistrationListResponse> => {
-        const searchParams = new URLSearchParams();
-        if (params?.connectionStatus) searchParams.set("connectionStatus", params.connectionStatus);
-        if (params?.search) searchParams.set("search", params.search);
-        if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
-        if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
-
-        const queryString = searchParams.toString();
-        const url = queryString
-            ? `${API_ENDPOINTS.CONNECTIVITY.BASE}?${queryString}`
-            : API_ENDPOINTS.CONNECTIVITY.BASE;
-
+    getDevices: async (params?: GetDevicesParams): Promise<DeviceRegistrationListResponse> => {
+        const url = buildUrl(API_ENDPOINTS.CONNECTIVITY.BASE, params as Record<string, unknown>);
         const res = await apiClient<DeviceRegistrationListResponse | DeviceRegistration[]>(url);
-        if (Array.isArray(res)) {
-            return {
-                items: res,
-                total: res.length,
-            };
-        }
-        return res;
+        return normalizeList<DeviceRegistration>(res);
     },
 
     getOnlineDevices: async (): Promise<DeviceRegistration[]> => {

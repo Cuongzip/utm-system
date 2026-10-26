@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 export interface ParsedApiError {
     message: string;
     fieldErrors: Record<string, string>;
@@ -107,4 +109,13 @@ export function parseApiError(err: unknown, defaultMessage = "An error occurred"
     }
 
     return { message, fieldErrors };
+}
+
+export function showApiError(
+    err: unknown,
+    defaultMessage = "An unexpected error occurred"
+): ParsedApiError {
+    const parsed = parseApiError(err, defaultMessage);
+    toast.error(parsed.message);
+    return parsed;
 }

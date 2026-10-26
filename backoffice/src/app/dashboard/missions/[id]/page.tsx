@@ -21,9 +21,8 @@ import {
     syncMissionWaypoints,
 } from "@/components/missions";
 import { missionService } from "@/services/missionService";
-import { hubService } from "@/services/hubService";
-import { droneService } from "@/services/droneService";
-import type { Waypoint, Hub, Drone, MissionScheduleType, UpdateMissionPayload } from "@/types";
+import { useHubsAll, useDronesAll } from "@/hooks";
+import type { Waypoint, MissionScheduleType, UpdateMissionPayload } from "@/types";
 import { parseApiError, validateSchema, createFieldErrorCleaner } from "@/utils";
 import { updateMissionBody } from "@/generated/mission";
 
@@ -32,12 +31,12 @@ export default function EditMissionPage() {
     const params = useParams();
     const missionId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
 
+    const { data: hubs = [] } = useHubsAll();
+    const { data: drones = [] } = useDronesAll();
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const [hubs, setHubs] = useState<Hub[]>([]);
-    const [drones, setDrones] = useState<Drone[]>([]);
 
     const [missionStatus, setMissionStatus] = useState<string | null>(null);
     const [initialWaypoints, setInitialWaypoints] = useState<Waypoint[]>([]);
@@ -116,16 +115,9 @@ export default function EditMissionPage() {
             setLoading(true);
             setError(null);
             try {
-                const [hubsRes, dronesRes, mission] = await Promise.all([
-                    hubService.getHubs({ limit: 0 }),
-                    droneService.getDrones({ limit: 0 }),
-                    missionService.getById(missionId),
-                ]);
+                const mission = await missionService.getById(missionId);
 
                 if (!isMounted) return;
-
-                setHubs(hubsRes.items || []);
-                setDrones(dronesRes.items || []);
 
                 setMissionStatus(mission.status || "draft");
                 setName(mission.name || "");

@@ -20,12 +20,12 @@ export interface LiveTelemetryLayerProps {
 export function LiveTelemetryLayer({
     flights = [],
     telemetryMap = {},
-    telemetryHistoryMap = {},
+    telemetryHistoryMap: _telemetryHistoryMap = {},
     selectedFlightId,
-    onSelectFlight,
-    hubCoordsMap = new Map(),
+    onSelectFlight: _onSelectFlight,
+    hubCoordsMap: _hubCoordsMap = new Map(),
     autoFollowSelected = true,
-    showPlannedRoute = false,
+    showPlannedRoute: _showPlannedRoute = false,
 }: LiveTelemetryLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);

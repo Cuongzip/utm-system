@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
 import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
-import { useCrudList } from "@/hooks";
+import { useCrudList, QUERY_KEYS } from "@/hooks";
+import { useMutation } from "@tanstack/react-query";
 import type { Hub, CreateHubPayload, UpdateHubPayload } from "@/types";
 
 export default function HubsPage() {
@@ -28,25 +29,38 @@ export default function HubsPage() {
         handleSelect: handleSelectHub,
         handleDelete: handleDeleteHub,
     } = useCrudList<Hub>({
+        queryKey: QUERY_KEYS.hubs,
         fetchFn: fetchHubs,
         deleteFn: deleteHub,
         entityName: "Vertiport hub",
     });
 
-    const handleSaveHub = async (payload: CreateHubPayload | UpdateHubPayload, id?: string) => {
-        try {
+    const saveHubMutation = useMutation({
+        mutationFn: async ({
+            payload,
+            id,
+        }: {
+            payload: CreateHubPayload | UpdateHubPayload;
+            id?: string;
+        }) => {
             if (id) {
-                await hubService.updateHub(id, payload as UpdateHubPayload);
-                toast.success("Vertiport hub updated successfully");
-            } else {
-                await hubService.createHub(payload as CreateHubPayload);
-                toast.success("Vertiport hub created successfully");
+                return hubService.updateHub(id, payload as UpdateHubPayload);
             }
-            await refresh();
-        } catch (err: unknown) {
-            toast.error("Failed to save hub");
-            throw err;
-        }
+            return hubService.createHub(payload as CreateHubPayload);
+        },
+        onSuccess: (_data, variables) => {
+            toast.success(
+                variables.id
+                    ? "Vertiport hub updated successfully"
+                    : "Vertiport hub created successfully"
+            );
+            refresh();
+        },
+        meta: { defaultErrorMessage: "Failed to save hub" },
+    });
+
+    const handleSaveHub = async (payload: CreateHubPayload | UpdateHubPayload, id?: string) => {
+        await saveHubMutation.mutateAsync({ payload, id });
     };
 
     return (

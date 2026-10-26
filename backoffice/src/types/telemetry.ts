@@ -11,5 +11,9 @@ export type TelemetryRecord = NonNullable<zod.infer<typeof getLatestFlightTeleme
 export type TelemetryHistoryItem = NonNullable<
     zod.infer<typeof getFlightTelemetryHistoryResponseItem>
 >;
+export type TelemetryHistoryQueryParams = {
+    from?: string;
+    to?: string;
+};
 
 export type TelemetryPoint = TelemetryRecord;

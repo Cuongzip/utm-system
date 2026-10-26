@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { showApiError } from "@/utils";
 
 export interface UseCrudListOptions<T extends { id?: string }> {
+    queryKey?: readonly unknown[];
     fetchFn: () => Promise<T[] | { items?: T[] }>;
     deleteFn?: (id: string) => Promise<unknown>;
     entityName?: string;
@@ -11,38 +14,46 @@ export interface UseCrudListOptions<T extends { id?: string }> {
 }
 
 export function useCrudList<T extends { id?: string }>({
+    queryKey,
     fetchFn,
     deleteFn,
     entityName = "Item",
     autoFetch = true,
 }: UseCrudListOptions<T>) {
-    const [items, setItems] = useState<T[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
+    const effectiveKey = useMemo(
+        () => queryKey || ["crud-list", entityName.toLowerCase()],
+        [queryKey, entityName]
+    );
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [itemToEdit, setItemToEdit] = useState<T | null>(null);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const [customError, setCustomError] = useState<string | null>(null);
+
+    const {
+        data,
+        isLoading: queryLoading,
+        error: queryError,
+        refetch,
+    } = useQuery({
+        queryKey: effectiveKey,
+        queryFn: async () => {
+            const res = await fetchFn();
+            return Array.isArray(res) ? res : res?.items || [];
+        },
+        enabled: autoFetch,
+    });
+
+    const items: T[] = data || [];
+    const loading = autoFetch && queryLoading;
+    const error =
+        customError || (queryError ? `Failed to fetch ${entityName.toLowerCase()}s` : null);
 
     const refresh = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await fetchFn();
-            const list = Array.isArray(res) ? res : res?.items || [];
-            setItems(list);
-            setError(null);
-        } catch {
-            setError(`Failed to fetch ${entityName.toLowerCase()}s`);
-        } finally {
-            setLoading(false);
-        }
-    }, [fetchFn, entityName]);
-
-    useEffect(() => {
-        if (autoFetch) {
-            refresh();
-        }
-    }, [autoFetch, refresh]);
+        setCustomError(null);
+        await refetch();
+    }, [refetch]);
 
     const openCreateModal = useCallback(() => {
         setItemToEdit(null);
@@ -72,22 +83,23 @@ export function useCrudList<T extends { id?: string }>({
                     setHighlightedId(null);
                 }
                 toast.success(`${entityName} deleted successfully`);
-                await refresh();
-            } catch {
-                toast.error(`Failed to delete ${entityName.toLowerCase()}`);
-                setError(`Failed to delete ${entityName.toLowerCase()}`);
+                queryClient.invalidateQueries({ queryKey: effectiveKey });
+            } catch (err: unknown) {
+                const { message } = showApiError(
+                    err,
+                    `Failed to delete ${entityName.toLowerCase()}`
+                );
+                setCustomError(message);
             }
         },
-        [deleteFn, entityName, highlightedId, refresh]
+        [deleteFn, entityName, highlightedId, queryClient, effectiveKey]
     );
 
     return {
         items,
-        setItems,
         loading,
-        setLoading,
         error,
-        setError,
+        setError: setCustomError,
         refresh,
         isModalOpen,
         setIsModalOpen,

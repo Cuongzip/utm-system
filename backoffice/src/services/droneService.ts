@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type { Drone, DroneListResponse, DroneRegistrationPayload, DroneQueryParams } from "@/types";
 
@@ -6,27 +6,9 @@ export type GetDronesParams = DroneQueryParams;
 
 export const droneService = {
     getDrones: async (params?: GetDronesParams): Promise<DroneListResponse> => {
-        const searchParams = new URLSearchParams();
-        if (params?.status) searchParams.set("status", params.status);
-        if (params?.search) searchParams.set("search", params.search);
-        if (params?.homeHubId) searchParams.set("homeHubId", params.homeHubId);
-        if (params?.ownerId) searchParams.set("ownerId", params.ownerId);
-        if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
-        if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
-
-        const queryString = searchParams.toString();
-        const url = queryString
-            ? `${API_ENDPOINTS.DRONES.BASE}?${queryString}`
-            : API_ENDPOINTS.DRONES.BASE;
-
+        const url = buildUrl(API_ENDPOINTS.DRONES.BASE, params as Record<string, unknown>);
         const res = await apiClient<DroneListResponse | Drone[]>(url);
-        if (Array.isArray(res)) {
-            return {
-                items: res,
-                total: res.length,
-            };
-        }
-        return res;
+        return normalizeList<Drone>(res);
     },
 
     getAll: async (): Promise<Drone[]> => {

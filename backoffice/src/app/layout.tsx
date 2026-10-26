@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui";
+import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,8 +16,10 @@ export default function RootLayout({
     return (
         <html lang="en" className="h-full antialiased">
             <body className="min-h-full flex flex-col">
-                {children}
-                <Toaster position="top-right" />
+                <QueryProvider>
+                    {children}
+                    <Toaster position="top-right" />
+                </QueryProvider>
             </body>
         </html>
     );

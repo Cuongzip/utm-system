@@ -1,6 +1,8 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { TelemetryRecord } from "@/types";
+import type { TelemetryRecord, TelemetryHistoryQueryParams } from "@/types";
+
+export type GetTelemetryHistoryParams = TelemetryHistoryQueryParams;
 
 export const telemetryService = {
     getLatestByFlightId: async (flightId: string): Promise<TelemetryRecord | null> => {
@@ -15,17 +17,13 @@ export const telemetryService = {
 
     getHistoryByFlightId: async (
         flightId: string,
-        from?: string,
-        to?: string
+        params?: GetTelemetryHistoryParams
     ): Promise<TelemetryRecord[]> => {
         try {
-            const params = new URLSearchParams();
-            if (from) params.set("from", from);
-            if (to) params.set("to", to);
-            const query = params.toString();
-            const url = query
-                ? `${API_ENDPOINTS.TELEMETRY.BY_FLIGHT(flightId)}?${query}`
-                : API_ENDPOINTS.TELEMETRY.BY_FLIGHT(flightId);
+            const url = buildUrl(
+                API_ENDPOINTS.TELEMETRY.BY_FLIGHT(flightId),
+                params as Record<string, unknown>
+            );
             const res = await apiClient<TelemetryRecord[]>(url);
             return Array.isArray(res) ? res : [];
         } catch {
@@ -45,17 +43,13 @@ export const telemetryService = {
 
     getHistoryByDroneId: async (
         droneId: string,
-        from?: string,
-        to?: string
+        params?: GetTelemetryHistoryParams
     ): Promise<TelemetryRecord[]> => {
         try {
-            const params = new URLSearchParams();
-            if (from) params.set("from", from);
-            if (to) params.set("to", to);
-            const query = params.toString();
-            const url = query
-                ? `${API_ENDPOINTS.TELEMETRY.BY_DRONE(droneId)}?${query}`
-                : API_ENDPOINTS.TELEMETRY.BY_DRONE(droneId);
+            const url = buildUrl(
+                API_ENDPOINTS.TELEMETRY.BY_DRONE(droneId),
+                params as Record<string, unknown>
+            );
             const res = await apiClient<TelemetryRecord[]>(url);
             return Array.isArray(res) ? res : [];
         } catch {

@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     Flight,
@@ -17,25 +17,9 @@ export const flightService = {
     },
 
     getFlights: async (params?: GetFlightsParams): Promise<FlightListResponse> => {
-        const query = new URLSearchParams();
-        if (params?.status) query.set("status", params.status);
-        if (params?.authorizationStatus)
-            query.set("authorizationStatus", params.authorizationStatus);
-        if (params?.pilotId) query.set("pilotId", params.pilotId);
-        if (params?.droneId) query.set("droneId", params.droneId);
-        if (params?.limit !== undefined) query.set("limit", String(params.limit));
-        if (params?.offset !== undefined) query.set("offset", String(params.offset));
-
-        const queryString = query.toString();
-        const endpoint = queryString
-            ? `${API_ENDPOINTS.FLIGHTS.BASE}?${queryString}`
-            : API_ENDPOINTS.FLIGHTS.BASE;
-
+        const endpoint = buildUrl(API_ENDPOINTS.FLIGHTS.BASE, params as Record<string, unknown>);
         const res = await apiClient<FlightListResponse | Flight[]>(endpoint);
-        if (Array.isArray(res)) {
-            return { items: res, total: res.length };
-        }
-        return res;
+        return normalizeList<Flight>(res);
     },
 
     getById: async (id: string): Promise<Flight> => {

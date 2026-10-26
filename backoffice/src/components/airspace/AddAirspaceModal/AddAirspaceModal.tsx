@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Modal, CustomSelect } from "@/components/ui";
 import {
     cn,
@@ -171,25 +172,15 @@ export function AddAirspaceModal({
         }
 
         const schema = zoneToEdit ? updateZoneBody : createZoneBody;
-        const validationData: any = zoneToEdit
-            ? {
-                  name: name.trim() || undefined,
-                  hubId: hubId.trim() || undefined,
-                  zoneType,
-                  status,
-                  altitudeCeiling: parseFormNumber(altitudeCeiling),
-                  description: description.trim() || undefined,
-                  geometry,
-              }
-            : {
-                  name: name.trim(),
-                  hubId: hubId.trim() || undefined,
-                  zoneType,
-                  status,
-                  altitudeCeiling: parseFormNumber(altitudeCeiling) ?? 120,
-                  description: description.trim() || undefined,
-                  geometry,
-              };
+        const validationData: any = {
+            name: name.trim() || (zoneToEdit ? undefined : ""),
+            hubId: hubId.trim() || undefined,
+            zoneType,
+            status,
+            altitudeCeiling: parseFormNumber(altitudeCeiling) ?? (zoneToEdit ? undefined : 120),
+            description: description.trim() || undefined,
+            geometry,
+        };
 
         const validation = validateSchema(schema, validationData);
         if (!validation.success) {
@@ -203,7 +194,11 @@ export function AddAirspaceModal({
             onClose();
         } catch (err: unknown) {
             const parsed = parseApiError(err, "Failed to save airspace zone");
-            setFieldErrors(parsed.fieldErrors);
+            if (Object.keys(parsed.fieldErrors).length > 0) {
+                setFieldErrors(parsed.fieldErrors);
+            } else {
+                toast.error(parsed.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -213,7 +208,7 @@ export function AddAirspaceModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={zoneToEdit ? "EDIT AIRSPACE ZONE" : "CREATE AIRSPACE ZONE"}
+            title={zoneToEdit ? "Edit Airspace Sector" : "Register Airspace Sector"}
             onSubmit={handleSubmit}
             loading={loading}
             submitText={zoneToEdit ? "Update Zone" : "Create Zone"}

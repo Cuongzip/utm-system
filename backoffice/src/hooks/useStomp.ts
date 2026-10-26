@@ -59,7 +59,9 @@ export function useStompSubscription<T = unknown>(
     enabled = true
 ) {
     const onMessageRef = useRef(onMessage);
-    onMessageRef.current = onMessage;
+    useEffect(() => {
+        onMessageRef.current = onMessage;
+    });
 
     useEffect(() => {
         if (!enabled || !destination) return;

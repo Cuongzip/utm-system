@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     Mission,
@@ -17,24 +17,9 @@ export type GetMissionsParams = MissionQueryParams;
 
 export const missionService = {
     getMissions: async (params?: GetMissionsParams): Promise<MissionListResponse> => {
-        const query = new URLSearchParams();
-        if (params?.status && params.status !== "all") query.set("status", params.status);
-        if (params?.departureHubId) query.set("departureHubId", params.departureHubId);
-        if (params?.arrivalHubId) query.set("arrivalHubId", params.arrivalHubId);
-        if (params?.scheduleType) query.set("scheduleType", params.scheduleType);
-        if (params?.page !== undefined) query.set("page", String(params.page));
-        if (params?.size !== undefined) query.set("size", String(params.size));
-
-        const queryString = query.toString();
-        const endpoint = queryString
-            ? `${API_ENDPOINTS.MISSIONS.BASE}?${queryString}`
-            : API_ENDPOINTS.MISSIONS.BASE;
-
+        const endpoint = buildUrl(API_ENDPOINTS.MISSIONS.BASE, params as Record<string, unknown>);
         const res = await apiClient<MissionListResponse | Mission[]>(endpoint);
-        if (Array.isArray(res)) {
-            return { items: res, total: res.length };
-        }
-        return res;
+        return normalizeList<Mission>(res);
     },
 
     getAll: async (): Promise<Mission[]> => {

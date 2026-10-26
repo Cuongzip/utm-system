@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     Hub,
@@ -12,23 +12,9 @@ export type GetHubsParams = HubQueryParams;
 
 export const hubService = {
     getHubs: async (params?: GetHubsParams): Promise<HubListResponse> => {
-        const searchParams = new URLSearchParams();
-        if (params?.search) searchParams.set("search", params.search);
-        if (params?.status) searchParams.set("status", params.status);
-        if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
-        if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
-
-        const qs = searchParams.toString();
-        const url = qs ? `${API_ENDPOINTS.HUBS.BASE}?${qs}` : API_ENDPOINTS.HUBS.BASE;
-
+        const url = buildUrl(API_ENDPOINTS.HUBS.BASE, params as Record<string, unknown>);
         const res = await apiClient<HubListResponse | Hub[]>(url);
-        if (Array.isArray(res)) {
-            return {
-                items: res,
-                total: res.length,
-            };
-        }
-        return res;
+        return normalizeList<Hub>(res);
     },
 
     getAll: async (): Promise<Hub[]> => {

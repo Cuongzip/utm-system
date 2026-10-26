@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, ShieldAlert, Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Modal, OutlineButton, ChamferButton, StatusBadge } from "@/components/ui";
 import { airspaceService } from "@/services/airspaceService";
 import type { CheckPathResult } from "@/types";
@@ -95,7 +95,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="PRE-FLIGHT AIRSPACE CHECK"
+            title="Pre-Flight Airspace Check"
             maxWidth="620px"
             footer={
                 <OutlineButton type="button" onClick={onClose}>

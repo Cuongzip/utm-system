@@ -1,50 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { ChamferButton, OutlineButton, PageHeader, AlertBanner } from "@/components/ui";
 import { FlightsTable, FlightsMap, AddFlightModal } from "@/components/flights";
 import { flightService } from "@/services/flightService";
-import { droneService } from "@/services/droneService";
-import { hubService } from "@/services/hubService";
-import { ApiError } from "@/services/apiClient";
-import type { Flight, Drone, Hub } from "@/types";
+import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Flight } from "@/types";
 import type { FlightHubCoord } from "@/components/map";
 
 export default function FlightsPage() {
-    const [flights, setFlights] = useState<Flight[]>([]);
-    const [drones, setDrones] = useState<Drone[]>([]);
-    const [hubs, setHubs] = useState<Hub[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data: hubs = [] } = useHubsAll();
+    const { data: drones = [] } = useDronesAll();
 
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [highlightedFlightId, setHighlightedFlightId] = useState<string | null>(null);
+    const fetchFlights = useCallback(() => flightService.getFlights({ limit: 0 }), []);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [flightsRes, dronesRes, hubsRes] = await Promise.all([
-                flightService.getFlights({ limit: 0 }),
-                droneService.getDrones({ limit: 0 }),
-                hubService.getHubs({ limit: 0 }),
-            ]);
-
-            setFlights(flightsRes.items || []);
-            setDrones(dronesRes.items || []);
-            setHubs(hubsRes.items || []);
-            setError(null);
-        } catch {
-            setError("Failed to fetch flight operations and route data");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const {
+        items: flights,
+        loading,
+        error,
+        setError,
+        refresh: fetchData,
+        isModalOpen: isAddModalOpen,
+        setIsModalOpen: setIsAddModalOpen,
+        highlightedId: highlightedFlightId,
+        setHighlightedId: setHighlightedFlightId,
+    } = useCrudList<Flight>({
+        queryKey: QUERY_KEYS.flights,
+        fetchFn: fetchFlights,
+        entityName: "Flight",
+    });
 
     const hubMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -77,95 +64,82 @@ export default function FlightsPage() {
         return map;
     }, [drones]);
 
-    const handleCreateFlight = async (payload: Partial<Flight>) => {
-        try {
-            await flightService.createFlight(payload);
+    const queryClient = useQueryClient();
+
+    const invalidateFlights = () => {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+    };
+
+    const createFlightMutation = useMutation({
+        mutationFn: (payload: Partial<Flight>) => flightService.createFlight(payload),
+        onSuccess: () => {
             toast.success("Flight operation registered successfully");
-            await fetchData();
-        } catch (err: unknown) {
-            const msg =
-                err instanceof ApiError &&
-                typeof err.data === "object" &&
-                err.data &&
-                "message" in err.data
-                    ? String((err.data as any).message)
-                    : "Failed to register flight operation";
-            toast.error(msg);
-            throw err;
-        }
-    };
+            invalidateFlights();
+        },
+        meta: { defaultErrorMessage: "Failed to register flight operation" },
+    });
 
-    const handleAuthorizeFlight = async (flight: Flight) => {
-        try {
-            await flightService.authorizeFlight(flight.id);
+    const authorizeFlightMutation = useMutation({
+        mutationFn: (flight: Flight) => flightService.authorizeFlight(flight.id),
+        onSuccess: (_data, flight) => {
             toast.success(`Flight ${flight.flightNumber || flight.id} authorized by ATC`);
-            await fetchData();
-        } catch (err: unknown) {
-            const msg =
-                err instanceof ApiError &&
-                typeof err.data === "object" &&
-                err.data &&
-                "message" in err.data
-                    ? String((err.data as any).message)
-                    : "Failed to authorize flight";
-            toast.error(msg);
-        }
-    };
+            invalidateFlights();
+        },
+        meta: { defaultErrorMessage: "Failed to authorize flight" },
+    });
 
-    const handleStartFlight = async (flight: Flight) => {
-        try {
+    const startFlightMutation = useMutation({
+        mutationFn: async (flight: Flight) => {
             const status = (flight.status || "planned").toLowerCase();
             const authStatus = ((flight as any).authorizationStatus || "").toLowerCase();
             if (status !== "authorized" && authStatus !== "approved") {
                 await flightService.authorizeFlight(flight.id);
             }
-            await flightService.startFlight(flight.id);
+            return flightService.startFlight(flight.id);
+        },
+        onSuccess: (_data, flight) => {
             toast.success(`Flight ${flight.flightNumber || flight.id} started successfully`);
-            await fetchData();
-        } catch (err: unknown) {
-            const msg =
-                err instanceof ApiError &&
-                typeof err.data === "object" &&
-                err.data &&
-                "message" in err.data
-                    ? String((err.data as any).message)
-                    : "Failed to start flight operation";
-            toast.error(msg);
-        }
-    };
+            invalidateFlights();
+        },
+        meta: { defaultErrorMessage: "Failed to start flight operation" },
+    });
 
-    const handleCompleteFlight = async (flight: Flight) => {
-        try {
-            await flightService.completeFlight(flight.id);
+    const completeFlightMutation = useMutation({
+        mutationFn: (flight: Flight) => flightService.completeFlight(flight.id),
+        onSuccess: (_data, flight) => {
             toast.success(`Flight ${flight.flightNumber || flight.id} completed successfully`);
-            await fetchData();
-        } catch (err: unknown) {
-            const msg =
-                err instanceof ApiError &&
-                typeof err.data === "object" &&
-                err.data &&
-                "message" in err.data
-                    ? String((err.data as any).message)
-                    : "Failed to complete flight operation";
-            toast.error(msg);
-        }
+            invalidateFlights();
+        },
+        meta: { defaultErrorMessage: "Failed to complete flight operation" },
+    });
+
+    const abortFlightMutation = useMutation({
+        mutationFn: (flight: Flight) => flightService.abortFlight(flight.id),
+        onSuccess: (_data, flight) => {
+            toast.success(`Flight ${flight.flightNumber || flight.id} aborted`);
+            invalidateFlights();
+        },
+        meta: { defaultErrorMessage: "Failed to abort flight operation" },
+    });
+
+    const handleCreateFlight = async (payload: Partial<Flight>) => {
+        await createFlightMutation.mutateAsync(payload);
     };
 
-    const handleAbortFlight = async (flight: Flight) => {
-        try {
-            await flightService.abortFlight(flight.id);
-            toast.success(`Flight ${flight.flightNumber || flight.id} aborted`);
-            await fetchData();
-        } catch (err: unknown) {
-            const msg =
-                err instanceof ApiError &&
-                typeof err.data === "object" &&
-                err.data &&
-                "message" in err.data
-                    ? String((err.data as any).message)
-                    : "Failed to abort flight operation";
-            toast.error(msg);
-        }
+    const handleAuthorizeFlight = (flight: Flight) => {
+        authorizeFlightMutation.mutate(flight);
+    };
+
+    const handleStartFlight = (flight: Flight) => {
+        startFlightMutation.mutate(flight);
+    };
+
+    const handleCompleteFlight = (flight: Flight) => {
+        completeFlightMutation.mutate(flight);
+    };
+
+    const handleAbortFlight = (flight: Flight) => {
+        abortFlightMutation.mutate(flight);
     };
 
     const handleSelectFlight = (flight: Flight | null) => {

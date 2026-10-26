@@ -29,7 +29,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 );
 Table.displayName = "Table";
 
-export interface TableHeaderProps extends React.HTMLAttributes<HTMLTableSectionElement> {}
+export type TableHeaderProps = React.HTMLAttributes<HTMLTableSectionElement>;
 
 export const TableHeader = forwardRef<HTMLTableSectionElement, TableHeaderProps>(
     ({ className, children, ...props }, ref) => {
@@ -42,7 +42,7 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, TableHeaderProps>
 );
 TableHeader.displayName = "TableHeader";
 
-export interface TableBodyProps extends React.HTMLAttributes<HTMLTableSectionElement> {}
+export type TableBodyProps = React.HTMLAttributes<HTMLTableSectionElement>;
 
 export const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
     ({ className, children, ...props }, ref) => {

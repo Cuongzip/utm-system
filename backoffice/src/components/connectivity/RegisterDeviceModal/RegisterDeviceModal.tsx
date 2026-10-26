@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Modal } from "@/components/ui";
-import { cn, parseApiError, validateSchema, createFieldErrorCleaner } from "@/utils";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { Modal, FormInput } from "@/components/ui";
+import { parseApiError } from "@/utils";
 import { registerDeviceBody } from "@/generated";
 import type { DeviceRegistrationPayload } from "@/types";
 
@@ -13,44 +16,52 @@ interface RegisterDeviceModalProps {
 }
 
 export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDeviceModalProps) {
-    const [droneId, setDroneId] = useState("");
-    const [deviceIdentifier, setDeviceIdentifier] = useState("");
-    const [certificateFingerprint, setCertificateFingerprint] = useState("");
     const [loading, setLoading] = useState(false);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+        setError,
+        formState: { errors },
+    } = useForm<DeviceRegistrationPayload>({
+        resolver: zodResolver(registerDeviceBody) as any,
+        defaultValues: {
+            droneId: "",
+            deviceIdentifier: "",
+            certificateFingerprint: "",
+        },
+    });
 
     useEffect(() => {
         if (isOpen) {
-            setDroneId("");
-            setDeviceIdentifier("");
-            setCertificateFingerprint("");
-            setFieldErrors({});
+            reset({
+                droneId: "",
+                deviceIdentifier: "",
+                certificateFingerprint: "",
+            });
         }
-    }, [isOpen]);
+    }, [isOpen, reset]);
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        const validation = validateSchema(registerDeviceBody, {
-            droneId: droneId.trim(),
-            deviceIdentifier: deviceIdentifier.trim(),
-            certificateFingerprint: certificateFingerprint.trim() || undefined,
-        });
-
-        if (!validation.success) {
-            setFieldErrors(validation.errors);
-            return;
-        }
-
+    const onFormSubmit = async (data: DeviceRegistrationPayload) => {
         try {
             setLoading(true);
-            setFieldErrors({});
-            await onSubmit(validation.data as DeviceRegistrationPayload);
+            const payload: DeviceRegistrationPayload = {
+                droneId: data.droneId.trim(),
+                deviceIdentifier: data.deviceIdentifier.trim(),
+                certificateFingerprint: data.certificateFingerprint?.trim() || undefined,
+            };
+            await onSubmit(payload);
             onClose();
         } catch (err: unknown) {
             const parsed = parseApiError(err, "Failed to register device");
-            setFieldErrors(parsed.fieldErrors);
+            if (Object.keys(parsed.fieldErrors).length > 0) {
+                Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
+                    setError(field as any, { message: msg });
+                });
+            } else {
+                toast.error(parsed.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -61,73 +72,36 @@ export function RegisterDeviceModal({ isOpen, onClose, onSubmit }: RegisterDevic
             isOpen={isOpen}
             onClose={onClose}
             title="Register Drone Device"
-            onSubmit={handleSubmit}
+            onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
             submitText="Register Device"
             loadingText="Registering..."
         >
-            <div className="form-group">
-                <label className="form-label" htmlFor="droneId">
-                    Drone ID *
-                </label>
-                <input
-                    id="droneId"
-                    type="text"
-                    value={droneId}
-                    onChange={(e) => {
-                        setDroneId(e.target.value);
-                        clearFieldError("droneId");
-                    }}
-                    placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
-                    className={cn("form-input", fieldErrors.droneId && "form-input-error")}
-                />
-                {fieldErrors.droneId && (
-                    <span className="form-error-msg">{fieldErrors.droneId}</span>
-                )}
-            </div>
+            <FormInput
+                id="droneId"
+                label="Drone ID"
+                required
+                placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                error={errors.droneId?.message}
+                {...register("droneId")}
+            />
 
-            <div className="form-group">
-                <label className="form-label" htmlFor="deviceIdentifier">
-                    Device Identifier *
-                </label>
-                <input
-                    id="deviceIdentifier"
-                    type="text"
-                    value={deviceIdentifier}
-                    onChange={(e) => {
-                        setDeviceIdentifier(e.target.value);
-                        clearFieldError("deviceIdentifier");
-                    }}
-                    placeholder="e.g. DEV-UTM-0091"
-                    className={cn("form-input", fieldErrors.deviceIdentifier && "form-input-error")}
-                />
-                {fieldErrors.deviceIdentifier && (
-                    <span className="form-error-msg">{fieldErrors.deviceIdentifier}</span>
-                )}
-            </div>
+            <FormInput
+                id="deviceIdentifier"
+                label="Device Identifier"
+                required
+                placeholder="e.g. DEV-UTM-0091"
+                error={errors.deviceIdentifier?.message}
+                {...register("deviceIdentifier")}
+            />
 
-            <div className="form-group">
-                <label className="form-label" htmlFor="certificateFingerprint">
-                    Certificate Fingerprint (Optional)
-                </label>
-                <input
-                    id="certificateFingerprint"
-                    type="text"
-                    value={certificateFingerprint}
-                    onChange={(e) => {
-                        setCertificateFingerprint(e.target.value);
-                        clearFieldError("certificateFingerprint");
-                    }}
-                    placeholder="e.g. SHA256:4a:5b:6c..."
-                    className={cn(
-                        "form-input",
-                        fieldErrors.certificateFingerprint && "form-input-error"
-                    )}
-                />
-                {fieldErrors.certificateFingerprint && (
-                    <span className="form-error-msg">{fieldErrors.certificateFingerprint}</span>
-                )}
-            </div>
+            <FormInput
+                id="certificateFingerprint"
+                label="Certificate Fingerprint (Optional)"
+                placeholder="e.g. SHA256:4a:5b:6c..."
+                error={errors.certificateFingerprint?.message}
+                {...register("certificateFingerprint")}
+            />
         </Modal>
     );
 }

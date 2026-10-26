@@ -15,6 +15,7 @@ import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
 import { hubService } from "@/services/hubService";
 import { droneService } from "@/services/droneService";
+import { useMutation } from "@tanstack/react-query";
 import {
     MISSION_STATUSES,
     MISSION_STATUS_LABELS,
@@ -86,42 +87,52 @@ export default function MissionsPage() {
         });
     }, [missions, searchQuery, statusFilter]);
 
-    const handleDuplicate = async (mission: Mission) => {
-        try {
-            await missionService.duplicateMission(mission.id);
+    const duplicateMissionMutation = useMutation({
+        mutationFn: (mission: Mission) => missionService.duplicateMission(mission.id),
+        onSuccess: (_data, mission) => {
             toast.success(`Mission "${mission.name || mission.id}" duplicated as draft`);
-            await fetchData();
-        } catch {
-            toast.error("Failed to duplicate mission");
-        }
-    };
+            fetchData();
+        },
+        meta: { defaultErrorMessage: "Failed to duplicate mission" },
+    });
 
-    const handleDelete = async (mission: Mission) => {
-        try {
-            await missionService.deleteMission(mission.id);
+    const deleteMissionMutation = useMutation({
+        mutationFn: (mission: Mission) => missionService.deleteMission(mission.id),
+        onSuccess: (_data, mission) => {
             toast.success(`Mission "${mission.name || mission.id}" deleted successfully`);
-            await fetchData();
-        } catch {
-            toast.error("Failed to delete mission");
-        }
+            fetchData();
+        },
+        meta: { defaultErrorMessage: "Failed to delete mission" },
+    });
+
+    const executeMissionMutation = useMutation({
+        mutationFn: ({ missionId, droneId }: { missionId: string; droneId: string }) =>
+            missionService.executeMission(missionId, {
+                droneId,
+                pilotId: "operator",
+            }),
+        onSuccess: () => {
+            toast.success("Mission is now executing");
+            fetchData();
+        },
+        meta: { defaultErrorMessage: "Failed to start mission execution" },
+    });
+
+    const handleDuplicate = (mission: Mission) => {
+        duplicateMissionMutation.mutate(mission);
     };
 
-    const handleExecute = async (mission: Mission) => {
-        try {
-            const droneIdToUse = drones[0]?.id;
-            if (!droneIdToUse) {
-                toast.error("No active drone found to execute this mission");
-                return;
-            }
-            await missionService.executeMission(mission.id, {
-                droneId: droneIdToUse,
-                pilotId: "operator",
-            });
-            toast.success(`Mission "${mission.name || mission.id}" is now executing`);
-            await fetchData();
-        } catch {
-            toast.error("Failed to start mission execution");
+    const handleDelete = (mission: Mission) => {
+        deleteMissionMutation.mutate(mission);
+    };
+
+    const handleExecute = (mission: Mission) => {
+        const droneIdToUse = drones[0]?.id;
+        if (!droneIdToUse) {
+            toast.error("No active drone found to execute this mission");
+            return;
         }
+        executeMissionMutation.mutate({ missionId: mission.id, droneId: droneIdToUse });
     };
 
     return (

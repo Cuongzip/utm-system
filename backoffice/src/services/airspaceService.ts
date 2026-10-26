@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     AirspaceZone,
@@ -16,23 +16,9 @@ export type GetZonesParams = AirspaceQueryParams;
 
 export const airspaceService = {
     getZones: async (params?: GetZonesParams): Promise<AirspaceZoneListResponse> => {
-        const query = new URLSearchParams();
-        if (params?.hubId) query.set("hubId", params.hubId);
-        if (params?.zoneType) query.set("zoneType", params.zoneType);
-        if (params?.status) query.set("status", params.status);
-        if (params?.limit !== undefined) query.set("limit", String(params.limit));
-        if (params?.offset !== undefined) query.set("offset", String(params.offset));
-
-        const queryString = query.toString();
-        const endpoint = queryString
-            ? `${API_ENDPOINTS.AIRSPACES.ZONES}?${queryString}`
-            : API_ENDPOINTS.AIRSPACES.ZONES;
-
+        const endpoint = buildUrl(API_ENDPOINTS.AIRSPACES.ZONES, params as Record<string, unknown>);
         const res = await apiClient<AirspaceZoneListResponse | AirspaceZone[]>(endpoint);
-        if (Array.isArray(res)) {
-            return { items: res, total: res.length };
-        }
-        return res;
+        return normalizeList<AirspaceZone>(res);
     },
 
     getZoneById: async (id: string): Promise<AirspaceZone> => {

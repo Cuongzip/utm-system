@@ -1,5 +1,5 @@
 import { addWaypointBody } from "@/generated/mission";
-import { calculateDistance } from "@/utils/geo";
+import { calculateDistance, calculatePathDistance, interpolatePoint } from "@/utils/geo";
 import type { Hub, Waypoint, AddWaypointPayload } from "@/types";
 import { missionService } from "@/services/missionService";
 import zod from "zod";
@@ -66,14 +66,7 @@ export function calculateMissionDistance(
         }
     }
 
-    if (pts.length >= 2) {
-        let sum = 0;
-        for (let i = 1; i < pts.length; i++) {
-            sum += calculateDistance(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng);
-        }
-        return sum;
-    }
-    return 0;
+    return calculatePathDistance(pts);
 }
 
 export function generateHubToHubWaypoints(
@@ -95,10 +88,10 @@ export function generateHubToHubWaypoints(
         return [];
     }
 
-    const midLat1 = depLat + (arrLat - depLat) * 0.33;
-    const midLng1 = depLng + (arrLng - depLng) * 0.33;
-    const midLat2 = depLat + (arrLat - depLat) * 0.66;
-    const midLng2 = depLng + (arrLng - depLng) * 0.66;
+    const p1 = { lat: depLat, lng: depLng };
+    const p2 = { lat: arrLat, lng: arrLng };
+    const mid1 = interpolatePoint(p1, p2, 0.33);
+    const mid2 = interpolatePoint(p1, p2, 0.66);
 
     return [
         {
@@ -113,16 +106,16 @@ export function generateHubToHubWaypoints(
             tempId: `hub-wp-2-${Date.now()}`,
             sequence: 2,
             name: "Climb & Enroute",
-            latitude: Number(midLat1.toFixed(6)),
-            longitude: Number(midLng1.toFixed(6)),
+            latitude: mid1.lat,
+            longitude: mid1.lng,
             altitude: defaultAltitude + 20,
         },
         {
             tempId: `hub-wp-3-${Date.now()}`,
             sequence: 3,
             name: "Approach Fix",
-            latitude: Number(midLat2.toFixed(6)),
-            longitude: Number(midLng2.toFixed(6)),
+            latitude: mid2.lat,
+            longitude: mid2.lng,
             altitude: defaultAltitude + 10,
         },
         {

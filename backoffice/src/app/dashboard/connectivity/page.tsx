@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { PageHeader, ChamferButton, OutlineButton, AlertBanner } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ConnectivityMetrics,
     ConnectivityTabs,
@@ -15,63 +17,90 @@ import {
     RegisterDeviceModal,
 } from "@/components/connectivity";
 import { connectivityService } from "@/services/connectivityService";
-import type { DeviceRegistration, DeviceRegistrationPayload } from "@/types";
+import { QUERY_KEYS } from "@/hooks";
+import type { DeviceRegistrationPayload } from "@/types";
 
 export default function ConnectivityPage() {
     const [activeSubTab, setActiveSubTab] = useState<ConnectivitySubTab>("overview");
-    const [devices, setDevices] = useState<DeviceRegistration[]>([]);
-    const [onlineDevices, setOnlineDevices] = useState<DeviceRegistration[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+    const queryClient = useQueryClient();
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const devicesRes = await connectivityService.getDevices();
-            const items = devicesRes?.items || [];
-            setDevices(items);
+    const {
+        data: devices = [],
+        isLoading: devicesLoading,
+        error: devicesError,
+        refetch: refetchDevices,
+    } = useQuery({
+        queryKey: QUERY_KEYS.connectivityDevices,
+        queryFn: async () => {
+            const res = await connectivityService.getDevices();
+            return res?.items || [];
+        },
+    });
 
+    const {
+        data: onlineDevices = [],
+        isLoading: onlineLoading,
+        refetch: refetchOnline,
+    } = useQuery({
+        queryKey: ["connectivity", "online"] as const,
+        queryFn: async () => {
             try {
-                const onlineRes = await connectivityService.getOnlineDevices();
-                setOnlineDevices(onlineRes || []);
+                const res = await connectivityService.getOnlineDevices();
+                return res || [];
             } catch {
-                setOnlineDevices(items.filter((d) => d.connectionStatus === "online"));
+                return devices.filter((d) => d.connectionStatus === "online");
             }
+        },
+        enabled: devices.length >= 0,
+    });
 
-            setError(null);
-        } catch {
-            setError("Failed to fetch devices");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const loading = devicesLoading || onlineLoading;
+    const error = devicesError ? "Failed to fetch devices" : null;
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const refreshAll = useCallback(() => {
+        refetchDevices();
+        refetchOnline();
+    }, [refetchDevices, refetchOnline]);
+
+    const registerDeviceMutation = useMutation({
+        mutationFn: (payload: DeviceRegistrationPayload) =>
+            connectivityService.registerDevice(payload),
+        onSuccess: () => {
+            toast.success("Device registered successfully");
+            queryClient.invalidateQueries({ queryKey: ["connectivity"] });
+        },
+        meta: { defaultErrorMessage: "Failed to register device" },
+    });
+
+    const heartbeatMutation = useMutation({
+        mutationFn: (id: string) => connectivityService.sendHeartbeat(id),
+        onSuccess: () => {
+            toast.success("Device heartbeat pinged successfully");
+            queryClient.invalidateQueries({ queryKey: ["connectivity"] });
+        },
+        meta: { defaultErrorMessage: "Failed to ping device heartbeat" },
+    });
+
+    const revokeDeviceMutation = useMutation({
+        mutationFn: (id: string) => connectivityService.revokeDevice(id),
+        onSuccess: () => {
+            toast.success("Device registration revoked");
+            queryClient.invalidateQueries({ queryKey: ["connectivity"] });
+        },
+        meta: { defaultErrorMessage: "Failed to revoke device registration" },
+    });
 
     const handleRegisterDevice = async (payload: DeviceRegistrationPayload) => {
-        await connectivityService.registerDevice(payload);
-        await fetchData();
+        await registerDeviceMutation.mutateAsync(payload);
     };
 
-    const handleHeartbeat = async (id: string) => {
-        try {
-            await connectivityService.sendHeartbeat(id);
-            await fetchData();
-        } catch {
-            setError("Failed to ping device heartbeat");
-        }
+    const handleHeartbeat = (id: string) => {
+        heartbeatMutation.mutate(id);
     };
 
-    const handleRevoke = async (id: string) => {
-        try {
-            await connectivityService.revokeDevice(id);
-            await fetchData();
-        } catch {
-            setError("Failed to revoke device registration");
-        }
+    const handleRevoke = (id: string) => {
+        revokeDeviceMutation.mutate(id);
     };
 
     const totalCount = devices.length;
@@ -81,7 +110,7 @@ export default function ConnectivityPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="Device Connectivity">
-                <OutlineButton size="sm" onClick={fetchData}>
+                <OutlineButton size="sm" onClick={refreshAll}>
                     <RotateCw className="w-3.5 h-3.5 text-[#334155]" />
                     <span>Refresh</span>
                 </OutlineButton>
@@ -92,7 +121,7 @@ export default function ConnectivityPage() {
                 </ChamferButton>
             </PageHeader>
 
-            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
+            {error && <AlertBanner message={error} onDismiss={() => {}} />}
 
             <ConnectivityMetrics
                 totalDevices={totalCount}
@@ -144,7 +173,7 @@ export default function ConnectivityPage() {
                 <RegisteredDevicesTable
                     devices={devices}
                     loading={loading}
-                    onRefresh={fetchData}
+                    onRefresh={refreshAll}
                     onRegisterDevice={() => setIsRegisterOpen(true)}
                     onHeartbeat={handleHeartbeat}
                     onRevoke={handleRevoke}

@@ -15,21 +15,20 @@ import {
     createMissionWaypoints,
 } from "@/components/missions";
 import { missionService } from "@/services/missionService";
-import { hubService } from "@/services/hubService";
-import { droneService } from "@/services/droneService";
-import type { Hub, Drone, MissionScheduleType, CreateMissionPayload } from "@/types";
+import { useHubsAll, useDronesAll } from "@/hooks";
+import type { MissionScheduleType, CreateMissionPayload } from "@/types";
 import { parseApiError, validateSchema, createFieldErrorCleaner } from "@/utils";
 import { createMissionBody } from "@/generated/mission";
 
 export default function NewMissionPage() {
     const router = useRouter();
 
-    const [loading, setLoading] = useState(false);
+    const { data: hubs = [], isLoading: hubsLoading } = useHubsAll();
+    const { data: drones = [], isLoading: dronesLoading } = useDronesAll();
+
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const [hubs, setHubs] = useState<Hub[]>([]);
-    const [drones, setDrones] = useState<Drone[]>([]);
+    const loading = hubsLoading || dronesLoading;
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -88,39 +87,14 @@ export default function NewMissionPage() {
         onClearWaypointErrors,
     });
 
-    const fetchPrerequisites = useCallback(async () => {
-        try {
-            setLoading(true);
-            const [hubsRes, dronesRes] = await Promise.all([
-                hubService.getHubs({ limit: 0 }),
-                droneService.getDrones({ limit: 0 }),
-            ]);
-            const loadedHubs = hubsRes.items || [];
-            setHubs(loadedHubs);
-            setDrones(dronesRes.items || []);
-
-            if (loadedHubs.length > 0) {
-                setDepartureHubId((prev) => prev || loadedHubs[0].id);
-                if (loadedHubs.length > 1) {
-                    setArrivalHubId((prev) => prev || loadedHubs[1].id);
-                }
-            }
-        } catch {
-            setError("Failed to load hubs and drone fleets");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     useEffect(() => {
-        let isMounted = true;
-        (async () => {
-            if (isMounted) await fetchPrerequisites();
-        })();
-        return () => {
-            isMounted = false;
-        };
-    }, [fetchPrerequisites]);
+        if (hubs.length > 0) {
+            setDepartureHubId((prev) => prev || hubs[0].id);
+            if (hubs.length > 1) {
+                setArrivalHubId((prev) => prev || hubs[1].id);
+            }
+        }
+    }, [hubs]);
 
     const handleSave = async () => {
         const scheduledIso =

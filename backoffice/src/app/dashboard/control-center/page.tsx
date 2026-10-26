@@ -16,55 +16,37 @@ import {
     TacticalMapContainer,
     type FlightHubCoord,
 } from "@/components/map";
-import { useLiveTelemetry } from "@/hooks";
-import { flightService, hubService } from "@/services";
-import type { Flight, Hub } from "@/types";
+import { useLiveTelemetry, useFlightsAll, useHubsAll } from "@/hooks";
 
 export default function ControlCenterPage() {
-    const [flights, setFlights] = useState<Flight[]>([]);
-    const [hubs, setHubs] = useState<Hub[]>([]);
+    const { data: allFlights = [], refetch: refetchFlights } = useFlightsAll();
+    const { data: hubs = [], refetch: refetchHubs } = useHubsAll();
     const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
-    const { telemetryMap, activeTelemetryCount, isSocketConnected } = useLiveTelemetry(flights);
+    const reloadFlightsAndHubs = useCallback(async () => {
+        await Promise.all([refetchFlights(), refetchHubs()]);
+    }, [refetchFlights, refetchHubs]);
 
-    const loadFlightsAndHubs = useCallback(async () => {
-        try {
-            const [fetchedFlights, fetchedHubs] = await Promise.all([
-                flightService.getAll(),
-                hubService.getAll(),
-            ]);
-
-            const activeFlights = fetchedFlights.filter((f) => {
-                const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
-                return (
-                    s === "active" ||
-                    s === "in_flight" ||
-                    s === "diverted" ||
-                    s === "emergency_landing"
-                );
-            });
-
-            setFlights(activeFlights);
-            setHubs(fetchedHubs);
-
-            if (activeFlights.length > 0) {
-                setSelectedFlightId((prev) =>
-                    prev && activeFlights.some((f) => f.id === prev) ? prev : activeFlights[0].id
-                );
-            } else {
-                setSelectedFlightId(null);
-            }
-        } catch (error) {
-            console.error("Failed to load operations data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const flights = useMemo(() => {
+        return allFlights.filter((f) => {
+            const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
+            return (
+                s === "active" || s === "in_flight" || s === "diverted" || s === "emergency_landing"
+            );
+        });
+    }, [allFlights]);
 
     useEffect(() => {
-        loadFlightsAndHubs();
-    }, [loadFlightsAndHubs]);
+        if (flights.length > 0) {
+            setSelectedFlightId((prev) =>
+                prev && flights.some((f) => f.id === prev) ? prev : flights[0].id
+            );
+        } else {
+            setSelectedFlightId(null);
+        }
+    }, [flights]);
+
+    const { telemetryMap, activeTelemetryCount, isSocketConnected } = useLiveTelemetry(flights);
 
     const hubCoordsMap = useMemo(() => {
         const map = new Map<string, FlightHubCoord>();
@@ -165,7 +147,7 @@ export default function ControlCenterPage() {
                         selectedFlightId={selectedFlightId}
                         onSelectFlight={setSelectedFlightId}
                         telemetryMap={telemetryMap}
-                        onReloadFlights={loadFlightsAndHubs}
+                        onReloadFlights={reloadFlightsAndHubs}
                     />
                 </div>
             </div>

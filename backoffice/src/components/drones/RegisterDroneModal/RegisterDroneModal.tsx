@@ -1,17 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput } from "@/components/ui";
-import { hubService } from "@/services/hubService";
-import {
-    cn,
-    parseApiError,
-    validateSchema,
-    parseFormNumber,
-    createFieldErrorCleaner,
-} from "@/utils";
+import { useHubsAll } from "@/hooks";
+import { toast } from "sonner";
+import { parseApiError } from "@/utils";
 import { createDroneBody } from "@/generated";
-import type { Drone, DroneRegistrationPayload, Hub } from "@/types";
+import type { Drone, DroneRegistrationPayload } from "@/types";
 
 interface RegisterDroneModalProps {
     isOpen: boolean;
@@ -26,77 +23,72 @@ export function RegisterDroneModal({
     onClose,
     onSubmit,
 }: RegisterDroneModalProps) {
-    const [registrationNumber, setRegistrationNumber] = useState("");
-    const [manufacturer, setManufacturer] = useState("");
-    const [model, setModel] = useState("");
-    const [homeHubId, setHomeHubId] = useState("");
-    const [batteryCapacityWh, setBatteryCapacityWh] = useState("");
-    const [maxPayload, setMaxPayload] = useState("");
-    const [hubs, setHubs] = useState<Hub[]>([]);
+    const { data: hubs = [] } = useHubsAll();
     const [loading, setLoading] = useState(false);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+        control,
+        setError,
+        formState: { errors },
+    } = useForm<DroneRegistrationPayload>({
+        resolver: zodResolver(createDroneBody) as any,
+        defaultValues: {
+            registrationNumber: "",
+            manufacturer: "",
+            model: "",
+            homeHubId: undefined,
+            batteryCapacityWh: 0,
+            maxPayload: 0,
+        },
+    });
 
     useEffect(() => {
         if (isOpen) {
-            const fetchHubs = async () => {
-                try {
-                    const items = await hubService.getAll();
-                    setHubs(items || []);
-                } catch {
-                    setHubs([]);
-                }
-            };
-            fetchHubs();
-
             if (droneToEdit) {
-                setRegistrationNumber(droneToEdit.registrationNumber || droneToEdit.id || "");
-                setManufacturer(droneToEdit.manufacturer || "");
-                setModel(droneToEdit.model || "");
-                setHomeHubId(droneToEdit.homeHubId || droneToEdit.homeHub?.id || "");
-                setBatteryCapacityWh(
-                    droneToEdit.batteryCapacityWh ? String(droneToEdit.batteryCapacityWh) : ""
-                );
-                setMaxPayload(droneToEdit.maxPayload ? String(droneToEdit.maxPayload) : "");
+                reset({
+                    registrationNumber: droneToEdit.registrationNumber || droneToEdit.id || "",
+                    manufacturer: droneToEdit.manufacturer || "",
+                    model: droneToEdit.model || "",
+                    homeHubId: droneToEdit.homeHubId || droneToEdit.homeHub?.id || undefined,
+                    batteryCapacityWh: droneToEdit.batteryCapacityWh || 0,
+                    maxPayload: droneToEdit.maxPayload || 0,
+                });
             } else {
-                setRegistrationNumber("");
-                setManufacturer("");
-                setModel("");
-                setHomeHubId("");
-                setBatteryCapacityWh("");
-                setMaxPayload("");
+                reset({
+                    registrationNumber: "",
+                    manufacturer: "",
+                    model: "",
+                    homeHubId: undefined,
+                    batteryCapacityWh: 0,
+                    maxPayload: 0,
+                });
             }
-            setFieldErrors({});
         }
-    }, [isOpen, droneToEdit]);
+    }, [isOpen, droneToEdit, reset]);
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        const payload = {
-            registrationNumber: registrationNumber.trim(),
-            manufacturer: manufacturer.trim(),
-            model: model.trim(),
-            homeHubId: homeHubId ? homeHubId.trim() : undefined,
-            batteryCapacityWh: parseFormNumber(batteryCapacityWh) as number,
-            maxPayload: parseFormNumber(maxPayload) as number,
-        };
-
-        const validation = validateSchema(createDroneBody, payload);
-
-        if (!validation.success) {
-            setFieldErrors(validation.errors);
-            return;
-        }
-
+    const onFormSubmit = async (data: DroneRegistrationPayload) => {
         try {
             setLoading(true);
-            setFieldErrors({});
-            await onSubmit(validation.data as DroneRegistrationPayload, droneToEdit?.id);
+            const payload: DroneRegistrationPayload = {
+                ...data,
+                homeHubId: data.homeHubId ? data.homeHubId : undefined,
+                batteryCapacityWh: Number(data.batteryCapacityWh),
+                maxPayload: Number(data.maxPayload),
+            };
+            await onSubmit(payload, droneToEdit?.id);
             onClose();
         } catch (err: unknown) {
             const parsed = parseApiError(err, "Failed to register drone");
-            setFieldErrors(parsed.fieldErrors);
+            if (Object.keys(parsed.fieldErrors).length > 0) {
+                Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
+                    setError(field as any, { message: msg });
+                });
+            } else {
+                toast.error(parsed.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -107,7 +99,7 @@ export function RegisterDroneModal({
             isOpen={isOpen}
             onClose={onClose}
             title={droneToEdit ? "Edit Drone" : "Register Drone"}
-            onSubmit={handleSubmit}
+            onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
             submitText={droneToEdit ? "Save Changes" : "Register Drone"}
             loadingText="Saving..."
@@ -116,13 +108,9 @@ export function RegisterDroneModal({
                 id="registrationNumber"
                 label="Registration Number"
                 required
-                value={registrationNumber}
-                onChange={(e) => {
-                    setRegistrationNumber(e.target.value);
-                    clearFieldError("registrationNumber");
-                }}
                 placeholder="e.g. DRN-001"
-                error={fieldErrors.registrationNumber}
+                error={errors.registrationNumber?.message}
+                {...register("registrationNumber")}
             />
 
             <div className="form-row-2">
@@ -130,26 +118,18 @@ export function RegisterDroneModal({
                     id="manufacturer"
                     label="Manufacturer"
                     required
-                    value={manufacturer}
-                    onChange={(e) => {
-                        setManufacturer(e.target.value);
-                        clearFieldError("manufacturer");
-                    }}
                     placeholder="e.g. DJI"
-                    error={fieldErrors.manufacturer}
+                    error={errors.manufacturer?.message}
+                    {...register("manufacturer")}
                 />
 
                 <FormInput
                     id="model"
                     label="Model"
                     required
-                    value={model}
-                    onChange={(e) => {
-                        setModel(e.target.value);
-                        clearFieldError("model");
-                    }}
                     placeholder="e.g. Matrice 300 RTK"
-                    error={fieldErrors.model}
+                    error={errors.model?.message}
+                    {...register("model")}
                 />
             </div>
 
@@ -157,55 +137,47 @@ export function RegisterDroneModal({
                 <label className="form-label" htmlFor="homeHub">
                     Home Hub
                 </label>
-                <CustomSelect
-                    value={homeHubId}
-                    onValueChange={(val) => {
-                        setHomeHubId(val);
-                        clearFieldError("homeHubId");
-                    }}
-                    options={[
-                        { value: "", label: "Select a hub" },
-                        ...hubs.map((h) => ({
-                            value: h.id,
-                            label: `${h.name}${h.code ? ` (${h.code})` : ""}`,
-                        })),
-                    ]}
-                    error={Boolean(fieldErrors.homeHubId)}
+                <Controller
+                    name="homeHubId"
+                    control={control}
+                    render={({ field }) => (
+                        <CustomSelect
+                            value={field.value || ""}
+                            onValueChange={(val: string) => field.onChange(val || undefined)}
+                            options={[
+                                { label: "No Home Hub Assigned", value: "" },
+                                ...hubs.map((hub) => ({
+                                    label: `${hub.name} (${hub.code || "HUB"})`,
+                                    value: hub.id,
+                                })),
+                            ]}
+                            placeholder="Select a home hub (optional)"
+                        />
+                    )}
                 />
-                {fieldErrors.homeHubId && (
-                    <span className="form-error-msg">{fieldErrors.homeHubId}</span>
-                )}
             </div>
 
             <div className="form-row-2">
                 <FormInput
                     id="batteryCapacityWh"
                     label="Battery Capacity (Wh)"
-                    required
                     type="number"
                     step="any"
-                    value={batteryCapacityWh}
-                    onChange={(e) => {
-                        setBatteryCapacityWh(e.target.value);
-                        clearFieldError("batteryCapacityWh");
-                    }}
-                    placeholder="e.g. 300"
-                    error={fieldErrors.batteryCapacityWh}
+                    required
+                    placeholder="e.g. 5000"
+                    error={errors.batteryCapacityWh?.message}
+                    {...register("batteryCapacityWh", { valueAsNumber: true })}
                 />
 
                 <FormInput
                     id="maxPayload"
                     label="Max Payload (kg)"
-                    required
                     type="number"
                     step="any"
-                    value={maxPayload}
-                    onChange={(e) => {
-                        setMaxPayload(e.target.value);
-                        clearFieldError("maxPayload");
-                    }}
-                    placeholder="e.g. 5"
-                    error={fieldErrors.maxPayload}
+                    required
+                    placeholder="e.g. 2.5"
+                    error={errors.maxPayload?.message}
+                    {...register("maxPayload", { valueAsNumber: true })}
                 />
             </div>
         </Modal>

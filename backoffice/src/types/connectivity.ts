@@ -17,6 +17,8 @@ export type DeviceRegistration = DeviceRegistrationGenerated & {
     id: string;
 };
 
+export type DeviceQueryParams = zod.infer<typeof getDevicesQueryParams>;
+
 export type DeviceRegistrationListResponse = Omit<
     NonNullable<zod.infer<typeof getDevicesResponse>>,
     "items"

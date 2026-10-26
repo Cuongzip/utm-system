@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Plus, RotateCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { ChamferButton, OutlineButton, PageHeader, AlertBanner } from "@/components/ui";
@@ -11,17 +11,12 @@ import {
     AirspaceBriefingModal,
 } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
-import { hubService } from "@/services/hubService";
-import { useCrudList } from "@/hooks";
-import type {
-    AirspaceZone,
-    CreateAirspaceZonePayload,
-    UpdateAirspaceZonePayload,
-    Hub,
-} from "@/types";
+import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
+import { useMutation } from "@tanstack/react-query";
+import type { AirspaceZone, CreateAirspaceZonePayload, UpdateAirspaceZonePayload } from "@/types";
 
 export default function AirspacePage() {
-    const [hubs, setHubs] = useState<Hub[]>([]);
+    const { data: hubs = [], refetch: fetchHubs } = useHubsAll();
     const [isBriefingOpen, setIsBriefingOpen] = useState(false);
 
     const fetchZones = useCallback(() => airspaceService.getZones({ limit: 0 }), []);
@@ -42,23 +37,11 @@ export default function AirspacePage() {
         handleSelect: handleSelectZone,
         handleDelete: handleDeleteZone,
     } = useCrudList<AirspaceZone>({
+        queryKey: QUERY_KEYS.airspace,
         fetchFn: fetchZones,
         deleteFn: deleteZone,
         entityName: "Airspace zone",
     });
-
-    const fetchHubs = useCallback(async () => {
-        try {
-            const res = await hubService.getHubs({ limit: 0 });
-            setHubs(res.items || []);
-        } catch {
-            setHubs([]);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchHubs();
-    }, [fetchHubs]);
 
     const handleRefreshAll = useCallback(async () => {
         await Promise.all([refreshZones(), fetchHubs()]);
@@ -72,23 +55,35 @@ export default function AirspacePage() {
         return map;
     }, [hubs]);
 
+    const saveZoneMutation = useMutation({
+        mutationFn: async ({
+            payload,
+            id,
+        }: {
+            payload: CreateAirspaceZonePayload | UpdateAirspaceZonePayload;
+            id?: string;
+        }) => {
+            if (id) {
+                return airspaceService.updateZone(id, payload as UpdateAirspaceZonePayload);
+            }
+            return airspaceService.createZone(payload as CreateAirspaceZonePayload);
+        },
+        onSuccess: (_data, variables) => {
+            toast.success(
+                variables.id
+                    ? "Airspace zone updated successfully"
+                    : "Airspace zone created successfully"
+            );
+            refreshZones();
+        },
+        meta: { defaultErrorMessage: "Failed to save airspace zone" },
+    });
+
     const handleSaveZone = async (
         payload: CreateAirspaceZonePayload | UpdateAirspaceZonePayload,
         id?: string
     ) => {
-        try {
-            if (id) {
-                await airspaceService.updateZone(id, payload as UpdateAirspaceZonePayload);
-                toast.success("Airspace zone updated successfully");
-            } else {
-                await airspaceService.createZone(payload as CreateAirspaceZonePayload);
-                toast.success("Airspace zone created successfully");
-            }
-            await refreshZones();
-        } catch (err: unknown) {
-            toast.error("Failed to save airspace zone");
-            throw err;
-        }
+        await saveZoneMutation.mutateAsync({ payload, id });
     };
 
     return (

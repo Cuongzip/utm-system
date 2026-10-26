@@ -197,14 +197,6 @@ export function MissionLayer({
                     (selectedWaypointId && wp.tempId === selectedWaypointId)
                 );
                 const isStart = idx === 0;
-                const isEnd = idx === sortedWaypoints.length - 1;
-
-                const pinColor = isStart
-                    ? Cesium.Color.fromCssColorString("#10b981")
-                    : isEnd
-                      ? Cesium.Color.fromCssColorString("#ef4444")
-                      : Cesium.Color.fromCssColorString(routeColor);
-
                 const seqNum = wp.sequence ?? idx + 1;
                 const altText = wp.altitude ? `${wp.altitude}m` : "";
                 const labelText = `WP${seqNum} ${altText}`.trim();
