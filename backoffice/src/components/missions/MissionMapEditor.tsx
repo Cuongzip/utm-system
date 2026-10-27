@@ -333,7 +333,7 @@ export function MissionMapEditor({
     };
 
     return (
-        <ChamferCard size="lg" accent="dark" className={cn("w-full h-full", className)}>
+        <ChamferCard size="lg" className={cn("w-full h-full", className)}>
             <div className="flex flex-col h-full bg-[var(--color-surface-panel)] overflow-hidden">
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (

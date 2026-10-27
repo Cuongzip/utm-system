@@ -15,7 +15,7 @@ import {
     TableHead,
     TableCell,
     TableLoading,
-    TableEmpty,
+    EmptyState,
 } from "@/components/ui";
 import type { Mission } from "@/types";
 import { formatDate } from "@/utils";
@@ -91,7 +91,7 @@ export function MissionsTable({
 
     return (
         <>
-            <ChamferCard size="lg" accent="dark" className="w-full">
+            <ChamferCard size="lg" className="w-full">
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
@@ -111,20 +111,23 @@ export function MissionsTable({
                         {loading ? (
                             <TableLoading colSpan={8} />
                         ) : missions.length === 0 ? (
-                            <TableEmpty
-                                colSpan={8}
-                                icon={Compass}
-                                title="No missions found"
-                                description="Plan and automate flight routes across your vertiport network"
-                                action={
-                                    onNewMission
-                                        ? {
-                                              label: "Create First Mission",
-                                              onClick: onNewMission,
-                                          }
-                                        : undefined
-                                }
-                            />
+                            <TableRow>
+                                <TableCell colSpan={8} className="py-10 text-center">
+                                    <EmptyState
+                                        icon={Compass}
+                                        title="No missions found"
+                                        description="Plan and automate flight routes across your vertiport network"
+                                        action={
+                                            onNewMission
+                                                ? {
+                                                      label: "Create First Mission",
+                                                      onClick: onNewMission,
+                                                  }
+                                                : undefined
+                                        }
+                                    />
+                                </TableCell>
+                            </TableRow>
                         ) : (
                             missions.map((mission) => {
                                 const isSelected = mission.id === selectedMissionId;

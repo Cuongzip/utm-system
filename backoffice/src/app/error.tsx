@@ -30,7 +30,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
             <div className="absolute w-[500px] h-[500px] rounded-full border border-red-500/10 pointer-events-none animate-pulse" />
 
             <div className="relative z-10 w-full max-w-xl">
-                <ChamferCard size="lg" accent="red" innerClassName="bg-[#120a0d] p-6 sm:p-8">
+                <ChamferCard size="lg" innerClassName="bg-[#120a0d] p-6 sm:p-8">
                     <div className="flex flex-col items-center text-center">
                         <div className="w-20 h-20 rounded-full border-2 border-dashed border-red-500/50 flex items-center justify-center mb-6 relative">
                             <div className="w-14 h-14 rounded-full bg-red-950/60 flex items-center justify-center animate-pulse" />

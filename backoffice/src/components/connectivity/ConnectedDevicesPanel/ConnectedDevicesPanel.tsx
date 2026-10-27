@@ -28,7 +28,7 @@ export function ConnectedDevicesPanel({
     const isOnline = (item: DeviceRegistration) => item.connectionStatus === "online";
 
     return (
-        <ChamferCard size="lg" accent="dark" className="min-h-[365px]">
+        <ChamferCard size="lg" className="min-h-[365px]">
             <div className="p-5 flex flex-col h-full w-full">
                 <div className="flex items-center justify-between pb-3 pl-2 border-b border-[#f1f5f9] w-full">
                     <h2 className="text-[12px] font-bold uppercase text-[#1e293b] tracking-[0.6px] leading-4">

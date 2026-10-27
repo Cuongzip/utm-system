@@ -8,7 +8,6 @@ import {
     ChamferButton,
     OutlineButton,
     type ChamferButtonVariant,
-    type ChamferAccent,
 } from "@/components/ui";
 import { cn } from "@/lib";
 import styles from "./Modal.module.css";
@@ -19,7 +18,6 @@ export interface ModalProps {
     title: React.ReactNode;
     icon?: React.ReactNode;
     maxWidth?: string | number;
-    accent?: ChamferAccent;
     className?: string;
     children: React.ReactNode;
 
@@ -40,7 +38,6 @@ export function Modal({
     title,
     icon,
     maxWidth = "480px",
-    accent = "dark",
     className,
     children,
     onSubmit,
@@ -66,7 +63,7 @@ export function Modal({
                             style={{ maxWidth: styleMaxWidth }}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <ChamferCard size="lg" accent={accent} className="w-full">
+                            <ChamferCard size="lg" className="w-full">
                                 <div className={styles.modalHeader}>
                                     <div className={styles.headerLeft}>
                                         {icon && <span className={styles.icon}>{icon}</span>}

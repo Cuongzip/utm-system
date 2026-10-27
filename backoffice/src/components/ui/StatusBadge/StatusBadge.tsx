@@ -45,17 +45,22 @@ export function StatusBadge({
         normalized === "conforming" ||
         normalized === "approved" ||
         normalized === "completed" ||
-        normalized === "success"
+        normalized === "success" ||
+        normalized === "resolved"
             ? styles.online
             : normalized === "connecting" ||
                 normalized === "maintenance" ||
                 normalized === "charging" ||
                 normalized === "pending" ||
+                normalized === "sent" ||
+                normalized === "acknowledged" ||
                 normalized === "idle" ||
                 normalized === "contingent" ||
                 normalized === "restricted" ||
                 normalized === "warning" ||
-                normalized === "paused"
+                normalized === "paused" ||
+                normalized === "medium" ||
+                normalized === "low"
               ? styles.connecting
               : normalized === "alert" ||
                   normalized === "error" ||
@@ -64,7 +69,10 @@ export function StatusBadge({
                   normalized === "non_conforming" ||
                   normalized === "cancelled" ||
                   normalized === "no_fly_zone" ||
-                  normalized === "nfz"
+                  normalized === "nfz" ||
+                  normalized === "critical" ||
+                  normalized === "high" ||
+                  normalized === "emergency"
                 ? styles.alert
                 : normalized === "in_flight" ||
                     normalized === "executing" ||
@@ -76,7 +84,7 @@ export function StatusBadge({
                   ? styles.inFlight
                   : normalized === "scheduled" || normalized === "planned"
                     ? styles.scheduled
-                    : normalized === "draft"
+                    : normalized === "draft" || normalized === "dismissed"
                       ? styles.draft
                       : styles.offline;
 

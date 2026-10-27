@@ -15,7 +15,7 @@ import {
     TableHead,
     TableCell,
     TableLoading,
-    TableEmpty,
+    EmptyState,
 } from "@/components/ui";
 import type { AirspaceZone } from "@/types";
 
@@ -71,7 +71,7 @@ export function AirspaceTable({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <ChamferCard size="lg" accent="dark" className="w-full">
+            <ChamferCard size="lg" className="w-full">
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
@@ -89,12 +89,15 @@ export function AirspaceTable({
                         {loading ? (
                             <TableLoading colSpan={6} message="Loading airspace zones..." />
                         ) : zones.length === 0 ? (
-                            <TableEmpty
-                                colSpan={6}
-                                icon={Shield}
-                                title="No airspace zones found"
-                                description="Establish your first 3D airspace restriction zone or corridor"
-                            />
+                            <TableRow>
+                                <TableCell colSpan={6} className="py-10 text-center">
+                                    <EmptyState
+                                        icon={Shield}
+                                        title="No airspace zones found"
+                                        description="Establish your first 3D airspace restriction zone or corridor"
+                                    />
+                                </TableCell>
+                            </TableRow>
                         ) : (
                             zones.map((zone) => {
                                 const isSelected = selectedZoneId === zone.id;

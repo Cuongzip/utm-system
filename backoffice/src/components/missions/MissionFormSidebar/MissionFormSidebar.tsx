@@ -94,7 +94,7 @@ export function MissionFormSidebar({
     ];
 
     return (
-        <ChamferCard size="lg" accent="dark" className={cn("w-full h-full", className)}>
+        <ChamferCard size="lg" className={cn("w-full h-full", className)}>
             <div className="flex flex-col h-full bg-[var(--color-surface-panel)] select-none overflow-hidden">
                 <div className="grid grid-cols-3 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs">
                     <button

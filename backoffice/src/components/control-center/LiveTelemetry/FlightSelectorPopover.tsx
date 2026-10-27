@@ -1,7 +1,14 @@
 "use client";
 
 import { Drone, ChevronRight, RefreshCw, Plane, Check } from "lucide-react";
-import { ChamferCard, StatusBadge, Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
+import {
+    ChamferCard,
+    StatusBadge,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+    EmptyState,
+} from "@/components/ui";
 import type { Flight, TelemetryRecord } from "@/types";
 
 export interface FlightSelectorPopoverProps {
@@ -40,7 +47,6 @@ export function FlightSelectorPopover({
                 >
                     <ChamferCard
                         size="md"
-                        accent="dark"
                         className={`transition-all ${isOpen ? "ring-2 ring-cyan-500/50" : "hover:opacity-95"}`}
                     >
                         <div className="p-3 bg-slate-50 flex items-center justify-between">
@@ -95,9 +101,13 @@ export function FlightSelectorPopover({
                 </div>
                 <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 p-1">
                     {flights.length === 0 ? (
-                        <div className="p-4 text-center text-slate-400 text-xs">
-                            No active flights available
-                        </div>
+                        <EmptyState
+                            compact
+                            icon={Drone}
+                            title="No active flights"
+                            description="No airborne drones transmitting telemetry"
+                            className="py-5"
+                        />
                     ) : (
                         flights.map((item) => {
                             const isSelected = item.id === (flight?.id || selectedFlightId);

@@ -345,3 +345,389 @@ export const createDroneBody = zod
         maxPayload: zod.number().describe("Maximum payload capacity in kilograms (kg)"),
     })
     .describe("Request payload for registering a new Drone / UAS");
+
+/**
+ * Retrieve paginated command execution history for the given drone
+ * @summary Get command history for Drone
+ */
+export const getCommandsParams = zod.object({
+    droneId: zod.string().describe("Unique UUID of the target drone"),
+});
+
+export const getCommandsQueryLimitDefault = 20;
+export const getCommandsQueryOffsetDefault = 0;
+
+export const getCommandsQueryParams = zod.object({
+    status: zod
+        .enum(["pending", "sent", "acknowledged", "executing", "completed", "failed", "cancelled"])
+        .optional()
+        .describe("Filter by command lifecycle status"),
+    commandType: zod
+        .enum([
+            "takeoff",
+            "land",
+            "rtl",
+            "emergency_stop",
+            "pause",
+            "hover",
+            "resume",
+            "goto",
+            "set_altitude",
+            "update_mission",
+            "set_home",
+            "configure",
+        ])
+        .optional()
+        .describe("Filter by tactical command type"),
+    limit: zod
+        .number()
+        .default(getCommandsQueryLimitDefault)
+        .describe("Page size limit (default: 20)"),
+    offset: zod.number().optional().describe("Offset index (default: 0)"),
+});
+
+export const getCommandsResponse = zod
+    .object({
+        items: zod
+            .array(
+                zod
+                    .object({
+                        id: zod
+                            .string()
+                            .optional()
+                            .describe("Unique UUID identifier of the command"),
+                        droneId: zod.string().optional().describe("Target drone UUID"),
+                        flightId: zod
+                            .string()
+                            .optional()
+                            .describe("Associated flight UUID if applicable"),
+                        commandType: zod
+                            .enum([
+                                "takeoff",
+                                "land",
+                                "rtl",
+                                "emergency_stop",
+                                "pause",
+                                "hover",
+                                "resume",
+                                "goto",
+                                "set_altitude",
+                                "update_mission",
+                                "set_home",
+                                "configure",
+                            ])
+                            .optional()
+                            .describe("Type of command"),
+                        parameters: zod
+                            .string()
+                            .optional()
+                            .describe("Command parameters in JSON string"),
+                        status: zod
+                            .enum([
+                                "pending",
+                                "sent",
+                                "acknowledged",
+                                "executing",
+                                "completed",
+                                "failed",
+                                "cancelled",
+                            ])
+                            .optional()
+                            .describe("Current lifecycle execution status of the command"),
+                        issuedBy: zod
+                            .string()
+                            .optional()
+                            .describe("User ID who issued the command"),
+                        issuedAt: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Timestamp when the command was issued"),
+                        acknowledgedAt: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Timestamp when the drone acknowledged receipt of command"),
+                        completedAt: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Timestamp when the command completed or failed"),
+                        errorMessage: zod
+                            .string()
+                            .optional()
+                            .describe("Error details if the command failed"),
+                        priority: zod.number().optional().describe("Command execution priority"),
+                        timeoutMs: zod.number().optional().describe("Timeout in milliseconds"),
+                        retryCount: zod.number().optional().describe("Retry attempts executed"),
+                        maxRetries: zod
+                            .number()
+                            .optional()
+                            .describe("Maximum retry attempts allowed"),
+                        createdOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Record creation timestamp"),
+                        createdBy: zod.string().optional().describe("Creator username / ID"),
+                        lastModifiedOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Last modification timestamp"),
+                        lastModifiedBy: zod
+                            .string()
+                            .optional()
+                            .describe("Last modifier username / ID"),
+                    })
+                    .describe("Detailed Drone Command view model")
+            )
+            .optional()
+            .describe("List of drone commands for the requested page"),
+        total: zod
+            .number()
+            .optional()
+            .describe("Total count of drone command records matching the filter criteria"),
+    })
+    .describe("Paginated list response containing Drone Commands");
+
+/**
+ * Dispatch tactical flight command (takeoff, land, rtl, emergency stop, etc.) to target drone
+ * @summary Send command to Drone
+ */
+export const sendCommandParams = zod.object({
+    droneId: zod.string().describe("Unique UUID of the target drone"),
+});
+
+export const sendCommandBody = zod
+    .object({
+        commandType: zod
+            .enum([
+                "takeoff",
+                "land",
+                "rtl",
+                "emergency_stop",
+                "pause",
+                "hover",
+                "resume",
+                "goto",
+                "set_altitude",
+                "update_mission",
+                "set_home",
+                "configure",
+            ])
+            .describe("Type of flight / tactical command to issue"),
+        flightId: zod
+            .string()
+            .optional()
+            .describe("Associated flight UUID if command is issued during a mission flight"),
+        parameters: zod
+            .string()
+            .optional()
+            .describe(
+                "Command parameters in JSON string format (e.g. altitude, speed, coordinates)"
+            ),
+        priority: zod
+            .number()
+            .optional()
+            .describe(
+                "Execution priority (0: Critical emergency, 1: High priority, 2: Normal, 3: Background)"
+            ),
+        timeoutMs: zod
+            .number()
+            .optional()
+            .describe("Timeout in milliseconds waiting for drone acknowledgment"),
+    })
+    .describe("Request payload for dispatching a command to a drone");
+
+/**
+ * Cancel a command before it enters execution state
+ * @summary Cancel pending command
+ */
+export const cancelCommandParams = zod.object({
+    droneId: zod.string().describe("Unique UUID of the target drone"),
+    commandId: zod.string().describe("Unique UUID of the command"),
+});
+
+export const cancelCommandResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID identifier of the command"),
+        droneId: zod.string().optional().describe("Target drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID if applicable"),
+        commandType: zod
+            .enum([
+                "takeoff",
+                "land",
+                "rtl",
+                "emergency_stop",
+                "pause",
+                "hover",
+                "resume",
+                "goto",
+                "set_altitude",
+                "update_mission",
+                "set_home",
+                "configure",
+            ])
+            .optional()
+            .describe("Type of command"),
+        parameters: zod.string().optional().describe("Command parameters in JSON string"),
+        status: zod
+            .enum([
+                "pending",
+                "sent",
+                "acknowledged",
+                "executing",
+                "completed",
+                "failed",
+                "cancelled",
+            ])
+            .optional()
+            .describe("Current lifecycle execution status of the command"),
+        issuedBy: zod.string().optional().describe("User ID who issued the command"),
+        issuedAt: zod.iso.datetime({}).optional().describe("Timestamp when the command was issued"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the drone acknowledged receipt of command"),
+        completedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the command completed or failed"),
+        errorMessage: zod.string().optional().describe("Error details if the command failed"),
+        priority: zod.number().optional().describe("Command execution priority"),
+        timeoutMs: zod.number().optional().describe("Timeout in milliseconds"),
+        retryCount: zod.number().optional().describe("Retry attempts executed"),
+        maxRetries: zod.number().optional().describe("Maximum retry attempts allowed"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username / ID"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last modifier username / ID"),
+    })
+    .describe("Detailed Drone Command view model");
+
+/**
+ * Retrieve current execution progress and acknowledgment state of a specific command
+ * @summary Get command details by ID
+ */
+export const getCommandByIdParams = zod.object({
+    droneId: zod.string().describe("Unique UUID of the target drone"),
+    commandId: zod.string().describe("Unique UUID of the command"),
+});
+
+export const getCommandByIdResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID identifier of the command"),
+        droneId: zod.string().optional().describe("Target drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID if applicable"),
+        commandType: zod
+            .enum([
+                "takeoff",
+                "land",
+                "rtl",
+                "emergency_stop",
+                "pause",
+                "hover",
+                "resume",
+                "goto",
+                "set_altitude",
+                "update_mission",
+                "set_home",
+                "configure",
+            ])
+            .optional()
+            .describe("Type of command"),
+        parameters: zod.string().optional().describe("Command parameters in JSON string"),
+        status: zod
+            .enum([
+                "pending",
+                "sent",
+                "acknowledged",
+                "executing",
+                "completed",
+                "failed",
+                "cancelled",
+            ])
+            .optional()
+            .describe("Current lifecycle execution status of the command"),
+        issuedBy: zod.string().optional().describe("User ID who issued the command"),
+        issuedAt: zod.iso.datetime({}).optional().describe("Timestamp when the command was issued"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the drone acknowledged receipt of command"),
+        completedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the command completed or failed"),
+        errorMessage: zod.string().optional().describe("Error details if the command failed"),
+        priority: zod.number().optional().describe("Command execution priority"),
+        timeoutMs: zod.number().optional().describe("Timeout in milliseconds"),
+        retryCount: zod.number().optional().describe("Retry attempts executed"),
+        maxRetries: zod.number().optional().describe("Maximum retry attempts allowed"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username / ID"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last modifier username / ID"),
+    })
+    .describe("Detailed Drone Command view model");
+
+/**
+ * Retrieve commands that are currently in pending, sent, acknowledged, or executing state
+ * @summary Get active commands for Drone
+ */
+export const getActiveCommandsParams = zod.object({
+    droneId: zod.string().describe("Unique UUID of the target drone"),
+});
+
+export const getActiveCommandsResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID identifier of the command"),
+        droneId: zod.string().optional().describe("Target drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID if applicable"),
+        commandType: zod
+            .enum([
+                "takeoff",
+                "land",
+                "rtl",
+                "emergency_stop",
+                "pause",
+                "hover",
+                "resume",
+                "goto",
+                "set_altitude",
+                "update_mission",
+                "set_home",
+                "configure",
+            ])
+            .optional()
+            .describe("Type of command"),
+        parameters: zod.string().optional().describe("Command parameters in JSON string"),
+        status: zod
+            .enum([
+                "pending",
+                "sent",
+                "acknowledged",
+                "executing",
+                "completed",
+                "failed",
+                "cancelled",
+            ])
+            .optional()
+            .describe("Current lifecycle execution status of the command"),
+        issuedBy: zod.string().optional().describe("User ID who issued the command"),
+        issuedAt: zod.iso.datetime({}).optional().describe("Timestamp when the command was issued"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the drone acknowledged receipt of command"),
+        completedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the command completed or failed"),
+        errorMessage: zod.string().optional().describe("Error details if the command failed"),
+        priority: zod.number().optional().describe("Command execution priority"),
+        timeoutMs: zod.number().optional().describe("Timeout in milliseconds"),
+        retryCount: zod.number().optional().describe("Retry attempts executed"),
+        maxRetries: zod.number().optional().describe("Maximum retry attempts allowed"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username / ID"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last modifier username / ID"),
+    })
+    .describe("Detailed Drone Command view model");

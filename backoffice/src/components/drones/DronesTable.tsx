@@ -15,7 +15,7 @@ import {
     TableHead,
     TableCell,
     TableLoading,
-    TableEmpty,
+    EmptyState,
 } from "@/components/ui";
 import type { Drone } from "@/types";
 
@@ -67,7 +67,7 @@ export function DronesTable({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <ChamferCard size="lg" accent="dark" className="w-full">
+            <ChamferCard size="lg" className="w-full">
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
@@ -86,12 +86,15 @@ export function DronesTable({
                         {loading ? (
                             <TableLoading colSpan={7} message="Loading drone fleet..." />
                         ) : drones.length === 0 ? (
-                            <TableEmpty
-                                colSpan={7}
-                                icon={Bot}
-                                title="No drones found"
-                                description="Register a drone to monitor its status and telemetry"
-                            />
+                            <TableRow>
+                                <TableCell colSpan={7} className="py-10 text-center">
+                                    <EmptyState
+                                        icon={Bot}
+                                        title="No drones found"
+                                        description="Register a drone to monitor its status and telemetry"
+                                    />
+                                </TableCell>
+                            </TableRow>
                         ) : (
                             drones.map((drone) => {
                                 const regText = drone.registrationNumber || drone.id;

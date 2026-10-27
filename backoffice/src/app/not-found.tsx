@@ -21,7 +21,7 @@ export default function NotFound() {
             <div className="absolute w-[800px] h-[800px] rounded-full border border-cyan-500/5 pointer-events-none" />
 
             <div className="relative z-10 w-full max-w-xl">
-                <ChamferCard size="lg" accent="cyan" innerClassName="bg-[#0b121c] p-6 sm:p-8">
+                <ChamferCard size="lg" innerClassName="bg-[#0b121c] p-6 sm:p-8">
                     <div className="flex flex-col items-center text-center">
                         <div className="w-20 h-20 rounded-full border-2 border-dashed border-[#00A3BF]/40 flex items-center justify-center mb-6 relative">
                             <div className="w-12 h-12 rounded-full border border-red-500/40 flex items-center justify-center animate-ping opacity-75" />

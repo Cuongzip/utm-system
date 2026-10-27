@@ -8,7 +8,6 @@ export interface TelemetryGaugeProps {
     unit?: string;
     offset: number;
     strokeColor: string;
-    accent?: "dark" | "cyan" | "amber" | "red";
     hasData?: boolean;
     valueClassName?: string;
 }
@@ -19,12 +18,11 @@ export function TelemetryGauge({
     unit,
     offset,
     strokeColor,
-    accent = "cyan",
     hasData = true,
     valueClassName = "text-slate-900",
 }: TelemetryGaugeProps) {
     return (
-        <ChamferCard size="md" accent={accent}>
+        <ChamferCard size="md">
             <div className="p-3 bg-slate-50 flex flex-col items-center justify-center h-full">
                 <span className="text-[10px] font-bold text-slate-500 font-mono tracking-wider uppercase mb-1">
                     {label}

@@ -15,7 +15,7 @@ import {
     TableHead,
     TableCell,
     TableLoading,
-    TableEmpty,
+    EmptyState,
 } from "@/components/ui";
 import type { Flight } from "@/types";
 import { formatDateTime } from "@/utils";
@@ -106,7 +106,7 @@ export function FlightsTable({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <ChamferCard size="lg" accent="dark" className="w-full">
+            <ChamferCard size="lg" className="w-full">
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
@@ -125,20 +125,23 @@ export function FlightsTable({
                         {loading ? (
                             <TableLoading colSpan={7} message="Loading flight operations..." />
                         ) : flights.length === 0 ? (
-                            <TableEmpty
-                                colSpan={7}
-                                icon={PlaneTakeoff}
-                                title="No flights found"
-                                description="Register a new flight operation or corridor mission"
-                                action={
-                                    onNewFlight
-                                        ? {
-                                              label: "+ New Flight",
-                                              onClick: onNewFlight,
-                                          }
-                                        : undefined
-                                }
-                            />
+                            <TableRow>
+                                <TableCell colSpan={7} className="py-10 text-center">
+                                    <EmptyState
+                                        icon={PlaneTakeoff}
+                                        title="No flights found"
+                                        description="Register a new flight operation or corridor mission"
+                                        action={
+                                            onNewFlight
+                                                ? {
+                                                      label: "+ New Flight",
+                                                      onClick: onNewFlight,
+                                                  }
+                                                : undefined
+                                        }
+                                    />
+                                </TableCell>
+                            </TableRow>
                         ) : (
                             flights.map((flight) => {
                                 const isSelected = selectedFlightId === flight.id;

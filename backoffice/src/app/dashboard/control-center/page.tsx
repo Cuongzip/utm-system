@@ -154,6 +154,8 @@ export default function ControlCenterPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FlightControl
+                    droneId={selectedFlight?.droneId}
+                    flightId={selectedFlight?.id}
                     uavId={selectedFlight?.droneId || selectedFlight?.flightNumber || "UAV-STANDBY"}
                     statusText={
                         selectedFlight
@@ -161,7 +163,7 @@ export default function ControlCenterPage() {
                             : "No active flight"
                     }
                 />
-                <RecentCommands />
+                <RecentCommands droneId={selectedFlight?.droneId} />
                 <ActiveAlerts />
             </div>
         </div>

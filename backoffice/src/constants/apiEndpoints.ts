@@ -8,6 +8,12 @@ export const API_ENDPOINTS = {
         BASE: "/api/api/v1/drones",
         BY_ID: (id: string) => `/api/api/v1/drones/${id}`,
         TELEMETRY: (id: string) => `/api/api/v1/telemetry/${id}`,
+        COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands`,
+        COMMAND_BY_ID: (droneId: string, commandId: string) =>
+            `/api/api/v1/drones/${droneId}/commands/${commandId}`,
+        ACTIVE_COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands/active`,
+        CANCEL_COMMAND: (droneId: string, commandId: string) =>
+            `/api/api/v1/drones/${droneId}/commands/${commandId}/cancel`,
     },
     HUBS: {
         BASE: "/api/api/v1/hubs",
@@ -28,6 +34,13 @@ export const API_ENDPOINTS = {
         BY_ID: (id: string) => `/api/api/v1/airspace/zones/${id}`,
         CHECK_POINT: "/api/api/v1/airspace/check",
         CHECK_PATH: "/api/api/v1/airspace/check-path",
+    },
+    ALERTS: {
+        BASE: "/api/api/v1/alerts",
+        ACTIVE: "/api/api/v1/alerts/active",
+        BY_ID: (id: string) => `/api/api/v1/alerts/${id}`,
+        ACKNOWLEDGE: (id: string) => `/api/api/v1/alerts/${id}/acknowledge`,
+        RESOLVE: (id: string) => `/api/api/v1/alerts/${id}/resolve`,
     },
     CONFLICTS: {
         BASE: "/api/api/v1/conflicts",

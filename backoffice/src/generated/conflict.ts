@@ -79,10 +79,18 @@ export const getAllConflictsResponseItem = zod
             .number()
             .optional()
             .describe("Measured horizontal separation distance in meters"),
+        minSeparationDistance: zod
+            .number()
+            .optional()
+            .describe("Minimum horizontal separation distance recorded during conflict"),
         verticalSeparation: zod
             .number()
             .optional()
             .describe("Measured vertical separation distance in meters"),
+        maxSeverity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Highest severity reached during conflict lifecycle"),
         timeToConflictSec: zod
             .number()
             .optional()
@@ -236,10 +244,18 @@ export const resolveConflictResponse = zod
             .number()
             .optional()
             .describe("Measured horizontal separation distance in meters"),
+        minSeparationDistance: zod
+            .number()
+            .optional()
+            .describe("Minimum horizontal separation distance recorded during conflict"),
         verticalSeparation: zod
             .number()
             .optional()
             .describe("Measured vertical separation distance in meters"),
+        maxSeverity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Highest severity reached during conflict lifecycle"),
         timeToConflictSec: zod
             .number()
             .optional()
@@ -336,10 +352,18 @@ export const acknowledgeConflictResponse = zod
             .number()
             .optional()
             .describe("Measured horizontal separation distance in meters"),
+        minSeparationDistance: zod
+            .number()
+            .optional()
+            .describe("Minimum horizontal separation distance recorded during conflict"),
         verticalSeparation: zod
             .number()
             .optional()
             .describe("Measured vertical separation distance in meters"),
+        maxSeverity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Highest severity reached during conflict lifecycle"),
         timeToConflictSec: zod
             .number()
             .optional()
@@ -468,10 +492,18 @@ export const getConflictByIdResponse = zod
             .number()
             .optional()
             .describe("Measured horizontal separation distance in meters"),
+        minSeparationDistance: zod
+            .number()
+            .optional()
+            .describe("Minimum horizontal separation distance recorded during conflict"),
         verticalSeparation: zod
             .number()
             .optional()
             .describe("Measured vertical separation distance in meters"),
+        maxSeverity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Highest severity reached during conflict lifecycle"),
         timeToConflictSec: zod
             .number()
             .optional()
@@ -505,6 +537,58 @@ export const getConflictByIdResponse = zod
         lastModifiedBy: zod.string().optional().describe("User who last modified this record"),
     })
     .describe("Airspace Conflict Detail View Model");
+
+/**
+ * Retrieve periodic proximity and trajectory snapshots recorded during active conflict lifecycle
+ * @summary Get conflict snapshots
+ */
+export const getSnapshotsByConflictIdParams = zod.object({
+    conflictId: zod.string().describe("Unique UUID identifier of the conflict"),
+});
+
+export const getSnapshotsByConflictIdResponseItem = zod
+    .object({
+        id: zod.string().optional().describe("Snapshot record UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        recordedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when snapshot was recorded"),
+        primaryLocation: zod
+            .object({
+                latitude: zod.number().optional().describe("WGS84 Latitude"),
+                longitude: zod.number().optional().describe("WGS84 Longitude"),
+            })
+            .optional()
+            .describe("WGS84 Coordinates representation"),
+        primaryAlt: zod.number().optional().describe("Primary flight altitude in meters"),
+        secondaryLocation: zod
+            .object({
+                latitude: zod.number().optional().describe("WGS84 Latitude"),
+                longitude: zod.number().optional().describe("WGS84 Longitude"),
+            })
+            .optional()
+            .describe("WGS84 Coordinates representation"),
+        secondaryAlt: zod.number().optional().describe("Secondary flight altitude in meters"),
+        separationDistance: zod
+            .number()
+            .optional()
+            .describe("Horizontal separation distance in meters"),
+        verticalSeparation: zod
+            .number()
+            .optional()
+            .describe("Vertical separation distance in meters"),
+        timeToConflictSec: zod
+            .number()
+            .optional()
+            .describe("Time to closest point of approach in seconds"),
+        severity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Severity at time of snapshot"),
+    })
+    .describe("Airspace Conflict Snapshot View Model");
+export const getSnapshotsByConflictIdResponse = zod.array(getSnapshotsByConflictIdResponseItem);
 
 /**
  * List currently active and unresolved conflicts requiring avoidance actions
@@ -564,10 +648,18 @@ export const getActiveConflictsResponseItem = zod
             .number()
             .optional()
             .describe("Measured horizontal separation distance in meters"),
+        minSeparationDistance: zod
+            .number()
+            .optional()
+            .describe("Minimum horizontal separation distance recorded during conflict"),
         verticalSeparation: zod
             .number()
             .optional()
             .describe("Measured vertical separation distance in meters"),
+        maxSeverity: zod
+            .enum(["emergency", "critical", "warning", "high", "medium", "low"])
+            .optional()
+            .describe("Highest severity reached during conflict lifecycle"),
         timeToConflictSec: zod
             .number()
             .optional()

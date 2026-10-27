@@ -1,93 +1,149 @@
 "use client";
 
-import { AlertTriangle, BatteryMedium } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { useMemo } from "react";
+import { AlertTriangle, ShieldAlert, ShieldCheck, Check, Loader2 } from "lucide-react";
+import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
+import { useActiveAlerts, QUERY_KEYS } from "@/hooks";
+import { alertService } from "@/services";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { formatTime } from "@/utils/format";
+import type { AlertVm } from "@/types";
 
-export interface AlertItem {
-    id: string;
-    title: string;
-    description: string;
-    severity: "HIGH" | "MEDIUM" | "LOW";
-    time: string;
+export interface ActiveAlertsProps {
+    alerts?: AlertVm[];
 }
 
-const DEFAULT_ALERTS: AlertItem[] = [];
+export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
+    const queryClient = useQueryClient();
+    const { data: fetchedAlerts = [], isLoading } = useActiveAlerts();
 
-export function ActiveAlerts({ alerts = DEFAULT_ALERTS }: { alerts?: AlertItem[] }) {
+    const alerts = propAlerts !== undefined ? propAlerts : fetchedAlerts;
+
+    const acknowledgeMutation = useMutation({
+        mutationFn: (alertId: string) => alertService.acknowledgeAlert(alertId),
+        onSuccess: () => {
+            toast.success("Alert acknowledged");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alertsActive });
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to acknowledge alert");
+        },
+    });
+
+    const activeCount = alerts.length;
+
+    const sortedAlerts = useMemo(() => {
+        return [...alerts].sort((a, b) => {
+            const timeA = new Date(a.createdOn || 0).getTime();
+            const timeB = new Date(b.createdOn || 0).getTime();
+            return timeB - timeA;
+        });
+    }, [alerts]);
+
     return (
-        <ChamferCard size="lg" accent="dark" className="h-[273px]">
+        <ChamferCard size="lg" className="h-[273px]">
             <div className="p-4 flex flex-col justify-between h-full">
-                <div>
+                <div className="flex flex-col h-full">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                         <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 font-mono tracking-wider">
-                            <AlertTriangle className="h-4 w-4 text-slate-500" />
+                            <AlertTriangle
+                                className={`h-4 w-4 ${activeCount > 0 ? "text-amber-500 animate-pulse" : "text-slate-400"}`}
+                            />
                             <span>ACTIVE ALERTS</span>
                         </div>
+                        <StatusBadge
+                            status={activeCount > 0 ? "alert" : "online"}
+                            label={activeCount > 0 ? `${activeCount} ACTIVE` : "NOMINAL"}
+                            shape="rounded"
+                        />
                     </div>
 
-                    <div className="space-y-2.5 mt-3">
-                        {alerts.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-center font-mono">
-                                <span className="text-xs text-slate-400">No active alerts</span>
-                                <span className="text-[10px] text-slate-400 mt-1">
-                                    Airspace status nominal
-                                </span>
+                    <div className="mt-2.5 overflow-y-auto max-h-[195px] space-y-2 pr-1 custom-scrollbar flex-1">
+                        {isLoading && propAlerts === undefined ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center font-mono text-slate-400">
+                                <Loader2 className="h-5 w-5 animate-spin mb-1 text-slate-400" />
+                                <span className="text-[11px]">Monitoring alerts...</span>
                             </div>
+                        ) : sortedAlerts.length === 0 ? (
+                            <EmptyState
+                                compact
+                                icon={ShieldCheck}
+                                title="No active alerts"
+                                description="Airspace and drone telemetry nominal"
+                                className="py-7"
+                            />
                         ) : (
-                            alerts.map((alert) => {
-                                const isHigh = alert.severity === "HIGH";
+                            sortedAlerts.map((alert) => {
+                                const severity = (alert.severity || "MEDIUM").toLowerCase();
+                                const isCriticalOrHigh =
+                                    severity === "critical" || severity === "high";
 
                                 return (
-                                    <ChamferCard
+                                    <div
                                         key={alert.id}
-                                        size="sm"
-                                        accent={isHigh ? "red" : "amber"}
-                                        className={isHigh ? "bg-[#fecdd3]" : "bg-[#fde68a]"}
-                                        innerClassName={`${isHigh ? "bg-[#fff1f2] text-red-950" : "bg-[#fffbeb] text-amber-950"} p-2.5 flex items-center justify-between`}
+                                        className="p-2.5 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100/70 flex items-center justify-between gap-2.5 transition-colors"
                                     >
-                                        <div className="flex items-center space-x-3">
+                                        <div className="flex items-center space-x-2.5 min-w-0 flex-1">
                                             <div
-                                                className={`p-1.5 rounded-md ${
-                                                    isHigh
-                                                        ? "bg-red-100 text-red-600"
-                                                        : "bg-amber-100 text-amber-600"
+                                                className={`p-1 rounded shrink-0 ${
+                                                    isCriticalOrHigh
+                                                        ? "bg-rose-100 text-rose-600"
+                                                        : "bg-amber-100 text-amber-700"
                                                 }`}
                                             >
-                                                {isHigh ? (
-                                                    <BatteryMedium className="h-4 w-4" />
-                                                ) : (
-                                                    <AlertTriangle className="h-4 w-4" />
-                                                )}
+                                                <ShieldAlert className="h-3.5 w-3.5" />
                                             </div>
-                                            <div>
-                                                <h4 className="text-xs font-bold font-mono">
-                                                    {alert.title}
-                                                </h4>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center space-x-1.5">
+                                                    <h4 className="text-[11px] font-bold font-mono text-slate-900 truncate">
+                                                        {alert.alertType || "BREACH"}
+                                                    </h4>
+                                                    <StatusBadge
+                                                        status={severity}
+                                                        shape="chamfer"
+                                                        showDot={false}
+                                                        className="text-[9px] px-1.5 py-0 shrink-0"
+                                                    />
+                                                </div>
                                                 <p
-                                                    className={`text-[10px] font-mono ${
-                                                        isHigh ? "text-red-700" : "text-amber-700"
-                                                    }`}
+                                                    className="text-[10px] font-mono text-slate-500 truncate mt-0.5"
+                                                    title={alert.message || undefined}
                                                 >
-                                                    {alert.description}
+                                                    {alert.message ||
+                                                        "Operational anomaly detected"}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className="text-right">
-                                            <span
-                                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
-                                                    isHigh
-                                                        ? "bg-red-200 text-red-800"
-                                                        : "bg-amber-200 text-amber-800"
-                                                }`}
-                                            >
-                                                {alert.severity}
+                                        <div className="flex flex-col items-end space-y-1 shrink-0">
+                                            <span className="text-[9px] text-slate-400 font-mono">
+                                                {alert.createdOn
+                                                    ? formatTime(alert.createdOn)
+                                                    : "Just now"}
                                             </span>
-                                            <span className="block text-[9px] text-slate-500 font-mono mt-0.5">
-                                                {alert.time}
-                                            </span>
+                                            {alert.acknowledged ? (
+                                                <StatusBadge
+                                                    status="acknowledged"
+                                                    shape="rounded"
+                                                    showDot={false}
+                                                    className="text-[9px] px-1.5 py-0"
+                                                />
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    disabled={acknowledgeMutation.isPending}
+                                                    onClick={() =>
+                                                        acknowledgeMutation.mutate(alert.id)
+                                                    }
+                                                    className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[9px] font-mono font-medium text-slate-700 shadow-2xs transition-colors cursor-pointer"
+                                                >
+                                                    <Check className="h-3 w-3 text-emerald-600" />
+                                                    <span>ACK</span>
+                                                </button>
+                                            )}
                                         </div>
-                                    </ChamferCard>
+                                    </div>
                                 );
                             })
                         )}

@@ -56,7 +56,7 @@ export function RegisteredDevicesTable({
     }, [devices, search, statusFilter]);
 
     return (
-        <ChamferCard size="lg" accent="dark" className="min-h-[420px]">
+        <ChamferCard size="lg" className="min-h-[420px]">
             <div className="p-5 flex flex-col h-full w-full gap-4">
                 <div className={styles.toolbar}>
                     <div className={styles.filterGroup}>

@@ -22,7 +22,7 @@ export function ConnectivityMetrics({
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-            <ChamferCard size="md" accent="dark" className="h-[119px]">
+            <ChamferCard size="md" className="h-[119px]">
                 <div className="p-4 flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between w-full pl-2">
                         <span className="text-[11px] font-bold text-[#64748b] tracking-[0.55px] uppercase">
@@ -40,7 +40,7 @@ export function ConnectivityMetrics({
                 </div>
             </ChamferCard>
 
-            <ChamferCard size="md" accent="dark" className="h-[119px]">
+            <ChamferCard size="md" className="h-[119px]">
                 <div className="p-4 flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between w-full pl-2">
                         <span className="text-[11px] font-bold text-[#64748b] tracking-[0.55px] uppercase">
@@ -63,7 +63,7 @@ export function ConnectivityMetrics({
                 </div>
             </ChamferCard>
 
-            <ChamferCard size="md" accent="dark" className="h-[119px]">
+            <ChamferCard size="md" className="h-[119px]">
                 <div className="p-4 flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between w-full pl-2">
                         <span className="text-[11px] font-bold text-[#64748b] tracking-[0.55px] uppercase">
@@ -81,7 +81,7 @@ export function ConnectivityMetrics({
                 </div>
             </ChamferCard>
 
-            <ChamferCard size="md" accent="dark" className="h-[119px]">
+            <ChamferCard size="md" className="h-[119px]">
                 <div className="p-4 flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between w-full pl-2">
                         <span className="text-[11px] font-bold text-[#64748b] tracking-[0.55px] uppercase">

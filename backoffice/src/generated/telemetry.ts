@@ -13,7 +13,7 @@ import zod from "zod";
  */
 export const ingestTelemetryBody = zod
     .object({
-        droneId: zod.string().describe("Unique identifier of the reporting drone"),
+        droneId: zod.string().min(1).describe("Unique identifier of the reporting drone"),
         flightId: zod
             .string()
             .optional()
@@ -30,6 +30,12 @@ export const ingestTelemetryBody = zod
             .number()
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
+        persistToDb: zod
+            .boolean()
+            .optional()
+            .describe(
+                "Whether to persist telemetry to database (default true). Set false for simulations to avoid disk bloat."
+            ),
     })
     .describe("Payload for ingesting high-frequency drone telemetry data");
 
@@ -96,6 +102,41 @@ export const getLatestFlightTelemetryResponse = zod
         timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
     })
     .describe("Telemetry record representation");
+
+/**
+ * Retrieve historical trajectory breadcrumbs for a specific drone hardware unit.
+ * @summary Get telemetry history for a drone
+ */
+export const getDroneTelemetryHistoryParams = zod.object({
+    droneId: zod.string(),
+});
+
+export const getDroneTelemetryHistoryQueryParams = zod.object({
+    from: zod.iso.datetime({}).optional().describe("Start timestamp (ISO-8601 UTC)"),
+    to: zod.iso.datetime({}).optional().describe("End timestamp (ISO-8601 UTC)"),
+});
+
+export const getDroneTelemetryHistoryResponseItem = zod
+    .object({
+        id: zod.string().optional().describe("Unique ID of the telemetry record"),
+        droneId: zod.string().optional().describe("Unique identifier of the reporting drone"),
+        flightId: zod.string().optional().describe("Associated flight operation ID"),
+        latitude: zod.number().optional().describe("Instantaneous WGS84 Latitude"),
+        longitude: zod.number().optional().describe("Instantaneous WGS84 Longitude"),
+        altitude: zod.number().optional().describe("Current altitude in meters (m)"),
+        speed: zod.number().optional().describe("Ground speed in meters per second (m/s)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360°)"),
+        pitch: zod.number().optional().describe("Pitch angle in degrees"),
+        roll: zod.number().optional().describe("Roll angle in degrees"),
+        yaw: zod.number().optional().describe("Yaw angle in degrees"),
+        batteryPercentage: zod
+            .number()
+            .optional()
+            .describe("Remaining battery percentage (0-100%)"),
+        timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
+    })
+    .describe("Telemetry record representation");
+export const getDroneTelemetryHistoryResponse = zod.array(getDroneTelemetryHistoryResponseItem);
 
 /**
  * Retrieve the most recent instantaneous telemetry position and health metrics for a drone hardware unit.

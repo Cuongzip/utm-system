@@ -4,7 +4,6 @@ import React, { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib";
 import { Tooltip } from "../Tooltip";
-import { EmptyState } from "../EmptyState";
 import styles from "./Table.module.css";
 
 export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
@@ -203,27 +202,6 @@ export function TableLoading({ colSpan = 1, message = "Loading..." }: TableLoadi
                     <Loader2 className="w-6 h-6 animate-spin text-[var(--color-border-dark)]" />
                     <span>{message}</span>
                 </div>
-            </td>
-        </tr>
-    );
-}
-
-export interface TableEmptyProps {
-    colSpan?: number;
-    icon?: React.ComponentType<{ className?: string }>;
-    title: string;
-    description?: string;
-    action?: {
-        label: string;
-        onClick: () => void;
-    };
-}
-
-export function TableEmpty({ colSpan = 1, icon, title, description, action }: TableEmptyProps) {
-    return (
-        <tr>
-            <td colSpan={colSpan} className="py-8">
-                <EmptyState icon={icon} title={title} description={description} action={action} />
             </td>
         </tr>
     );

@@ -18,7 +18,7 @@ export function TelemetryDistribution({
     const showActive = hasFeeds || totalFeeds > 0;
 
     return (
-        <ChamferCard size="lg" accent="dark" className="h-[222px]">
+        <ChamferCard size="lg" className="h-[222px]">
             <div className="p-5 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between w-full pl-2">
                     <h2 className="text-[12px] font-bold uppercase text-[var(--color-text-primary)] tracking-[0.6px] leading-4">

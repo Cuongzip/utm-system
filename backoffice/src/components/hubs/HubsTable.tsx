@@ -15,7 +15,7 @@ import {
     TableHead,
     TableCell,
     TableLoading,
-    TableEmpty,
+    EmptyState,
 } from "@/components/ui";
 import { formatDistance } from "@/utils";
 import type { Hub } from "@/types";
@@ -70,7 +70,7 @@ export function HubsTable({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <ChamferCard size="lg" accent="dark" className="w-full">
+            <ChamferCard size="lg" className="w-full">
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
@@ -88,12 +88,15 @@ export function HubsTable({
                         {loading ? (
                             <TableLoading colSpan={6} message="Loading vertiport hubs..." />
                         ) : hubs.length === 0 ? (
-                            <TableEmpty
-                                colSpan={6}
-                                icon={Building2}
-                                title="No vertiport hubs found"
-                                description="Get started by adding a new hub"
-                            />
+                            <TableRow>
+                                <TableCell colSpan={6} className="py-10 text-center">
+                                    <EmptyState
+                                        icon={Building2}
+                                        title="No vertiport hubs found"
+                                        description="Get started by adding a new hub"
+                                    />
+                                </TableCell>
+                            </TableRow>
                         ) : (
                             hubs.map((hub) => {
                                 const isSelected = selectedHubId === hub.id;

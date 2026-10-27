@@ -46,7 +46,6 @@ export function TacticalMapContainer({
     return (
         <ChamferCard
             size="lg"
-            accent="dark"
             className={cn(
                 "w-full transition-all",
                 isFullscreen

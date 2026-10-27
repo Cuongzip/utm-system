@@ -39,11 +39,7 @@ export function ConfirmDialog({
                             className="w-full max-w-md pointer-events-auto filter drop-shadow-xl"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <ChamferCard
-                                size="lg"
-                                accent={variant === "danger" ? "red" : "dark"}
-                                className="w-full"
-                            >
+                            <ChamferCard size="lg" className="w-full">
                                 <div className="p-5 flex flex-col gap-4">
                                     <div className="flex items-start gap-3.5">
                                         <div

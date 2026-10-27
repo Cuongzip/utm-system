@@ -11,6 +11,7 @@ export interface EmptyStateProps {
     action?: {
         label: string;
         onClick: () => void;
+        icon?: React.ComponentType<{ className?: string }>;
     };
     children?: React.ReactNode;
     className?: string;
@@ -26,6 +27,8 @@ export function EmptyState({
     className,
     compact = false,
 }: EmptyStateProps) {
+    const ActionIcon = action?.icon;
+
     return (
         <div
             className={cn(
@@ -37,16 +40,18 @@ export function EmptyState({
             {Icon && (
                 <div
                     className={cn(
-                        "rounded-full bg-[var(--color-surface-base)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)]",
-                        compact ? "w-8 h-8 mb-2" : "w-12 h-12 mb-3"
+                        "rounded-full bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400 shadow-2xs",
+                        compact ? "w-8 h-8 mb-2" : "w-11 h-11 mb-3"
                     )}
                 >
-                    <Icon className={compact ? "w-4 h-4" : "w-6 h-6"} />
+                    <Icon
+                        className={compact ? "w-4 h-4 text-slate-500" : "w-5 h-5 text-slate-500"}
+                    />
                 </div>
             )}
             <h3
                 className={cn(
-                    "font-semibold text-[var(--color-text-primary)]",
+                    "font-semibold font-mono text-slate-700",
                     compact ? "text-xs" : "text-sm"
                 )}
             >
@@ -55,16 +60,21 @@ export function EmptyState({
             {description && (
                 <p
                     className={cn(
-                        "text-[var(--color-text-muted)] mt-1 max-w-sm",
-                        compact ? "text-[11px]" : "text-xs"
+                        "text-slate-400 font-mono mt-1 max-w-sm",
+                        compact ? "text-[10px] leading-relaxed" : "text-xs"
                     )}
                 >
                     {description}
                 </p>
             )}
             {action && (
-                <OutlineButton size="sm" onClick={action.onClick} className="mt-4">
-                    {action.label}
+                <OutlineButton
+                    size="sm"
+                    onClick={action.onClick}
+                    className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
+                >
+                    {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-slate-600" />}
+                    <span>{action.label}</span>
                 </OutlineButton>
             )}
             {children}
