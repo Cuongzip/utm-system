@@ -1,21 +1,16 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, RotateCw, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
 import { ChamferButton, OutlineButton, PageHeader, AlertBanner } from "@/components/ui";
-import {
-    AirspaceTable,
-    AirspaceMap,
-    AddAirspaceModal,
-    AirspaceBriefingModal,
-} from "@/components/airspace";
+import { AirspaceTable, AirspaceMap, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
-import { useMutation } from "@tanstack/react-query";
-import type { AirspaceZone, CreateAirspaceZonePayload, UpdateAirspaceZonePayload } from "@/types";
+import type { AirspaceZone } from "@/types";
 
 export default function AirspacePage() {
+    const router = useRouter();
     const { data: hubs = [], refetch: fetchHubs } = useHubsAll();
     const [isBriefingOpen, setIsBriefingOpen] = useState(false);
 
@@ -28,11 +23,6 @@ export default function AirspacePage() {
         error,
         setError,
         refresh: refreshZones,
-        isModalOpen: isAddModalOpen,
-        itemToEdit: selectedZone,
-        openCreateModal,
-        openEditModal,
-        closeModal,
         highlightedId: highlightedZoneId,
         handleSelect: handleSelectZone,
         handleDelete: handleDeleteZone,
@@ -55,35 +45,12 @@ export default function AirspacePage() {
         return map;
     }, [hubs]);
 
-    const saveZoneMutation = useMutation({
-        mutationFn: async ({
-            payload,
-            id,
-        }: {
-            payload: CreateAirspaceZonePayload | UpdateAirspaceZonePayload;
-            id?: string;
-        }) => {
-            if (id) {
-                return airspaceService.updateZone(id, payload as UpdateAirspaceZonePayload);
-            }
-            return airspaceService.createZone(payload as CreateAirspaceZonePayload);
-        },
-        onSuccess: (_data, variables) => {
-            toast.success(
-                variables.id
-                    ? "Airspace zone updated successfully"
-                    : "Airspace zone created successfully"
-            );
-            refreshZones();
-        },
-        meta: { defaultErrorMessage: "Failed to save airspace zone" },
-    });
+    const handleCreateZone = () => {
+        router.push("/dashboard/airspace/new");
+    };
 
-    const handleSaveZone = async (
-        payload: CreateAirspaceZonePayload | UpdateAirspaceZonePayload,
-        id?: string
-    ) => {
-        await saveZoneMutation.mutateAsync({ payload, id });
+    const handleEditZone = (zone: AirspaceZone) => {
+        router.push(`/dashboard/airspace/${zone.id}`);
     };
 
     return (
@@ -99,7 +66,7 @@ export default function AirspacePage() {
                     <span>Refresh</span>
                 </OutlineButton>
 
-                <ChamferButton variant="dark" size="sm" onClick={openCreateModal}>
+                <ChamferButton variant="dark" size="sm" onClick={handleCreateZone}>
                     <Plus className="w-4 h-4 text-white" />
                     <span>Add Zone</span>
                 </ChamferButton>
@@ -113,7 +80,7 @@ export default function AirspacePage() {
                     loading={loading}
                     selectedZoneId={highlightedZoneId}
                     onSelectZone={handleSelectZone}
-                    onEditZone={openEditModal}
+                    onEditZone={handleEditZone}
                     onDeleteZone={handleDeleteZone}
                     hubMap={hubMap}
                 />
@@ -127,14 +94,6 @@ export default function AirspacePage() {
                     />
                 </div>
             </div>
-
-            <AddAirspaceModal
-                isOpen={isAddModalOpen}
-                zoneToEdit={selectedZone}
-                hubs={hubs}
-                onClose={closeModal}
-                onSubmit={handleSaveZone}
-            />
 
             <AirspaceBriefingModal
                 isOpen={isBriefingOpen}

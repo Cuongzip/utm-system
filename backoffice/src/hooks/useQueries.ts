@@ -5,6 +5,7 @@ import { hubService } from "@/services/hubService";
 import { droneService } from "@/services/droneService";
 import { flightService } from "@/services/flightService";
 import { alertService } from "@/services/alertService";
+import { airspaceService } from "@/services/airspaceService";
 
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
@@ -58,5 +59,16 @@ export function useDroneCommands(droneId?: string | null) {
         queryFn: () => droneService.getCommands(droneId!, { limit: 10 }),
         enabled: Boolean(droneId),
         refetchInterval: 3000,
+    });
+}
+
+export function useAirspaceAll() {
+    return useQuery({
+        queryKey: QUERY_KEYS.airspace,
+        queryFn: async () => {
+            const res = await airspaceService.getZones({ limit: 0 });
+            return res.items || [];
+        },
+        staleTime: 1000 * 60,
     });
 }

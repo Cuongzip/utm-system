@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Modal, OutlineButton, ChamferButton, StatusBadge } from "@/components/ui";
 import { airspaceService } from "@/services/airspaceService";
+import { checkPathBody } from "@/generated/airspace";
+import { validateSchema } from "@/utils";
 import type { CheckPathResult } from "@/types";
 
 interface AirspaceBriefingModalProps {
@@ -55,16 +57,16 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
     };
 
     const handleRunCheck = async () => {
-        const sLat = parseFloat(startLat);
-        const sLon = parseFloat(startLon);
-        const sAlt = parseFloat(startAlt) || 100;
+        const payload = {
+            points: [
+                { lat: Number(startLat), lon: Number(startLon), alt: Number(startAlt) || 100 },
+                { lat: Number(endLat), lon: Number(endLon), alt: Number(endAlt) || 100 },
+            ],
+            spacingM: Number(spacingM) || 200,
+        };
 
-        const eLat = parseFloat(endLat);
-        const eLon = parseFloat(endLon);
-        const eAlt = parseFloat(endAlt) || 100;
-        const spacing = parseFloat(spacingM) || 200;
-
-        if (isNaN(sLat) || isNaN(sLon) || isNaN(eLat) || isNaN(eLon)) {
+        const validation = validateSchema(checkPathBody, payload);
+        if (!validation.success) {
             setError("Please enter valid decimal coordinates for both waypoints.");
             return;
         }
@@ -73,13 +75,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
         setError(null);
 
         try {
-            const res = await airspaceService.checkPath({
-                points: [
-                    { lat: sLat, lon: sLon, alt: sAlt },
-                    { lat: eLat, lon: eLon, alt: eAlt },
-                ],
-                spacingM: spacing,
-            });
+            const res = await airspaceService.checkPath(payload);
             setCheckResult(res);
         } catch {
             setError("Airspace path check request failed. Verify backend service status.");

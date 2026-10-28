@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
-import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ConflictType;
 import com.utm.conflict.viewmodel.ConflictVm;
 import com.utm.conflict.viewmodel.LocationVm;
@@ -17,10 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
-)
+@Mapper(componentModel = "spring", builder = @org.mapstruct.Builder(disableBuilder = true))
 public abstract class ConflictMapper {
 
     @Autowired
@@ -74,7 +70,8 @@ public abstract class ConflictMapper {
             return Collections.emptyMap();
         }
         try {
-            return objectMapper.readValue(resolutionActionsJson, new TypeReference<>() {});
+            return objectMapper.readValue(resolutionActionsJson, new TypeReference<>() {
+            });
         } catch (Exception ex) {
             return Collections.singletonMap("raw", resolutionActionsJson);
         }
