@@ -8,10 +8,6 @@ import type { MapMode, ImageryType, MapCoordinates } from "./types";
 import { cn } from "@/lib";
 
 export interface TacticalMapContainerProps {
-    title: string;
-    icon?: React.ReactNode;
-    badge?: React.ReactNode | string;
-    activeCount?: number;
     initialMode?: MapMode;
     initialLayerType?: ImageryType;
     height?: string;
@@ -24,10 +20,6 @@ export interface TacticalMapContainerProps {
 }
 
 export function TacticalMapContainer({
-    title,
-    icon,
-    badge,
-    activeCount = 0,
     initialMode = "3d",
     initialLayerType = "satellite",
     height = "100%",
@@ -55,31 +47,7 @@ export function TacticalMapContainer({
             )}
         >
             <div className="relative w-full h-full min-h-[520px] flex flex-col overflow-hidden bg-slate-900 select-none">
-                <div className="px-4 py-2.5 border-b border-slate-700/60 bg-slate-900/90 flex items-center justify-between z-20 backdrop-blur-md">
-                    <div className="text-xs font-bold font-mono text-white flex items-center gap-2 uppercase tracking-wide">
-                        {icon}
-                        <span>{title}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        {activeCount > 0 && (
-                            <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-emerald-500/60 bg-emerald-950/80 text-emerald-400 text-[11px] font-mono font-semibold animate-pulse">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                <span>LIVE ({activeCount})</span>
-                            </span>
-                        )}
-                        {badge &&
-                            (typeof badge === "string" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded border border-slate-700 bg-slate-800 text-slate-300 text-[11px] font-mono font-medium">
-                                    {badge}
-                                </span>
-                            ) : (
-                                badge
-                            ))}
-                    </div>
-                </div>
-
-                <div className="absolute top-12 right-4 z-30 flex items-center gap-2 pointer-events-none">
+                <div className="absolute top-4 right-4 z-30 flex items-center gap-2 pointer-events-none">
                     <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700/80 backdrop-blur-md shadow-md pointer-events-auto">
                         <button
                             type="button"

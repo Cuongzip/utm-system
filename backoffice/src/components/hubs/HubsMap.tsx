@@ -1,6 +1,5 @@
 "use client";
 
-import { Navigation } from "lucide-react";
 import { TacticalMapContainer, HubsLayer, MapInspector } from "@/components/map";
 import type { Hub } from "@/types";
 
@@ -15,9 +14,6 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
 
     return (
         <TacticalMapContainer
-            icon={<Navigation className="w-4 h-4 text-cyan-400" />}
-            title="VERTIPORT AIRSPACE MAP"
-            badge={`${hubs.length} ${hubs.length === 1 ? "HUB" : "HUBS"} ACTIVE`}
             onEntityClick={(entityId) => {
                 const found = hubs.find((h) => h.id === entityId);
                 if (found && onSelectHub) {

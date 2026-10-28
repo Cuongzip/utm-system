@@ -1,6 +1,5 @@
 "use client";
 
-import { PlaneTakeoff } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
 import {
     TacticalMapContainer,
@@ -28,9 +27,6 @@ export function FlightsMap({
     droneMap = new Map(),
 }: FlightsMapProps) {
     const selectedFlight = flights.find((f) => f.id === selectedFlightId);
-    const activeFlightsCount = flights.filter(
-        (f) => f.status === "active" || (f.status as string) === "in_flight"
-    ).length;
 
     type ExtendedFlight = Flight & {
         drone?: { registrationNumber?: string; model?: string };
@@ -63,9 +59,6 @@ export function FlightsMap({
 
     return (
         <TacticalMapContainer
-            icon={<PlaneTakeoff className="w-4 h-4 text-cyan-400" />}
-            title="FLIGHT TRAJECTORY MAP"
-            badge={`${activeFlightsCount} ${activeFlightsCount === 1 ? "FLIGHT" : "FLIGHTS"} ACTIVE`}
             onEntityClick={(entityId) => {
                 const rawId = entityId
                     .replace(/^flight-route-/, "")

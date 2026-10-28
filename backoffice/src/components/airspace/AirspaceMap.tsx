@@ -1,6 +1,5 @@
 "use client";
 
-import { Shield } from "lucide-react";
 import { TacticalMapContainer, AirspaceLayer, MapInspector } from "@/components/map";
 import type { AirspaceZone } from "@/types";
 
@@ -18,13 +17,9 @@ export function AirspaceMap({
     hubMap = new Map(),
 }: AirspaceMapProps) {
     const selectedZone = zones.find((z) => z.id === selectedZoneId);
-    const activeZonesCount = zones.filter((z) => z.status === "active").length;
 
     return (
         <TacticalMapContainer
-            icon={<Shield className="w-4 h-4 text-cyan-400" />}
-            title="AIRSPACE SECTOR MAP"
-            badge={`${activeZonesCount} ${activeZonesCount === 1 ? "ZONE" : "ZONES"} ACTIVE`}
             initialMode="3d"
             onEntityClick={(entityId) => {
                 const found = zones.find((z) => z.id === entityId);
