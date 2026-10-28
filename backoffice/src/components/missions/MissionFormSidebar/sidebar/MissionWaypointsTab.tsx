@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { AlertCircle, X, MapPin, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { FormInput } from "@/components/ui";
 import { cn } from "@/lib";

@@ -1,5 +1,5 @@
 import { addWaypointBody } from "@/generated/mission";
-import { calculateDistance, calculatePathDistance, interpolatePoint } from "@/utils/geo";
+import { calculatePathDistance, interpolatePoint } from "@/utils/geo";
 import type { Hub, Waypoint, AddWaypointPayload, ProfilePoint } from "@/types";
 import { missionService } from "@/services/missionService";
 import zod from "zod";

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { AlertCircle, ShieldCheck } from "lucide-react";
 import { CustomSelect, FormInput, type SelectOption } from "@/components/ui";
 import {

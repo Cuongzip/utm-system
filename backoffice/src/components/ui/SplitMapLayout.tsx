@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { PageHeader } from "../PageHeader";
-import { AlertBanner } from "../AlertBanner";
+import { PageHeader } from "./PageHeader";
+import { AlertBanner } from "./AlertBanner";
 import { cn } from "@/lib";
 
 export interface SplitMapLayoutProps {

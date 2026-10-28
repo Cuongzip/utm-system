@@ -3,8 +3,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { format, isValid } from "date-fns";
 import { Calendar as CalendarIcon, Clock, X, Check } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "../Popover";
-import { Calendar } from "../Calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./Popover";
+import { Calendar } from "./Calendar";
 import { cn } from "@/lib";
 
 export interface DateTimePickerProps {

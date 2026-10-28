@@ -2,7 +2,7 @@
 
 import React from "react";
 import { X } from "lucide-react";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Tooltip } from "@/components/ui";
 import { cn } from "@/lib";
 import styles from "./MapInspector.module.css";
 

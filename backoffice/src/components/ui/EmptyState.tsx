@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib";
-import { OutlineButton } from "../OutlineButton";
+import { OutlineButton } from "./OutlineButton";
 
 export interface EmptyStateProps {
     icon?: React.ComponentType<{ className?: string }>;

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import type { Waypoint, Drone, Hub, MissionScheduleType } from "@/types";
