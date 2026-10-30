@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MousePointer, Plus, Pencil, Route, Compass } from "lucide-react";
-import { BaseCesiumMap, MissionLayer, AltitudeProfile, useCesium } from "@/components/map";
+import { TacticalMapContainer, MissionLayer, AltitudeProfile, useCesium } from "@/components/map";
 import { ChamferCard } from "@/components/ui";
 import { cn } from "@/lib";
 import type { Waypoint, Hub, ProfilePoint } from "@/types";
@@ -332,8 +332,10 @@ export function MissionMapEditor({
     };
 
     return (
-        <ChamferCard size="lg" className={cn("w-full h-full", className)}>
-            <div className="flex flex-col h-full bg-[var(--color-surface-panel)] overflow-hidden">
+        <TacticalMapContainer
+            initialMode="2d"
+            className={className}
+            header={
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono ml-auto">
@@ -416,49 +418,23 @@ export function MissionMapEditor({
                         </>
                     )}
                 </div>
-
-                <div className="relative flex-1 w-full min-h-[420px] overflow-hidden bg-slate-100">
-                    <BaseCesiumMap
-                        mode="2d"
-                        layerType="satellite"
-                        loadingText="Loading mission tactical canvas..."
-                    >
-                        <MissionLayer
-                            waypoints={waypoints}
-                            selectedWaypointId={selectedWaypointId}
-                            departureHub={departureHub}
-                            arrivalHub={arrivalHub}
-                            autoFitBounds={false}
-                        />
-
-                        <MissionEditorController
-                            mode={mode}
-                            defaultAltitude={defaultAltitude}
-                            waypoints={waypoints}
-                            isReadOnly={isReadOnly}
-                            onAddWaypoint={onAddWaypoint}
-                            onMoveWaypoint={onMoveWaypoint}
-                            onSelectWaypoint={onSelectWaypoint}
-                        />
-
-                        <MissionCameraController targetLocation={flyToTarget} />
-                    </BaseCesiumMap>
-
-                    {isReadOnly ? (
-                        <div className="absolute top-3 right-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                            <Compass className="w-3.5 h-3.5 text-[var(--color-tech-amber)]" />
-                            <span>Click waypoint to inspect parameters</span>
+            }
+            overlay={
+                isReadOnly ? (
+                    <div className="absolute top-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
+                        <Compass className="w-3.5 h-3.5 text-[var(--color-tech-amber)]" />
+                        <span>Click waypoint to inspect parameters</span>
+                    </div>
+                ) : (
+                    (mode === "add" || mode === "draw") && (
+                        <div className="absolute top-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
+                            <Plus className="w-3.5 h-3.5 text-white animate-pulse" />
+                            <span>Click to add • Drag point to move</span>
                         </div>
-                    ) : (
-                        (mode === "add" || mode === "draw") && (
-                            <div className="absolute top-3 right-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                                <Plus className="w-3.5 h-3.5 text-white animate-pulse" />
-                                <span>Click to add • Drag point to move</span>
-                            </div>
-                        )
-                    )}
-                </div>
-
+                    )
+                )
+            }
+            footer={
                 <AltitudeProfile
                     waypoints={waypoints}
                     selectedWaypointId={selectedWaypointId}
@@ -467,8 +443,28 @@ export function MissionMapEditor({
                     onWaypointClick={onSelectWaypoint}
                     onPointClick={handleProfilePointClick}
                 />
-            </div>
-        </ChamferCard>
+            }
+        >
+            <MissionLayer
+                waypoints={waypoints}
+                selectedWaypointId={selectedWaypointId}
+                departureHub={departureHub}
+                arrivalHub={arrivalHub}
+                autoFitBounds={false}
+            />
+
+            <MissionEditorController
+                mode={mode}
+                defaultAltitude={defaultAltitude}
+                waypoints={waypoints}
+                isReadOnly={isReadOnly}
+                onAddWaypoint={onAddWaypoint}
+                onMoveWaypoint={onMoveWaypoint}
+                onSelectWaypoint={onSelectWaypoint}
+            />
+
+            <MissionCameraController targetLocation={flyToTarget} />
+        </TacticalMapContainer>
     );
 }
 

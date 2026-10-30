@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Circle, Pentagon, Undo2, Trash2, Compass, Layers } from "lucide-react";
-import { BaseCesiumMap, useCesium } from "@/components/map";
+import { TacticalMapContainer, useCesium } from "@/components/map";
 import { AirspaceLayer } from "@/components/map/layers/AirspaceLayer";
 import { MAP_TOKENS } from "@/components/map/mapTokens";
 import { ChamferCard } from "@/components/ui";
@@ -351,8 +351,9 @@ export function AirspaceMapEditor({
     }, []);
 
     return (
-        <ChamferCard size="lg" className={cn("w-full h-full", className)}>
-            <div className="flex flex-col h-full bg-[var(--color-surface-panel)] overflow-hidden">
+        <TacticalMapContainer
+            className={className}
+            header={
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
                     <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                         <button
@@ -448,75 +449,72 @@ export function AirspaceMapEditor({
                         </button>
                     </div>
                 </div>
-
-                <div className="relative flex-1 w-full min-h-[420px] overflow-hidden bg-slate-100">
-                    <BaseCesiumMap mode="3d" layerType="satellite">
-                        <AirspaceCameraController
-                            recenterTrigger={recenterTrigger}
-                            geometryMode={geometryMode}
-                            center={center}
-                            radiusMeters={radiusMeters}
-                            polygonPoints={polygonPoints}
-                        />
-
-                        <AirspaceInteractionController
-                            geometryMode={geometryMode}
-                            onCenterChange={onCenterChange}
-                            onAddPolygonPoint={onAddPolygonPoint}
-                        />
-
-                        <ActiveAirspaceGraphic
-                            geometryMode={geometryMode}
-                            center={center}
-                            radiusMeters={radiusMeters}
-                            polygonPoints={polygonPoints}
-                            zoneType={zoneType}
-                            altitudeCeiling={altitudeCeiling}
-                        />
-
-                        {showContextZones && backgroundZones.length > 0 && (
-                            <AirspaceLayer zones={backgroundZones} autoFitBounds={false} />
+            }
+            overlay={
+                <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+                    <div className="px-3 py-1.5 bg-slate-900/90 backdrop-blur border border-slate-700/80 text-xs font-mono rounded shadow-lg flex items-center gap-3 text-slate-100">
+                        {geometryMode === "radius" ? (
+                            <>
+                                <span>
+                                    Center:{" "}
+                                    <strong className="text-white">
+                                        {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
+                                    </strong>
+                                </span>
+                                <span className="text-slate-500">|</span>
+                                <span>
+                                    Radius:{" "}
+                                    <strong className="text-cyan-400 font-bold">
+                                        {radiusMeters}m
+                                    </strong>
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <span>
+                                    Vertices:{" "}
+                                    <strong className="text-white">
+                                        {polygonPoints.length} points
+                                    </strong>
+                                    {polygonPoints.length < 3 && (
+                                        <span className="text-amber-400 ml-1.5 font-medium">
+                                            (min 3 required)
+                                        </span>
+                                    )}
+                                </span>
+                            </>
                         )}
-                    </BaseCesiumMap>
-
-                    <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-                        <div className="px-3 py-1.5 bg-slate-900/90 backdrop-blur border border-slate-700/80 text-xs font-mono rounded shadow-lg flex items-center gap-3 text-slate-100">
-                            {geometryMode === "radius" ? (
-                                <>
-                                    <span>
-                                        Center:{" "}
-                                        <strong className="text-white">
-                                            {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
-                                        </strong>
-                                    </span>
-                                    <span className="text-slate-500">|</span>
-                                    <span>
-                                        Radius:{" "}
-                                        <strong className="text-cyan-400 font-bold">
-                                            {radiusMeters}m
-                                        </strong>
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>
-                                        Vertices:{" "}
-                                        <strong className="text-white">
-                                            {polygonPoints.length} points
-                                        </strong>
-                                        {polygonPoints.length < 3 && (
-                                            <span className="text-amber-400 ml-1.5 font-medium">
-                                                (min 3 required)
-                                            </span>
-                                        )}
-                                    </span>
-                                </>
-                            )}
-                        </div>
                     </div>
                 </div>
-            </div>
-        </ChamferCard>
+            }
+        >
+            <AirspaceCameraController
+                recenterTrigger={recenterTrigger}
+                geometryMode={geometryMode}
+                center={center}
+                radiusMeters={radiusMeters}
+                polygonPoints={polygonPoints}
+            />
+
+            <AirspaceInteractionController
+                geometryMode={geometryMode}
+                onCenterChange={onCenterChange}
+                onAddPolygonPoint={onAddPolygonPoint}
+            />
+
+            <ActiveAirspaceGraphic
+                geometryMode={geometryMode}
+                center={center}
+                radiusMeters={radiusMeters}
+                polygonPoints={polygonPoints}
+                zoneType={zoneType}
+                altitudeCeiling={altitudeCeiling}
+            />
+
+            {showContextZones && backgroundZones.length > 0 && (
+                <AirspaceLayer zones={backgroundZones} autoFitBounds={false} />
+            )}
+        </TacticalMapContainer>
     );
 }
 
