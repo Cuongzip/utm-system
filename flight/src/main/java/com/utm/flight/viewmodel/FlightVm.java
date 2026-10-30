@@ -3,6 +3,7 @@ package com.utm.flight.viewmodel;
 import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
+import com.utm.flight.model.enumeration.Verdict;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.ZonedDateTime;
 
@@ -60,6 +61,12 @@ public record FlightVm(
 
         @Schema(description = "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)", example = "scheduled")
         FlightStatus status,
+
+        @Schema(description = "Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)", example = "go")
+        Verdict feasibilityVerdict,
+
+        @Schema(description = "ATC authorization override justification remarks if applicable", example = "Approved for emergency medical transport")
+        String feasibilityOverride,
 
         @Schema(description = "Flight remarks, route notes or weather considerations", example = "Medical parcel delivery route via Corridor Bravo")
         String notes,

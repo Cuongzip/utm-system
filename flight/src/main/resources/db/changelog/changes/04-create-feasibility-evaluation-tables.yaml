@@ -1,0 +1,149 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-add-feasibility-fields-to-flight
+      author: drops-utm
+      changes:
+        - addColumn:
+            tableName: flight
+            columns:
+              - column:
+                  name: feasibility_verdict
+                  type: varchar(20)
+                  defaultValue: "UNKNOWN"
+              - column:
+                  name: feasibility_override
+                  type: text
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_feasibility_verdict
+            columns:
+              - column:
+                  name: feasibility_verdict
+
+  - changeSet:
+      id: 04-create-feasibility-evaluations-table
+      author: drops-utm
+      changes:
+        - createTable:
+            tableName: feasibility_evaluations
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_feasibility_evaluations_flight
+                    references: flight(id)
+                    deleteCascade: true
+              - column:
+                  name: drone_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: verdict
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: margin_pct
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: usable_wh
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: required_wh
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cruise_wh
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hover_wh
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: climb_wh
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_factor
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: wind_factor
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: wind_speed_ms
+                  type: double precision
+              - column:
+                  name: confidence
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: solutions_json
+                  type: text
+              - column:
+                  name: explanation
+                  type: text
+              - column:
+                  name: explanation_source
+                  type: varchar(20)
+                  defaultValue: "deterministic"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: feasibility_evaluations
+            indexName: idx_feas_eval_flight_id
+            columns:
+              - column:
+                  name: flight_id
+        - createIndex:
+            tableName: feasibility_evaluations
+            indexName: idx_feas_eval_drone_id
+            columns:
+              - column:
+                  name: drone_id
+        - createIndex:
+            tableName: feasibility_evaluations
+            indexName: idx_feas_eval_verdict
+            columns:
+              - column:
+                  name: verdict
+        - createIndex:
+            tableName: feasibility_evaluations
+            indexName: idx_feas_eval_created_on
+            columns:
+              - column:
+                  name: created_on

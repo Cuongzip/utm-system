@@ -4,6 +4,7 @@ import com.utm.commonlibrary.model.AbstractAuditEntity;
 import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
+import com.utm.flight.model.enumeration.Verdict;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -88,6 +89,14 @@ public class Flight extends AbstractAuditEntity {
     @Column(name = "status", length = 50, nullable = false)
     @Builder.Default
     private FlightStatus status = FlightStatus.SCHEDULED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "feasibility_verdict", length = 20)
+    @Builder.Default
+    private Verdict feasibilityVerdict = Verdict.UNKNOWN;
+
+    @Column(name = "feasibility_override", columnDefinition = "TEXT")
+    private String feasibilityOverride;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;

@@ -2,6 +2,7 @@ package com.utm.flight.service;
 
 import com.utm.flight.config.ServiceUrlConfig;
 import com.utm.flight.viewmodel.DroneBriefVm;
+import com.utm.flight.viewmodel.DroneEnergySpecVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
@@ -44,5 +45,19 @@ public class DroneClientServiceImpl implements DroneClientService {
             log.error("Failed to fetch drone ID {} at url {}: {}", droneId, droneUrl, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    @Override
+    public Optional<DroneEnergySpecVm> getDroneEnergySpec(String droneId) {
+        return getDroneById(droneId).map(drone -> new DroneEnergySpecVm(
+                drone.batteryCapacityWh(),
+                drone.hoverPowerW(),
+                drone.cruisePowerW(),
+                drone.cruiseSpeedMs(),
+                drone.batteryHealthPct(),
+                drone.windToleranceMs(),
+                drone.maxPayload(),
+                drone.maxFlightTimeMin()
+        ));
     }
 }

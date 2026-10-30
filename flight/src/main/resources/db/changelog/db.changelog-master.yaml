@@ -3,4 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/01-create-flight-table.yaml
   - include:
       file: db/changelog/changes/03-create-flight-conformance-tables.yaml
-
+  - include:
+      file: db/changelog/changes/04-create-feasibility-evaluation-tables.yaml
