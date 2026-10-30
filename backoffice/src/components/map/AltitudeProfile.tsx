@@ -1,29 +1,42 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import type { Waypoint, Hub, ProfilePoint } from "@/types";
+import type { Hub, ProfilePoint } from "@/types";
 import { calculateDistance, formatDistance } from "@/utils";
-import { buildMissionRoutePoints } from "./missionUtils";
 
-export interface AltitudeProfileProps {
-    waypoints: Waypoint[];
+export interface BaseAltitudeWaypoint {
+    id?: string;
+    tempId?: string;
+    sequence?: number;
+    name?: string;
+    latitude?: number;
+    longitude?: number;
+    lat?: number;
+    lng?: number;
+    altitude?: number;
+}
+
+export interface AltitudeProfileProps<T extends BaseAltitudeWaypoint = BaseAltitudeWaypoint> {
+    waypoints?: T[];
     selectedWaypointId?: string | null;
-    onWaypointClick?: (waypoint: Waypoint) => void;
+    onWaypointClick?: (waypoint: T) => void;
     onPointClick?: (point: ProfilePoint) => void;
     departureHub?: Hub | null;
     arrivalHub?: Hub | null;
+    title?: string;
     className?: string;
 }
 
-export function AltitudeProfile({
-    waypoints,
+export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWaypoint>({
+    waypoints = [],
     selectedWaypointId,
     onWaypointClick,
     onPointClick,
     departureHub,
     arrivalHub,
+    title = "ALTITUDE PROFILE",
     className = "",
-}: AltitudeProfileProps) {
+}: AltitudeProfileProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(600);
     const chartHeight = 110;
@@ -48,7 +61,69 @@ export function AltitudeProfile({
     }, []);
 
     const { minAlt, maxAlt, totalDistance, segments } = useMemo(() => {
-        const pts: ProfilePoint[] = buildMissionRoutePoints(waypoints, departureHub, arrivalHub);
+        const sorted = [...waypoints].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+        const pts: ProfilePoint[] = [];
+
+        const hasDep =
+            departureHub?.location?.lat !== undefined && departureHub?.location?.lng !== undefined;
+        const hasArr =
+            arrivalHub?.location?.lat !== undefined && arrivalHub?.location?.lng !== undefined;
+
+        if (hasDep) {
+            pts.push({
+                id: "hub-dep",
+                label: departureHub.code || departureHub.name || "DEP",
+                altitude: departureHub.altitudeMsl ?? 0,
+                latitude: departureHub.location!.lat,
+                longitude: departureHub.location!.lng,
+                isDeparture: true,
+            });
+        }
+
+        sorted.forEach((wp, idx) => {
+            const lat = wp.latitude !== undefined ? wp.latitude : (wp.lat ?? 0);
+            const lng = wp.longitude !== undefined ? wp.longitude : (wp.lng ?? 0);
+            const alt = wp.altitude ?? 50;
+
+            const last = pts[pts.length - 1];
+            const isDup =
+                last &&
+                Math.abs(last.latitude - lat) < 0.0001 &&
+                Math.abs(last.longitude - lng) < 0.0001;
+
+            if (!isDup) {
+                pts.push({
+                    id: String(wp.id || wp.tempId || idx),
+                    label: String(wp.sequence ?? idx + 1),
+                    altitude: alt,
+                    latitude: lat,
+                    longitude: lng,
+                    waypoint: wp as any,
+                });
+            }
+        });
+
+        if (hasArr) {
+            const arrLat = arrivalHub.location!.lat;
+            const arrLng = arrivalHub.location!.lng;
+            const last = pts[pts.length - 1];
+            const isDup =
+                last &&
+                Math.abs(last.latitude - arrLat) < 0.0001 &&
+                Math.abs(last.longitude - arrLng) < 0.0001;
+
+            if (!isDup) {
+                pts.push({
+                    id: "hub-arr",
+                    label: arrivalHub.code || arrivalHub.name || "ARR",
+                    altitude: arrivalHub.altitudeMsl ?? 0,
+                    latitude: arrLat,
+                    longitude: arrLng,
+                    isArrival: true,
+                });
+            }
+        }
+
         if (pts.length === 0) {
             return { minAlt: 0, maxAlt: 100, totalDistance: 0, segments: [] };
         }
@@ -87,14 +162,14 @@ export function AltitudeProfile({
             <div
                 className={`p-4 bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] ${className}`}
             >
-                <div className="text-xs font-mono text-[var(--color-text-muted)] text-center py-6">
-                    Add waypoints to see altitude profile
+                <div className="text-xs font-mono text-[var(--color-text-muted)] text-center py-4">
+                    Add waypoints to inspect vertical altitude profile
                 </div>
             </div>
         );
     }
 
-    const chartPadding = { top: 20, right: 35, bottom: 25, left: 45 };
+    const chartPadding = { top: 18, right: 35, bottom: 22, left: 45 };
     const plotWidth = Math.max(chartWidth - chartPadding.left - chartPadding.right, 100);
     const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;
 
@@ -125,11 +200,11 @@ export function AltitudeProfile({
 
     return (
         <div
-            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 select-none ${className}`}
+            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2.5 select-none ${className}`}
         >
             <div className="flex items-center justify-between mb-1.5 px-0.5">
                 <span className="text-xs font-bold text-[var(--color-text-primary)] tracking-wide font-mono">
-                    ALTITUDE PROFILE
+                    {title}
                 </span>
                 <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
                     Distance: {formatDistance(totalDistance)}
@@ -144,9 +219,15 @@ export function AltitudeProfile({
                     className="w-full h-[110px]"
                 >
                     <defs>
-                        <linearGradient id="altitudeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#00a3bf" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#00a3bf" stopOpacity="0.02" />
+                        <linearGradient
+                            id="sharedAltitudeGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="0%"
+                            y2="100%"
+                        >
+                            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.02" />
                         </linearGradient>
                     </defs>
 
@@ -175,12 +256,12 @@ export function AltitudeProfile({
                         );
                     })}
 
-                    <path d={areaD} fill="url(#altitudeGradient)" />
+                    <path d={areaD} fill="url(#sharedAltitudeGradient)" />
 
                     <path
                         d={pathD}
                         fill="none"
-                        stroke="var(--color-tech-cyan)"
+                        stroke="var(--color-tech-cyan, #06b6d4)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -190,17 +271,18 @@ export function AltitudeProfile({
                         const x = getX(seg.distance);
                         const y = getY(seg.point.altitude);
                         const isSelected =
-                            seg.point.waypoint &&
-                            (seg.point.waypoint.id === selectedWaypointId ||
-                                seg.point.waypoint.tempId === selectedWaypointId);
+                            selectedWaypointId &&
+                            (seg.point.id === selectedWaypointId ||
+                                seg.point.id === `wp-${selectedWaypointId}` ||
+                                (seg.point.waypoint &&
+                                    (seg.point.waypoint.id === selectedWaypointId ||
+                                        seg.point.waypoint.tempId === selectedWaypointId)));
 
                         const pointColor = seg.point.isDeparture
-                            ? "var(--color-tech-cyan)"
+                            ? "var(--color-status-online, #10b981)"
                             : seg.point.isArrival
-                              ? "var(--color-tech-amber)"
-                              : idx === segments.length - 1
-                                ? "var(--color-status-alert)"
-                                : "var(--color-status-online)";
+                              ? "var(--color-tech-cyan, #06b6d4)"
+                              : "#06b6d4";
 
                         return (
                             <g
@@ -208,16 +290,16 @@ export function AltitudeProfile({
                                 className="cursor-pointer group"
                                 onClick={() => {
                                     if (seg.point.waypoint) {
-                                        onWaypointClick?.(seg.point.waypoint);
+                                        onWaypointClick?.(seg.point.waypoint as T);
                                     }
                                     onPointClick?.(seg.point);
                                 }}
                             >
                                 <title>
                                     {seg.point.isDeparture
-                                        ? `Departure Hub: ${departureHub?.name || "DEP"} (Click to navigate)`
+                                        ? `Departure Vertiport: ${departureHub?.name || "DEP"} (Click to navigate)`
                                         : seg.point.isArrival
-                                          ? `Arrival Hub: ${arrivalHub?.name || "ARR"} (Click to navigate)`
+                                          ? `Arrival Vertiport: ${arrivalHub?.name || "ARR"} (Click to navigate)`
                                           : `Waypoint ${seg.point.label} (${seg.point.altitude}m) (Click to navigate)`}
                                 </title>
                                 <circle
@@ -225,13 +307,13 @@ export function AltitudeProfile({
                                     cy={y}
                                     r={isSelected ? 9 : 7}
                                     className="opacity-0 group-hover:opacity-25 transition-opacity"
-                                    fill={pointColor}
+                                    fill={isSelected ? "#38bdf8" : pointColor}
                                 />
                                 <circle
                                     cx={x}
                                     cy={y}
                                     r={isSelected ? 6 : 4.5}
-                                    fill={pointColor}
+                                    fill={isSelected ? "#38bdf8" : pointColor}
                                     stroke="#ffffff"
                                     strokeWidth={isSelected ? 2.5 : 1.5}
                                 />
@@ -239,7 +321,11 @@ export function AltitudeProfile({
                                     x={x}
                                     y={y - 8}
                                     textAnchor="middle"
-                                    className="text-[10px] font-bold font-mono fill-[var(--color-text-primary)] pointer-events-none group-hover:fill-[var(--color-tech-cyan)]"
+                                    className={`text-[10px] font-bold font-mono pointer-events-none transition-colors ${
+                                        isSelected
+                                            ? "fill-cyan-400 font-bold"
+                                            : "fill-[var(--color-text-primary)] group-hover:fill-[var(--color-tech-cyan)]"
+                                    }`}
                                 >
                                     {seg.point.label}
                                 </text>

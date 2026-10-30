@@ -11,3 +11,4 @@ export * from "./TacticalMapContainer";
 export * from "./mapIcons";
 export * from "./mapTokens";
 export * from "./cesiumUtils";
+export * from "./AltitudeProfile";

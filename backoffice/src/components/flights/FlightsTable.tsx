@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlaneTakeoff, MapPin, Play, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { PlaneTakeoff, Play, CheckCircle2, AlertTriangle, ShieldCheck, Pencil } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
@@ -52,8 +52,8 @@ export function FlightsTable({
     const getActions = (flight: Flight): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
             {
-                label: "View on Map",
-                icon: <MapPin className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />,
+                label: "View Details",
+                icon: <Pencil className="w-3.5 h-3.5 text-cyan-500" />,
                 onClick: () => onSelectFlight?.(flight),
             },
         ];

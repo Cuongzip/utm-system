@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Edit, Trash2, MapPin } from "lucide-react";
+import { Shield, Edit, Trash2 } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
@@ -43,19 +43,11 @@ export function AirspaceTable({
     const getActions = (zone: AirspaceZone): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
             {
-                label: "View on Map",
-                icon: <MapPin className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />,
-                onClick: () => onSelectZone?.(zone),
+                label: "View Details",
+                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => (onEditZone ? onEditZone(zone) : onSelectZone?.(zone)),
             },
         ];
-
-        if (onEditZone) {
-            items.push({
-                label: "Edit",
-                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-                onClick: () => onEditZone(zone),
-            });
-        }
 
         if (onDeleteZone) {
             items.push({

@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw, ShieldCheck } from "lucide-react";
 import { ChamferButton, OutlineButton, PageHeader, AlertBanner } from "@/components/ui";
-import { AirspaceTable, AirspaceMap, AirspaceBriefingModal } from "@/components/airspace";
+import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
 import type { AirspaceZone } from "@/types";
@@ -24,7 +24,6 @@ export default function AirspacePage() {
         setError,
         refresh: refreshZones,
         highlightedId: highlightedZoneId,
-        handleSelect: handleSelectZone,
         handleDelete: handleDeleteZone,
     } = useCrudList<AirspaceZone>({
         queryKey: QUERY_KEYS.airspace,
@@ -49,7 +48,7 @@ export default function AirspacePage() {
         router.push("/dashboard/airspace/new");
     };
 
-    const handleEditZone = (zone: AirspaceZone) => {
+    const handleSelectZone = (zone: AirspaceZone) => {
         router.push(`/dashboard/airspace/${zone.id}`);
     };
 
@@ -74,26 +73,15 @@ export default function AirspacePage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
-            <div className="flex flex-col gap-6 w-full">
-                <AirspaceTable
-                    zones={zones}
-                    loading={loading}
-                    selectedZoneId={highlightedZoneId}
-                    onSelectZone={handleSelectZone}
-                    onEditZone={handleEditZone}
-                    onDeleteZone={handleDeleteZone}
-                    hubMap={hubMap}
-                />
-
-                <div className="w-full h-[560px]">
-                    <AirspaceMap
-                        zones={zones}
-                        selectedZoneId={highlightedZoneId}
-                        onSelectZone={handleSelectZone}
-                        hubMap={hubMap}
-                    />
-                </div>
-            </div>
+            <AirspaceTable
+                zones={zones}
+                loading={loading}
+                selectedZoneId={highlightedZoneId}
+                onSelectZone={handleSelectZone}
+                onEditZone={handleSelectZone}
+                onDeleteZone={handleDeleteZone}
+                hubMap={hubMap}
+            />
 
             <AirspaceBriefingModal
                 isOpen={isBriefingOpen}

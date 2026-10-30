@@ -2,10 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MousePointer, Plus, Pencil, Route, Compass } from "lucide-react";
-import { BaseCesiumMap, MissionLayer, useCesium } from "@/components/map";
+import { BaseCesiumMap, MissionLayer, AltitudeProfile, useCesium } from "@/components/map";
 import { ChamferCard } from "@/components/ui";
 import { cn } from "@/lib";
-import { AltitudeProfile } from "./AltitudeProfile";
 import type { Waypoint, Hub, ProfilePoint } from "@/types";
 
 export type EditorMode = "select" | "add" | "draw" | "hub-to-hub";

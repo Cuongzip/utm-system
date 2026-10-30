@@ -1,0 +1,477 @@
+"use client";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import {
+    ArrowLeft,
+    Save,
+    Play,
+    CheckCircle2,
+    AlertTriangle,
+    ShieldCheck,
+    Loader2,
+} from "lucide-react";
+import {
+    SplitMapLayout,
+    ChamferButton,
+    OutlineButton,
+    StatusBadge,
+    ConfirmDialog,
+} from "@/components/ui";
+import {
+    FlightMapEditor,
+    FlightFormSidebar,
+    useFlightRoute,
+    determineActiveTabFromFlightErrors,
+} from "@/components/flights";
+import { createFieldErrorCleaner, validateSchema } from "@/utils";
+import { createFlightBody, updateFlightBody } from "@/generated/flight";
+import type {
+    Hub,
+    Drone,
+    Flight,
+    FlightStatus,
+    CreateFlightPayload,
+    UpdateFlightPayload,
+} from "@/types";
+
+export interface FlightEditorProps {
+    mode: "create" | "edit";
+    initialData?: Flight | null;
+    hubs?: Hub[];
+    drones?: Drone[];
+    onSave: (payload: CreateFlightPayload | UpdateFlightPayload) => Promise<void>;
+    onAuthorize?: () => Promise<void>;
+    onStart?: () => Promise<void>;
+    onComplete?: () => Promise<void>;
+    onAbort?: () => Promise<void>;
+    loading?: boolean;
+}
+
+export function FlightEditor({
+    mode,
+    initialData,
+    hubs = [],
+    drones = [],
+    onSave,
+    onAuthorize,
+    onStart,
+    onComplete,
+    onAbort,
+    loading = false,
+}: FlightEditorProps) {
+    const router = useRouter();
+
+    const [submitting, setSubmitting] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [showAbortConfirm, setShowAbortConfirm] = useState(false);
+
+    const [flightNumber, setFlightNumber] = useState(initialData?.flightNumber || "");
+    const [droneId, setDroneId] = useState(initialData?.droneId || "");
+    const [departureHubId, setDepartureHubId] = useState(initialData?.departureHubId || "");
+    const [arrivalHubId, setArrivalHubId] = useState(initialData?.arrivalHubId || "");
+    const [pilotId, setPilotId] = useState(initialData?.pilotId || "");
+    const [cruisingAltitudeM, setCruisingAltitudeM] = useState<number>(
+        initialData?.cruisingAltitudeM !== undefined ? initialData.cruisingAltitudeM : 120
+    );
+    const [notes, setNotes] = useState(initialData?.notes || "");
+    const [executionId, setExecutionId] = useState(initialData?.executionId || "");
+    const [scheduledDeparture, setScheduledDeparture] = useState(
+        initialData?.scheduledDeparture || ""
+    );
+    const [scheduledArrival, setScheduledArrival] = useState(initialData?.scheduledArrival || "");
+
+    const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
+        "details"
+    );
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+
+    useEffect(() => {
+        if (mode === "create") {
+            const now = new Date();
+            const depTime = new Date(now.getTime() + 30 * 60 * 1000);
+            const arrTime = new Date(now.getTime() + 90 * 60 * 1000);
+
+            if (!flightNumber) {
+                setFlightNumber(`FL-${Math.floor(1000 + Math.random() * 9000)}`);
+            }
+            if (!droneId && drones.length > 0) {
+                setDroneId(drones[0].id);
+            }
+            if (!departureHubId && hubs.length > 0) {
+                setDepartureHubId(hubs[0].id);
+            }
+            if (!arrivalHubId && hubs.length > 1) {
+                setArrivalHubId(hubs[1].id);
+            }
+            if (!scheduledDeparture) {
+                setScheduledDeparture(depTime.toISOString());
+            }
+            if (!scheduledArrival) {
+                setScheduledArrival(arrTime.toISOString());
+            }
+        }
+    }, [
+        mode,
+        drones,
+        hubs,
+        flightNumber,
+        droneId,
+        departureHubId,
+        arrivalHubId,
+        scheduledDeparture,
+        scheduledArrival,
+    ]);
+
+    useEffect(() => {
+        if (initialData) {
+            setFlightNumber(initialData.flightNumber || "");
+            setDroneId(initialData.droneId || "");
+            setDepartureHubId(initialData.departureHubId || "");
+            setArrivalHubId(initialData.arrivalHubId || "");
+            setPilotId(initialData.pilotId || "");
+            setCruisingAltitudeM(
+                initialData.cruisingAltitudeM !== undefined ? initialData.cruisingAltitudeM : 120
+            );
+            setNotes(initialData.notes || "");
+            setExecutionId(initialData.executionId || "");
+            setScheduledDeparture(initialData.scheduledDeparture || "");
+            setScheduledArrival(initialData.scheduledArrival || "");
+        }
+    }, [initialData]);
+
+    const isReadOnly = Boolean(
+        mode === "edit" &&
+        initialData &&
+        (initialData.status === "active" ||
+            initialData.status === "completed" ||
+            initialData.status === "cancelled")
+    );
+
+    const selectedDepHub = useMemo(
+        () => hubs.find((h) => h.id === departureHubId) || null,
+        [hubs, departureHubId]
+    );
+
+    const selectedArrHub = useMemo(
+        () => hubs.find((h) => h.id === arrivalHubId) || null,
+        [hubs, arrivalHubId]
+    );
+
+    const onClearRouteErrors = useCallback(() => {
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next.plannedRoute;
+            delete next["plannedRoute.coordinates"];
+            delete next.route;
+            return next;
+        });
+    }, []);
+
+    const {
+        waypoints,
+        selectedWaypointId,
+        setSelectedWaypointId,
+        selectedWaypoint,
+        addWaypoint,
+        updateWaypoint,
+        moveWaypoint,
+        removeWaypoint,
+        moveWaypointOrder,
+        clearWaypoints,
+        computedGeoJsonLineString,
+        totalDistanceM,
+    } = useFlightRoute({
+        initialRoute: initialData?.plannedRoute as any,
+        departureHub: selectedDepHub,
+        arrivalHub: selectedArrHub,
+        cruisingAltitude: cruisingAltitudeM,
+        isReadOnly,
+        onClearErrors: onClearRouteErrors,
+    });
+
+    const handleSave = async () => {
+        setFieldErrors({});
+
+        if (departureHubId && arrivalHubId && departureHubId === arrivalHubId && hubs.length > 1) {
+            setFieldErrors({
+                arrivalHubId: "Departure and arrival vertiports must be different",
+            });
+            setActiveSidebarTab("details");
+            return;
+        }
+
+        const alt = Number(cruisingAltitudeM) || 120;
+
+        let plannedRoute = computedGeoJsonLineString;
+        if (!plannedRoute && selectedDepHub?.location && selectedArrHub?.location) {
+            plannedRoute = {
+                type: "LineString",
+                coordinates: [
+                    [
+                        selectedDepHub.location.lng,
+                        selectedDepHub.location.lat,
+                        selectedDepHub.altitudeMsl ?? 0,
+                    ],
+                    [
+                        selectedArrHub.location.lng,
+                        selectedArrHub.location.lat,
+                        selectedArrHub.altitudeMsl ?? 0,
+                    ],
+                ],
+            };
+        }
+
+        const formatIsoSafe = (val: string) => {
+            if (!val) return "";
+            try {
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? "" : d.toISOString();
+            } catch {
+                return "";
+            }
+        };
+
+        if (mode === "create") {
+            const payload: Record<string, unknown> = {
+                flightNumber: flightNumber.trim(),
+                droneId: droneId.trim(),
+                departureHubId: departureHubId.trim(),
+                arrivalHubId: arrivalHubId.trim(),
+                pilotId: pilotId.trim() || undefined,
+                cruisingAltitudeM: alt,
+                notes: notes.trim() || undefined,
+                executionId: executionId.trim() || undefined,
+                scheduledDeparture: formatIsoSafe(scheduledDeparture),
+                scheduledArrival: formatIsoSafe(scheduledArrival),
+                plannedRoute: plannedRoute ?? undefined,
+            };
+
+            const validation = validateSchema(createFlightBody, payload);
+            if (!validation.success) {
+                setFieldErrors(validation.errors);
+                setActiveSidebarTab(determineActiveTabFromFlightErrors(validation.errors));
+                return;
+            }
+
+            setSubmitting(true);
+            try {
+                await onSave(validation.data as CreateFlightPayload);
+            } finally {
+                setSubmitting(false);
+            }
+        } else {
+            const payload: Record<string, unknown> = {
+                droneId: droneId.trim() || undefined,
+                departureHubId: departureHubId.trim() || undefined,
+                arrivalHubId: arrivalHubId.trim() || undefined,
+                pilotId: pilotId.trim() || undefined,
+                cruisingAltitudeM: alt,
+                notes: notes.trim() || undefined,
+                scheduledDeparture: formatIsoSafe(scheduledDeparture) || undefined,
+                scheduledArrival: formatIsoSafe(scheduledArrival) || undefined,
+                plannedRoute: plannedRoute ?? undefined,
+            };
+
+            const validation = validateSchema(updateFlightBody, payload);
+            if (!validation.success) {
+                setFieldErrors(validation.errors);
+                setActiveSidebarTab(determineActiveTabFromFlightErrors(validation.errors));
+                return;
+            }
+
+            setSubmitting(true);
+            try {
+                await onSave(validation.data as UpdateFlightPayload);
+            } finally {
+                setSubmitting(false);
+            }
+        }
+    };
+
+    const handleAction = async (actionFn?: () => Promise<void>) => {
+        if (!actionFn) return;
+        setActionLoading(true);
+        try {
+            await actionFn();
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const flightStatus: FlightStatus = initialData?.status || "planned";
+
+    const pageTitle =
+        mode === "create"
+            ? "REGISTER NEW FLIGHT"
+            : isReadOnly
+              ? `VIEW FLIGHT PLAN: ${flightNumber}`
+              : `EDIT FLIGHT PLAN: ${flightNumber}`;
+
+    return (
+        <>
+            <SplitMapLayout
+                title={pageTitle}
+                badges={mode === "edit" ? <StatusBadge status={flightStatus} showDot /> : null}
+                headerActions={
+                    <div className="flex items-center gap-2">
+                        <OutlineButton
+                            size="sm"
+                            onClick={() => router.push("/dashboard/flights")}
+                            disabled={submitting || actionLoading}
+                        >
+                            <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
+                            <span>Cancel</span>
+                        </OutlineButton>
+
+                        {mode === "edit" && initialData && (
+                            <>
+                                {(flightStatus === "planned" || flightStatus === "scheduled") &&
+                                    onAuthorize && (
+                                        <OutlineButton
+                                            size="sm"
+                                            onClick={() => handleAction(onAuthorize)}
+                                            disabled={submitting || actionLoading}
+                                            className="text-blue-500 hover:text-blue-600 hover:border-blue-400"
+                                        >
+                                            <ShieldCheck className="w-3.5 h-3.5" />
+                                            <span>Authorize</span>
+                                        </OutlineButton>
+                                    )}
+
+                                {(flightStatus === "planned" ||
+                                    flightStatus === "scheduled" ||
+                                    flightStatus === "authorized") &&
+                                    onStart && (
+                                        <OutlineButton
+                                            size="sm"
+                                            onClick={() => handleAction(onStart)}
+                                            disabled={submitting || actionLoading}
+                                            className="text-emerald-500 hover:text-emerald-600 hover:border-emerald-400"
+                                        >
+                                            <Play className="w-3.5 h-3.5" />
+                                            <span>Start Flight</span>
+                                        </OutlineButton>
+                                    )}
+
+                                {flightStatus === "active" && onComplete && (
+                                    <OutlineButton
+                                        size="sm"
+                                        onClick={() => handleAction(onComplete)}
+                                        disabled={submitting || actionLoading}
+                                        className="text-cyan-500 hover:text-cyan-600 hover:border-cyan-400"
+                                    >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Complete Flight</span>
+                                    </OutlineButton>
+                                )}
+
+                                {flightStatus !== "completed" &&
+                                    flightStatus !== "cancelled" &&
+                                    onAbort && (
+                                        <OutlineButton
+                                            size="sm"
+                                            onClick={() => setShowAbortConfirm(true)}
+                                            disabled={submitting || actionLoading}
+                                            className="text-rose-500 hover:text-rose-600 hover:border-rose-400"
+                                        >
+                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                            <span>Abort</span>
+                                        </OutlineButton>
+                                    )}
+                            </>
+                        )}
+
+                        {!isReadOnly && (
+                            <ChamferButton
+                                variant="dark"
+                                size="sm"
+                                onClick={handleSave}
+                                disabled={submitting || actionLoading || loading}
+                            >
+                                {submitting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                ) : (
+                                    <Save className="w-4 h-4 text-white" />
+                                )}
+                                <span>{mode === "create" ? "Save Flight" : "Update Plan"}</span>
+                            </ChamferButton>
+                        )}
+                    </div>
+                }
+                mapContent={
+                    <FlightMapEditor
+                        departureHub={selectedDepHub}
+                        arrivalHub={selectedArrHub}
+                        waypoints={waypoints}
+                        cruisingAltitude={cruisingAltitudeM}
+                        onCruisingAltitudeChange={setCruisingAltitudeM}
+                        selectedWaypointId={selectedWaypointId}
+                        onAddWaypoint={addWaypoint}
+                        onMoveWaypoint={moveWaypoint}
+                        onSelectWaypoint={(wp) => setSelectedWaypointId(wp ? wp.id : null)}
+                        onClearWaypoints={clearWaypoints}
+                        isReadOnly={isReadOnly}
+                        className="h-full"
+                    />
+                }
+                sidebarContent={
+                    <FlightFormSidebar
+                        mode={mode}
+                        flightNumber={flightNumber}
+                        onFlightNumberChange={setFlightNumber}
+                        droneId={droneId}
+                        onDroneIdChange={setDroneId}
+                        departureHubId={departureHubId}
+                        onDepartureHubIdChange={setDepartureHubId}
+                        arrivalHubId={arrivalHubId}
+                        onArrivalHubIdChange={setArrivalHubId}
+                        pilotId={pilotId}
+                        onPilotIdChange={setPilotId}
+                        cruisingAltitudeM={cruisingAltitudeM}
+                        onCruisingAltitudeMChange={setCruisingAltitudeM}
+                        notes={notes}
+                        onNotesChange={setNotes}
+                        executionId={executionId}
+                        onExecutionIdChange={setExecutionId}
+                        scheduledDeparture={scheduledDeparture}
+                        onScheduledDepartureChange={setScheduledDeparture}
+                        scheduledArrival={scheduledArrival}
+                        onScheduledArrivalChange={setScheduledArrival}
+                        drones={drones}
+                        hubs={hubs}
+                        waypoints={waypoints}
+                        selectedWaypoint={selectedWaypoint}
+                        onSelectWaypoint={(wp) => setSelectedWaypointId(wp ? wp.id : null)}
+                        onUpdateWaypoint={updateWaypoint}
+                        onRemoveWaypoint={removeWaypoint}
+                        onMoveWaypointOrder={moveWaypointOrder}
+                        totalDistanceM={totalDistanceM}
+                        activeTab={activeSidebarTab}
+                        onTabChange={setActiveSidebarTab}
+                        fieldErrors={fieldErrors}
+                        onClearFieldError={clearFieldError}
+                        isReadOnly={isReadOnly}
+                    />
+                }
+            />
+
+            <ConfirmDialog
+                isOpen={showAbortConfirm}
+                title="ABORT FLIGHT OPERATION"
+                description={`Are you sure you want to abort flight ${flightNumber}? This action will immediately cancel the active trajectory and flag the flight as aborted.`}
+                confirmText="Abort Flight"
+                variant="danger"
+                loading={actionLoading}
+                onConfirm={async () => {
+                    await handleAction(onAbort);
+                    setShowAbortConfirm(false);
+                }}
+                onClose={() => setShowAbortConfirm(false)}
+            />
+        </>
+    );
+}
+
+export default FlightEditor;

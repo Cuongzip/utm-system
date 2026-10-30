@@ -1,5 +1,5 @@
 export * from "./MissionsTable";
-export * from "./AltitudeProfile";
+export { AltitudeProfile } from "@/components/map";
 export * from "./MissionMapEditor";
 export * from "./MissionFormSidebar";
 export * from "./missionUtils";
