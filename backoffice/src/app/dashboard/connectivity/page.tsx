@@ -91,21 +91,7 @@ export default function ConnectivityPage() {
         meta: { defaultErrorMessage: "Failed to revoke device registration" },
     });
 
-    const handleRegisterDevice = async (payload: DeviceRegistrationPayload) => {
-        await registerDeviceMutation.mutateAsync(payload);
-    };
-
-    const handleHeartbeat = (id: string) => {
-        heartbeatMutation.mutate(id);
-    };
-
-    const handleRevoke = (id: string) => {
-        revokeDeviceMutation.mutate(id);
-    };
-
-    const totalCount = devices.length;
     const onlineCount = onlineDevices.length;
-    const activeCount = onlineCount;
 
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
@@ -124,8 +110,8 @@ export default function ConnectivityPage() {
             {error && <AlertBanner message={error} onDismiss={() => {}} />}
 
             <ConnectivityMetrics
-                totalDevices={totalCount}
-                activeDevices={activeCount}
+                totalDevices={devices.length}
+                activeDevices={onlineCount}
                 onlineDevices={onlineCount}
                 pendingCommands={0}
                 protocolStatusCount={onlineCount}
@@ -161,8 +147,8 @@ export default function ConnectivityPage() {
                         status={onlineCount > 0 ? `ONLINE (${onlineCount})` : "STANDBY"}
                         devices={onlineDevices}
                         loading={loading}
-                        onHeartbeat={handleHeartbeat}
-                        onRevoke={handleRevoke}
+                        onHeartbeat={heartbeatMutation.mutate}
+                        onRevoke={revokeDeviceMutation.mutate}
                         onTroubleshootGateway={() => setActiveSubTab("telemetry-modes")}
                         onProvisionEdgeAgent={() => setIsRegisterOpen(true)}
                     />
@@ -175,8 +161,8 @@ export default function ConnectivityPage() {
                     loading={loading}
                     onRefresh={refreshAll}
                     onRegisterDevice={() => setIsRegisterOpen(true)}
-                    onHeartbeat={handleHeartbeat}
-                    onRevoke={handleRevoke}
+                    onHeartbeat={heartbeatMutation.mutate}
+                    onRevoke={revokeDeviceMutation.mutate}
                 />
             )}
 
@@ -194,7 +180,9 @@ export default function ConnectivityPage() {
             <AddDeviceModal
                 isOpen={isRegisterOpen}
                 onClose={() => setIsRegisterOpen(false)}
-                onSubmit={handleRegisterDevice}
+                onSubmit={async (payload) => {
+                    await registerDeviceMutation.mutateAsync(payload);
+                }}
             />
         </div>
     );

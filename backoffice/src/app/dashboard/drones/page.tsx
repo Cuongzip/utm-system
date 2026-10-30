@@ -49,10 +49,6 @@ export default function DronesPage() {
         meta: { defaultErrorMessage: "Failed to save drone" },
     });
 
-    const handleSaveDrone = async (payload: DroneRegistrationPayload, id?: string) => {
-        await saveDroneMutation.mutateAsync({ payload, id });
-    };
-
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="DRONES">
@@ -75,7 +71,9 @@ export default function DronesPage() {
                 isOpen={isRegisterOpen}
                 droneToEdit={selectedDrone}
                 onClose={closeModal}
-                onSubmit={handleSaveDrone}
+                onSubmit={async (payload, id) => {
+                    await saveDroneMutation.mutateAsync({ payload, id });
+                }}
             />
         </div>
     );

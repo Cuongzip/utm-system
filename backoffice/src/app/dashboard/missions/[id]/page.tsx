@@ -45,10 +45,6 @@ export default function EditMissionPage() {
         meta: { defaultErrorMessage: "Failed to save mission" },
     });
 
-    const handleSave = async (data: MissionSaveData) => {
-        await updateMutation.mutateAsync(data);
-    };
-
     if (missionLoading || hubsLoading || dronesLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
@@ -85,7 +81,9 @@ export default function EditMissionPage() {
             initialData={mission}
             hubs={hubs}
             drones={drones}
-            onSave={handleSave}
+            onSave={async (data) => {
+                await updateMutation.mutateAsync(data);
+            }}
             loading={updateMutation.isPending}
         />
     );

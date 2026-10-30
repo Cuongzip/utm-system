@@ -43,16 +43,14 @@ export default function NewMissionPage() {
         meta: { defaultErrorMessage: "Failed to create mission" },
     });
 
-    const handleSave = async (data: MissionSaveData) => {
-        await createMutation.mutateAsync(data);
-    };
-
     return (
         <MissionEditor
             mode="create"
             hubs={hubs}
             drones={drones}
-            onSave={handleSave}
+            onSave={async (data) => {
+                await createMutation.mutateAsync(data);
+            }}
             loading={hubsLoading || dronesLoading || createMutation.isPending}
         />
     );

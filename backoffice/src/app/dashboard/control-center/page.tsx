@@ -48,20 +48,23 @@ export default function ControlCenterPage() {
 
     const { telemetryMap, activeTelemetryCount, isSocketConnected } = useLiveTelemetry(flights);
 
-    const hubCoordsMap = useMemo(() => {
-        const map = new Map<string, FlightHubCoord>();
-        hubs.forEach((hub) => {
-            if (hub.location?.lat !== undefined && hub.location?.lng !== undefined) {
-                map.set(hub.id, {
-                    lat: hub.location.lat,
-                    lng: hub.location.lng,
-                    name: hub.name,
-                    code: hub.code,
-                });
-            }
-        });
-        return map;
-    }, [hubs]);
+    const hubCoordsMap = useMemo(
+        () =>
+            new Map<string, FlightHubCoord>(
+                hubs
+                    .filter((h) => h.location?.lat !== undefined && h.location?.lng !== undefined)
+                    .map((h) => [
+                        h.id,
+                        {
+                            lat: h.location!.lat,
+                            lng: h.location!.lng,
+                            name: h.name,
+                            code: h.code,
+                        },
+                    ])
+            ),
+        [hubs]
+    );
 
     const selectedFlight = flights.find((f) => f.id === selectedFlightId);
     const selectedTelemetry = selectedFlightId ? telemetryMap[selectedFlightId] : null;

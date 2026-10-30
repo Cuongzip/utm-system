@@ -47,14 +47,6 @@ export default function EditAirspacePage() {
         meta: { defaultErrorMessage: "Failed to delete airspace zone" },
     });
 
-    const handleSave = async (payload: unknown) => {
-        await updateMutation.mutateAsync(payload as UpdateAirspaceZonePayload);
-    };
-
-    const handleDelete = async () => {
-        await deleteMutation.mutateAsync();
-    };
-
     if (zoneLoading || hubsLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
@@ -91,8 +83,12 @@ export default function EditAirspacePage() {
             initialData={zone}
             hubs={hubs}
             existingZones={zones}
-            onSave={handleSave}
-            onDelete={handleDelete}
+            onSave={async (p) => {
+                await updateMutation.mutateAsync(p as UpdateAirspaceZonePayload);
+            }}
+            onDelete={async () => {
+                await deleteMutation.mutateAsync();
+            }}
             loading={updateMutation.isPending || deleteMutation.isPending}
         />
     );

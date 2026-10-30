@@ -36,17 +36,10 @@ export default function AirspacePage() {
         await Promise.all([refreshZones(), fetchHubs()]);
     }, [refreshZones, fetchHubs]);
 
-    const hubMap = useMemo(() => {
-        const map = new Map<string, string>();
-        hubs.forEach((h) => {
-            if (h.id) map.set(h.id, h.name || h.code || h.id);
-        });
-        return map;
-    }, [hubs]);
-
-    const handleCreateZone = () => {
-        router.push("/dashboard/airspace/new");
-    };
+    const hubMap = useMemo(
+        () => new Map(hubs.filter((h) => h.id).map((h) => [h.id, h.name || h.code || h.id])),
+        [hubs]
+    );
 
     const handleSelectZone = (zone: AirspaceZone) => {
         router.push(`/dashboard/airspace/${zone.id}`);
@@ -65,7 +58,11 @@ export default function AirspacePage() {
                     <span>Refresh</span>
                 </OutlineButton>
 
-                <ChamferButton variant="dark" size="sm" onClick={handleCreateZone}>
+                <ChamferButton
+                    variant="dark"
+                    size="sm"
+                    onClick={() => router.push("/dashboard/airspace/new")}
+                >
                     <Plus className="w-4 h-4 text-white" />
                     <span>Add Zone</span>
                 </ChamferButton>

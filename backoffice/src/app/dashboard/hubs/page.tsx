@@ -59,10 +59,6 @@ export default function HubsPage() {
         meta: { defaultErrorMessage: "Failed to save hub" },
     });
 
-    const handleSaveHub = async (payload: CreateHubPayload | UpdateHubPayload, id?: string) => {
-        await saveHubMutation.mutateAsync({ payload, id });
-    };
-
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="HUBS">
@@ -97,7 +93,9 @@ export default function HubsPage() {
                 isOpen={isModalOpen}
                 hubToEdit={selectedHub}
                 onClose={closeModal}
-                onSubmit={handleSaveHub}
+                onSubmit={async (payload, id) => {
+                    await saveHubMutation.mutateAsync({ payload, id });
+                }}
             />
         </div>
     );

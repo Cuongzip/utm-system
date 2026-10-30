@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
@@ -13,64 +13,36 @@ import {
 } from "@/components/ui";
 import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
-import { hubService } from "@/services/hubService";
-import { droneService } from "@/services/droneService";
+import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
-import {
-    MISSION_STATUSES,
-    MISSION_STATUS_LABELS,
-    type Mission,
-    type Hub,
-    type Drone,
-} from "@/types";
+import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
 
 export default function MissionsPage() {
     const router = useRouter();
-    const [missions, setMissions] = useState<Mission[]>([]);
-    const [hubs, setHubs] = useState<Hub[]>([]);
-    const [drones, setDrones] = useState<Drone[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data: hubs = [] } = useHubsAll();
+    const { data: drones = [] } = useDronesAll();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
-    const fetchData = useCallback(async () => {
-        try {
-            const [missionsRes, hubsRes, dronesRes] = await Promise.all([
-                missionService.getMissions({ size: 100 }),
-                hubService.getHubs({ limit: 0 }),
-                droneService.getDrones({ limit: 0 }),
-            ]);
+    const fetchMissions = useCallback(() => missionService.getMissions({ size: 100 }), []);
 
-            setMissions(missionsRes.items || []);
-            setHubs(hubsRes.items || []);
-            setDrones(dronesRes.items || []);
-            setError(null);
-        } catch {
-            setError("Failed to fetch missions and hub operations data");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const {
+        items: missions,
+        loading,
+        error,
+        setError,
+        refresh: fetchData,
+    } = useCrudList<Mission>({
+        queryKey: QUERY_KEYS.missions,
+        fetchFn: fetchMissions,
+        entityName: "Mission",
+    });
 
-    useEffect(() => {
-        let isMounted = true;
-        (async () => {
-            if (isMounted) await fetchData();
-        })();
-        return () => {
-            isMounted = false;
-        };
-    }, [fetchData]);
-
-    const hubMap = useMemo(() => {
-        const map = new Map<string, string>();
-        hubs.forEach((h) => {
-            if (h.id) map.set(h.id, h.name || h.code || h.id);
-        });
-        return map;
-    }, [hubs]);
+    const hubMap = useMemo(
+        () => new Map(hubs.filter((h) => h.id).map((h) => [h.id, h.name || h.code || h.id])),
+        [hubs]
+    );
 
     const filteredMissions = useMemo(() => {
         return missions.filter((m) => {
@@ -118,14 +90,6 @@ export default function MissionsPage() {
         meta: { defaultErrorMessage: "Failed to start mission execution" },
     });
 
-    const handleDuplicate = (mission: Mission) => {
-        duplicateMissionMutation.mutate(mission);
-    };
-
-    const handleDelete = (mission: Mission) => {
-        deleteMissionMutation.mutate(mission);
-    };
-
     const handleExecute = (mission: Mission) => {
         const droneIdToUse = drones[0]?.id;
         if (!droneIdToUse) {
@@ -138,13 +102,7 @@ export default function MissionsPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="MISSION PLANNING">
-                <OutlineButton
-                    size="sm"
-                    onClick={() => {
-                        setLoading(true);
-                        void fetchData();
-                    }}
-                >
+                <OutlineButton size="sm" onClick={fetchData}>
                     <RotateCw className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
                     <span>Refresh</span>
                 </OutlineButton>
@@ -190,8 +148,8 @@ export default function MissionsPage() {
                 loading={loading}
                 onSelectMission={(m) => router.push(`/dashboard/missions/${m.id}`)}
                 onExecuteMission={handleExecute}
-                onDuplicateMission={handleDuplicate}
-                onDeleteMission={handleDelete}
+                onDuplicateMission={duplicateMissionMutation.mutate}
+                onDeleteMission={deleteMissionMutation.mutate}
                 onNewMission={() => router.push("/dashboard/missions/new")}
                 hubMap={hubMap}
             />

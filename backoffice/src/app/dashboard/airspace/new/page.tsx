@@ -23,16 +23,14 @@ export default function NewAirspacePage() {
         meta: { defaultErrorMessage: "Failed to create airspace zone" },
     });
 
-    const handleSave = async (payload: unknown) => {
-        await createMutation.mutateAsync(payload as CreateAirspaceZonePayload);
-    };
-
     return (
         <AirspaceEditor
             mode="create"
             hubs={hubs}
             existingZones={zones}
-            onSave={handleSave}
+            onSave={async (p) => {
+                await createMutation.mutateAsync(p as CreateAirspaceZonePayload);
+            }}
             loading={hubsLoading || zonesLoading || createMutation.isPending}
         />
     );

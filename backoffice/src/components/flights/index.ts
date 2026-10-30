@@ -1,5 +1,4 @@
 export * from "./FlightsTable";
-export * from "./FlightsMap";
 export * from "./FlightEditor";
 export * from "./FlightFormSidebar";
 export * from "./FlightMapEditor";
