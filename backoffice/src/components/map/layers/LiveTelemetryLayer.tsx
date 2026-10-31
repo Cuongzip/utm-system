@@ -5,6 +5,7 @@ import { useCesium } from "../CesiumContext";
 import type { Flight, TelemetryRecord } from "@/types";
 import type { FlightHubCoord } from "./FlightsLayer";
 import { getDroneIconUri } from "../mapIcons";
+import { createTacticalLabel } from "../mapLabels";
 import { formatSpeed } from "@/utils";
 
 export interface LiveTelemetryLayerProps {
@@ -95,28 +96,17 @@ export function LiveTelemetryLayer({
                             width: isSelected ? 34 : 28,
                             height: isSelected ? 34 : 28,
                             rotation: -Cesium.Math.toRadians(droneHeading),
+                            eyeOffset: new Cesium.Cartesian3(0, 0, -30),
                             disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         },
-                        label: {
+                        label: createTacticalLabel(Cesium, {
                             text: `${flight.flightNumber || "DRONE"} • ${Math.round(droneAlt)}m • ${formatSpeed(telemetry.speed)}`,
-                            font: "bold 11px monospace",
-                            fillColor: Cesium.Color.WHITE,
-                            outlineColor: Cesium.Color.BLACK,
-                            outlineWidth: 2,
-                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                            isSelected,
+                            accentColor: "#00e5ff",
                             pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
-                            showBackground: true,
-                            backgroundColor: isSelected
-                                ? new Cesium.Color(0.02, 0.15, 0.25, 0.9)
-                                : new Cesium.Color(0.05, 0.08, 0.14, 0.85),
-                            backgroundPadding: new Cesium.Cartesian2(7, 4),
-                            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(
-                                0,
-                                300000
-                            ),
-                            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        },
+                            eyeOffset: new Cesium.Cartesian3(0, 0, -30),
+                            maxDistance: 300000,
+                        }),
                     });
                     newEntityIds.push(droneEntityId);
                 }

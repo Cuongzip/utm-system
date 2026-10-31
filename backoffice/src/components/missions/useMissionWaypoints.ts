@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import type { Waypoint, Hub } from "@/types";
 import { calculateMissionDistance, generateHubToHubWaypoints } from "./missionUtils";
@@ -23,6 +23,12 @@ export function useMissionWaypoints({
     const [waypoints, setWaypoints] = useState<Waypoint[]>(initialWaypoints);
     const [selectedWaypointId, setSelectedWaypointId] = useState<string | null>(null);
     const [defaultAltitude, setDefaultAltitude] = useState(initialAltitude);
+
+    useEffect(() => {
+        if (initialWaypoints && initialWaypoints.length > 0 && waypoints.length === 0) {
+            setWaypoints(initialWaypoints);
+        }
+    }, [initialWaypoints, waypoints.length]);
 
     const totalDistanceM = useMemo(
         () => calculateMissionDistance(waypoints, departureHub, arrivalHub),

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Waypoint, Hub } from "@/types";
 import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
+import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
 import { buildMissionRoutePoints } from "@/components/missions";
 
@@ -67,17 +68,14 @@ export function MissionLayer({
                         image: getHubIconUri("#06b6d4", false),
                         width: 28,
                         height: 28,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: {
+                    label: createTacticalLabel(Cesium, {
                         text: labelText,
-                        font: "bold 10px monospace",
-                        fillColor: Cesium.Color.fromCssColorString("#06b6d4"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                        accentColor: "#06b6d4",
                         pixelOffset: new Cesium.Cartesian2(0, -18),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
+                    }),
                 });
                 newEntityIds.push(entity.id);
             }
@@ -100,17 +98,14 @@ export function MissionLayer({
                         image: getHubIconUri("#06b6d4", false),
                         width: 28,
                         height: 28,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: {
+                    label: createTacticalLabel(Cesium, {
                         text: `ARR: ${arrivalHub.code || arrivalHub.name}`,
-                        font: "bold 10px monospace",
-                        fillColor: Cesium.Color.fromCssColorString("#06b6d4"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                        accentColor: "#06b6d4",
                         pixelOffset: new Cesium.Cartesian2(0, -18),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
+                    }),
                 });
                 newEntityIds.push(entity.id);
             }
@@ -171,20 +166,15 @@ export function MissionLayer({
                         image: getWaypointIconUri(seqNum, isSelected),
                         width: isSelected ? 30 : 24,
                         height: isSelected ? 30 : 24,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: {
+                    label: createTacticalLabel(Cesium, {
                         text: labelText,
-                        font: isSelected ? "bold 11px monospace" : "600 10px monospace",
-                        fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#00e5ff")
-                            : Cesium.Color.fromCssColorString("#0f172a"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 3,
-                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        isSelected,
+                        accentColor: isSelected ? "#00e5ff" : undefined,
                         pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
+                    }),
                 });
                 newEntityIds.push(entity.id);
             });
@@ -192,17 +182,12 @@ export function MissionLayer({
             entityIdsRef.current = newEntityIds;
 
             if (autoFitBounds && allPoints.length > 0) {
-                if (allPoints.length === 1) {
-                    viewer.camera.setView({
-                        destination: Cesium.Cartesian3.fromDegrees(
-                            allPoints[0].lng,
-                            allPoints[0].lat,
-                            15000.0
-                        ),
-                    });
-                } else {
-                    fitCameraToBounds(viewer, allPoints, { bufferRatio: 0.35, minBuffer: 0.02 });
-                }
+                fitCameraToBounds(viewer, allPoints, {
+                    animate: true,
+                    duration: 1.0,
+                    minHeight: 1500,
+                    paddingMultiplier: 1.5,
+                });
             }
 
             viewer.scene.requestRender();

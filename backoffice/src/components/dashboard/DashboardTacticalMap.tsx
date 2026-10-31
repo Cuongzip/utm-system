@@ -42,6 +42,7 @@ function PerspectiveResetHandler({ hubs, trigger }: { hubs: Hub[]; trigger: numb
             fitCameraToBounds(viewer, points.length ? points : [{ lat: 16.0544, lng: 108.2208 }], {
                 animate: trigger > 0,
                 duration: 1.2,
+                minHeight: points.length > 0 ? 1500 : 35000,
             });
         }
     }, [viewer, isLoaded, trigger, hubs]);

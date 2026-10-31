@@ -9,6 +9,7 @@ export * from "./layers/LiveTelemetryLayer";
 export * from "./MapInspector";
 export * from "./TacticalMapContainer";
 export * from "./mapIcons";
+export * from "./mapLabels";
 export * from "./mapTokens";
 export * from "./cesiumUtils";
 export * from "./AltitudeProfile";

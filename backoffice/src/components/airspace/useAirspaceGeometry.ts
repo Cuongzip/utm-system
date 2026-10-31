@@ -66,7 +66,7 @@ export function calculateDistanceMeters(
     return R * c;
 }
 
-export function parseExistingGeometry(geometry?: { type?: string; coordinates?: number[][][] }): {
+export function parseExistingGeometry(geometry?: any): {
     mode: GeometryMode;
     center: GeoPoint;
     radiusMeters: number;
@@ -75,7 +75,16 @@ export function parseExistingGeometry(geometry?: { type?: string; coordinates?: 
     const defaultCenter: GeoPoint = { lat: 10.7769, lng: 106.7009 };
     const defaultRadius = 1000;
 
-    if (!geometry || !geometry.coordinates || geometry.coordinates.length === 0) {
+    let parsed = geometry;
+    if (typeof parsed === "string") {
+        try {
+            parsed = JSON.parse(parsed);
+        } catch {
+            parsed = null;
+        }
+    }
+
+    if (!parsed || !parsed.coordinates || parsed.coordinates.length === 0) {
         return {
             mode: "radius",
             center: defaultCenter,
@@ -84,7 +93,7 @@ export function parseExistingGeometry(geometry?: { type?: string; coordinates?: 
         };
     }
 
-    const outerRing = geometry.coordinates[0];
+    const outerRing = parsed.coordinates[0];
     if (!outerRing || outerRing.length < 3) {
         return {
             mode: "radius",

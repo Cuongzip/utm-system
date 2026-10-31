@@ -58,6 +58,7 @@ services:
       - "${BACKOFFICE_PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
+      - API_GATEWAY_URL=http://nginx
     networks:
       - utm-network
 

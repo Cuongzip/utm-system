@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { PageHeader } from "@/components/ui";
 import { Building2, Navigation, Radio } from "lucide-react";
 import {
@@ -14,9 +14,45 @@ import {
     LiveTelemetryLayer,
     FlightsLayer,
     TacticalMapContainer,
-    type FlightHubCoord,
+    useCesium,
+    fitCameraToBounds,
 } from "@/components/map";
 import { useLiveTelemetry, useFlightsAll, useHubsAll } from "@/hooks";
+import type { Flight, Hub } from "@/types";
+
+function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flight[] }) {
+    const { viewer, isLoaded } = useCesium();
+    const hasInitialFitRef = useRef(false);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || hasInitialFitRef.current) return;
+
+        const hubPoints = hubs
+            .filter((h) => h.location?.lat !== undefined && h.location?.lng !== undefined)
+            .map((h) => ({ lat: h.location!.lat, lng: h.location!.lng }))
+            .filter((pt) => pt.lat >= 8 && pt.lat <= 24 && pt.lng >= 100 && pt.lng <= 112);
+
+        const flightPoints = flights
+            .flatMap((f) => ((f.plannedRoute as any)?.coordinates as number[][] | undefined) ?? [])
+            .filter((pt) => Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1]))
+            .map((pt) => ({ lng: Number(pt[0]), lat: Number(pt[1]) }))
+            .filter((pt) => pt.lat >= 8 && pt.lat <= 24 && pt.lng >= 100 && pt.lng <= 112);
+
+        const points = [...hubPoints, ...flightPoints];
+
+        if (points.length > 0) {
+            hasInitialFitRef.current = true;
+            fitCameraToBounds(viewer, points, {
+                animate: false,
+                duration: 1.0,
+                minHeight: 2500,
+                paddingMultiplier: 1.4,
+            });
+        }
+    }, [viewer, isLoaded, hubs, flights]);
+
+    return null;
+}
 
 export default function ControlCenterPage() {
     const { data: allFlights = [], refetch: refetchFlights } = useFlightsAll();
@@ -41,32 +77,18 @@ export default function ControlCenterPage() {
             setSelectedFlightId((prev) =>
                 prev && flights.some((f) => f.id === prev) ? prev : flights[0].id
             );
+        } else if (allFlights.length > 0) {
+            setSelectedFlightId((prev) =>
+                prev && allFlights.some((f) => f.id === prev) ? prev : allFlights[0].id
+            );
         } else {
             setSelectedFlightId(null);
         }
-    }, [flights]);
+    }, [flights, allFlights]);
 
     const { telemetryMap, activeTelemetryCount, isSocketConnected } = useLiveTelemetry(flights);
 
-    const hubCoordsMap = useMemo(
-        () =>
-            new Map<string, FlightHubCoord>(
-                hubs
-                    .filter((h) => h.location?.lat !== undefined && h.location?.lng !== undefined)
-                    .map((h) => [
-                        h.id,
-                        {
-                            lat: h.location!.lat,
-                            lng: h.location!.lng,
-                            name: h.name,
-                            code: h.code,
-                        },
-                    ])
-            ),
-        [hubs]
-    );
-
-    const selectedFlight = flights.find((f) => f.id === selectedFlightId);
+    const selectedFlight = allFlights.find((f) => f.id === selectedFlightId);
     const selectedTelemetry = selectedFlightId ? telemetryMap[selectedFlightId] : null;
 
     const activeFlightsCount = flights.length;
@@ -113,29 +135,30 @@ export default function ControlCenterPage() {
                                 .replace(/^drone-live-/, "")
                                 .replace(/^drone-heading-/, "")
                                 .replace(/^flight-route-/, "")
-                                .replace(/^flight-start-/, "")
-                                .replace(/^flight-end-/, "")
                                 .replace(/^flight-label-/, "");
-                            const found = flights.find((f) => f.id === rawId);
+                            const found = allFlights.find((f) => f.id === rawId);
                             if (found) {
                                 setSelectedFlightId(found.id);
                             }
                         }}
                     >
                         <FlightsLayer
-                            flights={flights}
+                            flights={allFlights}
                             selectedFlightId={selectedFlightId}
-                            hubCoordsMap={hubCoordsMap}
-                            autoFitBounds={true}
+                            hubs={hubs}
+                            autoFitBounds={false}
                             focusOnSelected={true}
+                            showEndpoints={false}
                         />
                         <LiveTelemetryLayer
-                            flights={flights}
+                            flights={flights.length > 0 ? flights : allFlights}
                             telemetryMap={telemetryMap}
                             selectedFlightId={selectedFlightId}
                             onSelectFlight={setSelectedFlightId}
+                            autoFollowSelected={false}
                         />
-                        <HubsLayer hubs={hubs} />
+                        <HubsLayer hubs={hubs} autoFitBounds={false} />
+                        <PerspectiveResetHandler hubs={hubs} flights={allFlights} />
                     </TacticalMapContainer>
                 </div>
 
@@ -143,7 +166,7 @@ export default function ControlCenterPage() {
                     <LiveTelemetry
                         telemetry={selectedTelemetry}
                         flight={selectedFlight}
-                        flights={flights}
+                        flights={flights.length > 0 ? flights : allFlights}
                         selectedFlightId={selectedFlightId}
                         onSelectFlight={setSelectedFlightId}
                         telemetryMap={telemetryMap}

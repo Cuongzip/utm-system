@@ -109,6 +109,8 @@ export function MissionEditor({
         handleMoveWaypointOrder,
         handleGenerateHubToHub,
     } = useMissionWaypoints({
+        initialWaypoints: initialData?.waypoints,
+        initialAltitude: initialData?.waypoints?.[0]?.altitude || 50,
         isReadOnly,
         departureHub: selectedDepartureHub,
         arrivalHub: selectedArrivalHub,

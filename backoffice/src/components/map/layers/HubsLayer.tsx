@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Hub } from "@/types";
 import { getHubIconUri } from "../mapIcons";
+import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface HubsLayerProps {
@@ -45,7 +46,7 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                 const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
                 const stackIndex = coordCounter[coordKey] || 0;
                 coordCounter[coordKey] = stackIndex + 1;
-                const yOffset = -20 - stackIndex * 15;
+                const yOffset = -22 - stackIndex * 24;
 
                 const entity = viewer.entities.add({
                     id: hub.id,
@@ -55,22 +56,14 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                         image: getHubIconUri(isSelected ? "#00e5ff" : "#06b6d4", isSelected),
                         width: isSelected ? 34 : 28,
                         height: isSelected ? 34 : 28,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -10),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: {
-                        text: hub.code,
-                        font: isSelected ? "bold 12px monospace" : "600 11px monospace",
-                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                        fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#00e5ff")
-                            : Cesium.Color.fromCssColorString("#0f172a"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 3,
-                        showBackground: false,
-                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    label: createTacticalLabel(Cesium, {
+                        text: hub.code || hub.name || "HUB",
+                        isSelected,
                         pixelOffset: new Cesium.Cartesian2(0, yOffset),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
+                    }),
                     ellipse: {
                         semiMinorAxis: radius,
                         semiMajorAxis: radius,
@@ -104,7 +97,10 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                 const lat = target?.location?.lat;
                 const lng = target?.location?.lng;
                 if (lat !== undefined && lng !== undefined) {
-                    const zoomHeight = Math.max((target?.airspaceRadius || 5000) * 4, 15000);
+                    const zoomHeight = Math.min(
+                        Math.max((target?.airspaceRadius || 500) * 2.0, 1500),
+                        8000
+                    );
                     viewer.camera.flyTo({
                         destination: Cesium.Cartesian3.fromDegrees(lng, lat, zoomHeight),
                         duration: 0.8,
@@ -122,16 +118,13 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                             c.lat !== undefined && c.lng !== undefined
                     );
 
-                if (valid.length === 1) {
-                    viewer.camera.setView({
-                        destination: Cesium.Cartesian3.fromDegrees(
-                            valid[0].lng,
-                            valid[0].lat,
-                            30000.0
-                        ),
+                if (valid.length > 0) {
+                    fitCameraToBounds(viewer, valid, {
+                        animate: true,
+                        duration: 1.0,
+                        minHeight: 2000,
+                        paddingMultiplier: 1.4,
                     });
-                } else if (valid.length > 1) {
-                    fitCameraToBounds(viewer, valid, { bufferRatio: 0.4, minBuffer: 0.08 });
                 }
             }
 

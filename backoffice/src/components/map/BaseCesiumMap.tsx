@@ -105,7 +105,15 @@ export function BaseCesiumMap({
                     selectionIndicator: false,
                 });
 
-                viewerRef.current = activeViewer;
+                // Disable default Cesium entity tracking / double click zoom
+                activeViewer.screenSpaceEventHandler.removeInputAction(
+                    Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
+                );
+                if (activeViewer.cesiumWidget?.screenSpaceEventHandler) {
+                    activeViewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
+                        Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
+                    );
+                }
 
                 activeViewer.useBrowserRecommendedResolution = false;
                 activeViewer.resolutionScale = 1.0;
@@ -181,10 +189,29 @@ export function BaseCesiumMap({
             const targetMode = mode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D;
 
             if (v.scene.mode !== targetMode) {
+                const currentPos = Cesium.Cartographic.fromCartesian(v.camera.position);
+                const targetLng = Cesium.Math.toDegrees(currentPos.longitude);
+                const targetLat = Cesium.Math.toDegrees(currentPos.latitude);
+                const targetHeight = Math.max(currentPos.height, 1200);
+
+                const onMorphComplete = () => {
+                    if (!v || v.isDestroyed()) return;
+                    v.scene.morphComplete.removeEventListener(onMorphComplete);
+                    v.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(
+                            targetLng,
+                            targetLat,
+                            targetHeight
+                        ),
+                    });
+                    v.scene.requestRender();
+                };
+                v.scene.morphComplete.addEventListener(onMorphComplete);
+
                 if (targetMode === Cesium.SceneMode.SCENE2D) {
-                    v.scene.morphTo2D(0.5);
+                    v.scene.morphTo2D(0.3);
                 } else {
-                    v.scene.morphTo3D(0.5);
+                    v.scene.morphTo3D(0.3);
                 }
             }
         }

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Circle, Pentagon, Undo2, Trash2, Compass, Layers } from "lucide-react";
+import { Circle, Pentagon, Undo2, Trash2, Layers } from "lucide-react";
 import { TacticalMapContainer, useCesium } from "@/components/map";
 import { AirspaceLayer } from "@/components/map/layers/AirspaceLayer";
+import { fitCameraToBounds } from "@/components/map/cesiumUtils";
 import { MAP_TOKENS } from "@/components/map/mapTokens";
-import { ChamferCard } from "@/components/ui";
 import { cn } from "@/lib";
 import type { AirspaceZone, AirspaceZoneType } from "@/types";
 import { GeometryMode, GeoPoint, generateCircleCoordinates } from "./useAirspaceGeometry";
@@ -54,6 +54,9 @@ function AirspaceInteractionController({
         onAddPolygonPointRef.current = onAddPolygonPoint;
     }, [geometryMode, onCenterChange, onAddPolygonPoint]);
 
+    const hasMovedRef = useRef(false);
+    const startPosRef = useRef<{ x: number; y: number } | null>(null);
+
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
 
@@ -65,13 +68,37 @@ function AirspaceInteractionController({
 
             const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
+            handler.setInputAction((event: { position: import("cesium").Cartesian2 }) => {
+                if (!viewer || viewer.isDestroyed()) return;
+                hasMovedRef.current = false;
+                startPosRef.current = { x: event.position.x, y: event.position.y };
+            }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
             handler.setInputAction((movement: { endPosition: import("cesium").Cartesian2 }) => {
                 if (!viewer || viewer.isDestroyed()) return;
+                if (
+                    startPosRef.current &&
+                    Math.hypot(
+                        movement.endPosition.x - startPosRef.current.x,
+                        movement.endPosition.y - startPosRef.current.y
+                    ) > 5
+                ) {
+                    hasMovedRef.current = true;
+                }
                 viewer.scene.canvas.style.cursor = "crosshair";
             }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
+            handler.setInputAction(() => {
+                startPosRef.current = null;
+            }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
             handler.setInputAction((click: { position: import("cesium").Cartesian2 }) => {
                 if (!viewer || viewer.isDestroyed()) return;
+
+                if (hasMovedRef.current) {
+                    hasMovedRef.current = false;
+                    return;
+                }
 
                 const ray = viewer.camera.getPickRay(click.position);
                 if (ray) {
@@ -271,56 +298,59 @@ function ActiveAirspaceGraphic({
 }
 
 function AirspaceCameraController({
-    recenterTrigger,
     geometryMode,
     center,
     radiusMeters,
     polygonPoints,
 }: {
-    recenterTrigger: number;
     geometryMode: GeometryMode;
     center: GeoPoint;
     radiusMeters: number;
     polygonPoints: GeoPoint[];
 }) {
     const { viewer, isLoaded } = useCesium();
+    const hasInitialFittedRef = useRef(false);
 
     useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed() || recenterTrigger === 0) return;
-        let cancelled = false;
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        if (hasInitialFittedRef.current) return;
 
-        async function flyToTarget() {
-            const Cesium = await import("cesium");
-            if (cancelled || !viewer || viewer.isDestroyed()) return;
+        let pointsToFit: { lat: number; lng: number }[] = [];
+        let minHeight = 1500;
 
-            if (geometryMode === "radius") {
-                const zoomHeight = Math.max(radiusMeters * 3.5, 1500);
-                viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(center.lng, center.lat, zoomHeight),
-                    duration: 0.8,
-                });
-            } else if (polygonPoints.length > 0) {
-                let sumLng = 0;
-                let sumLat = 0;
-                polygonPoints.forEach((p) => {
-                    sumLng += p.lng;
-                    sumLat += p.lat;
-                });
-                const cLng = sumLng / polygonPoints.length;
-                const cLat = sumLat / polygonPoints.length;
-                viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(cLng, cLat, 2500),
-                    duration: 0.8,
-                });
+        if (geometryMode === "radius") {
+            if (
+                center &&
+                typeof center.lat === "number" &&
+                typeof center.lng === "number" &&
+                !isNaN(center.lat) &&
+                !isNaN(center.lng) &&
+                (center.lat !== 0 || center.lng !== 0)
+            ) {
+                pointsToFit = [{ lat: center.lat, lng: center.lng }];
+                minHeight = Math.max(radiusMeters * 2.8, 1500);
             }
+        } else if (polygonPoints && polygonPoints.length > 0) {
+            pointsToFit = polygonPoints;
+            minHeight = 1200;
         }
 
-        flyToTarget();
+        if (pointsToFit.length === 0) return;
 
-        return () => {
-            cancelled = true;
-        };
-    }, [viewer, isLoaded, recenterTrigger, geometryMode, center, radiusMeters, polygonPoints]);
+        const timer = setTimeout(() => {
+            if (!viewer || viewer.isDestroyed()) return;
+            const success = fitCameraToBounds(viewer, pointsToFit, {
+                animate: true,
+                duration: 0.8,
+                minHeight,
+            });
+            if (success) {
+                hasInitialFittedRef.current = true;
+            }
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [viewer, isLoaded, geometryMode, center, radiusMeters, polygonPoints]);
 
     return null;
 }
@@ -342,16 +372,12 @@ export function AirspaceMapEditor({
     className = "",
 }: AirspaceMapEditorProps) {
     const [showContextZones, setShowContextZones] = useState(true);
-    const [recenterTrigger, setRecenterTrigger] = useState(1);
 
     const backgroundZones = existingZones.filter((z) => z.id !== currentZoneId);
 
-    const handleFitToZone = useCallback(() => {
-        setRecenterTrigger((prev) => prev + 1);
-    }, []);
-
     return (
         <TacticalMapContainer
+            initialMode="2d"
             className={className}
             header={
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
@@ -437,16 +463,6 @@ export function AirspaceMapEditor({
                             <Layers className="w-3.5 h-3.5" />
                             <span>Zones ({backgroundZones.length})</span>
                         </button>
-
-                        <button
-                            type="button"
-                            onClick={handleFitToZone}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-[var(--color-surface-card)] border border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] cursor-pointer"
-                            title="Recenter camera on zone"
-                        >
-                            <Compass className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
-                            <span>Recenter</span>
-                        </button>
                     </div>
                 </div>
             }
@@ -489,7 +505,6 @@ export function AirspaceMapEditor({
             }
         >
             <AirspaceCameraController
-                recenterTrigger={recenterTrigger}
                 geometryMode={geometryMode}
                 center={center}
                 radiusMeters={radiusMeters}

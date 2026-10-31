@@ -36,7 +36,17 @@ export function TacticalMapContainer({
     className,
     loadingText = "Loading tactical map...",
 }: TacticalMapContainerProps) {
-    const [mapMode, setMapMode] = useState<"globe" | "2d">(initialMode === "3d" ? "globe" : "2d");
+    const [mapMode, setMapMode] = useState<"globe" | "2d">(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const saved = localStorage.getItem("utm_map_mode");
+                if (saved === "2d" || saved === "globe") return saved;
+            } catch {
+                // ignore
+            }
+        }
+        return initialMode === "3d" ? "globe" : "2d";
+    });
     const [imageryType, setImageryType] = useState<ImageryType>(initialLayerType);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isLayersOpen, setIsLayersOpen] = useState(false);

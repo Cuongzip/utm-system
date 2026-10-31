@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { MousePointer, Plus, Pencil, Route, Compass } from "lucide-react";
 import { TacticalMapContainer, MissionLayer, AltitudeProfile, useCesium } from "@/components/map";
+import { fitCameraToBounds } from "@/components/map/cesiumUtils";
 import { cn } from "@/lib";
 import type { Waypoint, Hub, ProfilePoint } from "@/types";
 
@@ -10,10 +11,35 @@ export type EditorMode = "select" | "add" | "draw" | "hub-to-hub";
 
 function MissionCameraController({
     targetLocation,
+    missionPoints,
 }: {
     targetLocation: { lat: number; lng: number; altitude?: number; key: number } | null;
+    missionPoints: { lat: number; lng: number }[];
 }) {
     const { viewer, isLoaded } = useCesium();
+    const hasInitialFittedRef = useRef(false);
+    const lastPointCountRef = useRef(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed() || missionPoints.length === 0) return;
+        if (hasInitialFittedRef.current && missionPoints.length <= lastPointCountRef.current)
+            return;
+
+        const timer = setTimeout(() => {
+            if (!viewer || viewer.isDestroyed()) return;
+            const success = fitCameraToBounds(viewer, missionPoints, {
+                animate: true,
+                duration: 0.8,
+                minHeight: 1500,
+            });
+            if (success) {
+                hasInitialFittedRef.current = true;
+                lastPointCountRef.current = missionPoints.length;
+            }
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [viewer, isLoaded, missionPoints]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed() || !targetLocation) return;
@@ -24,17 +50,18 @@ function MissionCameraController({
             const Cesium = await import("cesium");
             if (cancelled || !viewer || viewer.isDestroyed()) return;
 
-            const currentHeight = viewer.camera.positionCartographic?.height || 3000;
-            const zoomHeight = Math.min(Math.max(currentHeight, 1500), 5000);
-
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(
                     targetLocation!.lng,
                     targetLocation!.lat,
-                    zoomHeight
+                    1500
                 ),
                 duration: 0.8,
+                complete: () => {
+                    if (!viewer.isDestroyed()) viewer.scene.requestRender();
+                },
             });
+            viewer.scene.requestRender();
         }
 
         flyToTarget();
@@ -308,6 +335,29 @@ export function MissionMapEditor({
         key: number;
     } | null>(null);
 
+    const allMissionPoints = useMemo(() => {
+        const pts: { lat: number; lng: number }[] = [];
+        if (
+            departureHub?.location?.lat !== undefined &&
+            departureHub?.location?.lng !== undefined
+        ) {
+            pts.push({ lat: departureHub.location.lat, lng: departureHub.location.lng });
+        }
+        waypoints.forEach((wp) => {
+            if (typeof wp.latitude === "number" && typeof wp.longitude === "number") {
+                pts.push({ lat: wp.latitude, lng: wp.longitude });
+            }
+        });
+        if (
+            arrivalHub?.location?.lat !== undefined &&
+            arrivalHub?.location?.lng !== undefined &&
+            arrivalHub.id !== departureHub?.id
+        ) {
+            pts.push({ lat: arrivalHub.location.lat, lng: arrivalHub.location.lng });
+        }
+        return pts;
+    }, [departureHub, arrivalHub, waypoints]);
+
     const handleProfilePointClick = (point: ProfilePoint) => {
         if (point.waypoint) {
             onSelectWaypoint?.(point.waypoint);
@@ -462,7 +512,10 @@ export function MissionMapEditor({
                 onSelectWaypoint={onSelectWaypoint}
             />
 
-            <MissionCameraController targetLocation={flyToTarget} />
+            <MissionCameraController
+                targetLocation={flyToTarget}
+                missionPoints={allMissionPoints}
+            />
         </TacticalMapContainer>
     );
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { MousePointer, Plus, Trash2, Compass } from "lucide-react";
 import { TacticalMapContainer, AltitudeProfile, useCesium } from "@/components/map";
-import { ChamferCard } from "@/components/ui";
 import { cn } from "@/lib";
 import { fitCameraToBounds } from "@/components/map/cesiumUtils";
 import { getHubIconUri, getWaypointIconUri } from "@/components/map/mapIcons";
+import { createTacticalLabel } from "@/components/map/mapLabels";
 import type { Hub, ProfilePoint } from "@/types";
 import type { FlightWaypoint } from "./useFlightRoute";
 
@@ -14,10 +14,34 @@ export type FlightEditorMode = "select" | "add";
 
 function FlightCameraController({
     targetLocation,
+    routePoints,
 }: {
     targetLocation: { lat: number; lng: number; altitude?: number; key: number } | null;
+    routePoints: { lat: number; lng: number }[];
 }) {
     const { viewer, isLoaded } = useCesium();
+    const hasInitialFittedRef = useRef(false);
+    const lastPointCountRef = useRef(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed() || routePoints.length === 0) return;
+        if (hasInitialFittedRef.current && routePoints.length <= lastPointCountRef.current) return;
+
+        const timer = setTimeout(() => {
+            if (!viewer || viewer.isDestroyed()) return;
+            const success = fitCameraToBounds(viewer, routePoints, {
+                animate: true,
+                duration: 0.8,
+                minHeight: 1500,
+            });
+            if (success) {
+                hasInitialFittedRef.current = true;
+                lastPointCountRef.current = routePoints.length;
+            }
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [viewer, isLoaded, routePoints]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed() || !targetLocation) return;
@@ -28,17 +52,18 @@ function FlightCameraController({
             const Cesium = await import("cesium");
             if (cancelled || !viewer || viewer.isDestroyed()) return;
 
-            const currentHeight = viewer.camera.positionCartographic?.height || 3000;
-            const zoomHeight = Math.min(Math.max(currentHeight, 1500), 5000);
-
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(
                     targetLocation!.lng,
                     targetLocation!.lat,
-                    zoomHeight
+                    1500
                 ),
                 duration: 0.8,
+                complete: () => {
+                    if (!viewer.isDestroyed()) viewer.scene.requestRender();
+                },
             });
+            viewer.scene.requestRender();
         }
 
         flyToTarget();
@@ -81,7 +106,6 @@ function FlightRouteRenderer({
 }) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
-    const hasFittedRef = useRef(false);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -102,11 +126,12 @@ function FlightRouteRenderer({
             const routePositions: import("cesium").Cartesian3[] = [];
             const boundPoints: { lat: number; lng: number }[] = [];
 
+            let depPos: import("cesium").Cartesian3 | null = null;
             if (
                 departureHub?.location?.lat !== undefined &&
                 departureHub?.location?.lng !== undefined
             ) {
-                const depPos = Cesium.Cartesian3.fromDegrees(
+                depPos = Cesium.Cartesian3.fromDegrees(
                     departureHub.location.lng,
                     departureHub.location.lat,
                     departureHub.altitudeMsl ?? 10
@@ -116,7 +141,48 @@ function FlightRouteRenderer({
                     lat: departureHub.location.lat,
                     lng: departureHub.location.lng,
                 });
+            }
 
+            waypoints.forEach((wp) => {
+                const alt = wp.altitude ?? cruisingAltitude;
+                const pos = Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, alt);
+                routePositions.push(pos);
+                boundPoints.push({ lat: wp.lat, lng: wp.lng });
+            });
+
+            let arrPos: import("cesium").Cartesian3 | null = null;
+            if (
+                arrivalHub?.location?.lat !== undefined &&
+                arrivalHub?.location?.lng !== undefined &&
+                arrivalHub.id !== departureHub?.id
+            ) {
+                arrPos = Cesium.Cartesian3.fromDegrees(
+                    arrivalHub.location.lng,
+                    arrivalHub.location.lat,
+                    arrivalHub.altitudeMsl ?? 10
+                );
+                routePositions.push(arrPos);
+                boundPoints.push({
+                    lat: arrivalHub.location.lat,
+                    lng: arrivalHub.location.lng,
+                });
+            }
+
+            if (routePositions.length >= 2) {
+                const lineId = "flight-planned-corridor";
+                viewer.entities.add({
+                    id: lineId,
+                    polyline: {
+                        positions: routePositions,
+                        width: 3.0,
+                        material: Cesium.Color.fromCssColorString("#06b6d4"),
+                        clampToGround: false,
+                    },
+                });
+                newEntityIds.push(lineId);
+            }
+
+            if (depPos && departureHub) {
                 const depId = "flight-dep-hub";
                 const isSameHub = arrivalHub?.id === departureHub.id;
                 viewer.entities.add({
@@ -126,30 +192,44 @@ function FlightRouteRenderer({
                         image: getHubIconUri("#10b981", false),
                         width: 28,
                         height: 28,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: {
+                    label: createTacticalLabel(Cesium, {
                         text: isSameHub
                             ? `HUB: ${departureHub.code || departureHub.name}`
                             : `DEP: ${departureHub.code || departureHub.name}`,
-                        font: "bold 10px monospace",
-                        fillColor: Cesium.Color.fromCssColorString("#10b981"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
-                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        accentColor: "#10b981",
                         pixelOffset: new Cesium.Cartesian2(0, -18),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
+                    }),
                 });
                 newEntityIds.push(depId);
+            }
+
+            if (arrPos && arrivalHub && arrivalHub.id !== departureHub?.id) {
+                const arrId = "flight-arr-hub";
+                viewer.entities.add({
+                    id: arrId,
+                    position: arrPos,
+                    billboard: {
+                        image: getHubIconUri("#06b6d4", false),
+                        width: 28,
+                        height: 28,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    },
+                    label: createTacticalLabel(Cesium, {
+                        text: `ARR: ${arrivalHub.code || arrivalHub.name}`,
+                        accentColor: "#06b6d4",
+                        pixelOffset: new Cesium.Cartesian2(0, -18),
+                    }),
+                });
+                newEntityIds.push(arrId);
             }
 
             waypoints.forEach((wp, index) => {
                 const alt = wp.altitude ?? cruisingAltitude;
                 const pos = Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, alt);
-                routePositions.push(pos);
-                boundPoints.push({ lat: wp.lat, lng: wp.lng });
-
                 const isSelected =
                     selectedWaypointId === wp.id ||
                     selectedWaypointId === wp.tempId ||
@@ -164,86 +244,21 @@ function FlightRouteRenderer({
                         width: isSelected ? 30 : 24,
                         height: isSelected ? 30 : 24,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: {
+                    label: createTacticalLabel(Cesium, {
                         text: `WP${wp.sequence ?? index + 1} (${alt}m)`,
-                        font: isSelected ? "bold 11px monospace" : "600 10px monospace",
-                        fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#00e5ff")
-                            : Cesium.Color.fromCssColorString("#0f172a"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 3,
-                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        isSelected,
+                        accentColor: "#00e5ff",
                         pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
+                    }),
                 });
                 newEntityIds.push(wpId);
             });
 
-            if (
-                arrivalHub?.location?.lat !== undefined &&
-                arrivalHub?.location?.lng !== undefined &&
-                arrivalHub.id !== departureHub?.id
-            ) {
-                const arrPos = Cesium.Cartesian3.fromDegrees(
-                    arrivalHub.location.lng,
-                    arrivalHub.location.lat,
-                    arrivalHub.altitudeMsl ?? 10
-                );
-                routePositions.push(arrPos);
-                boundPoints.push({
-                    lat: arrivalHub.location.lat,
-                    lng: arrivalHub.location.lng,
-                });
-
-                const arrId = "flight-arr-hub";
-                viewer.entities.add({
-                    id: arrId,
-                    position: arrPos,
-                    billboard: {
-                        image: getHubIconUri("#06b6d4", false),
-                        width: 28,
-                        height: 28,
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
-                    label: {
-                        text: `ARR: ${arrivalHub.code || arrivalHub.name}`,
-                        font: "bold 10px monospace",
-                        fillColor: Cesium.Color.fromCssColorString("#06b6d4"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
-                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                        pixelOffset: new Cesium.Cartesian2(0, -18),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
-                });
-                newEntityIds.push(arrId);
-            }
-
-            if (routePositions.length >= 2) {
-                const lineId = "flight-planned-corridor";
-                viewer.entities.add({
-                    id: lineId,
-                    polyline: {
-                        positions: routePositions,
-                        width: 3.5,
-                        material: new Cesium.PolylineGlowMaterialProperty({
-                            glowPower: 0.25,
-                            color: Cesium.Color.fromCssColorString("#06b6d4"),
-                        }),
-                    },
-                });
-                newEntityIds.push(lineId);
-            }
-
             entityIdsRef.current = newEntityIds;
-
-            if (boundPoints.length > 0 && !hasFittedRef.current) {
-                fitCameraToBounds(viewer, boundPoints, { bufferRatio: 0.35, minBuffer: 0.02 });
-                hasFittedRef.current = true;
-            }
 
             viewer.scene.requestRender();
         }
@@ -519,6 +534,27 @@ export function FlightMapEditor({
         key: number;
     } | null>(null);
 
+    const allRoutePoints = useMemo(() => {
+        const pts: { lat: number; lng: number }[] = [];
+        if (
+            departureHub?.location?.lat !== undefined &&
+            departureHub?.location?.lng !== undefined
+        ) {
+            pts.push({ lat: departureHub.location.lat, lng: departureHub.location.lng });
+        }
+        waypoints.forEach((wp) => {
+            pts.push({ lat: wp.lat, lng: wp.lng });
+        });
+        if (
+            arrivalHub?.location?.lat !== undefined &&
+            arrivalHub?.location?.lng !== undefined &&
+            arrivalHub.id !== departureHub?.id
+        ) {
+            pts.push({ lat: arrivalHub.location.lat, lng: arrivalHub.location.lng });
+        }
+        return pts;
+    }, [departureHub, arrivalHub, waypoints]);
+
     useEffect(() => {
         setAltInput(String(cruisingAltitude));
     }, [cruisingAltitude]);
@@ -659,7 +695,7 @@ export function FlightMapEditor({
                 onSelectWaypoint={onSelectWaypoint}
             />
 
-            <FlightCameraController targetLocation={flyToTarget} />
+            <FlightCameraController targetLocation={flyToTarget} routePoints={allRoutePoints} />
         </TacticalMapContainer>
     );
 }

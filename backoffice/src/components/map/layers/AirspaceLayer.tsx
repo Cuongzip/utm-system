@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { AirspaceZone } from "@/types";
 import { MAP_TOKENS } from "../mapTokens";
+import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface AirspaceLayerProps {
@@ -115,25 +116,13 @@ export function AirspaceLayer({
                         extrudedHeight: ceiling,
                     },
                     position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, ceiling + 15),
-                    label: {
+                    label: createTacticalLabel(Cesium, {
                         text: `${zone.name || zone.id} (${floor}-${ceiling}m)`,
-                        font: isSelected ? "bold 12px monospace" : "600 11px monospace",
-                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                        fillColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#ffffff")
-                            : Cesium.Color.fromCssColorString("#0f172a"),
-                        outlineColor: Cesium.Color.BLACK,
-                        outlineWidth: 2,
-                        showBackground: true,
-                        backgroundColor: isSelected
-                            ? new Cesium.Color(0.02, 0.15, 0.25, 0.9)
-                            : new Cesium.Color(0.95, 0.96, 0.98, 0.9),
-                        backgroundPadding: new Cesium.Cartesian2(6, 3),
-                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1500000),
-                    },
+                        isSelected,
+                        accentColor: "#f59e0b",
+                        fontSize: isSelected ? 12 : 11,
+                        maxDistance: 1500000,
+                    }),
                 });
 
                 newEntityIds.push(entity.id);
@@ -145,46 +134,42 @@ export function AirspaceLayer({
                 const target = zones.find((z) => z.id === selectedZoneId);
                 const outerRing = target?.geometry?.coordinates?.[0];
                 if (Array.isArray(outerRing) && outerRing.length > 0) {
-                    let sumLng = 0,
-                        sumLat = 0,
-                        count = 0;
+                    const pts: { lat: number; lng: number }[] = [];
                     outerRing.forEach((point) => {
                         if (Array.isArray(point) && point.length >= 2) {
-                            sumLng += point[0];
-                            sumLat += point[1];
-                            count++;
+                            pts.push({ lng: point[0], lat: point[1] });
                         }
                     });
-                    if (count > 0) {
-                        viewer.camera.flyTo({
-                            destination: Cesium.Cartesian3.fromDegrees(
-                                sumLng / count,
-                                sumLat / count,
-                                20000.0
-                            ),
+                    if (pts.length > 0) {
+                        fitCameraToBounds(viewer, pts, {
+                            animate: true,
                             duration: 0.8,
+                            minHeight: 1200,
+                            paddingMultiplier: 1.5,
                         });
                     }
                 }
             } else if (autoFitBounds && !hasAutoFittedRef.current && zones.length > 0) {
                 hasAutoFittedRef.current = true;
-                const points: { lat: number; lng: number }[] = [];
-                zones.forEach((z) => {
-                    const outerRing = z.geometry?.coordinates?.[0];
-                    if (Array.isArray(outerRing)) {
-                        outerRing.forEach((point) => {
-                            if (Array.isArray(point) && point.length >= 2) {
-                                const lng = point[0];
-                                const lat = point[1];
-                                if (typeof lng === "number" && typeof lat === "number") {
-                                    points.push({ lat, lng });
-                                }
-                            }
-                        });
-                    }
-                });
+                const points = zones.flatMap(
+                    (z) =>
+                        z.geometry?.coordinates?.[0]
+                            ?.filter(
+                                (p) =>
+                                    Array.isArray(p) &&
+                                    p.length >= 2 &&
+                                    !isNaN(p[0]) &&
+                                    !isNaN(p[1])
+                            )
+                            .map((p) => ({ lng: p[0], lat: p[1] })) ?? []
+                );
 
-                fitCameraToBounds(viewer, points, { bufferRatio: 0.4, minBuffer: 0.08 });
+                fitCameraToBounds(viewer, points, {
+                    animate: true,
+                    duration: 1.0,
+                    minHeight: 2000,
+                    paddingMultiplier: 1.4,
+                });
             }
 
             viewer.scene.requestRender();
