@@ -105,7 +105,7 @@ export default function ControlCenterPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
                     <TacticalMapContainer
-                        initialMode="3d"
+                        initialMode="2d"
                         initialLayerType="satellite"
                         className="h-[540px]"
                         onEntityClick={(entityId) => {

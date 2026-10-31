@@ -44,6 +44,7 @@ export function FlightsLayer({
 }: FlightsLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const hasAutoFittedRef = useRef(false);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -240,7 +241,8 @@ export function FlightsLayer({
                     destination: Cesium.Cartesian3.fromDegrees(midLng, midLat, zoomHeight),
                     duration: 0.8,
                 });
-            } else if (autoFitBounds && allPoints.length > 0) {
+            } else if (autoFitBounds && !hasAutoFittedRef.current && allPoints.length > 0) {
+                hasAutoFittedRef.current = true;
                 if (allPoints.length === 1) {
                     viewer.camera.setView({
                         destination: Cesium.Cartesian3.fromDegrees(

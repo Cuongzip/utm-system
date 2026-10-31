@@ -23,7 +23,7 @@ export interface TacticalMapContainerProps {
 }
 
 export function TacticalMapContainer({
-    initialMode = "3d",
+    initialMode = "2d",
     initialLayerType = "satellite",
     height = "100%",
     initialCoordinates,
@@ -41,6 +41,26 @@ export function TacticalMapContainer({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isLayersOpen, setIsLayersOpen] = useState(false);
     const layersRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("utm_map_mode");
+            if (saved === "2d" || saved === "globe") {
+                setMapMode(saved);
+            }
+        } catch {
+            // ignore
+        }
+    }, []);
+
+    const handleModeChange = (newMode: "globe" | "2d") => {
+        setMapMode(newMode);
+        try {
+            localStorage.setItem("utm_map_mode", newMode);
+        } catch {
+            // ignore
+        }
+    };
 
     useEffect(() => {
         if (!isLayersOpen) return;
@@ -72,7 +92,7 @@ export function TacticalMapContainer({
                         <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700/80 backdrop-blur-md shadow-md pointer-events-auto">
                             <button
                                 type="button"
-                                onClick={() => setMapMode("globe")}
+                                onClick={() => handleModeChange("globe")}
                                 className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-semibold font-mono transition-all cursor-pointer ${
                                     mapMode === "globe"
                                         ? "bg-slate-700 text-white shadow-xs"
@@ -84,7 +104,7 @@ export function TacticalMapContainer({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setMapMode("2d")}
+                                onClick={() => handleModeChange("2d")}
                                 className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-semibold font-mono transition-all cursor-pointer ${
                                     mapMode === "2d"
                                         ? "bg-slate-700 text-white shadow-xs"

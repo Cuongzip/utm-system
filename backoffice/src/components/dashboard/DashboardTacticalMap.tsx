@@ -1,27 +1,70 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, Play, RotateCcw, Mic, Crosshair } from "lucide-react";
-import { TacticalMapContainer, FlightsLayer, HubsLayer, AirspaceLayer } from "@/components/map";
-import type { Flight, Hub, AirspaceZone } from "@/types";
+import {
+    TacticalMapContainer,
+    FlightsLayer,
+    HubsLayer,
+    AirspaceLayer,
+    LiveTelemetryLayer,
+    useCesium,
+    fitCameraToBounds,
+} from "@/components/map";
+import type { Flight, Hub, AirspaceZone, TelemetryRecord } from "@/types";
 import { toast } from "sonner";
 
 export interface DashboardTacticalMapProps {
     flights: Flight[];
+    activeFlights?: Flight[];
     hubs: Hub[];
     dronesCount: number;
     airspaceZones: AirspaceZone[];
+    telemetryMap?: Record<string, TelemetryRecord>;
+    telemetryHistoryMap?: Record<string, TelemetryRecord[]>;
+    activeTelemetryCount?: number;
+    isSocketConnected?: boolean;
+}
+
+function PerspectiveResetHandler({ hubs, trigger }: { hubs: Hub[]; trigger: number }) {
+    const { viewer, isLoaded } = useCesium();
+    const hasInitialFitRef = React.useRef(false);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded) return;
+        if (trigger === 0 && hasInitialFitRef.current) return;
+
+        const points = hubs.flatMap((h) =>
+            h.location ? [{ lat: h.location.lat, lng: h.location.lng }] : []
+        );
+        if (points.length > 0 || trigger > 0) {
+            hasInitialFitRef.current = true;
+            fitCameraToBounds(viewer, points.length ? points : [{ lat: 16.0544, lng: 108.2208 }], {
+                animate: trigger > 0,
+                duration: 1.2,
+            });
+        }
+    }, [viewer, isLoaded, trigger, hubs]);
+
+    return null;
 }
 
 export function DashboardTacticalMap({
     flights = [],
+    activeFlights = [],
     hubs = [],
     dronesCount = 0,
     airspaceZones = [],
+    telemetryMap = {},
+    telemetryHistoryMap = {},
+    activeTelemetryCount = 0,
+    isSocketConnected = false,
 }: DashboardTacticalMapProps) {
     const [filterTraffic, setFilterTraffic] = useState(true);
     const [filterAirspace, setFilterAirspace] = useState(true);
-    const [filterZones, setFilterZones] = useState(true);
+    const [filterHubs, setFilterHubs] = useState(true);
+    const [showForesight, setShowForesight] = useState(false);
+    const [resetTrigger, setResetTrigger] = useState(0);
     const [isDemoRunning, setIsDemoRunning] = useState(false);
 
     const handleRunDemo = () => {
@@ -30,11 +73,17 @@ export function DashboardTacticalMap({
     };
 
     const handleForesight = () => {
-        toast.info("Trajectory foresight projection toggled");
+        setShowForesight((prev) => !prev);
+        toast.info(
+            !showForesight
+                ? "Trajectory foresight projection enabled"
+                : "Trajectory foresight hidden"
+        );
     };
 
     const handleReset = () => {
-        toast.info("Map perspective reset");
+        setResetTrigger((prev) => prev + 1);
+        toast.info("Map perspective reset to tactical bounds");
     };
 
     const handleVoice = () => {
@@ -43,7 +92,7 @@ export function DashboardTacticalMap({
 
     return (
         <TacticalMapContainer
-            initialMode="3d"
+            initialMode="2d"
             initialLayerType="satellite"
             className="w-full"
             header={
@@ -79,14 +128,14 @@ export function DashboardTacticalMap({
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFilterZones((prev) => !prev)}
+                            onClick={() => setFilterHubs((prev) => !prev)}
                             className={`px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
-                                filterZones
+                                filterHubs
                                     ? "bg-slate-800 text-white shadow-xs"
                                     : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                             }`}
                         >
-                            DRONE ZONES
+                            HUBS
                         </button>
 
                         <div className="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-slate-400 ml-1">
@@ -101,7 +150,11 @@ export function DashboardTacticalMap({
                         <button
                             type="button"
                             onClick={handleForesight}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                                showForesight
+                                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                                    : "text-slate-200 hover:text-white hover:bg-slate-800"
+                            }`}
                         >
                             <Eye className="w-3.5 h-3.5 text-cyan-400" />
                             <span>FORESIGHT</span>
@@ -137,14 +190,37 @@ export function DashboardTacticalMap({
                         <span className="text-slate-600">|</span>
                         <span>LON 108°13&apos;E</span>
                         <span className="text-slate-600">|</span>
-                        <span className="text-emerald-400 font-semibold">● RTK FIXED</span>
+                        {activeTelemetryCount > 0 ? (
+                            <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                <span>
+                                    {activeTelemetryCount} LIVE{" "}
+                                    {isSocketConnected ? "(WS)" : "(POLL)"}
+                                </span>
+                            </span>
+                        ) : isSocketConnected ? (
+                            <span className="text-cyan-400 font-medium">● WS READY</span>
+                        ) : (
+                            <span className="text-slate-400 font-medium">○ STANDBY</span>
+                        )}
                     </div>
                 </>
             }
         >
-            {filterTraffic && <FlightsLayer flights={flights} autoFitBounds={true} />}
-            <HubsLayer hubs={hubs} />
-            {(filterAirspace || filterZones) && <AirspaceLayer zones={airspaceZones} />}
+            {filterTraffic && (
+                <>
+                    <FlightsLayer flights={flights} autoFitBounds={false} />
+                    <LiveTelemetryLayer
+                        flights={activeFlights.length > 0 ? activeFlights : flights}
+                        telemetryMap={telemetryMap}
+                        telemetryHistoryMap={telemetryHistoryMap}
+                        showPlannedRoute={showForesight}
+                    />
+                </>
+            )}
+            {filterHubs && <HubsLayer hubs={hubs} autoFitBounds={false} />}
+            {filterAirspace && <AirspaceLayer zones={airspaceZones} autoFitBounds={false} />}
+            <PerspectiveResetHandler hubs={hubs} trigger={resetTrigger} />
         </TacticalMapContainer>
     );
 }

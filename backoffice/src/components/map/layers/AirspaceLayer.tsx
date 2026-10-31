@@ -26,6 +26,7 @@ export function AirspaceLayer({
 }: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const hasAutoFittedRef = useRef(false);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -165,7 +166,8 @@ export function AirspaceLayer({
                         });
                     }
                 }
-            } else if (autoFitBounds && zones.length > 0) {
+            } else if (autoFitBounds && !hasAutoFittedRef.current && zones.length > 0) {
+                hasAutoFittedRef.current = true;
                 const points: { lat: number; lng: number }[] = [];
                 zones.forEach((z) => {
                     const outerRing = z.geometry?.coordinates?.[0];

@@ -33,7 +33,7 @@ const DEFAULT_COORDINATES: MapCoordinates = {
 };
 
 export function BaseCesiumMap({
-    mode = "3d",
+    mode = "2d",
     layerType = "satellite",
     height = "100%",
     hideToolbar = true,

@@ -9,6 +9,8 @@ export interface DashboardKpiStripProps {
     totalHubsCount: number;
     fleetCount: number;
     conflictsCount: number;
+    activeTelemetryCount?: number;
+    isLoading?: boolean;
 }
 
 export function DashboardKpiStrip({
@@ -17,20 +19,27 @@ export function DashboardKpiStrip({
     totalHubsCount,
     fleetCount,
     conflictsCount,
+    activeTelemetryCount = 0,
+    isLoading = false,
 }: DashboardKpiStripProps) {
     const kpiCards = [
         {
             id: "active-flights",
             title: "ACTIVE FLIGHTS",
-            value: String(activeFlightsCount).padStart(2, "0"),
-            subValue: "AIRBORNE",
+            value: isLoading ? "--" : String(activeFlightsCount).padStart(2, "0"),
+            subValue:
+                activeTelemetryCount > 0
+                    ? `${activeTelemetryCount} STREAMING`
+                    : activeFlightsCount > 0
+                      ? "AIRBORNE"
+                      : "STANDBY",
             icon: Plane,
             iconClassName: "text-cyan-600",
         },
         {
             id: "hubs-online",
             title: "HUBS ONLINE",
-            value: String(hubsCount).padStart(2, "0"),
+            value: isLoading ? "--" : String(hubsCount).padStart(2, "0"),
             subValue: `OF ${totalHubsCount} TOTAL`,
             icon: Building2,
             iconClassName: "text-emerald-600",
@@ -38,7 +47,7 @@ export function DashboardKpiStrip({
         {
             id: "fleet",
             title: "FLEET",
-            value: String(fleetCount).padStart(2, "0"),
+            value: isLoading ? "--" : String(fleetCount).padStart(2, "0"),
             subValue: "REGISTERED",
             icon: Bot,
             iconClassName: "text-amber-600",
@@ -46,10 +55,10 @@ export function DashboardKpiStrip({
         {
             id: "conflicts",
             title: "CONFLICTS",
-            value: String(conflictsCount).padStart(2, "0"),
-            subValue: "ACTION REQUIRED",
+            value: isLoading ? "--" : String(conflictsCount).padStart(2, "0"),
+            subValue: conflictsCount > 0 ? "ACTION REQUIRED" : "ALL CLEAR",
             icon: AlertTriangle,
-            iconClassName: "text-rose-600",
+            iconClassName: conflictsCount > 0 ? "text-rose-600" : "text-emerald-600",
         },
     ];
 

@@ -15,6 +15,7 @@ export interface HubsLayerProps {
 export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: HubsLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const hasAutoFittedRef = useRef(false);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -109,7 +110,8 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                         duration: 0.8,
                     });
                 }
-            } else if (autoFitBounds && hubs.length > 0) {
+            } else if (autoFitBounds && !hasAutoFittedRef.current && hubs.length > 0) {
+                hasAutoFittedRef.current = true;
                 const valid = hubs
                     .map((h) => ({
                         lat: h.location?.lat,

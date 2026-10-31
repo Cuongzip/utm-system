@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MousePointer, Plus, Pencil, Route, Compass } from "lucide-react";
 import { TacticalMapContainer, MissionLayer, AltitudeProfile, useCesium } from "@/components/map";
-import { ChamferCard } from "@/components/ui";
 import { cn } from "@/lib";
 import type { Waypoint, Hub, ProfilePoint } from "@/types";
 

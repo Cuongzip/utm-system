@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { Activity, ArrowRight } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
@@ -8,10 +9,17 @@ import type { Flight } from "@/types";
 
 export interface DashboardFlightLogProps {
     flights: Flight[];
+    isLoading?: boolean;
 }
 
-export function DashboardFlightLog({ flights = [] }: DashboardFlightLogProps) {
-    const recentFlights = flights.slice(0, 5);
+export function DashboardFlightLog({ flights = [], isLoading = false }: DashboardFlightLogProps) {
+    const recentFlights = useMemo(() => {
+        const getFlightTime = (f: Flight) =>
+            new Date(
+                f.actualDeparture || f.scheduledDeparture || (f as any).createdOn || 0
+            ).getTime();
+        return [...flights].sort((a, b) => getFlightTime(b) - getFlightTime(a)).slice(0, 5);
+    }, [flights]);
 
     return (
         <ChamferCard size="lg" className="h-full min-h-[340px]">
@@ -23,12 +31,30 @@ export function DashboardFlightLog({ flights = [] }: DashboardFlightLogProps) {
                             <span>FLIGHT LOG</span>
                         </div>
                         <span className="text-xs font-mono text-slate-400">
-                            {recentFlights.length} RECENT ENTRIES
+                            {isLoading ? "SYNCING..." : `${recentFlights.length} RECENT ENTRIES`}
                         </span>
                     </div>
 
                     <div className="mt-3 divide-y divide-slate-100">
-                        {recentFlights.length === 0 ? (
+                        {isLoading ? (
+                            <div className="py-2 space-y-3">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="animate-pulse flex items-center justify-between p-2 rounded bg-slate-50/70"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-5 h-4 bg-slate-200 rounded" />
+                                            <div className="space-y-1.5">
+                                                <div className="w-24 h-3.5 bg-slate-200 rounded" />
+                                                <div className="w-32 h-2.5 bg-slate-100 rounded" />
+                                            </div>
+                                        </div>
+                                        <div className="w-16 h-5 bg-slate-200 rounded-full" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : recentFlights.length === 0 ? (
                             <EmptyState compact title="No recent flight entries" />
                         ) : (
                             recentFlights.map((flight, idx) => {
@@ -48,16 +74,21 @@ export function DashboardFlightLog({ flights = [] }: DashboardFlightLogProps) {
                                 const statusStr = (flight.status || "active").toLowerCase();
 
                                 return (
-                                    <div
+                                    <Link
                                         key={flight.id || idx}
-                                        className="py-2.5 flex items-center justify-between hover:bg-slate-50/60 px-2 rounded transition-colors"
+                                        href={
+                                            flight.id
+                                                ? `/dashboard/flights/${flight.id}`
+                                                : "/dashboard/flights"
+                                        }
+                                        className="py-2.5 flex items-center justify-between hover:bg-slate-50/80 px-2 rounded transition-colors group cursor-pointer block"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <span className="text-xs font-mono font-bold text-slate-400 w-5">
+                                            <span className="text-xs font-mono font-bold text-slate-400 group-hover:text-slate-600 transition-colors w-5">
                                                 {indexStr}
                                             </span>
                                             <div className="min-w-0">
-                                                <div className="text-xs font-bold font-mono text-slate-900 truncate">
+                                                <div className="text-xs font-bold font-mono text-slate-900 group-hover:text-cyan-600 transition-colors truncate">
                                                     {flightCode}
                                                 </div>
                                                 <div className="text-[11px] font-mono text-slate-400">
@@ -71,7 +102,7 @@ export function DashboardFlightLog({ flights = [] }: DashboardFlightLogProps) {
                                             label={statusStr.toUpperCase()}
                                             shape="rounded"
                                         />
-                                    </div>
+                                    </Link>
                                 );
                             })
                         )}
