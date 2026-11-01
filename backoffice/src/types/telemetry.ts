@@ -1,19 +1,4 @@
 import type zod from "zod";
-import type {
-    ingestTelemetryBody,
-    getLatestFlightTelemetryResponse,
-    getFlightTelemetryHistoryResponseItem,
-} from "@/generated/telemetry";
-
-export type IngestTelemetryPayload = zod.infer<typeof ingestTelemetryBody>;
+import type { getLatestFlightTelemetryResponse } from "@/generated/telemetry";
 
 export type TelemetryRecord = NonNullable<zod.infer<typeof getLatestFlightTelemetryResponse>>;
-export type TelemetryHistoryItem = NonNullable<
-    zod.infer<typeof getFlightTelemetryHistoryResponseItem>
->;
-export type TelemetryHistoryQueryParams = {
-    from?: string;
-    to?: string;
-};
-
-export type TelemetryPoint = TelemetryRecord;

@@ -23,10 +23,6 @@ export function validateSchema<T = unknown>(
     return { success: false, errors };
 }
 
-export function parseFormNumber(val: string): number | undefined {
-    return val.trim() === "" ? undefined : Number(val);
-}
-
 export function clearFieldError(
     setFieldErrors: (updater: (prev: Record<string, string>) => Record<string, string>) => void,
     ...fields: string[]

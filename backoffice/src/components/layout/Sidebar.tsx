@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
@@ -14,8 +13,8 @@ import {
     Building2,
     Shield,
     AlertOctagon,
+    PlayCircle,
     Settings,
-    Moon,
 } from "lucide-react";
 
 export type SidebarTabId =
@@ -28,14 +27,8 @@ export type SidebarTabId =
     | "hubs"
     | "airspace"
     | "conflicts"
+    | "simulation"
     | "settings";
-
-interface SidebarProps {
-    activeTab?: SidebarTabId;
-    onTabChange?: (tabId: SidebarTabId) => void;
-    isDarkMode?: boolean;
-    onToggleDarkMode?: () => void;
-}
 
 interface NavItem {
     id: SidebarTabId;
@@ -59,36 +52,15 @@ const NAV_ITEMS: NavItem[] = [
     { id: "hubs", label: "Hubs", href: "/dashboard/hubs", icon: Building2 },
     { id: "airspace", label: "Airspace", href: "/dashboard/airspace", icon: Shield },
     { id: "conflicts", label: "Conflicts", href: "/dashboard/conflicts", icon: AlertOctagon },
+    { id: "simulation", label: "Simulation", href: "/dashboard/simulation", icon: PlayCircle },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-export function Sidebar({
-    activeTab,
-    onTabChange,
-    isDarkMode = false,
-    onToggleDarkMode,
-}: SidebarProps) {
+export function Sidebar() {
     const pathname = usePathname() || "";
-    const [internalDarkMode, setInternalDarkMode] = useState(isDarkMode);
-
-    const handleToggleDarkMode = () => {
-        if (onToggleDarkMode) {
-            onToggleDarkMode();
-        } else {
-            setInternalDarkMode((prev) => {
-                const next = !prev;
-                if (typeof document !== "undefined") {
-                    document.documentElement.classList.toggle("dark", next);
-                }
-                return next;
-            });
-        }
-    };
-
-    const currentDark = onToggleDarkMode ? isDarkMode : internalDarkMode;
 
     return (
-        <nav className="w-60 bg-white text-slate-600 flex flex-col justify-between shrink-0 z-40 border-r border-slate-200 min-h-screen">
+        <nav className="w-60 bg-white text-slate-600 flex flex-col justify-between shrink-0 z-40 border-r border-slate-200 h-full overflow-y-auto">
             <div className="flex flex-col">
                 <div className="h-16 flex items-center px-5 border-b border-slate-200">
                     <Link href="/dashboard" className="flex items-center space-x-3">
@@ -117,17 +89,14 @@ export function Sidebar({
                     {NAV_ITEMS.map((item) => {
                         const Icon = item.icon;
                         const isActive =
-                            activeTab !== undefined
-                                ? activeTab === item.id
-                                : item.href === "/dashboard"
-                                  ? pathname === "/dashboard"
-                                  : pathname.startsWith(item.href);
+                            item.href === "/dashboard"
+                                ? pathname === "/dashboard"
+                                : pathname.startsWith(item.href);
 
                         return (
                             <Link
                                 key={item.id}
                                 href={item.href}
-                                onClick={() => onTabChange?.(item.id)}
                                 className={`flex items-center w-full px-3 py-2 rounded-md transition-colors text-left ${
                                     isActive
                                         ? "text-white bg-slate-600 shadow-sm font-semibold"
@@ -146,22 +115,8 @@ export function Sidebar({
                 </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200">
-                <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center text-xs font-medium text-slate-700">
-                        <Moon className="h-4 w-4 mr-2 text-slate-500" />
-                        <span>Dark Mode</span>
-                    </div>
-                    <div className="relative">
-                        <input
-                            type="checkbox"
-                            checked={currentDark}
-                            onChange={handleToggleDarkMode}
-                            className="sr-only peer"
-                        />
-                        <div className="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-slate-600" />
-                    </div>
-                </label>
+            <div className="p-4 border-t border-slate-200 text-center">
+                <span className="text-[10px] font-mono text-slate-400">UTM OPS v0.1.0</span>
             </div>
         </nav>
     );

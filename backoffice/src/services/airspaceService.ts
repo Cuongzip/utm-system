@@ -8,14 +8,10 @@ import type {
     UpdateAirspaceZonePayload,
     CheckPathPayload,
     CheckPathResult,
-    CheckPointPayload,
-    CheckPointResult,
 } from "@/types";
 
-export type GetZonesParams = AirspaceQueryParams;
-
 export const airspaceService = {
-    getZones: async (params?: GetZonesParams): Promise<AirspaceZoneListResponse> => {
+    getZones: async (params?: AirspaceQueryParams): Promise<AirspaceZoneListResponse> => {
         const endpoint = buildUrl(API_ENDPOINTS.AIRSPACES.ZONES, params as Record<string, unknown>);
         const res = await apiClient<AirspaceZoneListResponse | AirspaceZone[]>(endpoint);
         return normalizeList<AirspaceZone>(res);
@@ -47,13 +43,6 @@ export const airspaceService = {
 
     checkPath: async (payload: CheckPathPayload): Promise<CheckPathResult> => {
         return apiClient<CheckPathResult>(API_ENDPOINTS.AIRSPACES.CHECK_PATH, {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
-    },
-
-    checkPoint: async (payload: CheckPointPayload): Promise<CheckPointResult> => {
-        return apiClient<CheckPointResult>(API_ENDPOINTS.AIRSPACES.CHECK_POINT, {
             method: "POST",
             body: JSON.stringify(payload),
         });

@@ -90,6 +90,14 @@ export const getFlightByIdResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -233,6 +241,14 @@ export const updateFlightResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -383,6 +399,18 @@ export const getFlightsResponse = zod
                             .optional()
                             .describe(
                                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
+                            ),
+                        feasibilityVerdict: zod
+                            .enum(["go", "marginal", "no_go", "unknown"])
+                            .optional()
+                            .describe(
+                                "Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"
+                            ),
+                        feasibilityOverride: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "ATC authorization override justification remarks if applicable"
                             ),
                         notes: zod
                             .string()
@@ -536,6 +564,14 @@ export const startFlightResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -639,6 +675,14 @@ export const rejectFlightResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -736,6 +780,14 @@ export const completeFlightResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -833,6 +885,14 @@ export const authorizeFlightResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -939,6 +999,14 @@ export const abortFlightResponse = zod
             .describe(
                 "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
             ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
         notes: zod
             .string()
             .optional()
@@ -952,6 +1020,233 @@ export const abortFlightResponse = zod
             .describe("Username who last updated this flight plan"),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
+
+/**
+ * Allows ATC or Admin to approve a flight with marginal or no-go feasibility.
+ * @summary Override feasibility verdict
+ */
+export const overrideFeasibilityParams = zod.object({
+    flightId: zod.string().describe("Flight UUID identifier"),
+});
+
+export const overrideFeasibilityBody = zod
+    .object({
+        reason: zod.string().min(1).describe("Operational justification / mitigation reason"),
+        approvedBy: zod
+            .string()
+            .min(1)
+            .describe("ATC Controller or Hub Manager username / callsign"),
+    })
+    .describe("ATC authorization override for marginal or no-go feasibility verdicts");
+
+export const overrideFeasibilityResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
+        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
+        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
+        departureHubId: zod
+            .string()
+            .optional()
+            .describe("Departure Hub / Vertiport UUID identifier"),
+        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
+        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
+        scheduledDeparture: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Scheduled departure timestamp"),
+        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
+        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
+        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
+        cruisingAltitudeM: zod
+            .number()
+            .optional()
+            .describe("Planned cruising altitude in meters (m)"),
+        executionId: zod
+            .string()
+            .optional()
+            .describe("Associated mission execution UUID identifier"),
+        plannedRoute: zod
+            .object({
+                type: zod.string().min(1).describe("GeoJSON geometry type"),
+                coordinates: zod
+                    .array(zod.array(zod.number()))
+                    .min(1)
+                    .describe(
+                        "Array of trajectory coordinate points, where each point is [longitude, latitude] or [longitude, latitude, altitude]"
+                    ),
+            })
+            .optional()
+            .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
+        actualRoute: zod
+            .object({
+                type: zod.string().min(1).describe("GeoJSON geometry type"),
+                coordinates: zod
+                    .array(zod.array(zod.number()))
+                    .min(1)
+                    .describe(
+                        "Array of trajectory coordinate points, where each point is [longitude, latitude] or [longitude, latitude, altitude]"
+                    ),
+            })
+            .optional()
+            .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
+        authorizationStatus: zod
+            .enum(["pending", "approved", "rejected"])
+            .optional()
+            .describe("ATC authorization status (pending, approved, rejected)"),
+        conformanceStatus: zod
+            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
+            .optional()
+            .describe(
+                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
+            ),
+        status: zod
+            .enum([
+                "planned",
+                "scheduled",
+                "authorized",
+                "active",
+                "completed",
+                "cancelled",
+                "diverted",
+                "emergency_landing",
+            ])
+            .optional()
+            .describe(
+                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
+            ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("ATC authorization override justification remarks if applicable"),
+        notes: zod
+            .string()
+            .optional()
+            .describe("Flight remarks, route notes or weather considerations"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Username who created this flight plan"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod
+            .string()
+            .optional()
+            .describe("Username who last updated this flight plan"),
+    })
+    .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
+
+/**
+ * Runs deterministic physics energy model on the assigned drone and route geometry.
+ * @summary Check flight feasibility and energy profile
+ */
+export const checkFeasibilityParams = zod.object({
+    flightId: zod.string().describe("Flight UUID identifier"),
+});
+
+export const checkFeasibilityBody = zod
+    .object({
+        payloadKg: zod.number().optional().describe("Mission payload weight in kilograms (kg)"),
+        weatherOverride: zod
+            .object({
+                windSpeedMs: zod
+                    .number()
+                    .optional()
+                    .describe("Wind speed in meters per second (m/s)"),
+            })
+            .optional()
+            .describe("Environmental weather conditions override"),
+        distanceM: zod
+            .number()
+            .optional()
+            .describe(
+                "Mission distance in meters (optional override, default calculated from route)"
+            ),
+        hoverTimeS: zod
+            .number()
+            .optional()
+            .describe("Mission hover time in seconds (optional override)"),
+    })
+    .describe("Parameters for evaluating flight feasibility and energy profile");
+
+export const checkFeasibilityResponse = zod
+    .object({
+        flightId: zod.string().optional().describe("Flight UUID identifier"),
+        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
+        verdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Feasibility verdict (go, marginal, no_go, unknown)"),
+        marginPct: zod.number().optional().describe("Net battery reserve margin percentage (%)"),
+        usableWh: zod
+            .number()
+            .optional()
+            .describe("Net usable battery capacity in Watt-hours (Wh)"),
+        requiredWh: zod
+            .number()
+            .optional()
+            .describe("Total required mission energy in Watt-hours (Wh)"),
+        breakdown: zod
+            .object({
+                cruiseWh: zod
+                    .number()
+                    .optional()
+                    .describe("Energy consumed during cruise phase in Watt-hours (Wh)"),
+                hoverWh: zod
+                    .number()
+                    .optional()
+                    .describe("Energy consumed during hover phases in Watt-hours (Wh)"),
+                climbWh: zod
+                    .number()
+                    .optional()
+                    .describe("Energy consumed for climb/maneuver surcharge in Watt-hours (Wh)"),
+                payloadFactor: zod.number().optional().describe("Payload multiplier factor"),
+                windFactor: zod.number().optional().describe("Wind resistance multiplier factor"),
+            })
+            .optional()
+            .describe("Breakdown of consumed energy components and adjustment factors"),
+        windUsed: zod
+            .object({
+                speedMs: zod.number().optional().describe("Wind speed in meters per second (m/s)"),
+                source: zod
+                    .string()
+                    .optional()
+                    .describe("Source of wind data (override, weather_service, default)"),
+            })
+            .optional()
+            .describe("Wind conditions applied during energy evaluation"),
+        confidence: zod
+            .string()
+            .optional()
+            .describe("Evaluation confidence level (high, medium, low)"),
+        solutions: zod
+            .array(
+                zod
+                    .object({
+                        kind: zod.string().optional().describe("Solution classification kind"),
+                        label: zod.string().optional().describe("Short human-readable title"),
+                        detail: zod
+                            .string()
+                            .optional()
+                            .describe("Detailed actionable recommendation"),
+                    })
+                    .describe(
+                        "Mitigation solution or recommendation for marginal/no-go feasibility"
+                    )
+            )
+            .optional()
+            .describe("Recommended mitigations if verdict is marginal or no-go"),
+        explanation: zod.string().optional().describe("Summary explanation of evaluation outcome"),
+        explanationSource: zod
+            .string()
+            .optional()
+            .describe("Source of explanation (deterministic, llm)"),
+        evaluatedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when evaluation was executed"),
+    })
+    .describe("Outcome of pre-flight feasibility and energy calculation");
 
 /**
  * Query latest drone telemetry and perform an immediate 4D volume cross-track & vertical breach assessment.
@@ -1058,3 +1353,253 @@ export const getConformanceResponse = zod
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
     })
     .describe("Instantaneous 4D flight conformance evaluation details");
+
+/**
+ * Retrieves paginated historical feasibility evaluation records filtered by flight or drone.
+ * @summary Get feasibility evaluation history
+ */
+export const getHistoryQueryLimitDefault = 20;
+export const getHistoryQueryOffsetDefault = 0;
+
+export const getHistoryQueryParams = zod.object({
+    flightId: zod.string().optional().describe("Optional filter by Flight UUID"),
+    droneId: zod.string().optional().describe("Optional filter by Drone UUID"),
+    limit: zod.number().default(getHistoryQueryLimitDefault).describe("Page size limit"),
+    offset: zod.number().optional().describe("Page offset"),
+});
+
+export const getHistoryResponse = zod
+    .object({
+        items: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional().describe("Unique evaluation record UUID"),
+                        flightId: zod.string().optional().describe("Associated Flight UUID"),
+                        droneId: zod.string().optional().describe("Assigned Drone UUID"),
+                        verdict: zod
+                            .enum(["go", "marginal", "no_go", "unknown"])
+                            .optional()
+                            .describe("Feasibility verdict"),
+                        marginPct: zod
+                            .number()
+                            .optional()
+                            .describe("Net battery reserve margin percentage (%)"),
+                        usableWh: zod
+                            .number()
+                            .optional()
+                            .describe("Net usable battery capacity in Watt-hours (Wh)"),
+                        requiredWh: zod
+                            .number()
+                            .optional()
+                            .describe("Total required mission energy in Watt-hours (Wh)"),
+                        breakdown: zod
+                            .object({
+                                cruiseWh: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Energy consumed during cruise phase in Watt-hours (Wh)"
+                                    ),
+                                hoverWh: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Energy consumed during hover phases in Watt-hours (Wh)"
+                                    ),
+                                climbWh: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Energy consumed for climb/maneuver surcharge in Watt-hours (Wh)"
+                                    ),
+                                payloadFactor: zod
+                                    .number()
+                                    .optional()
+                                    .describe("Payload multiplier factor"),
+                                windFactor: zod
+                                    .number()
+                                    .optional()
+                                    .describe("Wind resistance multiplier factor"),
+                            })
+                            .optional()
+                            .describe(
+                                "Breakdown of consumed energy components and adjustment factors"
+                            ),
+                        windSpeedMs: zod
+                            .number()
+                            .optional()
+                            .describe("Wind speed in m/s used during evaluation"),
+                        confidence: zod.string().optional().describe("Confidence level"),
+                        solutions: zod
+                            .array(
+                                zod
+                                    .object({
+                                        kind: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Solution classification kind"),
+                                        label: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Short human-readable title"),
+                                        detail: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Detailed actionable recommendation"),
+                                    })
+                                    .describe(
+                                        "Mitigation solution or recommendation for marginal/no-go feasibility"
+                                    )
+                            )
+                            .optional()
+                            .describe("Mitigation recommendations"),
+                        explanation: zod.string().optional().describe("Explanation string"),
+                        explanationSource: zod
+                            .string()
+                            .optional()
+                            .describe("Source of explanation"),
+                        createdOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Timestamp when evaluation was recorded"),
+                        createdBy: zod
+                            .string()
+                            .optional()
+                            .describe("Operator or service account that initiated the evaluation"),
+                    })
+                    .describe("Historical feasibility evaluation record")
+            )
+            .optional()
+            .describe("List of feasibility evaluation records"),
+        total: zod
+            .number()
+            .optional()
+            .describe("Total number of evaluations matching query criteria"),
+    })
+    .describe("Paginated list response of feasibility evaluations");
+
+/**
+ * Alias route for retrieving historical feasibility evaluations.
+ * @summary Get feasibility evaluation history (alias)
+ */
+export const getHistoryAliasQueryLimitDefault = 20;
+export const getHistoryAliasQueryOffsetDefault = 0;
+
+export const getHistoryAliasQueryParams = zod.object({
+    flightId: zod.string().optional(),
+    droneId: zod.string().optional(),
+    limit: zod.number().default(getHistoryAliasQueryLimitDefault),
+    offset: zod.number().optional(),
+});
+
+export const getHistoryAliasResponse = zod
+    .object({
+        items: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional().describe("Unique evaluation record UUID"),
+                        flightId: zod.string().optional().describe("Associated Flight UUID"),
+                        droneId: zod.string().optional().describe("Assigned Drone UUID"),
+                        verdict: zod
+                            .enum(["go", "marginal", "no_go", "unknown"])
+                            .optional()
+                            .describe("Feasibility verdict"),
+                        marginPct: zod
+                            .number()
+                            .optional()
+                            .describe("Net battery reserve margin percentage (%)"),
+                        usableWh: zod
+                            .number()
+                            .optional()
+                            .describe("Net usable battery capacity in Watt-hours (Wh)"),
+                        requiredWh: zod
+                            .number()
+                            .optional()
+                            .describe("Total required mission energy in Watt-hours (Wh)"),
+                        breakdown: zod
+                            .object({
+                                cruiseWh: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Energy consumed during cruise phase in Watt-hours (Wh)"
+                                    ),
+                                hoverWh: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Energy consumed during hover phases in Watt-hours (Wh)"
+                                    ),
+                                climbWh: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Energy consumed for climb/maneuver surcharge in Watt-hours (Wh)"
+                                    ),
+                                payloadFactor: zod
+                                    .number()
+                                    .optional()
+                                    .describe("Payload multiplier factor"),
+                                windFactor: zod
+                                    .number()
+                                    .optional()
+                                    .describe("Wind resistance multiplier factor"),
+                            })
+                            .optional()
+                            .describe(
+                                "Breakdown of consumed energy components and adjustment factors"
+                            ),
+                        windSpeedMs: zod
+                            .number()
+                            .optional()
+                            .describe("Wind speed in m/s used during evaluation"),
+                        confidence: zod.string().optional().describe("Confidence level"),
+                        solutions: zod
+                            .array(
+                                zod
+                                    .object({
+                                        kind: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Solution classification kind"),
+                                        label: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Short human-readable title"),
+                                        detail: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Detailed actionable recommendation"),
+                                    })
+                                    .describe(
+                                        "Mitigation solution or recommendation for marginal/no-go feasibility"
+                                    )
+                            )
+                            .optional()
+                            .describe("Mitigation recommendations"),
+                        explanation: zod.string().optional().describe("Explanation string"),
+                        explanationSource: zod
+                            .string()
+                            .optional()
+                            .describe("Source of explanation"),
+                        createdOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Timestamp when evaluation was recorded"),
+                        createdBy: zod
+                            .string()
+                            .optional()
+                            .describe("Operator or service account that initiated the evaluation"),
+                    })
+                    .describe("Historical feasibility evaluation record")
+            )
+            .optional()
+            .describe("List of feasibility evaluation records"),
+        total: zod
+            .number()
+            .optional()
+            .describe("Total number of evaluations matching query criteria"),
+    })
+    .describe("Paginated list response of feasibility evaluations");

@@ -7,3 +7,5 @@ export * from "./conflict";
 export * from "./alert";
 export * from "./telemetry";
 export * from "./organization";
+export * from "./mission";
+export * from "./simulation";

@@ -10,8 +10,6 @@ import type {
     getWaypointsResponseItem,
     reorderWaypointsBody,
     executeMissionBody,
-    getExecutionsByMissionIdResponse,
-    getExecutionByIdResponse,
 } from "@/generated/mission";
 
 export type CreateMissionPayload = zod.infer<typeof createMissionBody>;
@@ -32,8 +30,7 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
     failed: "Failed",
 };
 
-export type MissionGenerated = NonNullable<zod.infer<typeof getMissionByIdResponse>>;
-export type Mission = MissionGenerated & {
+export type Mission = NonNullable<zod.infer<typeof getMissionByIdResponse>> & {
     id: string;
 };
 
@@ -44,8 +41,7 @@ export type MissionListResponse = Omit<
     items?: Mission[];
 };
 
-export type WaypointGenerated = NonNullable<zod.infer<typeof getWaypointsResponseItem>>;
-export type Waypoint = WaypointGenerated & {
+export type Waypoint = NonNullable<zod.infer<typeof getWaypointsResponseItem>> & {
     tempId?: string;
 };
 
@@ -64,5 +60,3 @@ export type AddWaypointPayload = zod.infer<typeof addWaypointBody>;
 export type UpdateWaypointPayload = zod.infer<typeof updateWaypointBody>;
 export type ReorderWaypointsPayload = zod.infer<typeof reorderWaypointsBody>;
 export type ExecuteMissionPayload = zod.infer<typeof executeMissionBody>;
-export type MissionExecution = NonNullable<zod.infer<typeof getExecutionsByMissionIdResponse>>;
-export type ExecutionDetails = NonNullable<zod.infer<typeof getExecutionByIdResponse>>;

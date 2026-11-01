@@ -11,6 +11,7 @@ export interface UseCrudListOptions<T extends { id?: string }> {
     deleteFn?: (id: string) => Promise<unknown>;
     entityName?: string;
     autoFetch?: boolean;
+    refetchInterval?: number;
 }
 
 export function useCrudList<T extends { id?: string }>({
@@ -19,6 +20,7 @@ export function useCrudList<T extends { id?: string }>({
     deleteFn,
     entityName = "Item",
     autoFetch = true,
+    refetchInterval,
 }: UseCrudListOptions<T>) {
     const queryClient = useQueryClient();
     const effectiveKey = useMemo(
@@ -43,6 +45,7 @@ export function useCrudList<T extends { id?: string }>({
             return Array.isArray(res) ? res : res?.items || [];
         },
         enabled: autoFetch,
+        refetchInterval,
     });
 
     const items: T[] = data || [];

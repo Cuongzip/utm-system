@@ -12,12 +12,10 @@ export type UpdateHubPayload = zod.infer<typeof updateHubBody>;
 export type HubQueryParams = zod.infer<typeof getHubsQueryParams>;
 export type HubStatus = NonNullable<zod.infer<typeof getHubByIdResponse>["status"]>;
 
-export type HubGenerated = NonNullable<zod.infer<typeof getHubByIdResponse>>;
-export type Hub = HubGenerated & {
+export type Hub = NonNullable<zod.infer<typeof getHubByIdResponse>> & {
     id: string;
 };
 
 export type HubListResponse = Omit<NonNullable<zod.infer<typeof getHubsResponse>>, "items"> & {
     items?: Hub[];
 };
-export type HubLocation = NonNullable<HubGenerated["location"]>;

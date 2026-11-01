@@ -11,10 +11,8 @@ export type DroneRegistrationPayload = zod.infer<typeof createDroneBody>;
 export type CreateDronePayload = DroneRegistrationPayload;
 export type UpdateDronePayload = zod.infer<typeof updateDroneBody>;
 export type DroneQueryParams = zod.infer<typeof getDronesQueryParams>;
-export type DroneStatus = NonNullable<zod.infer<typeof getDroneByIdResponse>["status"]>;
 
-export type DroneGenerated = NonNullable<zod.infer<typeof getDroneByIdResponse>>;
-export type Drone = DroneGenerated & {
+export type Drone = NonNullable<zod.infer<typeof getDroneByIdResponse>> & {
     id: string;
 };
 

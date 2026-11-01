@@ -27,8 +27,6 @@ export type DroneCommand = Omit<DroneCommandGenerated, "id" | "commandType" | "s
     status?: CommandStatus;
 };
 
-export type DroneCommandQueryParams = zod.infer<typeof getCommandsQueryParams>;
-
 export type DroneCommandListResponse = Omit<
     NonNullable<zod.infer<typeof getCommandsResponse>>,
     "items"

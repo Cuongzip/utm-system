@@ -30,12 +30,6 @@ export const ingestTelemetryBody = zod
             .number()
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
-        persistToDb: zod
-            .boolean()
-            .optional()
-            .describe(
-                "Whether to persist telemetry to database (default true). Set false for simulations to avoid disk bloat."
-            ),
     })
     .describe("Payload for ingesting high-frequency drone telemetry data");
 

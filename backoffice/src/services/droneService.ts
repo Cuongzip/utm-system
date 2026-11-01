@@ -12,10 +12,8 @@ import type {
     CommandType,
 } from "@/types";
 
-export type GetDronesParams = DroneQueryParams;
-
 export const droneService = {
-    getDrones: async (params?: GetDronesParams): Promise<DroneListResponse> => {
+    getDrones: async (params?: DroneQueryParams): Promise<DroneListResponse> => {
         const url = buildUrl(API_ENDPOINTS.DRONES.BASE, params as Record<string, unknown>);
         const res = await apiClient<DroneListResponse | Drone[]>(url);
         return normalizeList<Drone>(res);
@@ -24,10 +22,6 @@ export const droneService = {
     getAll: async (): Promise<Drone[]> => {
         const res = await droneService.getDrones({ limit: 0 });
         return res.items || [];
-    },
-
-    getById: async (id: string): Promise<Drone> => {
-        return apiClient<Drone>(API_ENDPOINTS.DRONES.BY_ID(id));
     },
 
     createDrone: async (payload: DroneRegistrationPayload): Promise<Drone> => {
@@ -66,21 +60,10 @@ export const droneService = {
         return apiClient<DroneCommandListResponse>(url);
     },
 
-    getActiveCommands: async (droneId: string): Promise<DroneCommand[]> => {
-        const res = await apiClient<DroneCommand[]>(API_ENDPOINTS.DRONES.ACTIVE_COMMANDS(droneId));
-        return Array.isArray(res) ? res : [];
-    },
-
     sendCommand: async (droneId: string, payload: SendCommandPayload): Promise<DroneCommand> => {
         return apiClient<DroneCommand>(API_ENDPOINTS.DRONES.COMMANDS(droneId), {
             method: "POST",
             body: JSON.stringify(payload),
-        });
-    },
-
-    cancelCommand: async (droneId: string, commandId: string): Promise<DroneCommand> => {
-        return apiClient<DroneCommand>(API_ENDPOINTS.DRONES.CANCEL_COMMAND(droneId, commandId), {
-            method: "POST",
         });
     },
 };

@@ -7,8 +7,6 @@ import type {
     getAllZonesQueryParams,
     checkPathBody,
     checkPathResponse,
-    checkPointBody,
-    checkPointResponse,
 } from "@/generated/airspace";
 import type { ConflictAlert } from "./alert";
 
@@ -33,5 +31,3 @@ export type AirspaceZoneListResponse = Omit<
 
 export type CheckPathPayload = zod.infer<typeof checkPathBody>;
 export type CheckPathResult = zod.infer<typeof checkPathResponse>;
-export type CheckPointPayload = zod.infer<typeof checkPointBody>;
-export type CheckPointResult = zod.infer<typeof checkPointResponse>;

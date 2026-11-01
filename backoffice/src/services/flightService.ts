@@ -8,15 +8,13 @@ import type {
     UpdateFlightPayload,
 } from "@/types";
 
-export type GetFlightsParams = FlightQueryParams;
-
 export const flightService = {
     getAll: async (): Promise<Flight[]> => {
         const res = await flightService.getFlights({ limit: 0 });
         return res.items || [];
     },
 
-    getFlights: async (params?: GetFlightsParams): Promise<FlightListResponse> => {
+    getFlights: async (params?: FlightQueryParams): Promise<FlightListResponse> => {
         const endpoint = buildUrl(API_ENDPOINTS.FLIGHTS.BASE, params as Record<string, unknown>);
         const res = await apiClient<FlightListResponse | Flight[]>(endpoint);
         return normalizeList<Flight>(res);
@@ -40,13 +38,6 @@ export const flightService = {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BY_ID(id), {
             method: "PUT",
             body: JSON.stringify(payload),
-        });
-    },
-
-    submitPlan: async (plan: CreateFlightPayload | Partial<Flight>): Promise<Flight> => {
-        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.SUBMIT_PLAN, {
-            method: "POST",
-            body: JSON.stringify(plan),
         });
     },
 

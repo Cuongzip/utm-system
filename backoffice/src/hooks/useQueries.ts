@@ -6,6 +6,7 @@ import { droneService } from "@/services/droneService";
 import { flightService } from "@/services/flightService";
 import { alertService } from "@/services/alertService";
 import { airspaceService } from "@/services/airspaceService";
+import { connectivityService } from "@/services/connectivityService";
 
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
@@ -19,6 +20,7 @@ export const QUERY_KEYS = {
     missions: ["missions"] as const,
     connectivityDevices: ["connectivity", "devices"] as const,
     alertsActive: ["alerts", "active"] as const,
+    simulation: ["simulation"] as const,
 };
 
 export function useHubsAll() {
@@ -70,5 +72,16 @@ export function useAirspaceAll() {
             return res.items || [];
         },
         staleTime: 1000 * 60,
+    });
+}
+
+export function useConnectivityDevices() {
+    return useQuery({
+        queryKey: QUERY_KEYS.connectivityDevices,
+        queryFn: async () => {
+            const res = await connectivityService.getDevices({ limit: 0 });
+            return res.items || [];
+        },
+        refetchInterval: 3000,
     });
 }

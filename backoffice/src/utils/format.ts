@@ -49,14 +49,6 @@ export function formatRelativeTime(val?: string | Date | number | null): string 
     }
 }
 
-export function formatCoordinates(lat: number, lon: number): string {
-    return `${lat.toFixed(5)}°N, ${lon.toFixed(5)}°E`;
-}
-
-export function formatAltitude(altitudeMeters: number): string {
-    return `${Math.round(altitudeMeters)} m`;
-}
-
 export function formatSpeed(speedMps?: number | null): string {
     if (speedMps === undefined || speedMps === null || isNaN(speedMps)) return "0 km/h";
     return `${Math.round(speedMps * 3.6)} km/h`;

@@ -13,18 +13,11 @@ import type {
     Waypoint,
 } from "@/types";
 
-export type GetMissionsParams = MissionQueryParams;
-
 export const missionService = {
-    getMissions: async (params?: GetMissionsParams): Promise<MissionListResponse> => {
+    getMissions: async (params?: MissionQueryParams): Promise<MissionListResponse> => {
         const endpoint = buildUrl(API_ENDPOINTS.MISSIONS.BASE, params as Record<string, unknown>);
         const res = await apiClient<MissionListResponse | Mission[]>(endpoint);
         return normalizeList<Mission>(res);
-    },
-
-    getAll: async (): Promise<Mission[]> => {
-        const res = await missionService.getMissions({ size: 100 });
-        return res.items || [];
     },
 
     getById: async (id: string): Promise<Mission> => {

@@ -3,9 +3,6 @@ export const API_ENDPOINTS = {
         BASE: "/api/api/v1/drones",
         BY_ID: (id: string) => `/api/api/v1/drones/${id}`,
         COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands`,
-        ACTIVE_COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands/active`,
-        CANCEL_COMMAND: (droneId: string, commandId: string) =>
-            `/api/api/v1/drones/${droneId}/commands/${commandId}/cancel`,
     },
     HUBS: {
         BASE: "/api/api/v1/hubs",
@@ -14,20 +11,15 @@ export const API_ENDPOINTS = {
     FLIGHTS: {
         BASE: "/api/api/v1/flights",
         BY_ID: (id: string) => `/api/api/v1/flights/${id}`,
-        SUBMIT_PLAN: "/api/api/v1/flights/plans",
     },
     AIRSPACES: {
         ZONES: "/api/api/v1/airspace/zones",
         BY_ID: (id: string) => `/api/api/v1/airspace/zones/${id}`,
-        CHECK_POINT: "/api/api/v1/airspace/check",
         CHECK_PATH: "/api/api/v1/airspace/check-path",
     },
     ALERTS: {
-        BASE: "/api/api/v1/alerts",
         ACTIVE: "/api/api/v1/alerts/active",
-        BY_ID: (id: string) => `/api/api/v1/alerts/${id}`,
         ACKNOWLEDGE: (id: string) => `/api/api/v1/alerts/${id}/acknowledge`,
-        RESOLVE: (id: string) => `/api/api/v1/alerts/${id}/resolve`,
     },
     CONFLICTS: {
         ALERTS: "/api/api/v1/alerts",
@@ -38,9 +30,6 @@ export const API_ENDPOINTS = {
         BY_ID: (id: string) => `/api/api/v1/connectivity/devices/${id}`,
         REGISTER: "/api/api/v1/connectivity/devices/register",
         HEARTBEAT: (id: string) => `/api/api/v1/connectivity/devices/${id}/heartbeat`,
-        STATUS: "/api/api/v1/connectivity/status",
-        TELEMETRY_STATS: "/api/api/v1/connectivity/telemetry/stats",
-        COMMANDS_STATS: "/api/api/v1/connectivity/commands/stats",
     },
     MISSIONS: {
         BASE: "/api/api/v1/missions",
@@ -54,9 +43,16 @@ export const API_ENDPOINTS = {
             `/api/api/v1/missions/${missionId}/waypoints/reorder`,
     },
     TELEMETRY: {
-        BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}`,
         LATEST_BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}/latest`,
-        BY_DRONE: (droneId: string) => `/api/api/v1/telemetry/drone/${droneId}`,
         LATEST_BY_DRONE: (droneId: string) => `/api/api/v1/telemetry/drone/${droneId}/latest`,
+    },
+    SIMULATION: {
+        BASE: "/api/api/v1/simulation/sessions",
+        BY_ID: (id: string) => `/api/api/v1/simulation/sessions/${id}`,
+        PAUSE: (id: string) => `/api/api/v1/simulation/sessions/${id}/pause`,
+        RESUME: (id: string) => `/api/api/v1/simulation/sessions/${id}/resume`,
+        STOP: (id: string) => `/api/api/v1/simulation/sessions/${id}/stop`,
+        DEVICE_POWER_ON: (id: string) => `/api/api/v1/simulation/devices/${id}/power-on`,
+        DEVICE_POWER_OFF: (id: string) => `/api/api/v1/simulation/devices/${id}/power-off`,
     },
 } as const;

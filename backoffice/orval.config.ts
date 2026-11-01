@@ -103,4 +103,14 @@ export default defineConfig({
             client: "zod",
         },
     },
+    simulation: {
+        input: {
+            target: "http://localhost:8081/simulation/v3/api-docs",
+            override: { transformer },
+        },
+        output: {
+            target: "src/generated/simulation.ts",
+            client: "zod",
+        },
+    },
 });

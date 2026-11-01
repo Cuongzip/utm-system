@@ -8,3 +8,4 @@ export * from "./alert";
 export * from "./telemetry";
 export * from "./mission";
 export * from "./droneCommand";
+export * from "./simulation";

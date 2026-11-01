@@ -8,6 +8,286 @@
 import zod from "zod";
 
 /**
+ * Mark safety issue as resolved and safe separation or nominal corridor state restored.
+ * @summary Resolve alert
+ */
+export const resolveAlertParams = zod.object({
+    id: zod.string().describe("Alert UUID"),
+});
+
+export const resolveAlertBody = zod
+    .object({
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions taken"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or agent identifier who resolved the incident"),
+    })
+    .describe("Payload to mark an alert as resolved");
+
+export const resolveAlertResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique alert UUID identifier"),
+        alertType: zod.string().optional().describe("Alert type code"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        status: zod
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
+            .optional()
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+        droneId: zod.string().optional().describe("Associated drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID"),
+        hubId: zod.string().optional().describe("Associated hub UUID"),
+        message: zod.string().optional().describe("Diagnostic human-readable message"),
+        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
+        acknowledged: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been acknowledged by an operator"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was acknowledged"),
+        acknowledgedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or username who acknowledged the alert"),
+        resolved: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been marked as resolved"),
+        resolvedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was resolved"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or system who marked the alert as resolved"),
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions"),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username or system agent"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last update timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last update username"),
+    })
+    .describe("Operational alert event model");
+
+/**
+ * Mark safety issue as resolved and safe separation or nominal corridor state restored.
+ * @summary Resolve alert
+ */
+export const resolveAlert1Params = zod.object({
+    id: zod.string().describe("Alert UUID"),
+});
+
+export const resolveAlert1Body = zod
+    .object({
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions taken"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or agent identifier who resolved the incident"),
+    })
+    .describe("Payload to mark an alert as resolved");
+
+export const resolveAlert1Response = zod
+    .object({
+        id: zod.string().optional().describe("Unique alert UUID identifier"),
+        alertType: zod.string().optional().describe("Alert type code"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        status: zod
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
+            .optional()
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+        droneId: zod.string().optional().describe("Associated drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID"),
+        hubId: zod.string().optional().describe("Associated hub UUID"),
+        message: zod.string().optional().describe("Diagnostic human-readable message"),
+        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
+        acknowledged: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been acknowledged by an operator"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was acknowledged"),
+        acknowledgedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or username who acknowledged the alert"),
+        resolved: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been marked as resolved"),
+        resolvedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was resolved"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or system who marked the alert as resolved"),
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions"),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username or system agent"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last update timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last update username"),
+    })
+    .describe("Operational alert event model");
+
+/**
+ * Record operator acknowledgment indicating that the alert has been seen and is under supervision.
+ * @summary Acknowledge alert
+ */
+export const acknowledgeAlertParams = zod.object({
+    id: zod.string().describe("Alert UUID"),
+});
+
+export const acknowledgeAlertBody = zod
+    .object({
+        note: zod.string().optional().describe("Optional operator acknowledgment note"),
+        acknowledgedBy: zod.string().optional().describe("Operator name or identifier override"),
+    })
+    .describe("Payload to acknowledge an alert");
+
+export const acknowledgeAlertResponse = zod
+    .object({
+        id: zod.string().optional().describe("Unique alert UUID identifier"),
+        alertType: zod.string().optional().describe("Alert type code"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        status: zod
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
+            .optional()
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+        droneId: zod.string().optional().describe("Associated drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID"),
+        hubId: zod.string().optional().describe("Associated hub UUID"),
+        message: zod.string().optional().describe("Diagnostic human-readable message"),
+        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
+        acknowledged: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been acknowledged by an operator"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was acknowledged"),
+        acknowledgedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or username who acknowledged the alert"),
+        resolved: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been marked as resolved"),
+        resolvedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was resolved"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or system who marked the alert as resolved"),
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions"),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username or system agent"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last update timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last update username"),
+    })
+    .describe("Operational alert event model");
+
+/**
+ * Record operator acknowledgment indicating that the alert has been seen and is under supervision.
+ * @summary Acknowledge alert
+ */
+export const acknowledgeAlert1Params = zod.object({
+    id: zod.string().describe("Alert UUID"),
+});
+
+export const acknowledgeAlert1Body = zod
+    .object({
+        note: zod.string().optional().describe("Optional operator acknowledgment note"),
+        acknowledgedBy: zod.string().optional().describe("Operator name or identifier override"),
+    })
+    .describe("Payload to acknowledge an alert");
+
+export const acknowledgeAlert1Response = zod
+    .object({
+        id: zod.string().optional().describe("Unique alert UUID identifier"),
+        alertType: zod.string().optional().describe("Alert type code"),
+        severity: zod
+            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+            .optional()
+            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        status: zod
+            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
+            .optional()
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+        droneId: zod.string().optional().describe("Associated drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID"),
+        hubId: zod.string().optional().describe("Associated hub UUID"),
+        message: zod.string().optional().describe("Diagnostic human-readable message"),
+        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
+        acknowledged: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been acknowledged by an operator"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was acknowledged"),
+        acknowledgedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or username who acknowledged the alert"),
+        resolved: zod
+            .boolean()
+            .optional()
+            .describe("Whether the alert has been marked as resolved"),
+        resolvedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the alert was resolved"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or system who marked the alert as resolved"),
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions"),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username or system agent"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last update timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last update username"),
+    })
+    .describe("Operational alert event model");
+
+/**
  * Query historical and active operational alerts with multi-dimensional filtering by drone, flight, severity, and resolution state.
  * @summary List system alerts
  */
@@ -127,146 +407,6 @@ export const createAlertBody = zod
         detailsJson: zod.string().optional().describe("Detailed JSON payload or sensor data"),
     })
     .describe("Payload to publish or trigger an operational alert");
-
-/**
- * Mark safety issue as resolved and safe separation or nominal corridor state restored.
- * @summary Resolve alert
- */
-export const resolveAlertParams = zod.object({
-    id: zod.string().describe("Alert UUID"),
-});
-
-export const resolveAlertBody = zod
-    .object({
-        resolutionNotes: zod
-            .string()
-            .optional()
-            .describe("Resolution commentary or remediation actions taken"),
-        resolvedBy: zod
-            .string()
-            .optional()
-            .describe("Operator or agent identifier who resolved the incident"),
-    })
-    .describe("Payload to mark an alert as resolved");
-
-export const resolveAlertResponse = zod
-    .object({
-        id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
-        severity: zod
-            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
-            .optional()
-            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
-        status: zod
-            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
-            .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
-        droneId: zod.string().optional().describe("Associated drone UUID"),
-        flightId: zod.string().optional().describe("Associated flight UUID"),
-        hubId: zod.string().optional().describe("Associated hub UUID"),
-        message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
-        acknowledgedAt: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Timestamp when the alert was acknowledged"),
-        acknowledgedBy: zod
-            .string()
-            .optional()
-            .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
-        resolvedAt: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Timestamp when the alert was resolved"),
-        resolvedBy: zod
-            .string()
-            .optional()
-            .describe("Operator or system who marked the alert as resolved"),
-        resolutionNotes: zod
-            .string()
-            .optional()
-            .describe("Resolution commentary or remediation actions"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
-        createdBy: zod.string().optional().describe("Creator username or system agent"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last update timestamp"),
-        lastModifiedBy: zod.string().optional().describe("Last update username"),
-    })
-    .describe("Operational alert event model");
-
-/**
- * Record operator acknowledgment indicating that the alert has been seen and is under supervision.
- * @summary Acknowledge alert
- */
-export const acknowledgeAlertParams = zod.object({
-    id: zod.string().describe("Alert UUID"),
-});
-
-export const acknowledgeAlertBody = zod
-    .object({
-        note: zod.string().optional().describe("Optional operator acknowledgment note"),
-        acknowledgedBy: zod.string().optional().describe("Operator name or identifier override"),
-    })
-    .describe("Payload to acknowledge an alert");
-
-export const acknowledgeAlertResponse = zod
-    .object({
-        id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
-        severity: zod
-            .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
-            .optional()
-            .describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
-        status: zod
-            .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
-            .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
-        droneId: zod.string().optional().describe("Associated drone UUID"),
-        flightId: zod.string().optional().describe("Associated flight UUID"),
-        hubId: zod.string().optional().describe("Associated hub UUID"),
-        message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
-        acknowledgedAt: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Timestamp when the alert was acknowledged"),
-        acknowledgedBy: zod
-            .string()
-            .optional()
-            .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
-        resolvedAt: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Timestamp when the alert was resolved"),
-        resolvedBy: zod
-            .string()
-            .optional()
-            .describe("Operator or system who marked the alert as resolved"),
-        resolutionNotes: zod
-            .string()
-            .optional()
-            .describe("Resolution commentary or remediation actions"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
-        createdBy: zod.string().optional().describe("Creator username or system agent"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last update timestamp"),
-        lastModifiedBy: zod.string().optional().describe("Last update username"),
-    })
-    .describe("Operational alert event model");
 
 /**
  * Retrieve complete technical metadata, breach values, and audit timeline for an alert.
