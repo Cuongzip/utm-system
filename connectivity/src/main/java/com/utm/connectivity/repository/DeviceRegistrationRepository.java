@@ -19,7 +19,7 @@ public interface DeviceRegistrationRepository extends JpaRepository<DeviceRegist
 
     Optional<DeviceRegistration> findByDeviceIdentifier(String deviceIdentifier);
 
-    Optional<DeviceRegistration> findByIdOrDeviceIdentifier(String id, String deviceIdentifier);
+    Optional<DeviceRegistration> findByIdOrDeviceIdentifierOrDroneId(String id, String deviceIdentifier, String droneId);
 
     Page<DeviceRegistration> findByConnectionStatus(DeviceConnectionStatus connectionStatus, Pageable pageable);
 

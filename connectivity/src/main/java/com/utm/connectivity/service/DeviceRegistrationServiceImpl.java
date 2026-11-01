@@ -124,7 +124,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional(readOnly = true)
     public DeviceRegistrationVm getDeviceById(String id) {
-        DeviceRegistration reg = deviceRegistrationRepository.findById(id)
+        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(id, id, id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, id));
 
         Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
@@ -134,7 +134,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional
     public HeartbeatResultVm processHeartbeat(String idOrIdentifier, DeviceHeartbeatPostVm heartbeatVm) {
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifier(idOrIdentifier, idOrIdentifier)
+        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(idOrIdentifier, idOrIdentifier, idOrIdentifier)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, idOrIdentifier));
 
         reg.setConnectionStatus(DeviceConnectionStatus.ONLINE);
@@ -150,7 +150,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional
     public RevokeResultVm revokeDeviceRegistration(String id) {
-        DeviceRegistration reg = deviceRegistrationRepository.findById(id)
+        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(id, id, id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, id));
 
         Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
