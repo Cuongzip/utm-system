@@ -52,8 +52,8 @@ export function buildMissionRoutePoints(
     if (hasDep) {
         pts.push({
             id: "hub-dep",
-            label: departureHub.code || "DEP",
-            altitude: 0,
+            label: departureHub.code || departureHub.name || "DEP",
+            altitude: departureHub.altitudeMsl ?? 0,
             latitude: departureHub.location!.lat,
             longitude: departureHub.location!.lng,
             isDeparture: true,
@@ -95,8 +95,8 @@ export function buildMissionRoutePoints(
         if (!isDup) {
             pts.push({
                 id: "hub-arr",
-                label: arrivalHub.code || "ARR",
-                altitude: 0,
+                label: arrivalHub.code || arrivalHub.name || "ARR",
+                altitude: arrivalHub.altitudeMsl ?? 0,
                 latitude: arrLat,
                 longitude: arrLng,
                 isArrival: true,

@@ -1,11 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
+import { calculateDistance, type GeoPoint } from "@/utils/geo";
 
 export type GeometryMode = "radius" | "polygon";
 
-export interface GeoPoint {
-    lat: number;
-    lng: number;
-}
+export type { GeoPoint };
 
 export interface GeoJsonPolygon {
     type: "Polygon";
@@ -45,25 +43,6 @@ export function generateCirclePolygon(
         type: "Polygon",
         coordinates: [generateCircleCoordinates(centerLat, centerLng, radiusMeters)],
     };
-}
-
-export function calculateDistanceMeters(
-    lat1: number,
-    lng1: number,
-    lat2: number,
-    lng2: number
-): number {
-    const R = 6371000; // Earth radius in meters
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-            Math.cos((lat2 * Math.PI) / 180) *
-            Math.sin(dLng / 2) *
-            Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
 }
 
 export function parseExistingGeometry(geometry?: any): {
@@ -115,13 +94,8 @@ export function parseExistingGeometry(geometry?: any): {
     const centroidLat = sumLat / (pointsCount - 1);
 
     if (pointsCount >= 30 && pointsCount <= 36) {
-        const d0 = calculateDistanceMeters(
-            centroidLat,
-            centroidLng,
-            outerRing[0][1],
-            outerRing[0][0]
-        );
-        const dHalf = calculateDistanceMeters(
+        const d0 = calculateDistance(centroidLat, centroidLng, outerRing[0][1], outerRing[0][0]);
+        const dHalf = calculateDistance(
             centroidLat,
             centroidLng,
             outerRing[Math.floor(pointsCount / 2)][1],

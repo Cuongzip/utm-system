@@ -2,9 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui";
-import { RotateCw } from "lucide-react";
-import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
     DashboardKpiStrip,
     DashboardTacticalMap,
@@ -21,10 +19,9 @@ import {
     QUERY_KEYS,
 } from "@/hooks";
 import { connectivityService } from "@/services/connectivityService";
-import { formatDate, formatDateTime } from "@/utils/format";
+import { formatDateTime } from "@/utils/format";
 
 export default function DashboardPage() {
-    const queryClient = useQueryClient();
     const {
         data: allFlights = [],
         isLoading: isLoadingFlights,
@@ -47,12 +44,9 @@ export default function DashboardPage() {
         },
     });
 
-    const [currentDateStr, setCurrentDateStr] = useState("2026-10-30");
     const [lastSyncedTime, setLastSyncedTime] = useState("");
-    const [isManualSyncing, setIsManualSyncing] = useState(false);
 
     useEffect(() => {
-        setCurrentDateStr(formatDate(new Date(), "yyyy-MM-dd"));
         setLastSyncedTime(formatDateTime(new Date(), "HH:mm:ss"));
     }, [allFlights, hubs, drones, alerts, zones, devices]);
 
@@ -93,46 +87,9 @@ export default function DashboardPage() {
         isErrorZones,
     ]);
 
-    const handleManualRefresh = async () => {
-        setIsManualSyncing(true);
-        try {
-            await queryClient.invalidateQueries();
-            setLastSyncedTime(formatDateTime(new Date(), "HH:mm:ss"));
-            toast.success("Operations Center synchronized with backend");
-        } catch {
-            toast.error("Failed to synchronize with backend");
-        } finally {
-            setIsManualSyncing(false);
-        }
-    };
-
     return (
         <div className="p-8 space-y-6 flex flex-col w-full min-h-[calc(100vh-80px)]">
-            <PageHeader title="OPERATIONS CENTER">
-                <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border border-slate-200 bg-white text-xs font-mono font-medium text-slate-700 shadow-2xs">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>LIVE</span>
-                        <span className="text-slate-300">|</span>
-                        <span>{currentDateStr}</span>
-                    </span>
-
-                    <button
-                        type="button"
-                        onClick={handleManualRefresh}
-                        disabled={isManualSyncing}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border border-slate-200 bg-white text-xs font-mono font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
-                        title="Force refresh backend data"
-                    >
-                        <RotateCw
-                            className={`w-3.5 h-3.5 ${
-                                isManualSyncing ? "animate-spin text-cyan-600" : "text-slate-500"
-                            }`}
-                        />
-                        <span>SYNC</span>
-                    </button>
-                </div>
-            </PageHeader>
+            <PageHeader title="OPERATIONS CENTER" />
 
             <DashboardKpiStrip
                 activeFlightsCount={activeFlights.length}

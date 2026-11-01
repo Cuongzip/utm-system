@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { PageHeader } from "@/components/ui";
-import { Building2, Navigation, Radio } from "lucide-react";
 import {
     LiveTelemetry,
     FlightControl,
@@ -72,57 +71,34 @@ export default function ControlCenterPage() {
         });
     }, [allFlights]);
 
+    const relevantHubs = useMemo(() => {
+        if (flights.length === 0) return [];
+        const activeHubIds = new Set<string>();
+        for (const f of flights) {
+            if (f.departureHubId) activeHubIds.add(f.departureHubId);
+            if (f.arrivalHubId) activeHubIds.add(f.arrivalHubId);
+        }
+        return hubs.filter((h) => activeHubIds.has(h.id));
+    }, [flights, hubs]);
+
     useEffect(() => {
         if (flights.length > 0) {
             setSelectedFlightId((prev) =>
                 prev && flights.some((f) => f.id === prev) ? prev : flights[0].id
             );
-        } else if (allFlights.length > 0) {
-            setSelectedFlightId((prev) =>
-                prev && allFlights.some((f) => f.id === prev) ? prev : allFlights[0].id
-            );
         } else {
             setSelectedFlightId(null);
         }
-    }, [flights, allFlights]);
+    }, [flights]);
 
-    const { telemetryMap, activeTelemetryCount, isSocketConnected } = useLiveTelemetry(flights);
+    const { telemetryMap } = useLiveTelemetry(flights);
 
-    const selectedFlight = allFlights.find((f) => f.id === selectedFlightId);
+    const selectedFlight = flights.find((f) => f.id === selectedFlightId);
     const selectedTelemetry = selectedFlightId ? telemetryMap[selectedFlightId] : null;
-
-    const activeFlightsCount = flights.length;
 
     return (
         <div className="p-8 space-y-6">
-            <PageHeader title="Live Operations">
-                <div className="flex items-center space-x-2 text-xs font-mono">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded border border-slate-200 bg-slate-50 text-slate-600 font-medium">
-                        <Building2 className="h-3.5 w-3.5 mr-1 text-slate-500" />
-                        {hubs.length} HUBS
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded border border-slate-300 bg-slate-100 text-slate-900 font-semibold">
-                        <Navigation className="h-3.5 w-3.5 mr-1 text-slate-700 rotate-45" />
-                        {activeFlightsCount > 0 ? `${activeFlightsCount} ACTIVE` : "0 ACTIVE"}
-                    </span>
-                    <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded border font-medium ${
-                            activeTelemetryCount > 0
-                                ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold animate-pulse"
-                                : isSocketConnected
-                                  ? "border-sky-300 bg-sky-50 text-sky-700 font-medium"
-                                  : "border-slate-200 bg-slate-50 text-slate-600"
-                        }`}
-                    >
-                        <Radio className="h-3.5 w-3.5 mr-1 text-emerald-600" />
-                        {activeTelemetryCount > 0
-                            ? `${activeTelemetryCount} TELEMETRY LIVE${isSocketConnected ? " (WS)" : ""}`
-                            : isSocketConnected
-                              ? "WS CONNECTED • STANDBY"
-                              : "TELEMETRY STANDBY"}
-                    </span>
-                </div>
-            </PageHeader>
+            <PageHeader title="Live Operations" />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
@@ -136,14 +112,14 @@ export default function ControlCenterPage() {
                                 .replace(/^drone-heading-/, "")
                                 .replace(/^flight-route-/, "")
                                 .replace(/^flight-label-/, "");
-                            const found = allFlights.find((f) => f.id === rawId);
+                            const found = flights.find((f) => f.id === rawId);
                             if (found) {
                                 setSelectedFlightId(found.id);
                             }
                         }}
                     >
                         <FlightsLayer
-                            flights={allFlights}
+                            flights={flights}
                             selectedFlightId={selectedFlightId}
                             hubs={hubs}
                             autoFitBounds={false}
@@ -151,14 +127,14 @@ export default function ControlCenterPage() {
                             showEndpoints={false}
                         />
                         <LiveTelemetryLayer
-                            flights={flights.length > 0 ? flights : allFlights}
+                            flights={flights}
                             telemetryMap={telemetryMap}
                             selectedFlightId={selectedFlightId}
                             onSelectFlight={setSelectedFlightId}
                             autoFollowSelected={false}
                         />
-                        <HubsLayer hubs={hubs} autoFitBounds={false} />
-                        <PerspectiveResetHandler hubs={hubs} flights={allFlights} />
+                        <HubsLayer hubs={relevantHubs} autoFitBounds={false} />
+                        <PerspectiveResetHandler hubs={relevantHubs} flights={flights} />
                     </TacticalMapContainer>
                 </div>
 
@@ -166,7 +142,7 @@ export default function ControlCenterPage() {
                     <LiveTelemetry
                         telemetry={selectedTelemetry}
                         flight={selectedFlight}
-                        flights={flights.length > 0 ? flights : allFlights}
+                        flights={flights}
                         selectedFlightId={selectedFlightId}
                         onSelectFlight={setSelectedFlightId}
                         telemetryMap={telemetryMap}

@@ -3,14 +3,6 @@ import { Construction, Sliders } from "lucide-react";
 import Link from "next/link";
 
 const TAB_TITLES: Record<string, string> = {
-    dashboard: "Dashboard Overview",
-    "control-center": "Control Center",
-    connectivity: "Device Connectivity",
-    missions: "Missions Operations",
-    flights: "Flights Management",
-    drones: "Drones Management",
-    hubs: "Operations Hubs",
-    airspace: "Airspace Sectors",
     conflicts: "Conflict Detection",
     settings: "System Settings",
 };

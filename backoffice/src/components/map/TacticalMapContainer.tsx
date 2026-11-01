@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import { Globe, Map as MapIcon, Maximize2, Minimize2, Layers } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
 import { BaseCesiumMap } from "./BaseCesiumMap";
@@ -22,6 +22,31 @@ export interface TacticalMapContainerProps {
     loadingText?: string;
 }
 
+function subscribeMapMode(callback: () => void) {
+    if (typeof window === "undefined") return () => {};
+    window.addEventListener("storage", callback);
+    window.addEventListener("utm_map_mode_change", callback);
+    return () => {
+        window.removeEventListener("storage", callback);
+        window.removeEventListener("utm_map_mode_change", callback);
+    };
+}
+
+function getMapModeSnapshot(): "globe" | "2d" {
+    if (typeof window === "undefined") return "2d";
+    try {
+        const saved = localStorage.getItem("utm_map_mode");
+        if (saved === "2d" || saved === "globe") return saved;
+    } catch {
+        // ignore
+    }
+    return "2d";
+}
+
+function getServerMapModeSnapshot(): "globe" | "2d" {
+    return "2d";
+}
+
 export function TacticalMapContainer({
     initialMode = "2d",
     initialLayerType = "satellite",
@@ -36,37 +61,20 @@ export function TacticalMapContainer({
     className,
     loadingText = "Loading tactical map...",
 }: TacticalMapContainerProps) {
-    const [mapMode, setMapMode] = useState<"globe" | "2d">(() => {
-        if (typeof window !== "undefined") {
-            try {
-                const saved = localStorage.getItem("utm_map_mode");
-                if (saved === "2d" || saved === "globe") return saved;
-            } catch {
-                // ignore
-            }
-        }
-        return initialMode === "3d" ? "globe" : "2d";
-    });
+    const mapMode = useSyncExternalStore(
+        subscribeMapMode,
+        getMapModeSnapshot,
+        getServerMapModeSnapshot
+    );
     const [imageryType, setImageryType] = useState<ImageryType>(initialLayerType);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isLayersOpen, setIsLayersOpen] = useState(false);
     const layersRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem("utm_map_mode");
-            if (saved === "2d" || saved === "globe") {
-                setMapMode(saved);
-            }
-        } catch {
-            // ignore
-        }
-    }, []);
-
     const handleModeChange = (newMode: "globe" | "2d") => {
-        setMapMode(newMode);
         try {
             localStorage.setItem("utm_map_mode", newMode);
+            window.dispatchEvent(new Event("utm_map_mode_change"));
         } catch {
             // ignore
         }

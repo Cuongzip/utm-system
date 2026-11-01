@@ -87,20 +87,3 @@ export function useTelemetryStream(
 
     useStompSubscription<TelemetryRecord>(destination, onRecord, enabled);
 }
-
-export function useDeviceHeartbeats(onHeartbeat: (data: unknown) => void, enabled = true) {
-    useStompSubscription("/topic/connectivity/heartbeats", onHeartbeat, enabled);
-}
-
-export function useHubStatusUpdates(
-    hubId: string | null,
-    onUpdate: (data: unknown) => void,
-    enabled = true
-) {
-    const destination = hubId ? `/topic/hubs/${hubId}` : null;
-    useStompSubscription(destination, onUpdate, enabled);
-}
-
-export function useAlertStream(onAlert: (data: unknown) => void, enabled = true) {
-    useStompSubscription("/topic/alerts/critical", onAlert, enabled);
-}

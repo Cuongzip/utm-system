@@ -105,7 +105,6 @@ export function BaseCesiumMap({
                     selectionIndicator: false,
                 });
 
-                // Disable default Cesium entity tracking / double click zoom
                 activeViewer.screenSpaceEventHandler.removeInputAction(
                     Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
                 );
@@ -154,6 +153,7 @@ export function BaseCesiumMap({
                     resizeObserver.observe(containerRef.current);
                 }
 
+                viewerRef.current = activeViewer;
                 setViewer(activeViewer);
                 setIsLoaded(true);
             } catch (err: unknown) {
@@ -179,7 +179,7 @@ export function BaseCesiumMap({
     }, []);
 
     useEffect(() => {
-        const v = viewerRef.current;
+        const v = viewerRef.current || viewer;
         if (!v || !isLoaded || v.isDestroyed()) return;
 
         async function updateSceneMode() {
@@ -189,38 +189,43 @@ export function BaseCesiumMap({
             const targetMode = mode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D;
 
             if (v.scene.mode !== targetMode) {
-                const currentPos = Cesium.Cartographic.fromCartesian(v.camera.position);
-                const targetLng = Cesium.Math.toDegrees(currentPos.longitude);
-                const targetLat = Cesium.Math.toDegrees(currentPos.latitude);
-                const targetHeight = Math.max(currentPos.height, 1200);
-
-                const onMorphComplete = () => {
-                    if (!v || v.isDestroyed()) return;
-                    v.scene.morphComplete.removeEventListener(onMorphComplete);
-                    v.camera.setView({
-                        destination: Cesium.Cartesian3.fromDegrees(
-                            targetLng,
-                            targetLat,
-                            targetHeight
-                        ),
-                    });
-                    v.scene.requestRender();
-                };
-                v.scene.morphComplete.addEventListener(onMorphComplete);
+                const carto = v.camera.positionCartographic;
+                const targetLng = carto
+                    ? Cesium.Math.toDegrees(carto.longitude)
+                    : initialCoordinates.lng;
+                const targetLat = carto
+                    ? Cesium.Math.toDegrees(carto.latitude)
+                    : initialCoordinates.lat;
+                const targetHeight = carto
+                    ? Math.max(carto.height, 1200)
+                    : (initialCoordinates.height ?? 45000);
 
                 if (targetMode === Cesium.SceneMode.SCENE2D) {
-                    v.scene.morphTo2D(0.3);
+                    v.scene.fog.enabled = false;
+                    v.scene.globe.showGroundAtmosphere = false;
+                    if (v.scene.sun) v.scene.sun.show = false;
+                    if (v.scene.moon) v.scene.moon.show = false;
+                    v.scene.morphTo2D(0);
                 } else {
-                    v.scene.morphTo3D(0.3);
+                    v.scene.fog.enabled = true;
+                    v.scene.globe.showGroundAtmosphere = true;
+                    if (v.scene.sun) v.scene.sun.show = true;
+                    if (v.scene.moon) v.scene.moon.show = true;
+                    v.scene.morphTo3D(0);
                 }
+
+                v.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(targetLng, targetLat, targetHeight),
+                });
+                v.scene.requestRender();
             }
         }
 
         updateSceneMode();
-    }, [mode, isLoaded]);
+    }, [mode, isLoaded, viewer, initialCoordinates]);
 
     useEffect(() => {
-        const v = viewerRef.current;
+        const v = viewerRef.current || viewer;
         if (!v || !isLoaded || v.isDestroyed()) return;
 
         async function updateImagery() {
@@ -254,7 +259,7 @@ export function BaseCesiumMap({
         }
 
         updateImagery();
-    }, [layerType, isLoaded]);
+    }, [layerType, isLoaded, viewer]);
 
     return (
         <CesiumContext.Provider value={{ viewer, isLoaded }}>

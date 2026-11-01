@@ -10,12 +10,22 @@ import {
     OutlineButton,
     SearchInput,
     AlertBanner,
+    CustomSelect,
+    type SelectOption,
 } from "@/components/ui";
 import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
 import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
+
+const STATUS_OPTIONS: SelectOption[] = [
+    { value: "all", label: "All Statuses" },
+    ...MISSION_STATUSES.map((status) => ({
+        value: status,
+        label: MISSION_STATUS_LABELS[status],
+    })),
+];
 
 export default function MissionsPage() {
     const router = useRouter();
@@ -127,19 +137,14 @@ export default function MissionsPage() {
                     className="w-72"
                 />
 
-                <div className="w-44">
-                    <select
+                <div className="w-48">
+                    <CustomSelect
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full h-[34px] px-3 border border-[var(--color-border-strong)] rounded-md text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] font-medium focus:outline-hidden focus:border-[var(--color-border-dark)] cursor-pointer"
-                    >
-                        <option value="all">All Statuses</option>
-                        {MISSION_STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                                {MISSION_STATUS_LABELS[status]}
-                            </option>
-                        ))}
-                    </select>
+                        onValueChange={(val) => setStatusFilter(val || "all")}
+                        options={STATUS_OPTIONS}
+                        placeholder="All Statuses"
+                        className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
+                    />
                 </div>
             </div>
 

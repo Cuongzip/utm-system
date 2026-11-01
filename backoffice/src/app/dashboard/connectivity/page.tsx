@@ -52,6 +52,7 @@ export default function ConnectivityPage() {
                 return devices.filter((d) => d.connectionStatus === "online");
             }
         },
+        refetchInterval: 10000,
         enabled: devices.length >= 0,
     });
 
@@ -146,11 +147,13 @@ export default function ConnectivityPage() {
                     <ConnectedDevicesPanel
                         status={onlineCount > 0 ? `ONLINE (${onlineCount})` : "STANDBY"}
                         devices={onlineDevices}
+                        registeredCount={devices.length}
                         loading={loading}
                         onHeartbeat={heartbeatMutation.mutate}
                         onRevoke={revokeDeviceMutation.mutate}
                         onTroubleshootGateway={() => setActiveSubTab("telemetry-modes")}
                         onProvisionEdgeAgent={() => setIsRegisterOpen(true)}
+                        onViewAllDevices={() => setActiveSubTab("devices")}
                     />
                 </>
             )}

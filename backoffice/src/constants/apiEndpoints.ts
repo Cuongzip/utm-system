@@ -1,16 +1,8 @@
 export const API_ENDPOINTS = {
-    AUTH: {
-        LOGIN: "/oauth2/authorization/keycloak",
-        LOGOUT: "/logout",
-        USER_INFO: "/authentication/user",
-    },
     DRONES: {
         BASE: "/api/api/v1/drones",
         BY_ID: (id: string) => `/api/api/v1/drones/${id}`,
-        TELEMETRY: (id: string) => `/api/api/v1/telemetry/${id}`,
         COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands`,
-        COMMAND_BY_ID: (droneId: string, commandId: string) =>
-            `/api/api/v1/drones/${droneId}/commands/${commandId}`,
         ACTIVE_COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands/active`,
         CANCEL_COMMAND: (droneId: string, commandId: string) =>
             `/api/api/v1/drones/${droneId}/commands/${commandId}/cancel`,
@@ -19,17 +11,12 @@ export const API_ENDPOINTS = {
         BASE: "/api/api/v1/hubs",
         BY_ID: (id: string) => `/api/api/v1/hubs/${id}`,
     },
-    ORGANIZATIONS: {
-        BASE: "/api/api/v1/organizations",
-        BY_ID: (id: string) => `/api/api/v1/organizations/${id}`,
-    },
     FLIGHTS: {
         BASE: "/api/api/v1/flights",
         BY_ID: (id: string) => `/api/api/v1/flights/${id}`,
         SUBMIT_PLAN: "/api/api/v1/flights/plans",
     },
     AIRSPACES: {
-        BASE: "/api/api/v1/airspace",
         ZONES: "/api/api/v1/airspace/zones",
         BY_ID: (id: string) => `/api/api/v1/airspace/zones/${id}`,
         CHECK_POINT: "/api/api/v1/airspace/check",
@@ -43,7 +30,6 @@ export const API_ENDPOINTS = {
         RESOLVE: (id: string) => `/api/api/v1/alerts/${id}/resolve`,
     },
     CONFLICTS: {
-        BASE: "/api/api/v1/conflicts",
         ALERTS: "/api/api/v1/alerts",
     },
     CONNECTIVITY: {
@@ -68,7 +54,6 @@ export const API_ENDPOINTS = {
             `/api/api/v1/missions/${missionId}/waypoints/reorder`,
     },
     TELEMETRY: {
-        BASE: "/api/api/v1/telemetry",
         BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}`,
         LATEST_BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}/latest`,
         BY_DRONE: (droneId: string) => `/api/api/v1/telemetry/drone/${droneId}`,

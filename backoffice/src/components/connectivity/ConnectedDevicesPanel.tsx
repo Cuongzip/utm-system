@@ -9,21 +9,25 @@ import styles from "./ConnectedDevicesPanel.module.css";
 interface ConnectedDevicesPanelProps {
     status?: string;
     devices?: DeviceRegistration[];
+    registeredCount?: number;
     loading?: boolean;
     onHeartbeat?: (id: string) => void;
     onRevoke?: (id: string) => void;
     onTroubleshootGateway?: () => void;
     onProvisionEdgeAgent?: () => void;
+    onViewAllDevices?: () => void;
 }
 
 export function ConnectedDevicesPanel({
     status = "STANDBY",
     devices = [],
+    registeredCount = 0,
     loading = false,
     onHeartbeat,
     onRevoke,
     onTroubleshootGateway,
     onProvisionEdgeAgent,
+    onViewAllDevices,
 }: ConnectedDevicesPanelProps) {
     const isOnline = (item: DeviceRegistration) => item.connectionStatus === "online";
 
@@ -56,9 +60,25 @@ export function ConnectedDevicesPanel({
                     <EmptyState
                         icon={WifiOff}
                         title="No Connected Devices"
-                        description="There are no ground or airborne devices broadcasting telemetry to the central gateway right now."
+                        description={
+                            registeredCount > 0
+                                ? `All ${registeredCount} registered devices are currently offline / in standby. No live telemetry broadcast in the last 30s.`
+                                : "There are no ground or airborne devices broadcasting telemetry to the central gateway right now."
+                        }
                     >
-                        <div className="pt-4 flex items-center gap-3">
+                        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+                            {onViewAllDevices && registeredCount > 0 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={onViewAllDevices}
+                                        className="text-xs font-bold text-cyan-600 hover:text-cyan-700 underline cursor-pointer"
+                                    >
+                                        View All Registered Devices ({registeredCount})
+                                    </button>
+                                    <span className="text-[16px] text-[#cbd5e1]">•</span>
+                                </>
+                            )}
                             <button
                                 type="button"
                                 onClick={onTroubleshootGateway}
