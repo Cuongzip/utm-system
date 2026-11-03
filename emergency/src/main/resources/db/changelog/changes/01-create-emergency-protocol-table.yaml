@@ -1,0 +1,131 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-emergency-protocol-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: emergency_protocols
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: emergency_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: severity
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: response_action
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fallback_action
+                  type: varchar(50)
+              - column:
+                  name: requires_confirmation
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: confirmation_timeout_seconds
+                  type: int
+                  defaultValueNumeric: 30
+                  constraints:
+                    nullable: false
+              - column:
+                  name: auto_execute_on_timeout
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: int
+                  defaultValueNumeric: 50
+                  constraints:
+                    nullable: false
+              - column:
+                  name: thresholds
+                  type: text
+              - column:
+                  name: conditions
+                  type: text
+              - column:
+                  name: notify_pilot
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notify_supervisor
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notify_ops_center
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: send_sms
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: send_email
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: play_audio_alarm
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_system_default
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)

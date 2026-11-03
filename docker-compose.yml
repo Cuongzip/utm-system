@@ -324,13 +324,41 @@ services:
     networks:
       - utm-network
 
+  emergency:
+    build:
+      context: .
+      dockerfile: ./emergency/Dockerfile
+    image: emergency:latest
+    ports:
+      - "8096:8096"
+    environment:
+      - SERVER_PORT=8096
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=utm_emergency
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KEYCLOAK_URL=http://identity
+      - FLIGHT_SERVICE_URL=http://flight:8086
+      - DRONE_SERVICE_URL=http://drone:8085
+      - HUB_SERVICE_URL=http://hub:8084
+      - ALERT_SERVICE_URL=http://alert:8093
+    depends_on:
+      - postgres
+      - flight
+      - drone
+      - hub
+      - alert
+    networks:
+      - utm-network
+
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.17.14
     ports:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/organization/v3/api-docs', name: 'Organization Service' }, { url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/connectivity/v3/api-docs', name: 'Connectivity Service' }, { url: '/mission/v3/api-docs', name: 'Mission Service' }]"
+      - "URLS=[{ url: '/organization/v3/api-docs', name: 'Organization Service' }, { url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/connectivity/v3/api-docs', name: 'Connectivity Service' }, { url: '/mission/v3/api-docs', name: 'Mission Service' }, { url: '/emergency/v3/api-docs', name: 'Emergency Service' }]"
       - OAUTH_CLIENT_ID=swagger-ui
       - OAUTH_USE_PKCE=true
     networks:

@@ -1,0 +1,61 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-create-emergency-config-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: emergency_config
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: config_key
+                  type: varchar(100)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: config_value
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - insert:
+            tableName: emergency_config
+            columns:
+              - column:
+                  name: id
+                  value: "00000000-0000-0000-0000-000000000001"
+              - column:
+                  name: config_key
+                  value: "operation_mode"
+              - column:
+                  name: config_value
+                  value: "\"supervised\""
+              - column:
+                  name: description
+                  value: "Emergency response operation mode: auto or supervised"
+              - column:
+                  name: created_on
+                  valueDate: "CURRENT_TIMESTAMP"
+              - column:
+                  name: last_modified_on
+                  valueDate: "CURRENT_TIMESTAMP"

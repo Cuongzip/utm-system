@@ -13,6 +13,7 @@ COPY alert ./alert
 COPY connectivity ./connectivity
 COPY organization ./organization
 COPY mission ./mission
+COPY emergency ./emergency
 COPY backoffice-bff ./backoffice-bff
 RUN mvn clean package -pl backoffice-bff -am -DskipTests
 

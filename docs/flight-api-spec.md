@@ -26,7 +26,8 @@
 12. [Module 12: Alerts & Operational Safety (Thực thể `Alert`)](#12-module-alerts--operational-safety-thực-thể-alert)
 13. [Module 13: Drone Commands & Control (Thực thể `DroneCommand`)](#13-module-drone-commands--control-thực-thể-dronecommand)
 14. [Module 14: Feasibility & Energy Evaluation (Thực thể `FeasibilityEvaluation`)](#14-module-feasibility--energy-evaluation-thực-thể-feasibilityevaluation)
-15. [Sơ Đồ Tuần Tự Toàn Trình (End-to-End Sequence)](#15-sơ-đồ-tuần-tự-toàn-trình)
+15. [Module 15: Emergency Response & Safety Failsafe (Thực thể `EmergencyIncident`, `EmergencyProtocol`, `BlackboxEntry`)](#15-module-emergency-response--safety-failsafe-thực-thể-emergencyincident-emergencyprotocol-blackboxentry)
+16. [Sơ Đồ Tuần Tự Toàn Trình (End-to-End Sequence)](#16-sơ-đồ-tuần-tự-toàn-trình)
 
 ---
 
@@ -2341,7 +2342,360 @@ export interface FeasibilitySolution {
 
 ---
 
-## 15. SƠ ĐỒ TUẦN TỰ TOÀN TRÌNH (TÍCH HỢP FEASIBILITY, ĐIỀU HÀNH, CONFLICT & ALERT)
+
+## 15. MODULE EMERGENCY RESPONSE & SAFETY FAILSAFE (Thực thể: `EmergencyIncident`, `EmergencyProtocol`, `BlackboxEntry`)
+
+Module này đóng vai trò là **"Bộ não an toàn thời gian thực & Hệ thống tự động cứu nạn (Failsafe Brain)"** cho các máy bay không người lái đang hoạt động. Khi phát hiện các nguy cơ đe dọa an toàn bay (pin tụt khẩn cấp, mất kết nối C2, hỏng động cơ, sắp va chạm chướng ngại vật/máy bay khác), hệ thống tự động đánh giá mức độ nghiêm trọng, tra cứu kịch bản ứng phó, kiểm tra tính khả thi năng lượng (`feasibility`) của đường bay về, và tự động ban hành lệnh cứu hộ (`LAND`, `RTH`, `DIVERT`, `HOVER`, `ESTOP`) xuống drone, đồng thời kích hoạt ghi nhận hộp đen điện tử (`BlackboxEntry`) tần số cao phục vụ công tác điều tra tai nạn.
+
+### 15.1 Cấu Trúc Bảng Dữ Liệu
+
+#### 15.1.1 Bảng Sự Cố Khẩn Cấp (`emergency_incidents`)
+
+| Tên Cột (DB Column) | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh sự cố khẩn cấp |
+| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone(id)`, NOT NULL | Drone gặp sự cố |
+| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight(id)`, NULLABLE | Chuyến bay đang diễn ra sự cố |
+| `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL | Phân loại loại sự cố |
+| `severity` | `varchar(50)` | `EmergencySeverity` | NOT NULL | Mức độ nghiêm trọng |
+| `status` | `varchar(50)` | `IncidentStatus` | NOT NULL, Default: `'active'` | Trạng thái xử lý sự cố |
+| `message` | `text` | `string` | NOT NULL | Mô tả tóm tắt sự cố |
+| `detection_data` | `jsonb` | `Record<string, unknown>` | NULLABLE | Dữ liệu viễn trắc/cảm biến tại thời điểm phát hiện |
+| `latitude` | `numeric(10, 7)` | `number` | NULLABLE | Vĩ độ lúc phát hiện sự cố |
+| `longitude` | `numeric(10, 7)` | `number` | NULLABLE | Kinh độ lúc phát hiện sự cố |
+| `altitude` | `numeric(8, 2)` | `number` | NULLABLE | Độ cao MSL (m) lúc phát hiện sự cố |
+| `response_action` | `varchar(50)` | `ResponseAction` | NULLABLE | Hành động ứng phó được chỉ định |
+| `was_auto_executed` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đã tự động kích hoạt bởi hệ thống |
+| `confirmation_required` | `boolean` | `boolean` | NOT NULL, Default: `false` | Có yêu cầu phi công/ATC duyệt trước |
+| `confirmed_by` | `varchar(100)` | `string` | NULLABLE | Username/ID người phê duyệt |
+| `confirmed_at` | `timestamptz` | `Date` | NULLABLE | Thời điểm người vận hành duyệt |
+| `confirmation_timeout_at` | `timestamptz` | `Date` | NULLABLE | Thời điểm hết hạn đếm ngược (để tự kích hoạt) |
+| `action_started_at` | `timestamptz` | `Date` | NULLABLE | Thời điểm lệnh can thiệp bắt đầu gửi xuống drone |
+| `action_completed_at` | `timestamptz` | `Date` | NULLABLE | Thời điểm drone xác nhận chấp hành xong |
+| `action_success` | `boolean` | `boolean` | NULLABLE | Kết quả thực thi hành động cứu nạn |
+| `action_error` | `text` | `string` | NULLABLE | Thông điệp lỗi nếu thực thi thất bại |
+| `resolved_at` | `timestamptz` | `Date` | NULLABLE | Thời điểm sự cố được giải quyết triệt để |
+| `resolved_by` | `varchar(100)` | `string` | NULLABLE | Người xác nhận đóng sự cố |
+| `resolution_notes` | `text` | `string` | NULLABLE | Ghi chú phương án giải quyết |
+| `root_cause` | `varchar(50)` | `RootCause` | NULLABLE | Nguyên nhân gốc rễ sau điều tra |
+| `root_cause_notes` | `text` | `string` | NULLABLE | Chi tiết kết quả điều tra kỹ thuật |
+| `lessons_learned` | `text` | `string` | NULLABLE | Bài học kinh nghiệm ngăn ngừa tái diễn |
+| `timeline` | `jsonb` | `IncidentTimelineEvent[]` | NULLABLE | Nhật ký toàn bộ mốc diễn biến sự cố |
+| `detected_at` | `timestamptz` | `Date` | NOT NULL | Thời điểm thuật toán phát hiện sự cố |
+| `created_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm tạo bản ghi |
+| `updated_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm cập nhật cuối cùng |
+
+#### 15.1.2 Bảng Kịch Bản Quy Chuẩn Ứng Phó Khẩn Cấp (`emergency_protocols`)
+
+| Tên Cột (DB Column) | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh kịch bản |
+| `name` | `varchar(100)` | `string` | NOT NULL, **UNIQUE** | Tên kịch bản quy chuẩn |
+| `description` | `text` | `string` | NULLABLE | Mô tả chi tiết mục đích và phạm vi áp dụng |
+| `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL | Loại sự cố kích hoạt kịch bản |
+| `severity` | `varchar(50)` | `EmergencySeverity` | NOT NULL | Cấp độ nghiêm trọng tương ứng |
+| `response_action` | `varchar(50)` | `ResponseAction` | NOT NULL | Hành động cứu nạn ưu tiên 1 |
+| `fallback_action` | `varchar(50)` | `ResponseAction` | NULLABLE | Hành động dự phòng nếu ưu tiên 1 không an toàn |
+| `requires_confirmation` | `boolean` | `boolean` | NOT NULL, Default: `true` | Yêu cầu người vận hành xác nhận |
+| `confirmation_timeout_seconds` | `int` | `number` | NOT NULL, Default: `30` | Thời gian đếm ngược chờ xác nhận (giây) |
+| `auto_execute_on_timeout` | `boolean` | `boolean` | NOT NULL, Default: `true` | Tự động kích hoạt khi hết hạn đếm ngược |
+| `priority` | `int` | `number` | NOT NULL, Default: `50` | Độ ưu tiên xử lý (số càng nhỏ càng ưu tiên) |
+| `thresholds` | `jsonb` | `Record<string, unknown>` | NULLABLE | Ngưỡng cảm biến kích hoạt (m, %, s) |
+| `conditions` | `jsonb` | `Record<string, unknown>` | NULLABLE | Điều kiện tiền đề (minBattery, requiresGps, ...) |
+| `notify_pilot` | `boolean` | `boolean` | NOT NULL, Default: `true` | Bắn thông báo đẩy cho phi công |
+| `notify_supervisor` | `boolean` | `boolean` | NOT NULL, Default: `true` | Bắn thông báo đẩy cho người giám sát |
+| `notify_ops_center` | `boolean` | `boolean` | NOT NULL, Default: `true` | Báo động trung tâm điều hành ATC |
+| `send_sms` | `boolean` | `boolean` | NOT NULL, Default: `false` | Gửi tin nhắn SMS khẩn cấp |
+| `send_email` | `boolean` | `boolean` | NOT NULL, Default: `true` | Gửi email báo động sự cố |
+| `play_audio_alarm` | `boolean` | `boolean` | NOT NULL, Default: `true` | Phát âm thanh còi hú báo động tại UI/Trạm điều hành |
+| `is_active` | `boolean` | `boolean` | NOT NULL, Default: `true` | Trạng thái hiệu lực của kịch bản |
+| `is_system_default` | `boolean` | `boolean` | NOT NULL, Default: `false` | Kịch bản mặc định của hệ thống (khóa sửa loại) |
+| `created_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm tạo |
+| `updated_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm cập nhật |
+
+#### 15.1.3 Bảng Hộp Đen Điện Tử (`blackbox_entries`)
+
+| Tên Cột (DB Column) | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh bản ghi hộp đen |
+| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight(id)`, NOT NULL, Index | Chuyến bay được ghi nhận |
+| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone(id)`, NOT NULL | Drone ghi nhận dữ liệu |
+| `incident_id` | `varchar(36)` | `string` | **FK** -> `emergency_incidents(id)`, NULLABLE, Index | Sự cố liên kết (nếu đang trong trạng thái khẩn cấp) |
+| `timestamp` | `timestamptz` | `Date` | NOT NULL, Index | Mốc thời gian chính xác của bản ghi viễn trắc |
+| `latitude` | `numeric(10, 7)` | `number` | NOT NULL | Vĩ độ WGS84 |
+| `longitude` | `numeric(10, 7)` | `number` | NOT NULL | Kinh độ WGS84 |
+| `altitude_msl` | `numeric(8, 2)` | `number` | NOT NULL | Cao độ tuyệt đối so với mực nước biển (m) |
+| `altitude_agl` | `numeric(8, 2)` | `number` | NULLABLE | Cao độ tương đối so với mặt đất (m) |
+| `roll` | `numeric(6, 2)` | `number` | NULLABLE | Góc nghiêng ngang roll (độ) |
+| `pitch` | `numeric(6, 2)` | `number` | NULLABLE | Góc nghiêng dọc pitch (độ) |
+| `yaw` | `numeric(6, 2)` | `number` | NULLABLE | Góc hướng đầu mũi yaw (độ) |
+| `ground_speed` | `numeric(6, 2)` | `number` | NOT NULL | Vận tốc mặt đất (m/s) |
+| `vertical_speed` | `numeric(6, 2)` | `number` | NULLABLE | Vận tốc leo/hạ cao độ (m/s) |
+| `heading` | `numeric(6, 2)` | `number` | NOT NULL | Hướng di chuyển la bàn (0 - 360 độ) |
+| `battery_level` | `numeric(5, 2)` | `number` | NOT NULL | Tỷ lệ pin còn lại (%) |
+| `battery_voltage` | `numeric(6, 2)` | `number` | NULLABLE | Điện áp tức thời của pack pin (V) |
+| `battery_current` | `numeric(6, 2)` | `number` | NULLABLE | Dòng điện xả tức thời (A) |
+| `signal_strength` | `numeric(5, 2)` | `number` | NOT NULL | Chất lượng tín hiệu C2 RSSI (%) |
+| `gps_satellites` | `int` | `number` | NULLABLE | Số lượng vệ tinh GPS khóa được |
+| `gps_hdop` | `numeric(5, 2)` | `number` | NULLABLE | Độ chính xác vị trí ngang HDOP |
+| `motor_rpm` | `jsonb` | `number[]` | NULLABLE | Tốc độ vòng tua từng motor |
+| `motor_temps` | `jsonb` | `number[]` | NULLABLE | Nhiệt độ từng motor (độ C) |
+| `command_received` | `varchar(100)` | `string` | NULLABLE | Lệnh điều khiển vừa nhận được |
+| `command_executed` | `varchar(100)` | `string` | NULLABLE | Lệnh drone vừa chấp hành |
+| `emergency_active` | `boolean` | `boolean` | NOT NULL, Default: `false` | Cờ đánh dấu trạng thái khẩn cấp đang bật |
+| `emergency_type` | `varchar(50)` | `string` | NULLABLE | Loại sự cố đang diễn ra tại mốc này |
+| `emergency_severity` | `varchar(50)` | `string` | NULLABLE | Cấp độ nghiêm trọng tại mốc này |
+| `flight_mode` | `varchar(50)` | `string` | NULLABLE | Chế độ lái (AUTO, GUIDED, MANUAL, RTL, LAND) |
+| `wind_speed` | `numeric(6, 2)` | `number` | NULLABLE | Tốc độ gió đo được từ phong kế drone (m/s) |
+| `wind_direction` | `numeric(6, 2)` | `number` | NULLABLE | Hướng gió (độ) |
+| `temperature` | `numeric(6, 2)` | `number` | NULLABLE | Nhiệt độ môi trường bên ngoài (độ C) |
+| `humidity` | `numeric(5, 2)` | `number` | NULLABLE | Độ ẩm tương đối của không khí (%) |
+| `is_emergency_recording` | `boolean` | `boolean` | NOT NULL, Default: `false` | Ghi nhận tần số cao lúc xảy ra sự cố (Tần số 10Hz) |
+| `created_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm ghi nhận |
+
+#### 15.1.4 Bảng Cấu Hình Hệ Thống Khẩn Cấp (`emergency_config`)
+
+| Tên Cột (DB Column) | Kiểu Dữ Liệu DB | Kiểu TypeScript | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `string` | **PK**, Default: `uuid_generate_v4()` | Định danh bản ghi cấu hình |
+| `key` | `varchar(100)` | `string` | NOT NULL, **UNIQUE** | Khóa cấu hình (ví dụ: `operation_mode`) |
+| `value` | `jsonb` | `unknown` | NOT NULL | Giá trị cấu hình lưu dạng JSON |
+| `description` | `text` | `string` | NULLABLE | Mô tả mục đích tham số cấu hình |
+| `updated_at` | `timestamptz` | `Date` | NOT NULL, Default: `now()` | Thời điểm cập nhật cuối cùng |
+
+### 15.2 Các Enum & Interface Nghiệp Vụ
+
+```typescript
+export type EmergencyType =
+  | 'battery_low'              // Pin dưới ngưỡng cảnh báo (ví dụ < 25%)
+  | 'battery_critical'         // Pin cạn kiệt nguy cấp (ví dụ < 15%)
+  | 'battery_rapid_discharge'  // Tụt áp/xả pin bất thường (> 5%/phút)
+  | 'signal_weak'              // C2 RSSI suy giảm (< 40%)
+  | 'signal_lost'              // Mất liên lạc C2 hoàn toàn (> 15s)
+  | 'geofence_warning'         // Tiến sát ranh giới hành lang/vùng cấm (< 30m)
+  | 'geofence_breach'          // Xuyên thủng ranh giới hành lang bay
+  | 'collision_aircraft'       // Nguy cơ đâm va máy bay khác (< 150m)
+  | 'collision_obstacle'       // Nguy cơ va chạm chướng ngại vật địa hình (< 30m)
+  | 'weather_wind'             // Gió giật vượt giới hạn chịu đựng drone
+  | 'weather_visibility'       // Tầm nhìn giảm sút nghiêm trọng
+  | 'motor_anomaly'            // Rung lắc motor / lệch RPM giữa các cánh quạt
+  | 'motor_failure'            // Chết motor đột ngột
+  | 'gps_degraded'             // Suy giảm số lượng vệ tinh (< 6 vệ tinh)
+  | 'gps_lost';                // Mất tín hiệu định vị GPS hoàn toàn
+
+export type EmergencySeverity = 'warning' | 'critical' | 'emergency';
+// 'warning': Cảnh báo sớm, duy trì giám sát chặt chẽ
+// 'critical': Nguy cơ cao, cần can thiệp trong vòng đếm ngược timeout
+// 'emergency': Sự cố chí mạng đe dọa rơi tức thời, can thiệp khẩn cấp ngay lập tức
+
+export type IncidentStatus = 
+  | 'active'                 // Sự cố vừa được phát hiện, đang phân tích
+  | 'pending_confirmation'   // Đang chờ phi công / ATC xác nhận hành động cứu hộ
+  | 'executing'              // Đang truyền lệnh và giám sát drone chấp hành cứu nạn
+  | 'resolved'               // Sự cố đã được xử lý an toàn / drone đã tiếp đất
+  | 'escalated';             // Không xử lý được, chuyển cấp cứu hộ cao hơn
+
+export type ResponseAction = 
+  | 'RTH'                    // Return-to-Home: Quay đầu về trạm xuất phát
+  | 'LAND'                   // Land Immediately: Hạ cánh thẳng đứng khẩn cấp tại chỗ
+  | 'HOVER'                  // Hover in place: Phanh khẩn cấp, bay treo giữ nguyên vị trí
+  | 'DIVERT'                 // Divert to Safe Zone: Chuyển hướng hạ cánh bãi đáp dự phòng
+  | 'DESCEND'                // Descend: Hạ bớt độ cao tránh tầng gió xoáy / máy bay khác
+  | 'CLIMB'                  // Climb: Tăng độ cao vượt chướng ngại vật
+  | 'ESTOP'                  // Emergency Motor Stop: Ngắt động cơ / bung dù cứu nạn
+  | 'NONE';                  // Giữ nguyên, chỉ phát âm thanh cảnh báo
+
+export type RootCause = 
+  | 'equipment'              // Lỗi phần cứng (pin, motor, esc, cảm biến)
+  | 'weather'                // Thời tiết bất lợi (gió giật, mưa giông, tầm nhìn)
+  | 'pilot_error'            // Lỗi thao tác phi công
+  | 'software'               // Lỗi phần mềm / thuật toán dẫn đường
+  | 'external'               // Tác động ngoại cảnh (chim trời, flycam lạ, phá sóng)
+  | 'unknown';               // Chưa rõ nguyên nhân (đang chờ phân tích hộp đen)
+
+export type OperationMode = 'auto' | 'supervised';
+// 'auto': Hệ thống tự động quyết định và bắn lệnh cứu nạn ngay lập tức không cần chờ
+// 'supervised': Hệ thống đề xuất hành động tối ưu và đếm ngược timeout (15-30s), phi công có quyền xác nhận hoặc can thiệp trước khi hệ thống tự kích hoạt
+
+export interface IncidentTimelineEvent {
+  timestamp: string;
+  event: string;
+  data?: Record<string, unknown>;
+}
+
+export interface PendingConfirmation {
+  incidentId: string;
+  incident: EmergencyIncident;
+  protocol: EmergencyProtocol;
+  timeoutAt: string;
+}
+
+export interface EmergencyStats {
+  byStatus: Array<{ status: string; count: number }>;
+  byType: Array<{ type: string; count: number }>;
+  bySeverity: Array<{ severity: string; count: number }>;
+  byDrone: Array<{ droneId: string; count: number }>;
+  avgResponseTimeSeconds: number;
+  resolutionStats: Array<{ success: boolean; count: number }>;
+}
+
+export interface EmergencyTrend {
+  period: string;
+  total: number;
+  warnings: number;
+  critical: number;
+  emergencies: number;
+}
+```
+
+### 15.3 Cơ Chế Ra Quyết Định Cứu Nạn (`DecisionEngine` & `ResponseExecutor`)
+
+#### Ma Trận Độ Ưu Tiên Sự Cố (`EMERGENCY_PRIORITY`)
+Khi một chiếc drone đồng thời gặp nhiều sự cố (ví dụ vừa yếu pin vừa lệch hành lang), bộ não `DecisionEngine` sắp xếp độ ưu tiên theo chỉ số tăng dần (số nhỏ hơn có quyền phủ quyết và chiếm quyền xử lý trước):
+1. `collision_aircraft` (1) -> Tránh đâm nổ trên không là ưu tiên tuyệt đối
+2. `collision_obstacle` (2) -> Tránh đâm chướng ngại vật địa hình
+3. `motor_failure` (10) -> Rơi tự do nếu không xử lý tức thì
+4. `motor_anomaly` (15)
+5. `gps_lost` (20)
+6. `geofence_breach` (30)
+7. `battery_critical` (40)
+8. `battery_low` (45)
+9. `signal_lost` (55)
+10. `weather_wind` (70)
+
+#### Quy Trình Thẩm Định Hành Động An Toàn (`validateAction`):
+Trước khi thực thi một hành động cứu nạn, `ResponseExecutor` **bắt buộc kiểm tra tính an toàn thông qua mô hình năng lượng của `FeasibilityEvaluation`**:
+- **Trường hợp hành động là `RTH`**:
+  1. Xác định tọa độ Hub xuất phát (`departureHub`).
+  2. Đo cự ly bay thẳng từ vị trí hiện tại về Hub: $DistanceToHome = Haversine(Pos_{now}, Pos_{hub})$.
+  3. Tính toán năng lượng tiêu hao tối thiểu: $RequiredWh = DistanceToHome \times CruisePowerW / (3600 \times CruiseSpeedMs)$.
+  4. Nếu % pin hiện tại $< RequiredWh + ReserveMargin$ -> **Đánh giá KHÔNG AN TOÀN (`safe = false`)**.
+  5. Hệ thống tự động kích hoạt hành động dự phòng (`fallbackAction`) là `DIVERT` hoặc `LAND`.
+- **Trường hợp hành động là `DIVERT`**:
+  1. Tìm kiếm trong bán kính 1.5 km các Bãi đáp khẩn cấp an toàn (`SafeZone` / Hub lân cận).
+  2. Chọn bãi đáp gần nhất và kiểm tra lượng pin đủ đáp ứng cự ly di chuyển.
+  3. Nếu không có bãi đáp phụ nào đủ pin tới nơi -> Chuyển sang `LAND` khẩn cấp tại chỗ.
+- **Trường hợp hành động là `LAND` hoặc `HOVER`**:
+  - Luôn được coi là hành động an toàn cuối cùng (Failsafe fallback) để tránh va chạm.
+
+### 15.4 Mối Quan Hệ Liên Kết (Relationships)
+
+- **`Drone (1,1) ── undergoes ── (0,n) EmergencyIncident`**: Một drone có thể trải qua nhiều sự cố khẩn cấp trong vòng đời hoạt động.
+- **`Flight (0,1) ── encounters ── (0,n) EmergencyIncident`**: Sự cố khẩn cấp thường gắn liền với một chuyến bay cụ thể (hoặc phát sinh khi drone đang nổ máy tại bãi chờ).
+- **`EmergencyProtocol (1,1) ── governed_by ── (0,n) EmergencyIncident`**: Mỗi sự cố được đối chiếu và xử lý theo một kịch bản quy chuẩn cụ thể.
+- **`EmergencyIncident (1,1) ── dispatches_cmd ── (0,n) DroneCommand`**: Khi hành động khẩn cấp được duyệt hoặc tự động kích hoạt, một lệnh điều khiển tương ứng (`LAND`, `RTH`, `HOVER`, `EMERGENCY_STOP`) được gửi tới module `DroneCommand` để truyền xuống drone.
+- **`Flight (1,1) ── records_blackbox ── (0,n) BlackboxEntry`**: Toàn bộ chuyến bay được ghi nhận dữ liệu hộp đen theo chu kỳ.
+- **`EmergencyIncident (0,1) ── captures_incident ── (0,n) BlackboxEntry`**: Khi sự cố khẩn cấp nổ ra, hộp đen chuyển sang chế độ ghi nhận tần số cao (10Hz) và liên kết trực tiếp với mã sự cố `incident_id`.
+
+### 15.5 Chi Tiết Từng Endpoint (17 Endpoints chuẩn hóa theo Drops-UTM)
+
+#### 15.5.1 `GET /emergency/incidents`
+- **Mô tả**: Lấy danh sách sự cố khẩn cấp có phân trang và bộ lọc đa tiêu chí.
+- **Input (Query)**: `?status=active&severity=critical&type=battery_critical&droneId=...&from=...&to=...&limit=50&offset=0`
+- **Output**: `200 OK` -> `{ "data": EmergencyIncident[], "total": number, "limit": number, "offset": number }`.
+
+#### 15.5.2 `GET /emergency/incidents/active`
+- **Mô tả**: Lấy nhanh toàn bộ các sự cố đang diễn ra (`active`, `pending_confirmation`, `executing`) để radar tác chiến hiển thị nhấp nháy trên bản đồ Cesium 3D.
+- **Output**: `200 OK` -> `EmergencyIncident[]`.
+
+#### 15.5.3 `GET /emergency/incidents/pending`
+- **Mô tả**: Lấy danh sách các sự cố đang trong giai đoạn đếm ngược chờ xác nhận (`pending_confirmation`) kèm thông tin kịch bản và thời gian `timeoutAt` để UI hiển thị thanh đếm ngược cho phi công/ATC.
+- **Output**: `200 OK` -> `PendingConfirmation[]`.
+
+#### 15.5.4 `GET /emergency/incidents/:id`
+- **Mô tả**: Lấy thông tin chi tiết một sự cố cụ thể, bao gồm toàn bộ mảng lịch sử diễn biến `timeline`.
+- **Output**: `200 OK` -> `EmergencyIncident`.
+
+#### 15.5.5 `POST /emergency/incidents/:id/confirm`
+- **Chỉ định role**: `pilot, atc, admin`
+- **Mô tả**: Người điều hành / phi công phê duyệt hoặc từ chối hành động ứng phó khẩn cấp đang được hệ thống đề xuất.
+- **Input (Body)**:
+  ```json
+  {
+    "approved": true
+  }
+  ```
+- **Logic xử lý chi tiết**:
+  1. Tìm sự cố trong hàng đợi chờ xác nhận (`pendingConfirmations`).
+  2. Hủy bỏ timer đếm ngược tự động (`clearTimeout`).
+  3. Ghi nhận `confirmed_by` (user hiện tại) và `confirmed_at = now()`.
+  4. Nếu `approved = true`: Chuyển `status = 'executing'` và kích hoạt `ResponseExecutorService.executeResponse(incident, protocol)`.
+  5. Nếu `approved = false`: Chuyển `status = 'resolved'`, ghi nhận ghi chú `"Action rejected by operator"` và đóng sự cố.
+- **Output**: `200 OK` -> `EmergencyIncident`.
+
+#### 15.5.6 `PUT /emergency/incidents/:id/root-cause`
+- **Chỉ định role**: `atc, admin`
+- **Mô tả**: Cập nhật kết luận điều tra nguyên nhân gốc rễ sau sự cố và bài học kinh nghiệm an toàn bay.
+- **Input (Body)**:
+  ```json
+  {
+    "rootCause": "weather",
+    "notes": "Drone gặp luồng gió đứt tầng đột ngột vượt quá giới hạn 15m/s làm tiêu hao pin nhanh chóng",
+    "lessonsLearned": "Cần thắt chặt ngưỡng kiểm tra gió METAR trước cất cánh tại khu vực bờ biển"
+  }
+  ```
+- **Output**: `200 OK` -> `EmergencyIncident`.
+
+#### 15.5.7 `GET /emergency/incidents/:id/blackbox`
+- **Mô tả**: Trích xuất dữ liệu chuỗi thời gian hộp đen điện tử được ghi nhận trong suốt quá trình diễn ra sự cố khẩn cấp để vẽ biểu đồ phục vụ công tác điều tra và tua lại (Replay).
+- **Input (Query)**: `?from=...&to=...`
+- **Output**: `200 OK` -> `BlackboxEntry[]`.
+
+#### 15.5.8 `GET /emergency/blackbox/flight/:flightId`
+- **Mô tả**: Lấy toàn bộ nhật ký hộp đen của một chuyến bay cụ thể.
+- **Input (Query)**: `?from=...&to=...&limit=1000`
+- **Output**: `200 OK` -> `BlackboxEntry[]`.
+
+#### 15.5.9 `GET /emergency/protocols`
+- **Mô tả**: Lấy danh sách toàn bộ kịch bản ứng phó khẩn cấp quy chuẩn trong hệ thống (sắp xếp theo priority tăng dần).
+- **Input (Query)**: `?active=true`
+- **Output**: `200 OK` -> `EmergencyProtocol[]`.
+
+#### 15.5.10 `GET /emergency/protocols/:id`
+- **Mô tả**: Lấy chi tiết một kịch bản ứng phó khẩn cấp quy chuẩn theo ID.
+- **Output**: `200 OK` -> `EmergencyProtocol`.
+
+#### 15.5.11 `PUT /emergency/protocols/:id`
+- **Chỉ định role**: `admin, atc`
+- **Mô tả**: Điều chỉnh các thông số trong kịch bản quy chuẩn (hành động ưu tiên, hành động fallback, thời gian timeout đếm ngược, ngưỡng kích hoạt, thông báo). Nếu là kịch bản mặc định (`isSystemDefault == true`), khóa không cho sửa `emergencyType` và `responseAction`.
+- **Input (Body)**: `Partial<EmergencyProtocol>`
+- **Output**: `200 OK` -> `EmergencyProtocol`.
+
+#### 15.5.12 `POST /emergency/protocols`
+- **Chỉ định role**: `admin, atc`
+- **Mô tả**: Tạo mới một kịch bản ứng phó khẩn cấp tùy biến (luôn gán `isSystemDefault = false`).
+- **Input (Body)**: `Partial<EmergencyProtocol>`
+- **Output**: `201 Created` -> `EmergencyProtocol`.
+
+#### 15.5.13 `GET /emergency/config`
+- **Mô tả**: Lấy cấu hình chế độ vận hành cứu hộ hiện tại của hệ thống (`operation_mode`: `'auto'` hoặc `'supervised'`) và toàn bộ dictionary configs.
+- **Output**: `200 OK` -> `{ "mode": "supervised", "configs": Record<string, unknown> }`.
+
+#### 15.5.14 `PUT /emergency/config/mode`
+- **Chỉ định role**: `admin, atc`
+- **Mô tả**: Chuyển đổi giữa chế độ cứu hộ có giám sát (`supervised`) và chế độ tự động tuyệt đối (`auto`).
+- **Input (Body)**: `{ "mode": "auto" }`
+- **Output**: `200 OK` -> `{ "mode": "auto" }`.
+
+#### 15.5.15 `PUT /emergency/config/:key`
+- **Chỉ định role**: `admin, atc`
+- **Mô tả**: Thiết lập cặp giá trị cấu hình động cho hệ thống khẩn cấp theo khóa (`key`).
+- **Input (Body)**: `{ "value": unknown, "description"?: string }`
+- **Output**: `200 OK` -> `EmergencyConfig`.
+
+#### 15.5.16 `GET /emergency/stats`
+- **Mô tả**: Báo cáo thống kê an toàn bay: tổng số sự cố theo loại, phân bố mức độ nghiêm trọng, drone bị sự cố nhiều nhất, tỷ lệ tự động xử lý thành công, thời gian xử lý trung bình.
+- **Input (Query)**: `?from=...&to=...`
+- **Output**: `200 OK` -> `EmergencyStats`.
+
+#### 15.5.17 `GET /emergency/stats/trends`
+- **Mô tả**: Thống kê xu hướng sự cố khẩn cấp theo chu kỳ thời gian (ngày, tuần, tháng) phục vụ vẽ biểu đồ đường/cột xu hướng an toàn bay.
+- **Input (Query)**: `?from=...&to=...&interval=day` (`day` | `week` | `month`)
+- **Output**: `200 OK` -> `EmergencyTrend[]`.
+
+---
+
+## 16. SƠ ĐỒ TUẦN TỰ TOÀN TRÌNH (TÍCH HỢP FEASIBILITY, CONFLICT, ALERT & EMERGENCY FAILSAFE)
 
 Sơ đồ tuần tự thể hiện sự phối hợp toàn diện giữa Người điều hành, Kiểm soát viên không lưu (ATC), các module nghiệp vụ, bộ tính toán khả thi năng lượng (Feasibility Check), bộ phát hiện xung đột va chạm 4D (Conflict Watchdog) và trung tâm xử lý cảnh báo khẩn cấp (Alerts Hub):
 
@@ -2355,6 +2709,7 @@ sequenceDiagram
     participant FlightSvc as Module Flights (4D Conformance)
     participant ConflictSvc as Module Conflicts (CPA Watchdog)
     participant AlertSvc as Module Alerts & Safety
+    participant EmergencySvc as Module Emergency (Failsafe Brain)
     participant SimEngine as Module Simulation (Virtual Drone)
     participant TelemetrySvc as Module Telemetry (STOMP WS)
     participant DroneDev as Drone Phần Cứng (IoT)
@@ -2405,15 +2760,30 @@ sequenceDiagram
         end
     end
 
-    %% Bước 5: Tiếp nhận & Can thiệp xử lý sự cố
-    Note over ATC,AlertSvc: Kiểm soát viên tiếp nhận sự cố
-    ATC->>AlertSvc: 12. PATCH /alerts/:id/acknowledge (Xác nhận đã nắm bắt)
-    AlertSvc-->>Admin: Cập nhật thẻ cảnh báo sang trạng thái ACKNOWLEDGED (vàng)
+    %% Bước 5: Tiếp nhận & Can thiệp xử lý sự cố khẩn cấp (Emergency Failsafe Loop)
+    Note over FlightSvc,EmergencySvc: Kích hoạt bộ não tự động cứu nạn khi phát hiện sự cố nguy cấp
+    FlightSvc->>EmergencySvc: 12. POST /emergency/incidents (Khai báo sự cố: BATTERY_CRITICAL)
+    EmergencySvc->>EmergencySvc: Tra cứu EmergencyProtocol phù hợp & chạy validateAction(RTH)
+    EmergencySvc->>FeasSvc: Thẩm định khả năng bay về Hub xuất phát
+    FeasSvc-->>EmergencySvc: Pin không đủ bay về Hub an toàn!
+    EmergencySvc->>EmergencySvc: Tự động đổi phương án sang FallbackAction: DIVERT tới Bãi đáp phụ B cách 600m
+    
+    alt Chế độ Supervised (Có giám sát)
+        EmergencySvc-->>TelemetrySvc: WebSocket /topic/emergency/pending (Đếm ngược 15s xác nhận)
+        TelemetrySvc-->>ATC: Cửa sổ khẩn cấp: Gợi ý DIVERT bãi B (Đếm ngược 15s)
+        opt ATC bấm phê duyệt trước khi hết giờ
+            ATC->>EmergencySvc: 13. POST /emergency/incidents/:id/confirm (approved: true)
+        end
+    else Chế độ Auto (Tự động kích hoạt ngay lập tức)
+        EmergencySvc->>EmergencySvc: Tự động kích hoạt không chờ đợi
+    end
 
-    ATC->>ConflictSvc: 13. POST /conflicts/:id/resolve (Ban hành lệnh né tránh: Divert Altitude)
-    ConflictSvc-->>DroneDev: Gửi chỉ thị khẩn cấp: Drone 1 hạ xuống 60m, Drone 2 giữ 100m
-    ConflictSvc->>AlertSvc: Cập nhật Alert.status = RESOLVED
-    AlertSvc-->>Admin: Tháo dỡ cảnh báo đỏ trên Control Center
+    EmergencySvc->>DroneDev: 14. Gửi lệnh điều khiển khẩn cấp: DIVERT tới tọa độ Bãi B
+    EmergencySvc->>EmergencySvc: Kích hoạt BlackboxEntry ghi tần số cao 10Hz
+    DroneDev-->>EmergencySvc: Drone đổi hướng bay và hạ cánh thành công tại Bãi B
+    EmergencySvc->>EmergencySvc: Đổi Incident.status = RESOLVED
+    EmergencySvc->>AlertSvc: Cập nhật Alert liên quan = RESOLVED
+    ATC->>EmergencySvc: 15. PUT /emergency/incidents/:id/root-cause (Ghi nhận biên bản điều tra tai nạn)
 
     %% Bước 6: Hạ cánh an toàn & Hoàn tất
     DroneDev->>FlightSvc: 14. Drone chạm đất an toàn tại Hub đích

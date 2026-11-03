@@ -1,0 +1,147 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-create-emergency-incident-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: emergency_incidents
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: drone_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+              - column:
+                  name: emergency_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: severity
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "active"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: detection_data
+                  type: text
+              - column:
+                  name: latitude
+                  type: numeric(10, 7)
+              - column:
+                  name: longitude
+                  type: numeric(10, 7)
+              - column:
+                  name: altitude
+                  type: numeric(8, 2)
+              - column:
+                  name: response_action
+                  type: varchar(50)
+              - column:
+                  name: was_auto_executed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: confirmation_required
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: confirmed_by
+                  type: varchar(100)
+              - column:
+                  name: confirmed_at
+                  type: timestamp with time zone
+              - column:
+                  name: confirmation_timeout_at
+                  type: timestamp with time zone
+              - column:
+                  name: action_started_at
+                  type: timestamp with time zone
+              - column:
+                  name: action_completed_at
+                  type: timestamp with time zone
+              - column:
+                  name: action_success
+                  type: boolean
+              - column:
+                  name: action_error
+                  type: text
+              - column:
+                  name: resolved_at
+                  type: timestamp with time zone
+              - column:
+                  name: resolved_by
+                  type: varchar(100)
+              - column:
+                  name: resolution_notes
+                  type: text
+              - column:
+                  name: root_cause
+                  type: varchar(50)
+              - column:
+                  name: root_cause_notes
+                  type: text
+              - column:
+                  name: lessons_learned
+                  type: text
+              - column:
+                  name: timeline
+                  type: text
+              - column:
+                  name: detected_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            indexName: idx_emergency_incidents_drone_id
+            tableName: emergency_incidents
+            columns:
+              - column:
+                  name: drone_id
+        - createIndex:
+            indexName: idx_emergency_incidents_flight_id
+            tableName: emergency_incidents
+            columns:
+              - column:
+                  name: flight_id
+        - createIndex:
+            indexName: idx_emergency_incidents_status
+            tableName: emergency_incidents
+            columns:
+              - column:
+                  name: status

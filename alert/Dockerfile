@@ -14,6 +14,7 @@ COPY alert ./alert
 COPY connectivity ./connectivity
 COPY organization ./organization
 COPY mission ./mission
+COPY emergency ./emergency
 RUN mvn clean package -pl alert -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine

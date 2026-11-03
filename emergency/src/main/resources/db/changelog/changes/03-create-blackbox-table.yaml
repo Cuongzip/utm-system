@@ -1,0 +1,167 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-create-blackbox-table
+      author: cuong
+      changes:
+        - createTable:
+            tableName: blackbox_entries
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: flight_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: drone_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: incident_id
+                  type: varchar(36)
+              - column:
+                  name: timestamp
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: latitude
+                  type: numeric(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: longitude
+                  type: numeric(10, 7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: altitude_msl
+                  type: numeric(8, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: altitude_agl
+                  type: numeric(8, 2)
+              - column:
+                  name: roll
+                  type: numeric(6, 2)
+              - column:
+                  name: pitch
+                  type: numeric(6, 2)
+              - column:
+                  name: yaw
+                  type: numeric(6, 2)
+              - column:
+                  name: ground_speed
+                  type: numeric(6, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: vertical_speed
+                  type: numeric(6, 2)
+              - column:
+                  name: heading
+                  type: numeric(6, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: battery_level
+                  type: numeric(5, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: battery_voltage
+                  type: numeric(6, 2)
+              - column:
+                  name: battery_current
+                  type: numeric(6, 2)
+              - column:
+                  name: signal_strength
+                  type: numeric(5, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gps_satellites
+                  type: int
+              - column:
+                  name: gps_hdop
+                  type: numeric(5, 2)
+              - column:
+                  name: motor_rpm
+                  type: text
+              - column:
+                  name: motor_temps
+                  type: text
+              - column:
+                  name: command_received
+                  type: varchar(100)
+              - column:
+                  name: command_executed
+                  type: varchar(100)
+              - column:
+                  name: emergency_active
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: emergency_type
+                  type: varchar(50)
+              - column:
+                  name: emergency_severity
+                  type: varchar(50)
+              - column:
+                  name: flight_mode
+                  type: varchar(50)
+              - column:
+                  name: wind_speed
+                  type: numeric(6, 2)
+              - column:
+                  name: wind_direction
+                  type: numeric(6, 2)
+              - column:
+                  name: temperature
+                  type: numeric(6, 2)
+              - column:
+                  name: humidity
+                  type: numeric(5, 2)
+              - column:
+                  name: is_emergency_recording
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            indexName: idx_blackbox_flight_ts
+            tableName: blackbox_entries
+            columns:
+              - column:
+                  name: flight_id
+              - column:
+                  name: timestamp
+        - createIndex:
+            indexName: idx_blackbox_incident_ts
+            tableName: blackbox_entries
+            columns:
+              - column:
+                  name: incident_id
+              - column:
+                  name: timestamp
