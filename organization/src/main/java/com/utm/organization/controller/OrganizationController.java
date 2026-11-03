@@ -3,10 +3,10 @@ package com.utm.organization.controller;
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
 import com.utm.organization.service.OrganizationService;
-import com.utm.organization.viewmodel.OrganizationListVm;
-import com.utm.organization.viewmodel.OrganizationPostVm;
-import com.utm.organization.viewmodel.OrganizationPutVm;
-import com.utm.organization.viewmodel.OrganizationVm;
+import com.utm.organization.viewmodel.organization.OrganizationListVm;
+import com.utm.organization.viewmodel.organization.OrganizationPostVm;
+import com.utm.organization.viewmodel.organization.OrganizationPutVm;
+import com.utm.organization.viewmodel.organization.OrganizationVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -204,3 +204,4 @@ public class OrganizationController {
         return ResponseEntity.noContent().build();
     }
 }
+

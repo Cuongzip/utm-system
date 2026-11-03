@@ -1,5 +1,9 @@
 package com.utm.mission.service;
 
+import com.utm.mission.service.client.DroneClientService;
+
+import com.utm.mission.service.client.FlightClientService;
+
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -11,13 +15,13 @@ import com.utm.mission.model.enumeration.MissionStatus;
 import com.utm.mission.repository.MissionExecutionRepository;
 import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
-import com.utm.mission.viewmodel.DroneBriefVm;
-import com.utm.mission.viewmodel.FlightBriefVm;
-import com.utm.mission.viewmodel.FlightCreateRequestVm;
-import com.utm.mission.viewmodel.FlightWaypointPayloadVm;
-import com.utm.mission.viewmodel.MissionExecutePostVm;
-import com.utm.mission.viewmodel.MissionExecutionResultVm;
-import com.utm.mission.viewmodel.MissionExecutionVm;
+import com.utm.mission.viewmodel.client.DroneBriefVm;
+import com.utm.mission.viewmodel.client.FlightBriefVm;
+import com.utm.mission.viewmodel.client.FlightCreateRequestVm;
+import com.utm.mission.viewmodel.client.FlightWaypointPayloadVm;
+import com.utm.mission.viewmodel.execution.MissionExecutePostVm;
+import com.utm.mission.viewmodel.execution.MissionExecutionResultVm;
+import com.utm.mission.viewmodel.execution.MissionExecutionVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

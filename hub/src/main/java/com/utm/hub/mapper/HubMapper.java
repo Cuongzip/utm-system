@@ -2,10 +2,10 @@ package com.utm.hub.mapper;
 
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.Location;
-import com.utm.hub.viewmodel.HubPostVm;
-import com.utm.hub.viewmodel.HubPutVm;
-import com.utm.hub.viewmodel.HubVm;
-import com.utm.hub.viewmodel.LocationVm;
+import com.utm.hub.viewmodel.hub.HubPostVm;
+import com.utm.hub.viewmodel.hub.HubPutVm;
+import com.utm.hub.viewmodel.hub.HubVm;
+import com.utm.hub.viewmodel.hub.LocationVm;
 import com.utm.commonlibrary.exception.BadRequestException;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.BeforeMapping;
@@ -105,3 +105,4 @@ public interface HubMapper {
         return value != null ? value.trim() : null;
     }
 }
+

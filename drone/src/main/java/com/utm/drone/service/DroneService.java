@@ -1,10 +1,10 @@
 package com.utm.drone.service;
 
 import com.utm.drone.model.enumeration.DroneStatus;
-import com.utm.drone.viewmodel.DroneListVm;
-import com.utm.drone.viewmodel.DronePostVm;
-import com.utm.drone.viewmodel.DronePutVm;
-import com.utm.drone.viewmodel.DroneVm;
+import com.utm.drone.viewmodel.drone.DroneListVm;
+import com.utm.drone.viewmodel.drone.DronePostVm;
+import com.utm.drone.viewmodel.drone.DronePutVm;
+import com.utm.drone.viewmodel.drone.DroneVm;
 
 public interface DroneService {
 
@@ -18,3 +18,4 @@ public interface DroneService {
 
     void deleteDrone(String id);
 }
+

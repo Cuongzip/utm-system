@@ -1,0 +1,23 @@
+package com.utm.airspace.viewmodel.check;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+
+@Schema(description = "Payload for 3D point airspace compliance check")
+public record AirspaceCheckVm(
+        @Schema(description = "Latitude coordinate (WGS84)", example = "10.778")
+        @NotNull(message = "Latitude is required")
+        Double lat,
+
+        @Schema(description = "Longitude coordinate (WGS84)", example = "106.702")
+        @NotNull(message = "Longitude is required")
+        Double lon,
+
+        @Schema(description = "Altitude in meters above ground/sea level (m)", example = "85.0", defaultValue = "0.0")
+        Double alt
+) {
+    public Double alt() {
+        return alt != null ? alt : 0.0;
+    }
+}
+

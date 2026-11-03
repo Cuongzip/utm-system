@@ -1,8 +1,8 @@
 package com.utm.alert.mapper;
 
 import com.utm.alert.model.Alert;
-import com.utm.alert.viewmodel.AlertPostVm;
-import com.utm.alert.viewmodel.AlertVm;
+import com.utm.alert.viewmodel.alert.AlertPostVm;
+import com.utm.alert.viewmodel.alert.AlertVm;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -35,3 +35,4 @@ public interface AlertMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     Alert toEntity(AlertPostVm postVm);
 }
+

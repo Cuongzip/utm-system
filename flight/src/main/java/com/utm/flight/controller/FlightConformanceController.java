@@ -1,7 +1,7 @@
 package com.utm.flight.controller;
 
 import com.utm.flight.service.FlightConformanceService;
-import com.utm.flight.viewmodel.FlightConformanceVm;
+import com.utm.flight.viewmodel.flight.FlightConformanceVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -54,4 +54,5 @@ public class FlightConformanceController {
         return ResponseEntity.ok(conformanceService.evaluateFlightConformance(flightId));
     }
 }
+
 

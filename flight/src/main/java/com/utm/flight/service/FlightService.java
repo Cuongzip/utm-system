@@ -1,11 +1,11 @@
 package com.utm.flight.service;
 
-import com.utm.flight.viewmodel.FlightAbortVm;
-import com.utm.flight.viewmodel.FlightListVm;
-import com.utm.flight.viewmodel.FlightPostVm;
-import com.utm.flight.viewmodel.FlightPutVm;
-import com.utm.flight.viewmodel.FlightRejectVm;
-import com.utm.flight.viewmodel.FlightVm;
+import com.utm.flight.viewmodel.flight.FlightAbortVm;
+import com.utm.flight.viewmodel.flight.FlightListVm;
+import com.utm.flight.viewmodel.flight.FlightPostVm;
+import com.utm.flight.viewmodel.flight.FlightPutVm;
+import com.utm.flight.viewmodel.flight.FlightRejectVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
 
 import java.util.List;
 
@@ -31,3 +31,4 @@ public interface FlightService {
 
     FlightVm abortFlight(String id, FlightAbortVm abortVm);
 }
+

@@ -3,10 +3,10 @@ package com.utm.flight.mapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.Flight;
-import com.utm.flight.viewmodel.FlightPostVm;
-import com.utm.flight.viewmodel.FlightPutVm;
-import com.utm.flight.viewmodel.FlightVm;
-import com.utm.flight.viewmodel.GeoJsonLineStringVm;
+import com.utm.flight.viewmodel.flight.FlightPostVm;
+import com.utm.flight.viewmodel.flight.FlightPutVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
+import com.utm.flight.viewmodel.flight.GeoJsonLineStringVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
@@ -36,8 +36,6 @@ public interface FlightMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "authorizationStatus", ignore = true)
     @Mapping(target = "conformanceStatus", ignore = true)
-    @Mapping(target = "feasibilityVerdict", ignore = true)
-    @Mapping(target = "feasibilityOverride", ignore = true)
     @Mapping(target = "actualDeparture", ignore = true)
     @Mapping(target = "actualArrival", ignore = true)
     @Mapping(target = "flightNumber", qualifiedByName = "trimString")
@@ -67,8 +65,6 @@ public interface FlightMapper {
     @Mapping(target = "executionId", ignore = true)
     @Mapping(target = "authorizationStatus", ignore = true)
     @Mapping(target = "conformanceStatus", ignore = true)
-    @Mapping(target = "feasibilityVerdict", ignore = true)
-    @Mapping(target = "feasibilityOverride", ignore = true)
     @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "lineStringToString")
     @Mapping(target = "actualRoute", source = "actualRoute", qualifiedByName = "lineStringToString")
     @Mapping(target = "createdOn", ignore = true)
@@ -106,3 +102,4 @@ public interface FlightMapper {
         }
     }
 }
+

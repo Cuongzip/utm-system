@@ -1,10 +1,10 @@
 package com.utm.simulation.service;
 
-import com.utm.simulation.viewmodel.InjectScenarioResultVm;
-import com.utm.simulation.viewmodel.InjectScenarioVm;
-import com.utm.simulation.viewmodel.ScenarioCatalogVm;
-import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
-import com.utm.simulation.viewmodel.SimulationSessionVm;
+import com.utm.simulation.viewmodel.scenario.InjectScenarioResultVm;
+import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
+import com.utm.simulation.viewmodel.scenario.ScenarioCatalogVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionVm;
 
 import java.util.List;
 
@@ -32,3 +32,4 @@ public interface SimulationService {
 
     List<ScenarioCatalogVm> getScenarioCatalog();
 }
+

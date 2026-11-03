@@ -3,8 +3,8 @@ package com.utm.conflict.mapper;
 import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictType;
-import com.utm.conflict.viewmodel.ConflictScanResultVm;
-import com.utm.conflict.viewmodel.FlightBriefVm;
+import com.utm.conflict.viewmodel.conflict.ConflictScanResultVm;
+import com.utm.conflict.viewmodel.client.FlightBriefVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -171,3 +171,4 @@ public interface ConflictDetectionMapper {
             ZonedDateTime scannedAt
     );
 }
+

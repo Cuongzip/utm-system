@@ -3,11 +3,11 @@ package com.utm.flight.service;
 import com.utm.flight.config.FeasibilityConfig;
 import com.utm.flight.model.enumeration.SolutionKind;
 import com.utm.flight.model.enumeration.Verdict;
-import com.utm.flight.viewmodel.DroneEnergySpecVm;
-import com.utm.flight.viewmodel.EnergyCalculationResultVm;
-import com.utm.flight.viewmodel.EnvConditionsVm;
-import com.utm.flight.viewmodel.FeasibilitySolutionVm;
-import com.utm.flight.viewmodel.MissionProfileVm;
+import com.utm.flight.viewmodel.feasibility.DroneEnergySpecVm;
+import com.utm.flight.viewmodel.feasibility.EnergyCalculationResultVm;
+import com.utm.flight.viewmodel.feasibility.EnvConditionsVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilitySolutionVm;
+import com.utm.flight.viewmodel.feasibility.MissionProfileVm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -163,3 +163,4 @@ public class EnergyModelServiceImpl implements EnergyModelService {
         );
     }
 }
+

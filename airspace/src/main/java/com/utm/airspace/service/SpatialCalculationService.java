@@ -1,7 +1,7 @@
 package com.utm.airspace.service;
 
-import com.utm.airspace.viewmodel.AirspaceCheckPointVm;
-import com.utm.airspace.viewmodel.GeoJsonPolygonVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPointVm;
+import com.utm.airspace.viewmodel.zone.GeoJsonPolygonVm;
 import com.utm.commonlibrary.exception.BadRequestException;
 import org.springframework.stereotype.Service;
 
@@ -148,3 +148,4 @@ public class SpatialCalculationService {
 
     public record SampledPoint(double lat, double lon, double alt, int segmentIndex, double distanceFromStartM) {}
 }
+

@@ -11,9 +11,9 @@ import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ResolutionStrategy;
 import com.utm.conflict.repository.ConflictRepository;
 import com.utm.conflict.model.enumeration.ConflictType;
-import com.utm.conflict.viewmodel.ConflictPostVm;
-import com.utm.conflict.viewmodel.ConflictResolvePostVm;
-import com.utm.conflict.viewmodel.ConflictVm;
+import com.utm.conflict.viewmodel.conflict.ConflictPostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictResolvePostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -146,3 +146,4 @@ public class ConflictServiceImpl implements ConflictService {
         return conflictMapper.toVm(saved);
     }
 }
+

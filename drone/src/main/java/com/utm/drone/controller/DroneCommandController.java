@@ -3,9 +3,9 @@ package com.utm.drone.controller;
 import com.utm.drone.model.enumeration.CommandStatus;
 import com.utm.drone.model.enumeration.CommandType;
 import com.utm.drone.service.DroneCommandService;
-import com.utm.drone.viewmodel.DroneCommandListVm;
-import com.utm.drone.viewmodel.DroneCommandPostVm;
-import com.utm.drone.viewmodel.DroneCommandVm;
+import com.utm.drone.viewmodel.command.DroneCommandListVm;
+import com.utm.drone.viewmodel.command.DroneCommandPostVm;
+import com.utm.drone.viewmodel.command.DroneCommandVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -162,3 +162,4 @@ public class DroneCommandController {
         return ResponseEntity.ok(droneCommandService.getActiveCommands(droneId));
     }
 }
+

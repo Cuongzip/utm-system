@@ -2,9 +2,9 @@ package com.utm.drone.service;
 
 import com.utm.drone.model.enumeration.CommandStatus;
 import com.utm.drone.model.enumeration.CommandType;
-import com.utm.drone.viewmodel.DroneCommandListVm;
-import com.utm.drone.viewmodel.DroneCommandPostVm;
-import com.utm.drone.viewmodel.DroneCommandVm;
+import com.utm.drone.viewmodel.command.DroneCommandListVm;
+import com.utm.drone.viewmodel.command.DroneCommandPostVm;
+import com.utm.drone.viewmodel.command.DroneCommandVm;
 
 import java.util.List;
 
@@ -20,3 +20,4 @@ public interface DroneCommandService {
 
     List<DroneCommandVm> getActiveCommands(String droneId);
 }
+

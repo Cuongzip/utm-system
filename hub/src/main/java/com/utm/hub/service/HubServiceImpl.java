@@ -7,10 +7,10 @@ import com.utm.hub.mapper.HubMapper;
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.repository.HubRepository;
-import com.utm.hub.viewmodel.HubListVm;
-import com.utm.hub.viewmodel.HubPostVm;
-import com.utm.hub.viewmodel.HubPutVm;
-import com.utm.hub.viewmodel.HubVm;
+import com.utm.hub.viewmodel.hub.HubListVm;
+import com.utm.hub.viewmodel.hub.HubPostVm;
+import com.utm.hub.viewmodel.hub.HubPutVm;
+import com.utm.hub.viewmodel.hub.HubVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -116,3 +116,4 @@ public class HubServiceImpl implements HubService {
         log.info("Deactivated Hub with ID: {}", id);
     }
 }
+

@@ -1,9 +1,9 @@
 package com.utm.mission.service;
 
-import com.utm.mission.viewmodel.MissionListVm;
-import com.utm.mission.viewmodel.MissionPostVm;
-import com.utm.mission.viewmodel.MissionPutVm;
-import com.utm.mission.viewmodel.MissionVm;
+import com.utm.mission.viewmodel.mission.MissionListVm;
+import com.utm.mission.viewmodel.mission.MissionPostVm;
+import com.utm.mission.viewmodel.mission.MissionPutVm;
+import com.utm.mission.viewmodel.mission.MissionVm;
 
 public interface MissionService {
 
@@ -19,3 +19,4 @@ public interface MissionService {
 
     MissionVm duplicateMission(String id);
 }
+

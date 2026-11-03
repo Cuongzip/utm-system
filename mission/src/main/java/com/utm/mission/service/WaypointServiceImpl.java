@@ -1,5 +1,7 @@
 package com.utm.mission.service;
 
+import com.utm.mission.service.client.AirspaceClientService;
+
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -9,11 +11,11 @@ import com.utm.mission.model.Waypoint;
 import com.utm.mission.model.enumeration.MissionStatus;
 import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
-import com.utm.mission.viewmodel.WaypointPostVm;
-import com.utm.mission.viewmodel.WaypointPutVm;
-import com.utm.mission.viewmodel.WaypointReorderItemVm;
-import com.utm.mission.viewmodel.WaypointReorderVm;
-import com.utm.mission.viewmodel.WaypointVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPostVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPutVm;
+import com.utm.mission.viewmodel.waypoint.WaypointReorderItemVm;
+import com.utm.mission.viewmodel.waypoint.WaypointReorderVm;
+import com.utm.mission.viewmodel.waypoint.WaypointVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +43,8 @@ public class WaypointServiceImpl implements WaypointService {
     public WaypointVm addWaypoint(String missionId, WaypointPostVm postVm) {
         Mission mission = findDraftMissionOrThrow(missionId);
         int nextSeq = waypointRepository.findMaxSequenceByMissionId(missionId) + 1;
-        Optional<String> safetyWarning = airspaceClientService.checkPointSafety(postVm.latitude(), postVm.longitude(), postVm.altitude());
+        Optional<String> safetyWarning = airspaceClientService.checkPointSafety(postVm.latitude(), postVm.longitude(),
+                postVm.altitude());
 
         Waypoint waypoint = waypointMapper.toEntity(postVm);
         waypoint.setMission(mission);
@@ -74,8 +77,7 @@ public class WaypointServiceImpl implements WaypointService {
         Optional<String> safetyWarning = airspaceClientService.checkPointSafety(
                 waypoint.getLatitude(),
                 waypoint.getLongitude(),
-                waypoint.getAltitude()
-        );
+                waypoint.getAltitude());
 
         Waypoint saved = waypointRepository.save(waypoint);
         return waypointMapper.toVm(saved, safetyWarning.orElse(null));

@@ -2,10 +2,10 @@ package com.utm.organization.service;
 
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
-import com.utm.organization.viewmodel.OrganizationListVm;
-import com.utm.organization.viewmodel.OrganizationPostVm;
-import com.utm.organization.viewmodel.OrganizationPutVm;
-import com.utm.organization.viewmodel.OrganizationVm;
+import com.utm.organization.viewmodel.organization.OrganizationListVm;
+import com.utm.organization.viewmodel.organization.OrganizationPostVm;
+import com.utm.organization.viewmodel.organization.OrganizationPutVm;
+import com.utm.organization.viewmodel.organization.OrganizationVm;
 
 public interface OrganizationService {
 
@@ -25,3 +25,4 @@ public interface OrganizationService {
 
     void deleteOrganization(String id);
 }
+

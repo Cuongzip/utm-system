@@ -1,9 +1,9 @@
 package com.utm.mission.mapper;
 
 import com.utm.mission.model.Waypoint;
-import com.utm.mission.viewmodel.WaypointPostVm;
-import com.utm.mission.viewmodel.WaypointPutVm;
-import com.utm.mission.viewmodel.WaypointVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPostVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPutVm;
+import com.utm.mission.viewmodel.waypoint.WaypointVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
@@ -49,3 +49,4 @@ public interface WaypointMapper {
 
     List<WaypointVm> toVmList(List<Waypoint> entities);
 }
+

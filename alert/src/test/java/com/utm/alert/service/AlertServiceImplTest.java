@@ -5,10 +5,10 @@ import com.utm.alert.model.Alert;
 import com.utm.alert.model.enumeration.AlertSeverity;
 import com.utm.alert.model.enumeration.AlertStatus;
 import com.utm.alert.repository.AlertRepository;
-import com.utm.alert.viewmodel.AlertAcknowledgePostVm;
-import com.utm.alert.viewmodel.AlertPostVm;
-import com.utm.alert.viewmodel.AlertResolvePostVm;
-import com.utm.alert.viewmodel.AlertVm;
+import com.utm.alert.viewmodel.alert.AlertAcknowledgePostVm;
+import com.utm.alert.viewmodel.alert.AlertPostVm;
+import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
+import com.utm.alert.viewmodel.alert.AlertVm;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -120,3 +120,4 @@ class AlertServiceImplTest {
         verify(messagingTemplate).convertAndSend(eq("/topic/alerts/live"), eq(vm));
     }
 }
+

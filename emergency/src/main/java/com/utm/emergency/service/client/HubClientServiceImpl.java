@@ -1,7 +1,5 @@
 package com.utm.emergency.service.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.emergency.config.ServiceUrlConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +21,11 @@ public class HubClientServiceImpl implements HubClientService {
 
     @Override
     public Optional<HubLocationVm> getHubById(String hubId) {
-        if (hubId == null || hubId.isBlank()) return Optional.empty();
+        if (hubId == null || hubId.isBlank())
+            return Optional.empty();
         try {
-            var url = (serviceUrlConfig.hub() != null ? serviceUrlConfig.hub() : "http://hub:8084") + "/hub/api/v1/hubs/" + hubId;
+            var url = (serviceUrlConfig.hub() != null ? serviceUrlConfig.hub() : "http://hub:8084")
+                    + "/hub/api/v1/hubs/" + hubId;
             HubLocationVm vm = restClient.get()
                     .uri(url)
                     .retrieve()
@@ -40,11 +40,13 @@ public class HubClientServiceImpl implements HubClientService {
     @Override
     public List<HubLocationVm> getActiveHubs() {
         try {
-            var url = (serviceUrlConfig.hub() != null ? serviceUrlConfig.hub() : "http://hub:8084") + "/hub/api/v1/hubs?status=active";
+            var url = (serviceUrlConfig.hub() != null ? serviceUrlConfig.hub() : "http://hub:8084")
+                    + "/hub/api/v1/hubs?status=active";
             List<HubLocationVm> list = restClient.get()
                     .uri(url)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+                    .body(new ParameterizedTypeReference<>() {
+                    });
             return list != null ? list : Collections.emptyList();
         } catch (Exception e) {
             log.warn("Failed to fetch active hubs from Hub Service: {}", e.getMessage());

@@ -1,5 +1,8 @@
 package com.utm.drone.service;
 
+import com.utm.drone.service.client.HubClientService;
+import com.utm.drone.service.client.OrganizationClientService;
+
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
@@ -8,12 +11,12 @@ import com.utm.drone.mapper.DroneMapper;
 import com.utm.drone.model.Drone;
 import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.repository.DroneRepository;
-import com.utm.drone.viewmodel.DroneListVm;
-import com.utm.drone.viewmodel.DronePostVm;
-import com.utm.drone.viewmodel.DronePutVm;
-import com.utm.drone.viewmodel.DroneVm;
-import com.utm.drone.viewmodel.HubBriefVm;
-import com.utm.drone.viewmodel.OrganizationBriefVm;
+import com.utm.drone.viewmodel.drone.DroneListVm;
+import com.utm.drone.viewmodel.drone.DronePostVm;
+import com.utm.drone.viewmodel.drone.DronePutVm;
+import com.utm.drone.viewmodel.drone.DroneVm;
+import com.utm.drone.viewmodel.client.HubBriefVm;
+import com.utm.drone.viewmodel.client.OrganizationBriefVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

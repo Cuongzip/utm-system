@@ -1,5 +1,7 @@
 package com.utm.mission.service;
 
+import com.utm.mission.service.client.HubClientService;
+
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -11,12 +13,12 @@ import com.utm.mission.model.enumeration.MissionScheduleType;
 import com.utm.mission.model.enumeration.MissionStatus;
 import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
-import com.utm.mission.viewmodel.HubBriefVm;
-import com.utm.mission.viewmodel.MissionListVm;
-import com.utm.mission.viewmodel.MissionPostVm;
-import com.utm.mission.viewmodel.MissionPutVm;
-import com.utm.mission.viewmodel.MissionVm;
-import com.utm.mission.viewmodel.WaypointVm;
+import com.utm.mission.viewmodel.client.HubBriefVm;
+import com.utm.mission.viewmodel.mission.MissionListVm;
+import com.utm.mission.viewmodel.mission.MissionPostVm;
+import com.utm.mission.viewmodel.mission.MissionPutVm;
+import com.utm.mission.viewmodel.mission.MissionVm;
+import com.utm.mission.viewmodel.waypoint.WaypointVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +78,8 @@ public class MissionServiceImpl implements MissionService {
 
     @Override
     @Transactional(readOnly = true)
-    public MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String scheduleType, Integer limit, Integer offset) {
+    public MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String scheduleType,
+            Integer limit, Integer offset) {
         Specification<Mission> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (status != null && !status.isBlank()) {
@@ -111,8 +114,10 @@ public class MissionServiceImpl implements MissionService {
 
         Set<String> hubIds = new HashSet<>();
         for (Mission m : page.getContent()) {
-            if (m.getDepartureHubId() != null) hubIds.add(m.getDepartureHubId());
-            if (m.getArrivalHubId() != null) hubIds.add(m.getArrivalHubId());
+            if (m.getDepartureHubId() != null)
+                hubIds.add(m.getDepartureHubId());
+            if (m.getArrivalHubId() != null)
+                hubIds.add(m.getArrivalHubId());
         }
         Map<String, HubBriefVm> hubMap = hubClientService.getHubsByIds(hubIds);
 
@@ -138,8 +143,7 @@ public class MissionServiceImpl implements MissionService {
                             m.getCreatedOn(),
                             m.getCreatedBy(),
                             m.getLastModifiedOn(),
-                            m.getLastModifiedBy()
-                    );
+                            m.getLastModifiedBy());
                 })
                 .toList();
 
@@ -185,7 +189,8 @@ public class MissionServiceImpl implements MissionService {
             }
         }
 
-        MissionScheduleType targetScheduleType = putVm.scheduleType() != null ? putVm.scheduleType() : mission.getScheduleType();
+        MissionScheduleType targetScheduleType = putVm.scheduleType() != null ? putVm.scheduleType()
+                : mission.getScheduleType();
         ZonedDateTime targetScheduledAt = putVm.scheduledAt() != null ? putVm.scheduledAt() : mission.getScheduledAt();
         if (targetScheduleType == MissionScheduleType.SCHEDULED) {
             if (targetScheduledAt == null || !targetScheduledAt.isAfter(ZonedDateTime.now())) {
@@ -253,10 +258,12 @@ public class MissionServiceImpl implements MissionService {
         return getMissionById(savedCopy.getId());
     }
 
-    private MissionVm toEnrichedMissionVm(Mission mission, HubBriefVm depHub, HubBriefVm arrHub, Double estimatedDistance) {
+    private MissionVm toEnrichedMissionVm(Mission mission, HubBriefVm depHub, HubBriefVm arrHub,
+            Double estimatedDistance) {
         MissionVm base = missionMapper.toVm(mission);
         int wpCount = mission.getWaypoints() != null ? mission.getWaypoints().size() : 0;
-        List<WaypointVm> waypoints = mission.getWaypoints() != null ? waypointMapper.toVmList(mission.getWaypoints()) : List.of();
+        List<WaypointVm> waypoints = mission.getWaypoints() != null ? waypointMapper.toVmList(mission.getWaypoints())
+                : List.of();
 
         return new MissionVm(
                 base.id(),
@@ -275,8 +282,7 @@ public class MissionServiceImpl implements MissionService {
                 base.createdOn(),
                 base.createdBy(),
                 base.lastModifiedOn(),
-                base.lastModifiedBy()
-        );
+                base.lastModifiedBy());
     }
 
     private double calculateEstimatedDistance(List<Waypoint> waypoints) {
@@ -301,7 +307,7 @@ public class MissionServiceImpl implements MissionService {
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2.0) * Math.sin(dLat / 2.0)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
+                        * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
         double c = 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
         return R * c;
     }

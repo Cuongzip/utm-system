@@ -1,8 +1,8 @@
 package com.utm.telemetry.controller;
 
 import com.utm.telemetry.service.TelemetryService;
-import com.utm.telemetry.viewmodel.TelemetryIngestVm;
-import com.utm.telemetry.viewmodel.TelemetryRecordVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryIngestVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -144,3 +144,4 @@ public class TelemetryController {
         return ResponseEntity.ok(telemetryService.getLatestByDroneId(droneId));
     }
 }
+

@@ -1,7 +1,7 @@
 package com.utm.conflict.controller;
 
 import com.utm.conflict.service.ConflictSnapshotService;
-import com.utm.conflict.viewmodel.ConflictSnapshotVm;
+import com.utm.conflict.viewmodel.conflict.ConflictSnapshotVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -51,3 +51,4 @@ public class ConflictSnapshotController {
         return ResponseEntity.ok(conflictSnapshotService.getSnapshotsByConflictId(conflictId));
     }
 }
+

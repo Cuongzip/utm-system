@@ -5,8 +5,8 @@ import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.telemetry.mapper.TelemetryMapper;
 import com.utm.telemetry.model.TelemetryRecord;
 import com.utm.telemetry.repository.TelemetryRecordRepository;
-import com.utm.telemetry.viewmodel.TelemetryIngestVm;
-import com.utm.telemetry.viewmodel.TelemetryRecordVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryIngestVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -132,3 +132,4 @@ public class TelemetryServiceImpl implements TelemetryService {
                 .toList();
     }
 }
+

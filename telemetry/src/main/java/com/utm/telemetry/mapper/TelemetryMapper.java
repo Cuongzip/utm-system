@@ -1,8 +1,8 @@
 package com.utm.telemetry.mapper;
 
 import com.utm.telemetry.model.TelemetryRecord;
-import com.utm.telemetry.viewmodel.TelemetryIngestVm;
-import com.utm.telemetry.viewmodel.TelemetryRecordVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryIngestVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -22,3 +22,4 @@ public interface TelemetryMapper {
     @Mapping(target = "timestamp", expression = "java(entity.getCreatedOn() != null ? entity.getCreatedOn() : java.time.ZonedDateTime.now())")
     TelemetryRecordVm toVm(TelemetryRecord entity);
 }
+

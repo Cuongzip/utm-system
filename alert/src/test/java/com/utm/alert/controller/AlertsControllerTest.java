@@ -3,11 +3,11 @@ package com.utm.alert.controller;
 import com.utm.alert.model.enumeration.AlertSeverity;
 import com.utm.alert.model.enumeration.AlertStatus;
 import com.utm.alert.service.AlertService;
-import com.utm.alert.viewmodel.AlertAcknowledgePostVm;
-import com.utm.alert.viewmodel.AlertListVm;
-import com.utm.alert.viewmodel.AlertPostVm;
-import com.utm.alert.viewmodel.AlertResolvePostVm;
-import com.utm.alert.viewmodel.AlertVm;
+import com.utm.alert.viewmodel.alert.AlertAcknowledgePostVm;
+import com.utm.alert.viewmodel.alert.AlertListVm;
+import com.utm.alert.viewmodel.alert.AlertPostVm;
+import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
+import com.utm.alert.viewmodel.alert.AlertVm;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -158,3 +158,4 @@ class AlertsControllerTest {
         assertEquals(1, response.getBody().totalElements());
     }
 }
+

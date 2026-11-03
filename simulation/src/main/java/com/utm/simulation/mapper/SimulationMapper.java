@@ -2,9 +2,9 @@ package com.utm.simulation.mapper;
 
 import com.utm.simulation.model.SimulationEvent;
 import com.utm.simulation.model.SimulationSession;
-import com.utm.simulation.viewmodel.SimulationEventVm;
-import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
-import com.utm.simulation.viewmodel.SimulationSessionVm;
+import com.utm.simulation.viewmodel.session.SimulationEventVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -59,3 +59,4 @@ public interface SimulationMapper {
         return val != null ? Math.round(val * 10.0) / 10.0 : null;
     }
 }
+

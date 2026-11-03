@@ -1,12 +1,12 @@
 package com.utm.connectivity.service;
 
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
-import com.utm.connectivity.viewmodel.DeviceHeartbeatPostVm;
-import com.utm.connectivity.viewmodel.DeviceRegistrationListVm;
-import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
-import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
-import com.utm.connectivity.viewmodel.HeartbeatResultVm;
-import com.utm.connectivity.viewmodel.RevokeResultVm;
+import com.utm.connectivity.viewmodel.device.DeviceHeartbeatPostVm;
+import com.utm.connectivity.viewmodel.device.DeviceRegistrationListVm;
+import com.utm.connectivity.viewmodel.device.DeviceRegistrationPostVm;
+import com.utm.connectivity.viewmodel.device.DeviceRegistrationVm;
+import com.utm.connectivity.viewmodel.device.HeartbeatResultVm;
+import com.utm.connectivity.viewmodel.device.RevokeResultVm;
 
 import java.util.List;
 
@@ -24,3 +24,4 @@ public interface DeviceRegistrationService {
 
     RevokeResultVm revokeDeviceRegistration(String id);
 }
+

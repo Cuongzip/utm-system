@@ -1,20 +1,18 @@
 package com.utm.conflict.mapper;
 
+import com.utm.conflict.viewmodel.client.LocationVm;
+
 import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.ConflictSnapshot;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
-import com.utm.conflict.viewmodel.ConflictSnapshotVm;
-import com.utm.conflict.viewmodel.LocationVm;
+import com.utm.conflict.viewmodel.conflict.ConflictSnapshotVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 import java.util.List;
 
-@Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
-)
+@Mapper(componentModel = "spring", builder = @org.mapstruct.Builder(disableBuilder = true))
 public abstract class ConflictSnapshotMapper {
 
     @Mapping(target = "conflictId", source = "conflict.id")
@@ -47,8 +45,7 @@ public abstract class ConflictSnapshotMapper {
             Double sLat, Double sLon, Double sAlt,
             Double distHoriz, Double distVert,
             Integer timeToConflict,
-            ConflictSeverity severity
-    );
+            ConflictSeverity severity);
 
     @Named("mapPrimaryLocation")
     protected LocationVm mapPrimaryLocation(ConflictSnapshot entity) {

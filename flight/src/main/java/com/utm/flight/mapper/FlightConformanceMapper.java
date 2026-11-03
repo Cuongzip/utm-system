@@ -3,8 +3,8 @@ package com.utm.flight.mapper;
 import com.utm.flight.model.Flight;
 import com.utm.flight.model.FlightConformance;
 import com.utm.flight.model.enumeration.ConformanceStatus;
-import com.utm.flight.viewmodel.FlightConformanceVm;
-import com.utm.flight.viewmodel.TelemetryBriefVm;
+import com.utm.flight.viewmodel.flight.FlightConformanceVm;
+import com.utm.flight.viewmodel.client.TelemetryBriefVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
@@ -72,3 +72,4 @@ public interface FlightConformanceMapper {
         return status != null ? status.getValue() : null;
     }
 }
+

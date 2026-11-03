@@ -8,7 +8,7 @@ import com.utm.conflict.model.ConflictSnapshot;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.repository.ConflictRepository;
 import com.utm.conflict.repository.ConflictSnapshotRepository;
-import com.utm.conflict.viewmodel.ConflictSnapshotVm;
+import com.utm.conflict.viewmodel.conflict.ConflictSnapshotVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,3 +59,4 @@ public class ConflictSnapshotServiceImpl implements ConflictSnapshotService {
         conflictSnapshotRepository.save(snapshot);
     }
 }
+

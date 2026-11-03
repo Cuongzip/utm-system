@@ -1,10 +1,10 @@
 package com.utm.alert.service;
 
-import com.utm.alert.viewmodel.AlertAcknowledgePostVm;
-import com.utm.alert.viewmodel.AlertListVm;
-import com.utm.alert.viewmodel.AlertPostVm;
-import com.utm.alert.viewmodel.AlertResolvePostVm;
-import com.utm.alert.viewmodel.AlertVm;
+import com.utm.alert.viewmodel.alert.AlertAcknowledgePostVm;
+import com.utm.alert.viewmodel.alert.AlertListVm;
+import com.utm.alert.viewmodel.alert.AlertPostVm;
+import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
+import com.utm.alert.viewmodel.alert.AlertVm;
 
 import java.util.List;
 
@@ -33,3 +33,4 @@ public interface AlertService {
 
     AlertVm resolveAlert(String id, AlertResolvePostVm resolveVm);
 }
+

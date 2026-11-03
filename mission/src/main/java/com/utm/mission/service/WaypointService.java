@@ -1,9 +1,9 @@
 package com.utm.mission.service;
 
-import com.utm.mission.viewmodel.WaypointPostVm;
-import com.utm.mission.viewmodel.WaypointPutVm;
-import com.utm.mission.viewmodel.WaypointReorderVm;
-import com.utm.mission.viewmodel.WaypointVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPostVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPutVm;
+import com.utm.mission.viewmodel.waypoint.WaypointReorderVm;
+import com.utm.mission.viewmodel.waypoint.WaypointVm;
 
 import java.util.List;
 
@@ -19,3 +19,4 @@ public interface WaypointService {
 
     List<WaypointVm> reorderWaypoints(String missionId, WaypointReorderVm reorderVm);
 }
+

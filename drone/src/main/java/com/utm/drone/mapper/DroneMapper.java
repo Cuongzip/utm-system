@@ -1,12 +1,13 @@
 package com.utm.drone.mapper;
 
+import com.utm.drone.viewmodel.client.DeviceRegistrationBriefVm;
+import com.utm.drone.viewmodel.client.HubBriefVm;
+import com.utm.drone.viewmodel.client.OrganizationBriefVm;
+
 import com.utm.drone.model.Drone;
-import com.utm.drone.viewmodel.DeviceRegistrationBriefVm;
-import com.utm.drone.viewmodel.DronePostVm;
-import com.utm.drone.viewmodel.DronePutVm;
-import com.utm.drone.viewmodel.DroneVm;
-import com.utm.drone.viewmodel.HubBriefVm;
-import com.utm.drone.viewmodel.OrganizationBriefVm;
+import com.utm.drone.viewmodel.drone.DronePostVm;
+import com.utm.drone.viewmodel.drone.DronePutVm;
+import com.utm.drone.viewmodel.drone.DroneVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,10 +15,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
-)
+@Mapper(componentModel = "spring", builder = @org.mapstruct.Builder(disableBuilder = true))
 public interface DroneMapper {
 
     @Mapping(target = "id", source = "drone.id")
@@ -35,7 +33,8 @@ public interface DroneMapper {
     @Mapping(target = "createdBy", source = "drone.createdBy")
     @Mapping(target = "lastModifiedOn", source = "drone.lastModifiedOn")
     @Mapping(target = "lastModifiedBy", source = "drone.lastModifiedBy")
-    DroneVm toVm(Drone drone, OrganizationBriefVm owner, HubBriefVm homeHub, DeviceRegistrationBriefVm deviceRegistration);
+    DroneVm toVm(Drone drone, OrganizationBriefVm owner, HubBriefVm homeHub,
+            DeviceRegistrationBriefVm deviceRegistration);
 
     @Mapping(target = "owner", ignore = true)
     @Mapping(target = "homeHub", ignore = true)

@@ -1,12 +1,12 @@
 package com.utm.simulation.controller;
 
 import com.utm.simulation.service.SimulationService;
-import com.utm.simulation.viewmodel.InjectScenarioResultVm;
-import com.utm.simulation.viewmodel.InjectScenarioVm;
-import com.utm.simulation.viewmodel.ScenarioCatalogVm;
-import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
-import com.utm.simulation.viewmodel.SimulationSessionVm;
-import com.utm.simulation.viewmodel.TimeScaleUpdateVm;
+import com.utm.simulation.viewmodel.scenario.InjectScenarioResultVm;
+import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
+import com.utm.simulation.viewmodel.scenario.ScenarioCatalogVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionVm;
+import com.utm.simulation.viewmodel.session.TimeScaleUpdateVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -173,3 +173,4 @@ public class SimulationController {
         return ResponseEntity.ok(simulationService.getScenarioCatalog());
     }
 }
+

@@ -1,5 +1,8 @@
 package com.utm.flight.service;
 
+import com.utm.flight.service.client.DroneClientService;
+import com.utm.flight.service.client.HubClientService;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.constants.MessageCode;
@@ -12,14 +15,14 @@ import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.repository.FlightRepository;
-import com.utm.flight.viewmodel.FlightAbortVm;
-import com.utm.flight.viewmodel.FlightListVm;
-import com.utm.flight.viewmodel.FlightPostVm;
-import com.utm.flight.viewmodel.FlightPutVm;
-import com.utm.flight.viewmodel.FlightRejectVm;
-import com.utm.flight.viewmodel.FlightVm;
-import com.utm.flight.viewmodel.GeoJsonLineStringVm;
-import com.utm.flight.viewmodel.HubBriefVm;
+import com.utm.flight.viewmodel.flight.FlightAbortVm;
+import com.utm.flight.viewmodel.flight.FlightListVm;
+import com.utm.flight.viewmodel.flight.FlightPostVm;
+import com.utm.flight.viewmodel.flight.FlightPutVm;
+import com.utm.flight.viewmodel.flight.FlightRejectVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
+import com.utm.flight.viewmodel.flight.GeoJsonLineStringVm;
+import com.utm.flight.viewmodel.client.HubBriefVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -323,3 +326,5 @@ public class FlightServiceImpl implements FlightService {
         }
     }
 }
+
+

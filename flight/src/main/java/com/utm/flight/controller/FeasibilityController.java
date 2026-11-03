@@ -1,11 +1,11 @@
 package com.utm.flight.controller;
 
 import com.utm.flight.service.FeasibilityService;
-import com.utm.flight.viewmodel.FeasibilityCheckPostVm;
-import com.utm.flight.viewmodel.FeasibilityEvaluationListVm;
-import com.utm.flight.viewmodel.FeasibilityOverridePostVm;
-import com.utm.flight.viewmodel.FeasibilityResultVm;
-import com.utm.flight.viewmodel.FlightVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityCheckPostVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationListVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityOverridePostVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityResultVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -98,3 +98,4 @@ public class FeasibilityController {
         return getHistory(flightId, droneId, limit, offset);
     }
 }
+

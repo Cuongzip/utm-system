@@ -1,8 +1,8 @@
 package com.utm.drone.mapper;
 
 import com.utm.drone.model.DroneCommand;
-import com.utm.drone.viewmodel.DroneCommandPostVm;
-import com.utm.drone.viewmodel.DroneCommandVm;
+import com.utm.drone.viewmodel.command.DroneCommandPostVm;
+import com.utm.drone.viewmodel.command.DroneCommandVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -45,3 +45,4 @@ public interface DroneCommandMapper {
         return (value != null && !value.isBlank()) ? value.trim() : null;
     }
 }
+

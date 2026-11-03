@@ -1,14 +1,14 @@
 package com.utm.airspace.controller;
 
 import com.utm.airspace.service.AirspaceService;
-import com.utm.airspace.viewmodel.AirspaceCheckPathResultVm;
-import com.utm.airspace.viewmodel.AirspaceCheckPathVm;
-import com.utm.airspace.viewmodel.AirspaceCheckResultVm;
-import com.utm.airspace.viewmodel.AirspaceCheckVm;
-import com.utm.airspace.viewmodel.AirspaceZoneListVm;
-import com.utm.airspace.viewmodel.AirspaceZonePostVm;
-import com.utm.airspace.viewmodel.AirspaceZonePutVm;
-import com.utm.airspace.viewmodel.AirspaceZoneVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPathResultVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPathVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckResultVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneListVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePostVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePutVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -139,3 +139,4 @@ public class AirspaceController {
                 return ResponseEntity.ok(Map.of("message", "Airspace zone deactivated successfully"));
         }
 }
+

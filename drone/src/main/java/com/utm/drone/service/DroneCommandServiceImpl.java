@@ -12,9 +12,9 @@ import com.utm.drone.model.enumeration.CommandType;
 import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.repository.DroneCommandRepository;
 import com.utm.drone.repository.DroneRepository;
-import com.utm.drone.viewmodel.DroneCommandListVm;
-import com.utm.drone.viewmodel.DroneCommandPostVm;
-import com.utm.drone.viewmodel.DroneCommandVm;
+import com.utm.drone.viewmodel.command.DroneCommandListVm;
+import com.utm.drone.viewmodel.command.DroneCommandPostVm;
+import com.utm.drone.viewmodel.command.DroneCommandVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -229,3 +229,4 @@ public class DroneCommandServiceImpl implements DroneCommandService {
         return 2000;
     }
 }
+

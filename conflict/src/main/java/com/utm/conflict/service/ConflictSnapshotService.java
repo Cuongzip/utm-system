@@ -2,7 +2,7 @@ package com.utm.conflict.service;
 
 import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
-import com.utm.conflict.viewmodel.ConflictSnapshotVm;
+import com.utm.conflict.viewmodel.conflict.ConflictSnapshotVm;
 
 import java.util.List;
 
@@ -19,3 +19,4 @@ public interface ConflictSnapshotService {
             ConflictSeverity severity
     );
 }
+

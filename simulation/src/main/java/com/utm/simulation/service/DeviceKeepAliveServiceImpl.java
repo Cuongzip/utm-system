@@ -1,5 +1,7 @@
 package com.utm.simulation.service;
 
+import com.utm.simulation.service.client.ConnectivityClientService;
+
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -89,3 +91,4 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
         }
     }
 }
+

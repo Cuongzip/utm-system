@@ -1,10 +1,10 @@
 package com.utm.mission.controller;
 
 import com.utm.mission.service.WaypointService;
-import com.utm.mission.viewmodel.WaypointPostVm;
-import com.utm.mission.viewmodel.WaypointPutVm;
-import com.utm.mission.viewmodel.WaypointReorderVm;
-import com.utm.mission.viewmodel.WaypointVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPostVm;
+import com.utm.mission.viewmodel.waypoint.WaypointPutVm;
+import com.utm.mission.viewmodel.waypoint.WaypointReorderVm;
+import com.utm.mission.viewmodel.waypoint.WaypointVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -163,3 +163,4 @@ public class WaypointController {
         return ResponseEntity.ok(waypointService.reorderWaypoints(missionId, reorderVm));
     }
 }
+

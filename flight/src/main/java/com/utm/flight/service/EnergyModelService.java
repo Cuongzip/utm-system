@@ -1,9 +1,9 @@
 package com.utm.flight.service;
 
-import com.utm.flight.viewmodel.DroneEnergySpecVm;
-import com.utm.flight.viewmodel.EnergyCalculationResultVm;
-import com.utm.flight.viewmodel.EnvConditionsVm;
-import com.utm.flight.viewmodel.MissionProfileVm;
+import com.utm.flight.viewmodel.feasibility.DroneEnergySpecVm;
+import com.utm.flight.viewmodel.feasibility.EnergyCalculationResultVm;
+import com.utm.flight.viewmodel.feasibility.EnvConditionsVm;
+import com.utm.flight.viewmodel.feasibility.MissionProfileVm;
 
 public interface EnergyModelService {
     EnergyCalculationResultVm calculateEnergy(
@@ -12,3 +12,4 @@ public interface EnergyModelService {
             EnvConditionsVm envConditions
     );
 }
+

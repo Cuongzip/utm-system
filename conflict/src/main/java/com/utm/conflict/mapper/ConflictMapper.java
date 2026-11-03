@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.conflict.model.Conflict;
 import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictType;
-import com.utm.conflict.viewmodel.ConflictVm;
-import com.utm.conflict.viewmodel.LocationVm;
+import com.utm.conflict.viewmodel.conflict.ConflictVm;
+import com.utm.conflict.viewmodel.client.LocationVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -44,7 +44,7 @@ public abstract class ConflictMapper {
     @Mapping(target = "createdBy", source = "createdBy")
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
-    public abstract Conflict toEntity(com.utm.conflict.viewmodel.ConflictPostVm postVm, String createdBy);
+    public abstract Conflict toEntity(com.utm.conflict.viewmodel.conflict.ConflictPostVm postVm, String createdBy);
 
     protected ConflictType mapConflictTypeFromPost(String type) {
         ConflictType parsed = ConflictType.fromValue(type);
@@ -77,3 +77,5 @@ public abstract class ConflictMapper {
         }
     }
 }
+
+

@@ -1,10 +1,10 @@
 package com.utm.hub.service;
 
 import com.utm.hub.model.enumeration.HubStatus;
-import com.utm.hub.viewmodel.HubListVm;
-import com.utm.hub.viewmodel.HubPostVm;
-import com.utm.hub.viewmodel.HubPutVm;
-import com.utm.hub.viewmodel.HubVm;
+import com.utm.hub.viewmodel.hub.HubListVm;
+import com.utm.hub.viewmodel.hub.HubPostVm;
+import com.utm.hub.viewmodel.hub.HubPutVm;
+import com.utm.hub.viewmodel.hub.HubVm;
 
 public interface HubService {
 
@@ -18,3 +18,4 @@ public interface HubService {
 
     void deactivateHub(String id);
 }
+

@@ -1,7 +1,7 @@
 package com.utm.telemetry.service;
 
-import com.utm.telemetry.viewmodel.TelemetryIngestVm;
-import com.utm.telemetry.viewmodel.TelemetryRecordVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryIngestVm;
+import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -18,3 +18,4 @@ public interface TelemetryService {
 
     List<TelemetryRecordVm> getDroneTrackHistory(String droneId, ZonedDateTime from, ZonedDateTime to);
 }
+

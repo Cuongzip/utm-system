@@ -1,9 +1,9 @@
 package com.utm.connectivity.mapper;
 
 import com.utm.connectivity.model.DeviceRegistration;
-import com.utm.connectivity.viewmodel.DeviceRegistrationPostVm;
-import com.utm.connectivity.viewmodel.DeviceRegistrationVm;
-import com.utm.connectivity.viewmodel.DroneBriefVm;
+import com.utm.connectivity.viewmodel.device.DeviceRegistrationPostVm;
+import com.utm.connectivity.viewmodel.device.DeviceRegistrationVm;
+import com.utm.connectivity.viewmodel.client.DroneBriefVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -47,3 +47,4 @@ public interface DeviceRegistrationMapper {
         return value != null ? value.trim() : null;
     }
 }
+

@@ -7,13 +7,13 @@ import com.utm.conflict.model.enumeration.ConflictSeverity;
 import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ConflictType;
 import com.utm.conflict.repository.ConflictRepository;
-import com.utm.conflict.viewmodel.AirspaceCheckPostVm;
-import com.utm.conflict.viewmodel.AirspaceCheckResponseVm;
-import com.utm.conflict.viewmodel.AlertTriggerPostVm;
-import com.utm.conflict.viewmodel.ConflictScanResultVm;
-import com.utm.conflict.viewmodel.FlightBriefVm;
-import com.utm.conflict.viewmodel.FlightListBriefVm;
-import com.utm.conflict.viewmodel.TelemetryBriefVm;
+import com.utm.conflict.viewmodel.client.AirspaceCheckPostVm;
+import com.utm.conflict.viewmodel.client.AirspaceCheckResponseVm;
+import com.utm.conflict.viewmodel.client.AlertTriggerPostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictScanResultVm;
+import com.utm.conflict.viewmodel.client.FlightBriefVm;
+import com.utm.conflict.viewmodel.client.FlightListBriefVm;
+import com.utm.conflict.viewmodel.client.TelemetryBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -430,3 +430,4 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     private record FlightWithTelemetry(FlightBriefVm flight, TelemetryBriefVm telemetry) {
     }
 }
+

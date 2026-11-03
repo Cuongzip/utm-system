@@ -1,5 +1,8 @@
 package com.utm.flight.service;
 
+import com.utm.flight.service.client.TelemetryClientService;
+import com.utm.flight.service.client.ConflictClientService;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.constants.MessageCode;
@@ -11,9 +14,9 @@ import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.repository.FlightConformanceRepository;
 import com.utm.flight.repository.FlightRepository;
-import com.utm.flight.viewmodel.FlightConformanceVm;
-import com.utm.flight.viewmodel.GeoJsonLineStringVm;
-import com.utm.flight.viewmodel.TelemetryBriefVm;
+import com.utm.flight.viewmodel.flight.FlightConformanceVm;
+import com.utm.flight.viewmodel.flight.GeoJsonLineStringVm;
+import com.utm.flight.viewmodel.client.TelemetryBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -333,3 +336,5 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     record CrossTrackResult(double crossTrackDistanceM, double verticalErrorM) {
     }
 }
+
+

@@ -21,7 +21,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,10 +48,10 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     private final EmergencyProtocolMapper protocolMapper;
     private final AlertClientService alertClient;
     private final SimpMessagingTemplate messagingTemplate;
-    @Lazy private final ResponseExecutorService responseExecutorService;
+    private final ResponseExecutorService responseExecutorService;
 
     private OperationMode mode = OperationMode.supervised;
-    private List<EmergencyProtocol> cachedProtocols = new ArrayList<>();
+    private volatile List<EmergencyProtocol> cachedProtocols = new ArrayList<>();
     private final Map<String, PendingItem> pendingConfirmations = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
@@ -60,8 +59,8 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
             EmergencyIncident incident,
             EmergencyProtocol protocol,
             ZonedDateTime timeoutAt,
-            ScheduledFuture<?> timerFuture
-    ) {}
+            ScheduledFuture<?> timerFuture) {
+    }
 
     private static final Map<EmergencyType, Integer> EMERGENCY_PRIORITY = Map.ofEntries(
             Map.entry(EmergencyType.collision_aircraft, 1),
@@ -78,8 +77,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
             Map.entry(EmergencyType.signal_lost, 55),
             Map.entry(EmergencyType.signal_weak, 60),
             Map.entry(EmergencyType.weather_wind, 70),
-            Map.entry(EmergencyType.weather_visibility, 75)
-    );
+            Map.entry(EmergencyType.weather_visibility, 75));
 
     @PostConstruct
     public void init() {
@@ -128,8 +126,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                         entry.getKey(),
                         incidentMapper.toVm(entry.getValue().incident()),
                         protocolMapper.toVm(entry.getValue().protocol()),
-                        entry.getValue().timeoutAt()
-                ))
+                        entry.getValue().timeoutAt()))
                 .toList();
     }
 
@@ -150,8 +147,10 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
         incident.setConfirmedAt(ZonedDateTime.now());
 
         if (approved) {
-            log.info("Action {} confirmed by user {} for incident {}", incident.getResponseAction(), userId, incidentId);
-            responseExecutorService.executeResponse(incident, item.protocol().getResponseAction(), item.protocol().getFallbackAction());
+            log.info("Action {} confirmed by user {} for incident {}", incident.getResponseAction(), userId,
+                    incidentId);
+            responseExecutorService.executeResponse(incident, item.protocol().getResponseAction(),
+                    item.protocol().getFallbackAction());
         } else {
             log.info("Action rejected by user {} for incident {}", userId, incidentId);
             incident.setStatus(IncidentStatus.resolved);
@@ -166,8 +165,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                 "incidentId", incidentId,
                 "approved", approved,
                 "confirmedBy", userId != null ? userId : "operator",
-                "action", incident.getResponseAction() != null ? incident.getResponseAction().name() : ""
-        ));
+                "action", incident.getResponseAction() != null ? incident.getResponseAction().name() : ""));
         broadcastIncident(incident);
 
         return incidentMapper.toVm(incident);
@@ -187,8 +185,10 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     public void processEmergency(EmergencyIncident incident) {
         EmergencyProtocol protocol = findMatchingProtocol(incident.getEmergencyType(), incident.getSeverity());
         if (protocol == null) {
-            log.warn("No matching protocol for {} (severity: {}). Using immediate LAND.", incident.getEmergencyType(), incident.getSeverity());
-            responseExecutorService.executeResponse(incident, com.utm.emergency.model.enumeration.ResponseAction.LAND, null);
+            log.warn("No matching protocol for {} (severity: {}). Using immediate LAND.", incident.getEmergencyType(),
+                    incident.getSeverity());
+            responseExecutorService.executeResponse(incident, com.utm.emergency.model.enumeration.ResponseAction.LAND,
+                    null);
             return;
         }
 
@@ -198,7 +198,8 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
 
         if (!requiresConfirm) {
             incident.setWasAutoExecuted(true);
-            responseExecutorService.executeResponse(incident, protocol.getResponseAction(), protocol.getFallbackAction());
+            responseExecutorService.executeResponse(incident, protocol.getResponseAction(),
+                    protocol.getFallbackAction());
         } else {
             queueForConfirmation(incident, protocol);
         }
@@ -214,15 +215,13 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
         incident.setResponseAction(protocol.getResponseAction());
         appendTimeline(incident, "awaiting_confirmation", Map.of(
                 "action", protocol.getResponseAction().name(),
-                "timeoutSeconds", timeoutSec
-        ));
+                "timeoutSeconds", timeoutSec));
         incidentRepo.save(incident);
         messagingTemplate.convertAndSend("/topic/emergency/pending", new PendingConfirmationVm(
                 incident.getId(),
                 incidentMapper.toVm(incident),
                 protocolMapper.toVm(protocol),
-                timeoutAt
-        ));
+                timeoutAt));
         broadcastIncident(incident);
 
         alertClient.publishAlert(new AlertClientService.AlertPostVm(
@@ -230,15 +229,16 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                 incident.getFlightId(),
                 incident.getEmergencyType().name(),
                 incident.getSeverity().name(),
-                "CRITICAL EMERGENCY: Action " + protocol.getResponseAction() + " awaits confirmation. Timeout in " + timeoutSec + "s",
-                "active"
-        ));
+                "CRITICAL EMERGENCY: Action " + protocol.getResponseAction() + " awaits confirmation. Timeout in "
+                        + timeoutSec + "s",
+                "active"));
 
         ScheduledFuture<?> timer = scheduler.schedule(() -> {
             try {
                 handleTimeout(incident.getId());
             } catch (Exception ex) {
-                log.error("Error executing confirmation timeout for incident {}: {}", incident.getId(), ex.getMessage());
+                log.error("Error executing confirmation timeout for incident {}: {}", incident.getId(),
+                        ex.getMessage());
             }
         }, timeoutSec, TimeUnit.SECONDS);
 
@@ -249,16 +249,21 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     @Transactional
     public void handleTimeout(String incidentId) {
         PendingItem item = pendingConfirmations.remove(incidentId);
-        if (item == null) return;
+        if (item == null)
+            return;
 
         EmergencyIncident incident = incidentRepo.findById(incidentId).orElse(item.incident());
-        if (incident.getStatus() != IncidentStatus.pending_confirmation) return;
+        if (incident.getStatus() != IncidentStatus.pending_confirmation)
+            return;
 
         if (item.protocol().isAutoExecuteOnTimeout()) {
-            log.warn("Timeout reached for incident {}. Auto-executing action: {}", incidentId, item.protocol().getResponseAction());
+            log.warn("Timeout reached for incident {}. Auto-executing action: {}", incidentId,
+                    item.protocol().getResponseAction());
             incident.setWasAutoExecuted(true);
-            appendTimeline(incident, "confirmation_timeout_auto_executed", Map.of("action", item.protocol().getResponseAction().name()));
-            responseExecutorService.executeResponse(incident, item.protocol().getResponseAction(), item.protocol().getFallbackAction());
+            appendTimeline(incident, "confirmation_timeout_auto_executed",
+                    Map.of("action", item.protocol().getResponseAction().name()));
+            responseExecutorService.executeResponse(incident, item.protocol().getResponseAction(),
+                    item.protocol().getFallbackAction());
         } else {
             log.warn("Timeout reached for incident {}. Protocol requires escalation.", incidentId);
             incident.setStatus(IncidentStatus.escalated);
@@ -281,15 +286,18 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
 
     @Override
     public List<EmergencyIncident> prioritizeEmergencies(List<EmergencyIncident> incidents) {
-        if (incidents == null) return List.of();
+        if (incidents == null)
+            return List.of();
         return incidents.stream()
                 .sorted(Comparator.comparingInt(i -> EMERGENCY_PRIORITY.getOrDefault(i.getEmergencyType(), 100)))
                 .toList();
     }
 
     private void appendTimeline(EmergencyIncident incident, String event, Map<String, Object> data) {
-        List<IncidentTimelineEventVm> timeline = new ArrayList<>(incidentMapper.stringToTimelineList(incident.getTimeline()));
-        timeline.add(new IncidentTimelineEventVm(ZonedDateTime.now().toString(), event, incidentMapper.OBJECT_MAPPER.valueToTree(data)));
+        List<IncidentTimelineEventVm> timeline = new ArrayList<>(
+                incidentMapper.stringToTimelineList(incident.getTimeline()));
+        timeline.add(new IncidentTimelineEventVm(ZonedDateTime.now().toString(), event,
+                EmergencyIncidentMapper.OBJECT_MAPPER.valueToTree(data)));
         incident.setTimeline(incidentMapper.timelineListToString(timeline));
     }
 

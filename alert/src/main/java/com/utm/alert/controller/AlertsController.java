@@ -1,11 +1,11 @@
 package com.utm.alert.controller;
 
 import com.utm.alert.service.AlertService;
-import com.utm.alert.viewmodel.AlertAcknowledgePostVm;
-import com.utm.alert.viewmodel.AlertListVm;
-import com.utm.alert.viewmodel.AlertPostVm;
-import com.utm.alert.viewmodel.AlertResolvePostVm;
-import com.utm.alert.viewmodel.AlertVm;
+import com.utm.alert.viewmodel.alert.AlertAcknowledgePostVm;
+import com.utm.alert.viewmodel.alert.AlertListVm;
+import com.utm.alert.viewmodel.alert.AlertPostVm;
+import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
+import com.utm.alert.viewmodel.alert.AlertVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -129,4 +129,5 @@ public class AlertsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 }
+
 

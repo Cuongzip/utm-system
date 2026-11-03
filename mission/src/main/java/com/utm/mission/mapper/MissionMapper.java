@@ -1,10 +1,10 @@
 package com.utm.mission.mapper;
 
 import com.utm.mission.model.Mission;
-import com.utm.mission.viewmodel.MissionBriefVm;
-import com.utm.mission.viewmodel.MissionPostVm;
-import com.utm.mission.viewmodel.MissionPutVm;
-import com.utm.mission.viewmodel.MissionVm;
+import com.utm.mission.viewmodel.mission.MissionBriefVm;
+import com.utm.mission.viewmodel.mission.MissionPostVm;
+import com.utm.mission.viewmodel.mission.MissionPutVm;
+import com.utm.mission.viewmodel.mission.MissionVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;

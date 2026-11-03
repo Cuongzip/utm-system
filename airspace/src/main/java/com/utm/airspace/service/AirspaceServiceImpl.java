@@ -1,21 +1,23 @@
 package com.utm.airspace.service;
 
+import com.utm.airspace.service.client.HubClientService;
+
 import com.utm.airspace.mapper.AirspaceZoneMapper;
 import com.utm.airspace.model.AirspaceZone;
 import com.utm.airspace.model.enumeration.AirspaceZoneStatus;
 import com.utm.airspace.model.enumeration.AirspaceZoneType;
 import com.utm.airspace.repository.AirspaceZoneRepository;
-import com.utm.airspace.viewmodel.AirspaceCheckPathResultVm;
-import com.utm.airspace.viewmodel.AirspaceCheckPathVm;
-import com.utm.airspace.viewmodel.AirspaceCheckPointVm;
-import com.utm.airspace.viewmodel.AirspaceCheckResultVm;
-import com.utm.airspace.viewmodel.AirspaceCheckVm;
-import com.utm.airspace.viewmodel.AirspacePathConflictVm;
-import com.utm.airspace.viewmodel.AirspaceViolationVm;
-import com.utm.airspace.viewmodel.AirspaceZoneListVm;
-import com.utm.airspace.viewmodel.AirspaceZonePostVm;
-import com.utm.airspace.viewmodel.AirspaceZonePutVm;
-import com.utm.airspace.viewmodel.AirspaceZoneVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPathResultVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPathVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPointVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckResultVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckVm;
+import com.utm.airspace.viewmodel.check.AirspacePathConflictVm;
+import com.utm.airspace.viewmodel.check.AirspaceViolationVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneListVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePostVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePutVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -245,3 +247,5 @@ public class AirspaceServiceImpl implements AirspaceService {
         log.info("Soft deleted (deactivated) AirspaceZone with ID: {}", id);
     }
 }
+
+

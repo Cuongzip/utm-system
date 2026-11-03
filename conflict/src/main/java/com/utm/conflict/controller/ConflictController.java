@@ -3,10 +3,10 @@ package com.utm.conflict.controller;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
 import com.utm.conflict.service.ConflictDetectionService;
 import com.utm.conflict.service.ConflictService;
-import com.utm.conflict.viewmodel.ConflictPostVm;
-import com.utm.conflict.viewmodel.ConflictResolvePostVm;
-import com.utm.conflict.viewmodel.ConflictScanResultVm;
-import com.utm.conflict.viewmodel.ConflictVm;
+import com.utm.conflict.viewmodel.conflict.ConflictPostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictResolvePostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictScanResultVm;
+import com.utm.conflict.viewmodel.conflict.ConflictVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -207,3 +207,4 @@ public class ConflictController {
         }
     }
 }
+

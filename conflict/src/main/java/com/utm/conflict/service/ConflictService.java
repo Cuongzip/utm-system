@@ -1,8 +1,8 @@
 package com.utm.conflict.service;
 
-import com.utm.conflict.viewmodel.ConflictPostVm;
-import com.utm.conflict.viewmodel.ConflictResolvePostVm;
-import com.utm.conflict.viewmodel.ConflictVm;
+import com.utm.conflict.viewmodel.conflict.ConflictPostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictResolvePostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictVm;
 
 import java.util.List;
 
@@ -20,3 +20,4 @@ public interface ConflictService {
 
     ConflictVm resolveConflict(String id, ConflictResolvePostVm resolveVm, String resolvedBy);
 }
+

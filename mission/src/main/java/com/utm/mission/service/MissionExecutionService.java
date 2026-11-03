@@ -1,8 +1,8 @@
 package com.utm.mission.service;
 
-import com.utm.mission.viewmodel.MissionExecutePostVm;
-import com.utm.mission.viewmodel.MissionExecutionResultVm;
-import com.utm.mission.viewmodel.MissionExecutionVm;
+import com.utm.mission.viewmodel.execution.MissionExecutePostVm;
+import com.utm.mission.viewmodel.execution.MissionExecutionResultVm;
+import com.utm.mission.viewmodel.execution.MissionExecutionVm;
 
 import java.util.List;
 
@@ -14,3 +14,4 @@ public interface MissionExecutionService {
 
     List<MissionExecutionVm> getExecutionsByMissionId(String missionId);
 }
+

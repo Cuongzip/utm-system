@@ -1,5 +1,8 @@
 package com.utm.simulation.service;
 
+import com.utm.simulation.service.client.FlightClientService;
+import com.utm.simulation.service.client.TelemetryClientService;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,14 +30,14 @@ import com.utm.simulation.model.enumeration.EmergencyScenarioType;
 import com.utm.simulation.model.enumeration.SimulationStatus;
 import com.utm.simulation.repository.SimulationEventRepository;
 import com.utm.simulation.repository.SimulationSessionRepository;
-import com.utm.simulation.viewmodel.FlightDetailVm;
-import com.utm.simulation.viewmodel.InjectScenarioResultVm;
-import com.utm.simulation.viewmodel.InjectScenarioVm;
-import com.utm.simulation.viewmodel.ScenarioCatalogVm;
-import com.utm.simulation.viewmodel.SimulationSessionCreateVm;
-import com.utm.simulation.viewmodel.SimulationSessionVm;
-import com.utm.simulation.viewmodel.TelemetryPushVm;
-import com.utm.simulation.viewmodel.WaypointVm;
+import com.utm.simulation.viewmodel.client.FlightDetailVm;
+import com.utm.simulation.viewmodel.scenario.InjectScenarioResultVm;
+import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
+import com.utm.simulation.viewmodel.scenario.ScenarioCatalogVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionVm;
+import com.utm.simulation.viewmodel.client.TelemetryPushVm;
+import com.utm.simulation.viewmodel.client.WaypointVm;
 
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -75,10 +78,12 @@ public class SimulationServiceImpl implements SimulationService {
             throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, flightId);
         }
 
-        if (sessionRepository.existsByDroneIdAndStatusIn(droneId, List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
+        if (sessionRepository.existsByDroneIdAndStatusIn(droneId,
+                List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
             throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
         }
-        if (sessionRepository.existsByFlightIdAndStatusIn(flightId, List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
+        if (sessionRepository.existsByFlightIdAndStatusIn(flightId,
+                List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
             throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, flightId);
         }
 
@@ -359,7 +364,8 @@ public class SimulationServiceImpl implements SimulationService {
                     // Box-Muller Gaussian sensor noise
                     double noiseDistMeters = ThreadLocalRandom.current().nextGaussian() * 0.5;
                     double noiseLat = (noiseDistMeters / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
-                    double noiseLon = (noiseDistMeters / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(effectiveLat)))) * (180.0 / Math.PI);
+                    double noiseLon = (noiseDistMeters / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(effectiveLat))))
+                            * (180.0 / Math.PI);
                     double noiseAlt = ThreadLocalRandom.current().nextGaussian() * 0.3;
                     double noiseHeading = ThreadLocalRandom.current().nextGaussian() * 1.0;
                     double noiseSpeed = ThreadLocalRandom.current().nextGaussian() * 0.1;
@@ -380,7 +386,9 @@ public class SimulationServiceImpl implements SimulationService {
                         double perpHeading = Math.toRadians((runtime.currentHeading + 90.0) % 360.0);
                         double driftDist = 25.0; // meters
                         effectiveLat += (driftDist * Math.cos(perpHeading) / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
-                        effectiveLon += (driftDist * Math.sin(perpHeading) / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat)))) * (180.0 / Math.PI);
+                        effectiveLon += (driftDist * Math.sin(perpHeading)
+                                / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat))))
+                                * (180.0 / Math.PI);
                     }
 
                     TelemetryPushVm telemetryPush = new TelemetryPushVm(

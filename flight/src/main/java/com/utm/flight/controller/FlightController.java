@@ -1,12 +1,12 @@
 package com.utm.flight.controller;
 
 import com.utm.flight.service.FlightService;
-import com.utm.flight.viewmodel.FlightAbortVm;
-import com.utm.flight.viewmodel.FlightListVm;
-import com.utm.flight.viewmodel.FlightPostVm;
-import com.utm.flight.viewmodel.FlightPutVm;
-import com.utm.flight.viewmodel.FlightRejectVm;
-import com.utm.flight.viewmodel.FlightVm;
+import com.utm.flight.viewmodel.flight.FlightAbortVm;
+import com.utm.flight.viewmodel.flight.FlightListVm;
+import com.utm.flight.viewmodel.flight.FlightPostVm;
+import com.utm.flight.viewmodel.flight.FlightPutVm;
+import com.utm.flight.viewmodel.flight.FlightRejectVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -255,3 +255,4 @@ public class FlightController {
         return ResponseEntity.ok(flightService.abortFlight(id, abortVm));
     }
 }
+

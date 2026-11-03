@@ -1,8 +1,8 @@
 package com.utm.mission.mapper;
 
 import com.utm.mission.model.MissionExecution;
-import com.utm.mission.viewmodel.MissionExecutePostVm;
-import com.utm.mission.viewmodel.MissionExecutionVm;
+import com.utm.mission.viewmodel.execution.MissionExecutePostVm;
+import com.utm.mission.viewmodel.execution.MissionExecutionVm;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -34,3 +34,4 @@ public interface MissionExecutionMapper {
 
     List<MissionExecutionVm> toVmList(List<MissionExecution> executions);
 }
+

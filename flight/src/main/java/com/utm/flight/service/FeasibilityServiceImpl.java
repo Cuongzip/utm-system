@@ -1,5 +1,7 @@
 package com.utm.flight.service;
 
+import com.utm.flight.service.client.DroneClientService;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.constants.MessageCode;
@@ -14,17 +16,17 @@ import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.repository.FeasibilityEvaluationRepository;
 import com.utm.flight.repository.FlightRepository;
-import com.utm.flight.viewmodel.DroneEnergySpecVm;
-import com.utm.flight.viewmodel.EnergyCalculationResultVm;
-import com.utm.flight.viewmodel.EnvConditionsVm;
-import com.utm.flight.viewmodel.FeasibilityCheckPostVm;
-import com.utm.flight.viewmodel.FeasibilityEvaluationListVm;
-import com.utm.flight.viewmodel.FeasibilityEvaluationVm;
-import com.utm.flight.viewmodel.FeasibilityOverridePostVm;
-import com.utm.flight.viewmodel.FeasibilityResultVm;
-import com.utm.flight.viewmodel.FlightVm;
-import com.utm.flight.viewmodel.MissionProfileVm;
-import com.utm.flight.viewmodel.WindUsedVm;
+import com.utm.flight.viewmodel.feasibility.DroneEnergySpecVm;
+import com.utm.flight.viewmodel.feasibility.EnergyCalculationResultVm;
+import com.utm.flight.viewmodel.feasibility.EnvConditionsVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityCheckPostVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationListVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityOverridePostVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityResultVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
+import com.utm.flight.viewmodel.feasibility.MissionProfileVm;
+import com.utm.flight.viewmodel.feasibility.WindUsedVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -199,3 +201,5 @@ public class FeasibilityServiceImpl implements FeasibilityService {
         return EARTH_RADIUS_M * c;
     }
 }
+
+

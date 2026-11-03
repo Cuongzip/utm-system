@@ -5,12 +5,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.FeasibilityEvaluation;
 import com.utm.flight.model.Flight;
-import com.utm.flight.viewmodel.EnergyBreakdownVm;
-import com.utm.flight.viewmodel.EnergyCalculationResultVm;
-import com.utm.flight.viewmodel.FeasibilityEvaluationVm;
-import com.utm.flight.viewmodel.FeasibilityResultVm;
-import com.utm.flight.viewmodel.FeasibilitySolutionVm;
-import com.utm.flight.viewmodel.WindUsedVm;
+import com.utm.flight.viewmodel.feasibility.EnergyBreakdownVm;
+import com.utm.flight.viewmodel.feasibility.EnergyCalculationResultVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityResultVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilitySolutionVm;
+import com.utm.flight.viewmodel.feasibility.WindUsedVm;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -145,3 +145,4 @@ public interface FeasibilityMapper {
         return stringToSolutions(solutionsJson);
     }
 }
+

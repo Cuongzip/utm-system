@@ -1,6 +1,6 @@
 package com.utm.flight.service;
 
-import com.utm.flight.viewmodel.FlightConformanceVm;
+import com.utm.flight.viewmodel.flight.FlightConformanceVm;
 
 public interface FlightConformanceService {
 
@@ -10,4 +10,5 @@ public interface FlightConformanceService {
 
     void checkActiveFlightsConformance();
 }
+
 

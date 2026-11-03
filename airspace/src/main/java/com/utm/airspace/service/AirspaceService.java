@@ -1,13 +1,13 @@
 package com.utm.airspace.service;
 
-import com.utm.airspace.viewmodel.AirspaceCheckPathResultVm;
-import com.utm.airspace.viewmodel.AirspaceCheckPathVm;
-import com.utm.airspace.viewmodel.AirspaceCheckResultVm;
-import com.utm.airspace.viewmodel.AirspaceCheckVm;
-import com.utm.airspace.viewmodel.AirspaceZoneListVm;
-import com.utm.airspace.viewmodel.AirspaceZonePostVm;
-import com.utm.airspace.viewmodel.AirspaceZonePutVm;
-import com.utm.airspace.viewmodel.AirspaceZoneVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPathResultVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckPathVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckResultVm;
+import com.utm.airspace.viewmodel.check.AirspaceCheckVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneListVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePostVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePutVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
 
 public interface AirspaceService {
 
@@ -25,3 +25,4 @@ public interface AirspaceService {
 
     void deleteZone(String id);
 }
+

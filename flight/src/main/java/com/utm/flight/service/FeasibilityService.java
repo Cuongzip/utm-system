@@ -1,10 +1,10 @@
 package com.utm.flight.service;
 
-import com.utm.flight.viewmodel.FeasibilityCheckPostVm;
-import com.utm.flight.viewmodel.FeasibilityEvaluationListVm;
-import com.utm.flight.viewmodel.FeasibilityOverridePostVm;
-import com.utm.flight.viewmodel.FeasibilityResultVm;
-import com.utm.flight.viewmodel.FlightVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityCheckPostVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationListVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityOverridePostVm;
+import com.utm.flight.viewmodel.feasibility.FeasibilityResultVm;
+import com.utm.flight.viewmodel.flight.FlightVm;
 
 public interface FeasibilityService {
 
@@ -14,3 +14,4 @@ public interface FeasibilityService {
 
     FeasibilityEvaluationListVm getHistory(String flightId, String droneId, int limit, int offset);
 }
+

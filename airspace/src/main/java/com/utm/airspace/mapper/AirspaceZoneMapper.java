@@ -3,10 +3,10 @@ package com.utm.airspace.mapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.airspace.model.AirspaceZone;
-import com.utm.airspace.viewmodel.AirspaceZonePostVm;
-import com.utm.airspace.viewmodel.AirspaceZonePutVm;
-import com.utm.airspace.viewmodel.AirspaceZoneVm;
-import com.utm.airspace.viewmodel.GeoJsonPolygonVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePostVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZonePutVm;
+import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
+import com.utm.airspace.viewmodel.zone.GeoJsonPolygonVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -85,3 +85,4 @@ public interface AirspaceZoneMapper {
         }
     }
 }
+

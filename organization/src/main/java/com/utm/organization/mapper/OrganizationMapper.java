@@ -2,9 +2,9 @@ package com.utm.organization.mapper;
 
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.organization.model.Organization;
-import com.utm.organization.viewmodel.OrganizationPostVm;
-import com.utm.organization.viewmodel.OrganizationPutVm;
-import com.utm.organization.viewmodel.OrganizationVm;
+import com.utm.organization.viewmodel.organization.OrganizationPostVm;
+import com.utm.organization.viewmodel.organization.OrganizationPutVm;
+import com.utm.organization.viewmodel.organization.OrganizationVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.BeforeMapping;
 import org.mapstruct.Mapper;
@@ -78,4 +78,5 @@ public interface OrganizationMapper {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
+
 

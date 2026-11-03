@@ -2,10 +2,10 @@ package com.utm.drone.controller;
 
 import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.service.DroneService;
-import com.utm.drone.viewmodel.DroneListVm;
-import com.utm.drone.viewmodel.DronePostVm;
-import com.utm.drone.viewmodel.DronePutVm;
-import com.utm.drone.viewmodel.DroneVm;
+import com.utm.drone.viewmodel.drone.DroneListVm;
+import com.utm.drone.viewmodel.drone.DronePostVm;
+import com.utm.drone.viewmodel.drone.DronePutVm;
+import com.utm.drone.viewmodel.drone.DroneVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -217,3 +217,4 @@ public class DroneController {
         return ResponseEntity.ok(Map.of("message", "Drone removed successfully"));
     }
 }
+

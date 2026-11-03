@@ -8,10 +8,10 @@ import com.utm.organization.model.Organization;
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
 import com.utm.organization.repository.OrganizationRepository;
-import com.utm.organization.viewmodel.OrganizationListVm;
-import com.utm.organization.viewmodel.OrganizationPostVm;
-import com.utm.organization.viewmodel.OrganizationPutVm;
-import com.utm.organization.viewmodel.OrganizationVm;
+import com.utm.organization.viewmodel.organization.OrganizationListVm;
+import com.utm.organization.viewmodel.organization.OrganizationPostVm;
+import com.utm.organization.viewmodel.organization.OrganizationPutVm;
+import com.utm.organization.viewmodel.organization.OrganizationVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -125,3 +125,4 @@ public class OrganizationServiceImpl implements OrganizationService {
         log.info("Soft-deleted organization with ID: {} (status set to inactive)", id);
     }
 }
+

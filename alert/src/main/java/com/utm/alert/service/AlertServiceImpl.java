@@ -5,11 +5,11 @@ import com.utm.alert.model.Alert;
 import com.utm.alert.model.enumeration.AlertSeverity;
 import com.utm.alert.model.enumeration.AlertStatus;
 import com.utm.alert.repository.AlertRepository;
-import com.utm.alert.viewmodel.AlertAcknowledgePostVm;
-import com.utm.alert.viewmodel.AlertListVm;
-import com.utm.alert.viewmodel.AlertPostVm;
-import com.utm.alert.viewmodel.AlertResolvePostVm;
-import com.utm.alert.viewmodel.AlertVm;
+import com.utm.alert.viewmodel.alert.AlertAcknowledgePostVm;
+import com.utm.alert.viewmodel.alert.AlertListVm;
+import com.utm.alert.viewmodel.alert.AlertPostVm;
+import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
+import com.utm.alert.viewmodel.alert.AlertVm;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.NotFoundException;
 import jakarta.persistence.criteria.Predicate;
@@ -229,3 +229,4 @@ public class AlertServiceImpl implements AlertService {
         return "SYSTEM";
     }
 }
+
