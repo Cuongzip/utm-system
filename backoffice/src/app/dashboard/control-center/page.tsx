@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { PageHeader } from "@/components/ui";
 import {
     LiveTelemetry,
@@ -54,13 +54,9 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
 }
 
 export default function ControlCenterPage() {
-    const { data: allFlights = [], refetch: refetchFlights } = useFlightsAll();
-    const { data: hubs = [], refetch: refetchHubs } = useHubsAll();
+    const { data: allFlights = [] } = useFlightsAll();
+    const { data: hubs = [] } = useHubsAll();
     const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
-
-    const reloadFlightsAndHubs = useCallback(async () => {
-        await Promise.all([refetchFlights(), refetchHubs()]);
-    }, [refetchFlights, refetchHubs]);
 
     const flights = useMemo(() => {
         return allFlights.filter((f) => {
@@ -146,22 +142,12 @@ export default function ControlCenterPage() {
                         selectedFlightId={selectedFlightId}
                         onSelectFlight={setSelectedFlightId}
                         telemetryMap={telemetryMap}
-                        onReloadFlights={reloadFlightsAndHubs}
                     />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FlightControl
-                    droneId={selectedFlight?.droneId}
-                    flightId={selectedFlight?.id}
-                    uavId={selectedFlight?.droneId || selectedFlight?.flightNumber || "UAV-STANDBY"}
-                    statusText={
-                        selectedFlight
-                            ? `${selectedFlight.flightNumber || selectedFlight.id.slice(0, 8)} • ${(selectedFlight.status || "ready").toUpperCase()}`
-                            : "No active flight"
-                    }
-                />
+                <FlightControl droneId={selectedFlight?.droneId} flightId={selectedFlight?.id} />
                 <RecentCommands droneId={selectedFlight?.droneId} />
                 <ActiveAlerts />
             </div>

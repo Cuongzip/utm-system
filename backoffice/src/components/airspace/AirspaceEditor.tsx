@@ -209,6 +209,10 @@ export function AirspaceEditor({
                         onClearPolygonPoints={clearPolygonPoints}
                         zoneType={zoneType}
                         altitudeCeiling={altitudeCeiling}
+                        onAltitudeCeilingChange={(val) => {
+                            setAltitudeCeiling(val);
+                            clearFieldError("altitudeCeiling");
+                        }}
                         existingZones={existingZones}
                         currentZoneId={initialData?.id}
                         className="h-full"

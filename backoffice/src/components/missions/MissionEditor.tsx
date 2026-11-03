@@ -107,6 +107,8 @@ export function MissionEditor({
         handleSelectWaypoint,
         handleMoveWaypoint,
         handleMoveWaypointOrder,
+        handleUndoWaypoint,
+        handleClearWaypoints,
         handleGenerateHubToHub,
     } = useMissionWaypoints({
         initialWaypoints: initialData?.waypoints,
@@ -285,6 +287,8 @@ export function MissionEditor({
                     onAddWaypoint={handleAddWaypoint}
                     onMoveWaypoint={handleMoveWaypoint}
                     onSelectWaypoint={handleSelectWaypoint}
+                    onUndoWaypoint={handleUndoWaypoint}
+                    onClearWaypoints={handleClearWaypoints}
                     onGenerateHubToHub={handleGenerateHubToHub}
                     isReadOnly={isReadOnly}
                     className="h-full"

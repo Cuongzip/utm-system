@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Circle, Pentagon, Undo2, Trash2, Layers } from "lucide-react";
-import { TacticalMapContainer, useCesium } from "@/components/map";
-import { AirspaceLayer } from "@/components/map/layers/AirspaceLayer";
+import { Circle, Pentagon } from "lucide-react";
+import {
+    TacticalMapContainer,
+    MapUndoClear,
+    MapZoneAction,
+    AirspaceLayer,
+    useCesium,
+} from "@/components/map";
 import { fitCameraToBounds } from "@/components/map/cesiumUtils";
 import { MAP_TOKENS } from "@/components/map/mapTokens";
 import { cn } from "@/lib";
@@ -22,6 +27,7 @@ export interface AirspaceMapEditorProps {
     onClearPolygonPoints: () => void;
     zoneType: AirspaceZoneType;
     altitudeCeiling: number;
+    onAltitudeCeilingChange?: (val: number) => void;
     existingZones?: AirspaceZone[];
     currentZoneId?: string;
     className?: string;
@@ -367,11 +373,25 @@ export function AirspaceMapEditor({
     onClearPolygonPoints,
     zoneType,
     altitudeCeiling,
+    onAltitudeCeilingChange,
     existingZones = [],
     currentZoneId,
     className = "",
 }: AirspaceMapEditorProps) {
-    const [showContextZones, setShowContextZones] = useState(true);
+    const [showContextZones, setShowContextZones] = useState(false);
+    const [altInput, setAltInput] = useState(String(altitudeCeiling ?? 120));
+
+    useEffect(() => {
+        setAltInput(String(altitudeCeiling ?? 120));
+    }, [altitudeCeiling]);
+
+    const handleAltChange = (val: string) => {
+        setAltInput(val);
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && parsed > 0) {
+            onAltitudeCeilingChange?.(parsed);
+        }
+    };
 
     const backgroundZones = existingZones.filter((z) => z.id !== currentZoneId);
 
@@ -381,7 +401,7 @@ export function AirspaceMapEditor({
             className={className}
             header={
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
-                    <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
+                    <div className="flex items-center h-[34px] gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                         <button
                             type="button"
                             onClick={() => onGeometryModeChange("radius")}
@@ -415,54 +435,33 @@ export function AirspaceMapEditor({
 
                     <div className="flex items-center gap-2">
                         {geometryMode === "polygon" && (
-                            <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
-                                <button
-                                    type="button"
-                                    onClick={onUndoPolygonPoint}
-                                    disabled={polygonPoints.length === 0}
-                                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] disabled:opacity-40 cursor-pointer"
-                                    title="Undo last point"
-                                >
-                                    <Undo2 className="w-3.5 h-3.5" />
-                                    <span>Undo</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={onClearPolygonPoints}
-                                    disabled={polygonPoints.length === 0}
-                                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded text-red-500 hover:bg-red-50 disabled:opacity-40 cursor-pointer"
-                                    title="Clear all points"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Clear</span>
-                                </button>
-                            </div>
+                            <MapUndoClear
+                                onUndo={onUndoPolygonPoint}
+                                onClear={onClearPolygonPoints}
+                                disabled={polygonPoints.length === 0}
+                            />
                         )}
 
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-card)] px-2.5 py-1 rounded border border-[var(--color-border-default)]">
+                        <div className="flex items-center h-[34px] gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-card)] px-2.5 py-1 rounded border border-[var(--color-border-default)]">
                             <span className="text-[11px] font-mono uppercase text-[var(--color-text-muted)]">
-                                Ceiling:
+                                Alt:
                             </span>
-                            <span className="font-mono text-xs font-bold text-[var(--color-text-primary)]">
-                                {altitudeCeiling}
-                            </span>
+                            <input
+                                type="number"
+                                min="1"
+                                max="5000"
+                                value={altInput}
+                                onChange={(e) => handleAltChange(e.target.value)}
+                                className="w-12 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
+                            />
                             <span className="font-mono text-slate-400 text-[11px]">m</span>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => setShowContextZones((prev) => !prev)}
-                            className={cn(
-                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border transition-colors cursor-pointer",
-                                showContextZones
-                                    ? "bg-[var(--color-surface-card)] border-[var(--color-border-default)] text-[var(--color-border-dark)] font-bold"
-                                    : "border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)]"
-                            )}
-                            title="Toggle background airspace sectors"
-                        >
-                            <Layers className="w-3.5 h-3.5" />
-                            <span>Zones ({backgroundZones.length})</span>
-                        </button>
+                        <MapZoneAction
+                            active={showContextZones}
+                            onToggle={() => setShowContextZones((prev) => !prev)}
+                            count={backgroundZones.length}
+                        />
                     </div>
                 </div>
             }

@@ -91,6 +91,20 @@ export function useMissionWaypoints({
         [isReadOnly]
     );
 
+    const handleUndoWaypoint = useCallback(() => {
+        if (isReadOnly) return;
+        setWaypoints((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
+        setSelectedWaypointId(null);
+        onClearWaypointErrors?.();
+    }, [isReadOnly, onClearWaypointErrors]);
+
+    const handleClearWaypoints = useCallback(() => {
+        if (isReadOnly) return;
+        setWaypoints([]);
+        setSelectedWaypointId(null);
+        onClearWaypointErrors?.();
+    }, [isReadOnly, onClearWaypointErrors]);
+
     const handleMoveWaypoint = useCallback(
         (wpId: string, lat: number, lng: number) => {
             if (isReadOnly) return;
@@ -165,6 +179,8 @@ export function useMissionWaypoints({
         handleSelectWaypoint,
         handleMoveWaypoint,
         handleMoveWaypointOrder,
+        handleUndoWaypoint,
+        handleClearWaypoints,
         handleGenerateHubToHub,
     };
 }

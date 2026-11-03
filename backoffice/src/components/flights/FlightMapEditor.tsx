@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import { MousePointer, Plus, Trash2, Compass } from "lucide-react";
-import { TacticalMapContainer, AltitudeProfile, useCesium } from "@/components/map";
+import { MousePointer, Plus, Compass } from "lucide-react";
+import {
+    TacticalMapContainer,
+    AltitudeProfile,
+    AirspaceLayer,
+    MapUndoClear,
+    MapZoneAction,
+    useCesium,
+} from "@/components/map";
+import { useAirspaceAll } from "@/hooks";
 import { cn } from "@/lib";
 import { fitCameraToBounds } from "@/components/map/cesiumUtils";
 import { getHubIconUri, getWaypointIconUri } from "@/components/map/mapIcons";
@@ -86,6 +94,7 @@ interface FlightMapEditorProps {
     onAddWaypoint?: (lat: number, lng: number, altitude?: number) => void;
     onMoveWaypoint?: (id: string, lat: number, lng: number) => void;
     onSelectWaypoint?: (waypoint: FlightWaypoint | null) => void;
+    onUndoWaypoint?: () => void;
     onClearWaypoints?: () => void;
     isReadOnly?: boolean;
     className?: string;
@@ -521,12 +530,15 @@ export function FlightMapEditor({
     onAddWaypoint,
     onMoveWaypoint,
     onSelectWaypoint,
+    onUndoWaypoint,
     onClearWaypoints,
     isReadOnly = false,
     className = "",
 }: FlightMapEditorProps) {
     const [mode, setMode] = useState<FlightEditorMode>(isReadOnly ? "select" : "add");
     const [altInput, setAltInput] = useState(String(cruisingAltitude));
+    const [showZones, setShowZones] = useState(false);
+    const { data: zones = [] } = useAirspaceAll();
     const [flyToTarget, setFlyToTarget] = useState<{
         lat: number;
         lng: number;
@@ -583,72 +595,76 @@ export function FlightMapEditor({
             header={
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono ml-auto">
+                        <div className="inline-flex items-center h-[34px] gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             <span>READ-ONLY VIEW</span>
                         </div>
                     ) : (
-                        <>
-                            <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
-                                <button
-                                    type="button"
-                                    onClick={() => setMode("select")}
-                                    className={cn(
-                                        "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
-                                        mode === "select"
-                                            ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
-                                            : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
-                                    )}
-                                    title="Select or drag waypoints"
-                                >
-                                    <MousePointer className="w-3.5 h-3.5" />
-                                    <span>Select</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setMode("add")}
-                                    className={cn(
-                                        "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
-                                        mode === "add"
-                                            ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
-                                            : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
-                                    )}
-                                    title="Click on map to add waypoint"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>Add Point</span>
-                                </button>
-
-                                {waypoints.length > 0 && onClearWaypoints && (
-                                    <button
-                                        type="button"
-                                        onClick={onClearWaypoints}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
-                                        title="Clear all intermediate waypoints"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Clear</span>
-                                    </button>
+                        <div className="flex items-center h-[34px] gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
+                            <button
+                                type="button"
+                                onClick={() => setMode("select")}
+                                className={cn(
+                                    "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
+                                    mode === "select"
+                                        ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
-                            </div>
+                                title="Select or drag waypoints"
+                            >
+                                <MousePointer className="w-3.5 h-3.5" />
+                                <span>Select</span>
+                            </button>
 
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-card)] px-2.5 py-1 rounded border border-[var(--color-border-default)]">
-                                <span className="text-[11px] font-mono uppercase text-[var(--color-text-muted)]">
-                                    Alt:
-                                </span>
-                                <input
-                                    type="number"
-                                    min="10"
-                                    max="1000"
-                                    value={altInput}
-                                    onChange={(e) => handleAltChange(e.target.value)}
-                                    className="w-14 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
-                                />
-                                <span className="font-mono text-slate-400 text-[11px]">m</span>
-                            </div>
-                        </>
+                            <button
+                                type="button"
+                                onClick={() => setMode("add")}
+                                className={cn(
+                                    "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
+                                    mode === "add"
+                                        ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
+                                )}
+                                title="Click on map to add waypoint"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add Point</span>
+                            </button>
+                        </div>
                     )}
+
+                    <div className="flex items-center gap-2">
+                        {!isReadOnly && (
+                            <>
+                                <MapUndoClear
+                                    onUndo={onUndoWaypoint}
+                                    onClear={onClearWaypoints}
+                                    disabled={waypoints.length === 0}
+                                />
+
+                                <div className="flex items-center h-[34px] gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-card)] px-2.5 py-1 rounded border border-[var(--color-border-default)]">
+                                    <span className="text-[11px] font-mono uppercase text-[var(--color-text-muted)]">
+                                        Alt:
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="10"
+                                        max="1000"
+                                        value={altInput}
+                                        onChange={(e) => handleAltChange(e.target.value)}
+                                        className="w-14 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
+                                    />
+                                    <span className="font-mono text-slate-400 text-[11px]">m</span>
+                                </div>
+                            </>
+                        )}
+
+                        <MapZoneAction
+                            active={showZones}
+                            onToggle={() => setShowZones((prev) => !prev)}
+                            count={zones.length}
+                        />
+                    </div>
                 </div>
             }
             overlay={
@@ -696,6 +712,8 @@ export function FlightMapEditor({
             />
 
             <FlightCameraController targetLocation={flyToTarget} routePoints={allRoutePoints} />
+
+            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} autoFitBounds={false} />}
         </TacticalMapContainer>
     );
 }

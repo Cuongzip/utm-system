@@ -179,6 +179,7 @@ export function FlightEditor({
         moveWaypoint,
         removeWaypoint,
         moveWaypointOrder,
+        undoWaypoint,
         clearWaypoints,
         computedGeoJsonLineString,
         totalDistanceM,
@@ -411,6 +412,7 @@ export function FlightEditor({
                         onAddWaypoint={addWaypoint}
                         onMoveWaypoint={moveWaypoint}
                         onSelectWaypoint={(wp) => setSelectedWaypointId(wp ? wp.id : null)}
+                        onUndoWaypoint={undoWaypoint}
                         onClearWaypoints={clearWaypoints}
                         isReadOnly={isReadOnly}
                         className="h-full"

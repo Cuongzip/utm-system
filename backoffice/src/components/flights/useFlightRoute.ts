@@ -217,6 +217,13 @@ export function useFlightRoute({
         [isReadOnly, onClearErrors]
     );
 
+    const undoWaypoint = useCallback(() => {
+        if (isReadOnly) return;
+        setWaypoints((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
+        setSelectedWaypointId(null);
+        onClearErrors?.();
+    }, [isReadOnly, onClearErrors]);
+
     const clearWaypoints = useCallback(() => {
         if (isReadOnly) return;
         setWaypoints([]);
@@ -243,6 +250,7 @@ export function useFlightRoute({
         moveWaypoint,
         removeWaypoint,
         moveWaypointOrder,
+        undoWaypoint,
         clearWaypoints,
         totalDistanceM,
         computedGeoJsonLineString,

@@ -14,7 +14,6 @@ export interface LiveTelemetryProps {
     selectedFlightId?: string | null;
     onSelectFlight?: (flightId: string) => void;
     telemetryMap?: Record<string, TelemetryRecord>;
-    onReloadFlights?: () => void;
 }
 
 export function LiveTelemetry({
@@ -24,7 +23,6 @@ export function LiveTelemetry({
     selectedFlightId,
     onSelectFlight,
     telemetryMap = {},
-    onReloadFlights,
 }: LiveTelemetryProps) {
     const [isFlightListOpen, setIsFlightListOpen] = useState(false);
     const hasTelemetry = !!telemetry;
@@ -83,7 +81,6 @@ export function LiveTelemetry({
                         selectedFlightId={selectedFlightId}
                         onSelectFlight={onSelectFlight}
                         telemetryMap={telemetryMap}
-                        onReloadFlights={onReloadFlights}
                         hasAlert={hasAlert}
                         serialNumber={serialNumber}
                         uavId={uavId}
