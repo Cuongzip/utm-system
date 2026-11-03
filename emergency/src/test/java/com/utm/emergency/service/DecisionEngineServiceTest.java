@@ -14,15 +14,18 @@ import com.utm.emergency.repository.EmergencyConfigRepository;
 import com.utm.emergency.repository.EmergencyIncidentRepository;
 import com.utm.emergency.repository.EmergencyProtocolRepository;
 import com.utm.emergency.service.client.AlertClientService;
+import com.utm.emergency.viewmodel.config.OperationModeVm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +43,7 @@ class DecisionEngineServiceTest {
     @Mock private EmergencyIncidentMapper incidentMapper;
     @Mock private EmergencyProtocolMapper protocolMapper;
     @Mock private AlertClientService alertClient;
+    @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private ResponseExecutorService responseExecutorService;
 
     @InjectMocks
@@ -93,5 +97,12 @@ class DecisionEngineServiceTest {
         decisionEngineService.processEmergency(incident);
 
         verify(responseExecutorService).executeResponse(eq(incident), eq(ResponseAction.DESCEND), any());
+    }
+
+    @Test
+    void testSetMode_BroadcastsMode() {
+        when(configRepo.findByKey("operation_mode")).thenReturn(Optional.empty());
+        decisionEngineService.setMode(OperationMode.auto);
+        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/mode"), eq(new OperationModeVm(OperationMode.auto)));
     }
 }

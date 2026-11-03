@@ -13,6 +13,7 @@ import com.utm.emergency.repository.EmergencyConfigRepository;
 import com.utm.emergency.repository.EmergencyIncidentRepository;
 import com.utm.emergency.repository.EmergencyProtocolRepository;
 import com.utm.emergency.service.client.AlertClientService;
+import com.utm.emergency.viewmodel.config.OperationModeVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentTimelineEventVm;
 import com.utm.emergency.viewmodel.incident.PendingConfirmationVm;
@@ -21,6 +22,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     private final EmergencyIncidentMapper incidentMapper;
     private final EmergencyProtocolMapper protocolMapper;
     private final AlertClientService alertClient;
+    private final SimpMessagingTemplate messagingTemplate;
     @Lazy private final ResponseExecutorService responseExecutorService;
 
     private OperationMode mode = OperationMode.supervised;
@@ -114,6 +117,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                         .build());
         config.setValue("\"" + mode.name() + "\"");
         configRepo.save(config);
+        messagingTemplate.convertAndSend("/topic/emergency/mode", new OperationModeVm(mode));
         log.info("Emergency operation mode updated to: {}", mode);
     }
 
@@ -157,6 +161,14 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
             appendTimeline(incident, "action_rejected", Map.of("operator", userId != null ? userId : "unknown"));
             incidentRepo.save(incident);
         }
+
+        messagingTemplate.convertAndSend("/topic/emergency/confirmed", (Object) Map.of(
+                "incidentId", incidentId,
+                "approved", approved,
+                "confirmedBy", userId != null ? userId : "operator",
+                "action", incident.getResponseAction() != null ? incident.getResponseAction().name() : ""
+        ));
+        broadcastIncident(incident);
 
         return incidentMapper.toVm(incident);
     }
@@ -205,6 +217,13 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                 "timeoutSeconds", timeoutSec
         ));
         incidentRepo.save(incident);
+        messagingTemplate.convertAndSend("/topic/emergency/pending", new PendingConfirmationVm(
+                incident.getId(),
+                incidentMapper.toVm(incident),
+                protocolMapper.toVm(protocol),
+                timeoutAt
+        ));
+        broadcastIncident(incident);
 
         alertClient.publishAlert(new AlertClientService.AlertPostVm(
                 incident.getDroneId(),
@@ -245,6 +264,18 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
             incident.setStatus(IncidentStatus.escalated);
             appendTimeline(incident, "confirmation_timeout_escalated", Map.of());
             incidentRepo.save(incident);
+            broadcastIncident(incident);
+        }
+    }
+
+    private void broadcastIncident(EmergencyIncident incident) {
+        EmergencyIncidentVm vm = incidentMapper.toVm(incident);
+        messagingTemplate.convertAndSend("/topic/emergency/incidents", vm);
+        if (incident.getDroneId() != null && !incident.getDroneId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/drone/" + incident.getDroneId(), vm);
+        }
+        if (incident.getFlightId() != null && !incident.getFlightId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/flight/" + incident.getFlightId(), vm);
         }
     }
 

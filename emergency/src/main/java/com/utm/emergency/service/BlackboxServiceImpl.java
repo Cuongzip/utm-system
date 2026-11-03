@@ -7,6 +7,7 @@ import com.utm.emergency.viewmodel.blackbox.BlackboxEntryPostVm;
 import com.utm.emergency.viewmodel.blackbox.BlackboxEntryVm;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +20,18 @@ public class BlackboxServiceImpl implements BlackboxService {
 
     private final BlackboxEntryRepository blackboxRepo;
     private final BlackboxEntryMapper blackboxMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
     public BlackboxEntryVm recordEntry(BlackboxEntryPostVm postVm) {
         BlackboxEntry entry = blackboxMapper.toEntity(postVm);
         BlackboxEntry saved = blackboxRepo.save(entry);
-        return blackboxMapper.toVm(saved);
+        BlackboxEntryVm vm = blackboxMapper.toVm(saved);
+        if (saved.getIncidentId() != null && !saved.getIncidentId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/blackbox/" + saved.getIncidentId(), vm);
+        }
+        return vm;
     }
 
     @Override

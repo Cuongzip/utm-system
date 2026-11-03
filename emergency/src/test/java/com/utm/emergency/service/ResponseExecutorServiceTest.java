@@ -1,5 +1,6 @@
 package com.utm.emergency.service;
 
+import com.utm.emergency.mapper.BlackboxEntryMapper;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.model.EmergencyIncident;
 import com.utm.emergency.model.enumeration.EmergencySeverity;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.Optional;
 
@@ -32,6 +34,8 @@ class ResponseExecutorServiceTest {
     @Mock private FlightClientService flightClient;
     @Mock private HubClientService hubClient;
     @Mock private EmergencyIncidentMapper incidentMapper;
+    @Mock private BlackboxEntryMapper blackboxMapper;
+    @Mock private SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
     private ResponseExecutorServiceImpl responseExecutorService;

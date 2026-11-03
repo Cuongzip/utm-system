@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
 
     private final EmergencyIncidentRepository incidentRepo;
     private final EmergencyIncidentMapper incidentMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -106,7 +108,16 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
         incident.setRootCause(rootCauseVm.rootCause());
         if (rootCauseVm.notes() != null) incident.setRootCauseNotes(rootCauseVm.notes());
         if (rootCauseVm.lessonsLearned() != null) incident.setLessonsLearned(rootCauseVm.lessonsLearned());
-        return incidentMapper.toVm(incidentRepo.save(incident));
+        EmergencyIncident saved = incidentRepo.save(incident);
+        EmergencyIncidentVm vm = incidentMapper.toVm(saved);
+        messagingTemplate.convertAndSend("/topic/emergency/incidents", vm);
+        if (saved.getDroneId() != null && !saved.getDroneId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/drone/" + saved.getDroneId(), vm);
+        }
+        if (saved.getFlightId() != null && !saved.getFlightId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/flight/" + saved.getFlightId(), vm);
+        }
+        return vm;
     }
 
     @Override

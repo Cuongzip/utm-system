@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class AlertServiceImpl implements AlertService {
 
     private final AlertRepository alertRepository;
     private final AlertMapper alertMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -58,7 +60,9 @@ public class AlertServiceImpl implements AlertService {
                 savedAlert.getAlertType(), savedAlert.getFlightId(), savedAlert.getDroneId(),
                 savedAlert.getSeverity(), savedAlert.getMessage());
 
-        return alertMapper.toVm(savedAlert);
+        AlertVm vm = alertMapper.toVm(savedAlert);
+        broadcastAlert(vm);
+        return vm;
     }
 
     @Override
@@ -161,7 +165,9 @@ public class AlertServiceImpl implements AlertService {
 
         Alert updated = alertRepository.save(alert);
         log.info("Alert '{}' acknowledged by operator '{}'", id, operator);
-        return alertMapper.toVm(updated);
+        AlertVm vm = alertMapper.toVm(updated);
+        broadcastAlert(vm);
+        return vm;
     }
 
     @Override
@@ -186,7 +192,26 @@ public class AlertServiceImpl implements AlertService {
 
         Alert updated = alertRepository.save(alert);
         log.info("Alert '{}' marked as RESOLVED by operator '{}'", id, operator);
-        return alertMapper.toVm(updated);
+        AlertVm vm = alertMapper.toVm(updated);
+        broadcastAlert(vm);
+        return vm;
+    }
+
+    private void broadcastAlert(AlertVm vm) {
+        try {
+            messagingTemplate.convertAndSend("/topic/alerts/live", vm);
+            if (vm.severity() == AlertSeverity.CRITICAL) {
+                messagingTemplate.convertAndSend("/topic/alerts/critical", vm);
+            }
+            if (vm.droneId() != null && !vm.droneId().isBlank()) {
+                messagingTemplate.convertAndSend("/topic/alerts/drone/" + vm.droneId(), vm);
+            }
+            if (vm.flightId() != null && !vm.flightId().isBlank()) {
+                messagingTemplate.convertAndSend("/topic/alerts/flight/" + vm.flightId(), vm);
+            }
+        } catch (Exception ex) {
+            log.error("Failed to broadcast alert via WebSocket: {}", ex.getMessage());
+        }
     }
 
     private String getCurrentUserSafely(String explicitUser) {

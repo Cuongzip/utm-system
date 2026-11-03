@@ -1,5 +1,6 @@
 package com.utm.emergency.service;
 
+import com.utm.emergency.mapper.BlackboxEntryMapper;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.model.BlackboxEntry;
 import com.utm.emergency.model.EmergencyIncident;
@@ -13,6 +14,7 @@ import com.utm.emergency.service.client.HubClientService;
 import com.utm.emergency.viewmodel.incident.IncidentTimelineEventVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,8 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
     private final FlightClientService flightClient;
     private final HubClientService hubClient;
     private final EmergencyIncidentMapper incidentMapper;
+    private final BlackboxEntryMapper blackboxMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public ValidationResult validateAction(EmergencyIncident incident, ResponseAction action) {
@@ -137,6 +141,7 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
         incident.setActionStartedAt(ZonedDateTime.now());
         appendTimeline(incident, "action_executing", Map.of("action", actionToExecute.name()));
         incidentRepo.save(incident);
+        broadcastIncident(incident);
 
         boolean dispatched = droneClient.sendEmergencyCommand(incident.getDroneId(), actionToExecute.name(), incident.getFlightId(), incident.getId());
 
@@ -149,8 +154,20 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
         incident.setResolvedBy("system_failsafe");
         appendTimeline(incident, dispatched ? "action_completed" : "action_dispatch_failed", Map.of("action", actionToExecute.name()));
         incidentRepo.save(incident);
+        broadcastIncident(incident);
 
         log.info("Failsafe action {} completed for incident {}", actionToExecute, incident.getId());
+    }
+
+    private void broadcastIncident(EmergencyIncident incident) {
+        var vm = incidentMapper.toVm(incident);
+        messagingTemplate.convertAndSend("/topic/emergency/incidents", vm);
+        if (incident.getDroneId() != null && !incident.getDroneId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/drone/" + incident.getDroneId(), vm);
+        }
+        if (incident.getFlightId() != null && !incident.getFlightId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/flight/" + incident.getFlightId(), vm);
+        }
     }
 
     private void recordEmergencyBlackbox(EmergencyIncident incident, ResponseAction action) {
@@ -174,7 +191,10 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
                     .emergencySeverity(incident.getSeverity().name())
                     .isEmergencyRecording(true)
                     .build();
-            blackboxRepo.save(entry);
+            BlackboxEntry saved = blackboxRepo.save(entry);
+            if (incident.getId() != null) {
+                messagingTemplate.convertAndSend("/topic/emergency/blackbox/" + incident.getId(), blackboxMapper.toVm(saved));
+            }
         } catch (Exception e) {
             log.error("Failed to record emergency blackbox entry: {}", e.getMessage());
         }
