@@ -44,6 +44,9 @@ public final class MessageCode {
     public static final String MISSION_WAYPOINTS_LESS_THAN_TWO = "MISSION_WAYPOINTS_LESS_THAN_TWO";
     public static final String DRONE_NOT_AVAILABLE = "DRONE_NOT_AVAILABLE";
     public static final String FLIGHT_REJECTED = "FLIGHT_REJECTED";
+    public static final String EMERGENCY_PROTOCOL_NOT_FOUND = "EMERGENCY_PROTOCOL_NOT_FOUND";
+    public static final String EMERGENCY_INCIDENT_NOT_FOUND = "EMERGENCY_INCIDENT_NOT_FOUND";
+    public static final String PENDING_CONFIRMATION_NOT_FOUND = "PENDING_CONFIRMATION_NOT_FOUND";
 
     private MessageCode() {
     }

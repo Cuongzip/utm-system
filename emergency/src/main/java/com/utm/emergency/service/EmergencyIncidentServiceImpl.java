@@ -1,5 +1,7 @@
 package com.utm.emergency.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.model.EmergencyIncident;
 import com.utm.emergency.model.enumeration.EmergencySeverity;
@@ -40,7 +42,8 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
 
     @Override
     @Transactional(readOnly = true)
-    public IncidentPageVm searchIncidents(String status, EmergencySeverity severity, EmergencyType type, String droneId, ZonedDateTime from, ZonedDateTime to, int limit, int offset) {
+    public IncidentPageVm searchIncidents(String status, EmergencySeverity severity, EmergencyType type, String droneId,
+            ZonedDateTime from, ZonedDateTime to, int limit, int offset) {
         int pageLimit = limit > 0 ? limit : 50;
         int pageNumber = offset >= 0 ? offset / pageLimit : 0;
 
@@ -81,14 +84,17 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<EmergencyIncident> page = incidentRepo.findAll(spec, PageRequest.of(pageNumber, pageLimit, Sort.by(Sort.Direction.DESC, "detectedAt")));
-        return new IncidentPageVm(incidentMapper.toVmList(page.getContent()), page.getTotalElements(), pageLimit, offset);
+        Page<EmergencyIncident> page = incidentRepo.findAll(spec,
+                PageRequest.of(pageNumber, pageLimit, Sort.by(Sort.Direction.DESC, "detectedAt")));
+        return new IncidentPageVm(incidentMapper.toVmList(page.getContent()), page.getTotalElements(), pageLimit,
+                offset);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<EmergencyIncidentVm> getActiveIncidents() {
-        List<IncidentStatus> activeStatuses = List.of(IncidentStatus.active, IncidentStatus.pending_confirmation, IncidentStatus.executing);
+        List<IncidentStatus> activeStatuses = List.of(IncidentStatus.active, IncidentStatus.pending_confirmation,
+                IncidentStatus.executing);
         return incidentMapper.toVmList(incidentRepo.findByStatusInOrderByDetectedAtDesc(activeStatuses));
     }
 
@@ -96,7 +102,7 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     @Transactional(readOnly = true)
     public EmergencyIncidentVm getIncidentById(String id) {
         EmergencyIncident incident = incidentRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Incident not found: " + id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, id));
         return incidentMapper.toVm(incident);
     }
 
@@ -104,10 +110,8 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     @Transactional
     public EmergencyIncidentVm updateRootCause(String id, RootCauseVm rootCauseVm) {
         EmergencyIncident incident = incidentRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Incident not found: " + id));
-        incident.setRootCause(rootCauseVm.rootCause());
-        if (rootCauseVm.notes() != null) incident.setRootCauseNotes(rootCauseVm.notes());
-        if (rootCauseVm.lessonsLearned() != null) incident.setLessonsLearned(rootCauseVm.lessonsLearned());
+                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, id));
+        incidentMapper.updateEntityFromRootCauseVm(incident, rootCauseVm);
         EmergencyIncident saved = incidentRepo.save(incident);
         EmergencyIncidentVm vm = incidentMapper.toVm(saved);
         messagingTemplate.convertAndSend("/topic/emergency/incidents", vm);
@@ -159,8 +163,8 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
         DateTimeFormatter formatter = "month".equalsIgnoreCase(interval)
                 ? DateTimeFormatter.ofPattern("yyyy-MM")
                 : "week".equalsIgnoreCase(interval)
-                ? DateTimeFormatter.ofPattern("yyyy-'W'w")
-                : DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        ? DateTimeFormatter.ofPattern("yyyy-'W'w")
+                        : DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         Map<String, List<EmergencyIncident>> grouped = new LinkedHashMap<>();
         for (var inc : incidents) {
@@ -170,10 +174,14 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
 
         return grouped.entrySet().stream()
                 .map(entry -> {
-                    long warnings = entry.getValue().stream().filter(i -> i.getSeverity() == EmergencySeverity.warning).count();
-                    long critical = entry.getValue().stream().filter(i -> i.getSeverity() == EmergencySeverity.critical).count();
-                    long emergencies = entry.getValue().stream().filter(i -> i.getSeverity() == EmergencySeverity.emergency).count();
-                    return new EmergencyTrendVm(entry.getKey(), entry.getValue().size(), warnings, critical, emergencies);
+                    long warnings = entry.getValue().stream().filter(i -> i.getSeverity() == EmergencySeverity.warning)
+                            .count();
+                    long critical = entry.getValue().stream().filter(i -> i.getSeverity() == EmergencySeverity.critical)
+                            .count();
+                    long emergencies = entry.getValue().stream()
+                            .filter(i -> i.getSeverity() == EmergencySeverity.emergency).count();
+                    return new EmergencyTrendVm(entry.getKey(), entry.getValue().size(), warnings, critical,
+                            emergencies);
                 })
                 .toList();
     }

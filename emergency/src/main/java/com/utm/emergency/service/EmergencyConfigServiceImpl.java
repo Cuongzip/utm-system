@@ -52,17 +52,20 @@ public class EmergencyConfigServiceImpl implements EmergencyConfigService {
     @Override
     @Transactional
     public EmergencyConfigVm setConfig(String key, ConfigValueVm vm) {
-        String jsonVal;
+        String json;
         try {
-            jsonVal = objectMapper.writeValueAsString(vm.value());
+            json = objectMapper.writeValueAsString(vm.value());
         } catch (JsonProcessingException e) {
-            jsonVal = String.valueOf(vm.value());
+            json = String.valueOf(vm.value());
         }
+        final String jsonVal = json;
 
         EmergencyConfig config = configRepo.findByKey(key)
-                .orElse(EmergencyConfig.builder().key(key).build());
-        config.setValue(jsonVal);
-        if (vm.description() != null) config.setDescription(vm.description());
+                .map(existing -> {
+                    configMapper.updateEntityFromVm(existing, vm, jsonVal);
+                    return existing;
+                })
+                .orElseGet(() -> configMapper.toEntity(key, vm, jsonVal));
 
         EmergencyConfig saved = configRepo.save(config);
         return configMapper.toVm(saved);

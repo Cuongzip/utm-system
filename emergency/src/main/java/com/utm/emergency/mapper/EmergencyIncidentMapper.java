@@ -8,11 +8,15 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.utm.emergency.model.EmergencyIncident;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentTimelineEventVm;
+import com.utm.emergency.viewmodel.incident.RootCauseVm;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
 import java.util.Collections;
@@ -32,6 +36,17 @@ public interface EmergencyIncidentMapper {
     EmergencyIncidentVm toVm(EmergencyIncident entity);
 
     List<EmergencyIncidentVm> toVmList(List<EmergencyIncident> entities);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "rootCause", source = "rootCauseVm.rootCause")
+    @Mapping(target = "rootCauseNotes", source = "rootCauseVm.notes")
+    @Mapping(target = "lessonsLearned", source = "rootCauseVm.lessonsLearned")
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    void updateEntityFromRootCauseVm(@MappingTarget EmergencyIncident entity, RootCauseVm rootCauseVm);
 
     @Named("stringToJsonNode")
     default JsonNode stringToJsonNode(String json) {

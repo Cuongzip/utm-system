@@ -1,5 +1,9 @@
 package com.utm.emergency.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.NotFoundException;
+
+import com.utm.emergency.mapper.EmergencyConfigMapper;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.mapper.EmergencyProtocolMapper;
 import com.utm.emergency.model.EmergencyConfig;
@@ -44,6 +48,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     private final EmergencyIncidentRepository incidentRepo;
     private final EmergencyProtocolRepository protocolRepo;
     private final EmergencyConfigRepository configRepo;
+    private final EmergencyConfigMapper configMapper;
     private final EmergencyIncidentMapper incidentMapper;
     private final EmergencyProtocolMapper protocolMapper;
     private final AlertClientService alertClient;
@@ -108,12 +113,14 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     @Transactional
     public void setMode(OperationMode mode) {
         this.mode = mode;
+        String val = "\"" + mode.name() + "\"";
+        String desc = "Emergency response operation mode: auto or supervised";
         EmergencyConfig config = configRepo.findByKey("operation_mode")
-                .orElse(EmergencyConfig.builder()
-                        .key("operation_mode")
-                        .description("Emergency response operation mode: auto or supervised")
-                        .build());
-        config.setValue("\"" + mode.name() + "\"");
+                .map(existing -> {
+                    configMapper.updateEntity(existing, val, desc);
+                    return existing;
+                })
+                .orElseGet(() -> configMapper.toEntity("operation_mode", val, desc));
         configRepo.save(config);
         messagingTemplate.convertAndSend("/topic/emergency/mode", new OperationModeVm(mode));
         log.info("Emergency operation mode updated to: {}", mode);
@@ -135,7 +142,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     public EmergencyIncidentVm confirmAction(String incidentId, boolean approved, String userId) {
         PendingItem item = pendingConfirmations.remove(incidentId);
         if (item == null) {
-            throw new IllegalArgumentException("No pending confirmation found for incident id: " + incidentId);
+            throw new NotFoundException(MessageCode.PENDING_CONFIRMATION_NOT_FOUND, incidentId);
         }
 
         if (item.timerFuture() != null) {

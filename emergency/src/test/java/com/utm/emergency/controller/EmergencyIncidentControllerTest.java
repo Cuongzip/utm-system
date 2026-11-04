@@ -42,9 +42,10 @@ class EmergencyIncidentControllerTest {
         when(incidentService.searchIncidents(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new IncidentPageVm(List.of(), 0, 50, 0));
 
-        IncidentPageVm result = incidentController.getIncidents(null, null, null, null, null, null, 50, 0);
+        var result = incidentController.getIncidents(null, null, null, null, null, null, 50, 0);
         assertNotNull(result);
-        assertEquals(0, result.total());
+        assertEquals(200, result.getStatusCode().value());
+        assertEquals(0, result.getBody().total());
     }
 
     @Test
@@ -54,14 +55,13 @@ class EmergencyIncidentControllerTest {
                 IncidentStatus.resolved, "Battery warning", null, 0.0, 0.0, 0.0,
                 ResponseAction.RTH, false, true, "pilot", ZonedDateTime.now(), null,
                 null, null, true, null, ZonedDateTime.now(), "pilot", "RTH confirmed",
-                null, null, null, List.of(), ZonedDateTime.now(), null, null
-        );
+                null, null, null, List.of(), ZonedDateTime.now(), null, null);
 
         when(decisionEngine.confirmAction(eq("inc-1"), eq(true), any())).thenReturn(vm);
 
-        EmergencyIncidentVm res = incidentController.confirmIncident("inc-1", new ConfirmIncidentVm(true), null);
-        assertEquals("inc-1", res.id());
-        assertEquals(IncidentStatus.resolved, res.status());
+        var res = incidentController.confirmIncident("inc-1", new ConfirmIncidentVm(true), null);
+        assertEquals(200, res.getStatusCode().value());
+        assertEquals("inc-1", res.getBody().id());
+        assertEquals(IncidentStatus.resolved, res.getBody().status());
     }
 }
-

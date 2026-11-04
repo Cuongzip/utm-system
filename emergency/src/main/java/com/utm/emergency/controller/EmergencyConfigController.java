@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/api/v1/emergency/config", "/emergency/config"})
+@RequestMapping({ "/api/v1/emergency/config", "/emergency/config" })
 @Tag(name = "Emergency Configuration", description = "Endpoints for emergency system runtime configuration and operation mode")
 @RequiredArgsConstructor
 public class EmergencyConfigController {
@@ -27,25 +28,23 @@ public class EmergencyConfigController {
 
     @GetMapping
     @Operation(summary = "Get emergency system operation mode and configs")
-    public EmergencySystemConfigVm getConfig() {
-        return configService.getSystemConfig();
+    public ResponseEntity<EmergencySystemConfigVm> getConfig() {
+        return ResponseEntity.ok(configService.getSystemConfig());
     }
 
     @PutMapping("/mode")
     @PreAuthorize("hasAnyRole('admin', 'atc')")
     @Operation(summary = "Switch decision engine operation mode: auto or supervised")
-    public OperationModeVm setMode(@Valid @RequestBody OperationModeVm body) {
-        return configService.setMode(body.mode());
+    public ResponseEntity<OperationModeVm> setMode(@Valid @RequestBody OperationModeVm body) {
+        return ResponseEntity.ok(configService.setMode(body.mode()));
     }
 
     @PutMapping("/{key}")
     @PreAuthorize("hasAnyRole('admin', 'atc')")
     @Operation(summary = "Set dynamic emergency configuration value by key")
-    public EmergencyConfigVm setConfig(
+    public ResponseEntity<EmergencyConfigVm> setConfig(
             @PathVariable String key,
-            @Valid @RequestBody ConfigValueVm body
-    ) {
-        return configService.setConfig(key, body);
+            @Valid @RequestBody ConfigValueVm body) {
+        return ResponseEntity.ok(configService.setConfig(key, body));
     }
 }
-

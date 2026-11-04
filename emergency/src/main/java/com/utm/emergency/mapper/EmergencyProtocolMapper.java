@@ -37,6 +37,7 @@ public interface EmergencyProtocolMapper {
     List<EmergencyProtocolVm> toVmList(List<EmergencyProtocol> entities);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "name", qualifiedByName = "trimString")
     @Mapping(target = "systemDefault", constant = "false")
     @Mapping(target = "active", source = "isActive", defaultValue = "true")
     @Mapping(target = "requiresConfirmation", source = "requiresConfirmation", defaultValue = "true")
@@ -59,6 +60,7 @@ public interface EmergencyProtocolMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "name", qualifiedByName = "trimString")
     @Mapping(target = "systemDefault", ignore = true)
     @Mapping(target = "active", source = "isActive")
     @Mapping(target = "thresholds", source = "thresholds", qualifiedByName = "jsonNodeToString")
@@ -67,7 +69,12 @@ public interface EmergencyProtocolMapper {
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
-    void updateEntityFromPutVm(EmergencyProtocolPutVm putVm, @MappingTarget EmergencyProtocol entity);
+    void updateEntityFromPutVm(@MappingTarget EmergencyProtocol entity, EmergencyProtocolPutVm putVm);
+
+    @Named("trimString")
+    default String trimString(String value) {
+        return value != null ? value.trim() : null;
+    }
 
     @Named("stringToJsonNode")
     default JsonNode stringToJsonNode(String json) {

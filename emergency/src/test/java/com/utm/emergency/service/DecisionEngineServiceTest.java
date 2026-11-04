@@ -1,13 +1,13 @@
 package com.utm.emergency.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.utm.emergency.mapper.EmergencyConfigMapper;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.mapper.EmergencyProtocolMapper;
+import com.utm.emergency.model.EmergencyConfig;
 import com.utm.emergency.model.EmergencyIncident;
 import com.utm.emergency.model.EmergencyProtocol;
 import com.utm.emergency.model.enumeration.EmergencySeverity;
 import com.utm.emergency.model.enumeration.EmergencyType;
-import com.utm.emergency.model.enumeration.IncidentStatus;
 import com.utm.emergency.model.enumeration.OperationMode;
 import com.utm.emergency.model.enumeration.ResponseAction;
 import com.utm.emergency.repository.EmergencyConfigRepository;
@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -37,14 +36,24 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DecisionEngineServiceTest {
 
-    @Mock private EmergencyIncidentRepository incidentRepo;
-    @Mock private EmergencyProtocolRepository protocolRepo;
-    @Mock private EmergencyConfigRepository configRepo;
-    @Mock private EmergencyIncidentMapper incidentMapper;
-    @Mock private EmergencyProtocolMapper protocolMapper;
-    @Mock private AlertClientService alertClient;
-    @Mock private SimpMessagingTemplate messagingTemplate;
-    @Mock private ResponseExecutorService responseExecutorService;
+    @Mock
+    private EmergencyIncidentRepository incidentRepo;
+    @Mock
+    private EmergencyProtocolRepository protocolRepo;
+    @Mock
+    private EmergencyConfigRepository configRepo;
+    @Mock
+    private EmergencyConfigMapper configMapper;
+    @Mock
+    private EmergencyIncidentMapper incidentMapper;
+    @Mock
+    private EmergencyProtocolMapper protocolMapper;
+    @Mock
+    private AlertClientService alertClient;
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
+    @Mock
+    private ResponseExecutorService responseExecutorService;
 
     @InjectMocks
     private DecisionEngineServiceImpl decisionEngineService;
@@ -66,8 +75,7 @@ class DecisionEngineServiceTest {
                         .responseAction(ResponseAction.RTH)
                         .requiresConfirmation(true)
                         .confirmationTimeoutSeconds(30)
-                        .build()
-        ));
+                        .build()));
         decisionEngineService.reloadProtocols();
     }
 
@@ -102,7 +110,13 @@ class DecisionEngineServiceTest {
     @Test
     void testSetMode_BroadcastsMode() {
         when(configRepo.findByKey("operation_mode")).thenReturn(Optional.empty());
+        EmergencyConfig config = new EmergencyConfig();
+        when(configMapper.toEntity(eq("operation_mode"), any(String.class), any(String.class))).thenReturn(config);
+
         decisionEngineService.setMode(OperationMode.auto);
-        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/mode"), eq(new OperationModeVm(OperationMode.auto)));
+
+        verify(configRepo).save(config);
+        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/mode"),
+                eq(new OperationModeVm(OperationMode.auto)));
     }
 }

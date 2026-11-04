@@ -172,25 +172,7 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
 
     private void recordEmergencyBlackbox(EmergencyIncident incident, ResponseAction action) {
         try {
-            BlackboxEntry entry = BlackboxEntry.builder()
-                    .droneId(incident.getDroneId())
-                    .flightId(incident.getFlightId() != null ? incident.getFlightId() : "FLIGHT-EMERGENCY")
-                    .incidentId(incident.getId())
-                    .timestamp(ZonedDateTime.now())
-                    .latitude(incident.getLatitude() != null ? incident.getLatitude() : 0.0)
-                    .longitude(incident.getLongitude() != null ? incident.getLongitude() : 0.0)
-                    .altitudeMsl(incident.getAltitude() != null ? incident.getAltitude() : 0.0)
-                    .groundSpeed(0.0)
-                    .heading(0.0)
-                    .batteryLevel(15.0)
-                    .signalStrength(90.0)
-                    .commandReceived(action.name())
-                    .commandExecuted(action.name())
-                    .emergencyActive(true)
-                    .emergencyType(incident.getEmergencyType().name())
-                    .emergencySeverity(incident.getSeverity().name())
-                    .isEmergencyRecording(true)
-                    .build();
+            BlackboxEntry entry = blackboxMapper.toEmergencyEntity(incident, action);
             BlackboxEntry saved = blackboxRepo.save(entry);
             if (incident.getId() != null) {
                 messagingTemplate.convertAndSend("/topic/emergency/blackbox/" + incident.getId(), blackboxMapper.toVm(saved));

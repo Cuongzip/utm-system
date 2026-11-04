@@ -1,20 +1,3 @@
--- ==============================================================================
--- UTM (Unmanned Traffic Management) System - Master Seed Data Script
--- Language: English
--- Region: Ho Chi Minh City Metropolitan Airspace (SGN / VVTS FIR)
--- Target Databases:
---   1. utm_organization
---   2. utm_hub
---   3. utm_airspace
---   4. utm_drone
---   5. utm_connectivity
---   6. utm_mission
---   7. utm_flight
---   8. utm_telemetry
---   9. utm_conflict
---  10. utm_alert
---  11. utm_simulation
--- ==============================================================================
 
 -- ------------------------------------------------------------------------------
 -- 1. utm_organization
@@ -954,6 +937,192 @@ VALUES
    '{"windSpeedMs":5.2,"headingCorrectionDeg":3.5}', 
    NOW() - interval '3 minutes', 
    'system');
+
+-- ------------------------------------------------------------------------------
+-- 12. utm_emergency
+-- ------------------------------------------------------------------------------
+\c utm_emergency;
+
+TRUNCATE TABLE emergency_protocols CASCADE;
+TRUNCATE TABLE emergency_incidents CASCADE;
+TRUNCATE TABLE blackbox_entries CASCADE;
+TRUNCATE TABLE emergency_config CASCADE;
+
+INSERT INTO emergency_config (id, config_key, config_value, description, created_on, last_modified_on, created_by)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', 'operation_mode', '"supervised"', 'Emergency response operation mode: auto or supervised', NOW(), NOW(), 'system');
+
+INSERT INTO emergency_protocols (
+  id, name, description, emergency_type, severity, response_action, fallback_action, 
+  requires_confirmation, confirmation_timeout_seconds, auto_execute_on_timeout, priority, 
+  is_active, is_system_default, notify_pilot, notify_supervisor, notify_ops_center, 
+  send_sms, send_email, play_audio_alarm, created_on, last_modified_on, created_by
+)
+VALUES
+  ('10000000-0000-0000-0000-000000000001', 
+   'Aircraft Proximity - Descend', 
+   'When manned aircraft detected nearby, descend immediately', 
+   'collision_aircraft', 
+   'emergency', 
+   'DESCEND', 
+   'LAND', 
+   false, 10, true, 1, 
+   true, true, true, true, true, 
+   true, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000002', 
+   'Obstacle Collision Imminent - Hover', 
+   'Terrain or obstacle collision imminent, emergency hover', 
+   'collision_obstacle', 
+   'emergency', 
+   'HOVER', 
+   'LAND', 
+   false, 10, true, 2, 
+   true, true, true, true, true, 
+   true, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000003', 
+   'Motor Failure - Immediate Land', 
+   'Motor dead or stalled, execute vertical emergency land', 
+   'motor_failure', 
+   'emergency', 
+   'LAND', 
+   'ESTOP', 
+   false, 5, true, 10, 
+   true, true, true, true, true, 
+   true, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000004', 
+   'Motor Anomaly - Precautionary Land', 
+   'Vibration or temperature anomaly on motor, land immediately', 
+   'motor_anomaly', 
+   'critical', 
+   'LAND', 
+   'HOVER', 
+   true, 20, true, 15, 
+   true, true, true, true, true, 
+   false, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000005', 
+   'GPS Signal Lost - Hover', 
+   'Complete loss of navigation satellites, hold position', 
+   'gps_lost', 
+   'critical', 
+   'HOVER', 
+   'LAND', 
+   true, 30, true, 20, 
+   true, true, true, true, true, 
+   false, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000006', 
+   'GPS Degraded - Hover', 
+   'High HDOP or low satellite count, hover until geometry improves', 
+   'gps_degraded', 
+   'warning', 
+   'HOVER', 
+   'NONE', 
+   true, 60, false, 25, 
+   true, true, true, false, false, 
+   false, false, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000007', 
+   'Geofence Breach - Hover & Await', 
+   'Drone breached boundary, hover in place and alert ATC', 
+   'geofence_breach', 
+   'critical', 
+   'HOVER', 
+   'RTH', 
+   true, 30, true, 30, 
+   true, true, true, true, true, 
+   true, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000008', 
+   'Geofence Proximity - Divert', 
+   'Approaching corridor limit, divert trajectory', 
+   'geofence_warning', 
+   'warning', 
+   'DIVERT', 
+   'HOVER', 
+   true, 45, true, 35, 
+   true, true, true, false, false, 
+   false, false, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000009', 
+   'Battery Critical - Land Immediately', 
+   'Battery below 15%, immediate forced landing', 
+   'battery_critical', 
+   'emergency', 
+   'LAND', 
+   'ESTOP', 
+   false, 15, true, 40, 
+   true, true, true, true, true, 
+   true, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000010', 
+   'Battery Low - Return to Home', 
+   'Battery below 30%, initiate return to base hub', 
+   'battery_low', 
+   'warning', 
+   'RTH', 
+   'LAND', 
+   true, 30, true, 45, 
+   true, true, true, false, false, 
+   false, false, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000011', 
+   'Rapid Battery Discharge - RTH', 
+   'Abnormal discharge rate, immediate return to home', 
+   'battery_rapid_discharge', 
+   'critical', 
+   'RTH', 
+   'LAND', 
+   true, 20, true, 50, 
+   true, true, true, true, true, 
+   false, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000012', 
+   'Signal Lost - Auto RTH', 
+   'C2 link lost over 15s, execute failsafe RTH', 
+   'signal_lost', 
+   'critical', 
+   'RTH', 
+   'LAND', 
+   false, 15, true, 55, 
+   true, true, true, true, true, 
+   true, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000013', 
+   'Signal Weak - Climb', 
+   'Weak RSSI, climb slightly to gain line of sight', 
+   'signal_weak', 
+   'warning', 
+   'CLIMB', 
+   'HOVER', 
+   true, 45, false, 60, 
+   true, true, true, false, false, 
+   false, false, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000014', 
+   'Severe Wind Gust - Land', 
+   'High crosswind exceeding drone limits, land safely', 
+   'weather_wind', 
+   'critical', 
+   'LAND', 
+   'HOVER', 
+   true, 30, true, 70, 
+   true, true, true, true, false, 
+   false, true, true, NOW(), NOW(), 'system'),
+
+  ('10000000-0000-0000-0000-000000000015', 
+   'Low Visibility - Hover', 
+   'Dense fog or reduced visibility, hold hover', 
+   'weather_visibility', 
+   'warning', 
+   'HOVER', 
+   'LAND', 
+   true, 60, false, 75, 
+   true, true, true, false, false, 
+   false, false, false, NOW(), NOW(), 'system');
 
 -- ==============================================================================
 -- End of Seed Data Script

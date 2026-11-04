@@ -14,6 +14,7 @@ import com.utm.flight.model.Flight;
 import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
+import com.utm.flight.model.enumeration.Verdict;
 import com.utm.flight.repository.FlightRepository;
 import com.utm.flight.viewmodel.flight.FlightAbortVm;
 import com.utm.flight.viewmodel.flight.FlightListVm;
@@ -159,9 +160,11 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED) {
+        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED
+                || flight.getStatus() == FlightStatus.CANCELLED || flight.getStatus() == FlightStatus.EMERGENCY_LANDING
+                || flight.getStatus() == FlightStatus.DIVERTED) {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
-                    "Cannot edit an active or completed flight");
+                    "Cannot edit an active, completed, cancelled, diverted, or emergency landing flight");
         }
 
         if (flightPutVm.droneId() != null && !flightPutVm.droneId().isBlank()) {
@@ -195,6 +198,12 @@ public class FlightServiceImpl implements FlightService {
             flight.setActualRoute(serializeGeoJson(flightPutVm.actualRoute()));
         }
 
+        if (flight.getStatus() == FlightStatus.AUTHORIZED) {
+            flight.setStatus(FlightStatus.SCHEDULED);
+            flight.setAuthorizationStatus(FlightAuthorizationStatus.PENDING);
+            log.info("Flight {} was modified after authorization; resetting to SCHEDULED/PENDING", id);
+        }
+
         Flight updatedFlight = flightRepository.saveAndFlush(flight);
         log.info("Updated Flight plan with ID: {}", id);
         return flightMapper.toVm(updatedFlight);
@@ -206,8 +215,16 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only planned/scheduled flights can be authorized");
+        if ((flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED)
+                || flight.getAuthorizationStatus() != FlightAuthorizationStatus.PENDING) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Only planned/scheduled flights with pending authorization can be authorized");
+        }
+
+        if (flight.getFeasibilityVerdict() == Verdict.NO_GO
+                && (flight.getFeasibilityOverride() == null || flight.getFeasibilityOverride().isBlank())) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Cannot authorize flight with NO_GO feasibility verdict without an approved feasibility override");
         }
 
         flight.setAuthorizationStatus(FlightAuthorizationStatus.APPROVED);
@@ -223,8 +240,10 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Cannot reject an active or completed flight");
+        if ((flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED && flight.getStatus() != FlightStatus.AUTHORIZED)
+                || flight.getAuthorizationStatus() == FlightAuthorizationStatus.REJECTED) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Cannot reject a flight that is active, completed, cancelled, or already rejected");
         }
 
         flight.setAuthorizationStatus(FlightAuthorizationStatus.REJECTED);
@@ -246,9 +265,10 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getAuthorizationStatus() != FlightAuthorizationStatus.APPROVED
-                && flight.getStatus() != FlightStatus.AUTHORIZED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Flight must be approved by ATC before takeoff");
+        if (flight.getStatus() != FlightStatus.AUTHORIZED
+                || flight.getAuthorizationStatus() != FlightAuthorizationStatus.APPROVED) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Flight must be in AUTHORIZED status and APPROVED by ATC before takeoff");
         }
 
         flight.setStatus(FlightStatus.ACTIVE);
@@ -283,11 +303,18 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if (flight.getStatus() == FlightStatus.COMPLETED) {
-            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Cannot abort an already completed flight");
+        if (flight.getStatus() == FlightStatus.COMPLETED || flight.getStatus() == FlightStatus.CANCELLED
+                || flight.getStatus() == FlightStatus.EMERGENCY_LANDING) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Cannot abort a completed, cancelled, or already emergency landing flight");
         }
 
-        flight.setStatus(FlightStatus.CANCELLED);
+        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.DIVERTED) {
+            flight.setStatus(FlightStatus.EMERGENCY_LANDING);
+        } else {
+            flight.setStatus(FlightStatus.CANCELLED);
+        }
+
         if (abortVm != null && abortVm.reason() != null && !abortVm.reason().isBlank()) {
             String updatedNotes = (flight.getNotes() != null ? flight.getNotes() + "\n" : "") + "Aborted reason: "
                     + abortVm.reason().trim();
@@ -295,7 +322,7 @@ public class FlightServiceImpl implements FlightService {
         }
 
         Flight savedFlight = flightRepository.saveAndFlush(flight);
-        log.warn("Flight ID: {} was aborted / cancelled", id);
+        log.warn("Flight ID: {} was aborted / cancelled (status: {})", id, flight.getStatus());
         return flightMapper.toVm(savedFlight);
     }
 

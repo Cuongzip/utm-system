@@ -25,9 +25,10 @@ class EmergencyConfigControllerTest {
 
     @Test
     void testGetConfig() {
-        when(configService.getSystemConfig()).thenReturn(new EmergencySystemConfigVm(OperationMode.supervised, Map.of()));
-        EmergencySystemConfigVm cfg = configController.getConfig();
-        assertEquals(OperationMode.supervised, cfg.mode());
+        when(configService.getSystemConfig())
+                .thenReturn(new EmergencySystemConfigVm(OperationMode.supervised, Map.of()));
+        var res = configController.getConfig();
+        assertEquals(200, res.getStatusCode().value());
+        assertEquals(OperationMode.supervised, res.getBody().mode());
     }
 }
-

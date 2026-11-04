@@ -116,8 +116,11 @@ public class FeasibilityServiceImpl implements FeasibilityService {
         Flight flight = flightRepository.findById(flightId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId));
 
-        if (flight.getStatus() == FlightStatus.COMPLETED || flight.getStatus() == FlightStatus.CANCELLED) {
-            throw new BadRequestException("Cannot override feasibility for a completed or cancelled flight");
+        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED
+                || flight.getStatus() == FlightStatus.CANCELLED || flight.getStatus() == FlightStatus.EMERGENCY_LANDING
+                || flight.getStatus() == FlightStatus.DIVERTED) {
+            throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
+                    "Cannot override feasibility for an active, completed, cancelled, diverted, or emergency landing flight");
         }
 
         String justification = String.format("Override by %s: %s", request.approvedBy().trim(), request.reason().trim());
@@ -125,6 +128,7 @@ public class FeasibilityServiceImpl implements FeasibilityService {
 
         if (flight.getAuthorizationStatus() == FlightAuthorizationStatus.PENDING) {
             flight.setAuthorizationStatus(FlightAuthorizationStatus.APPROVED);
+            flight.setStatus(FlightStatus.AUTHORIZED);
         }
 
         Flight saved = flightRepository.save(flight);
