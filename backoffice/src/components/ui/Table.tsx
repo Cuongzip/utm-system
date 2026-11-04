@@ -3,8 +3,7 @@
 import React, { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib";
-import { Tooltip } from "../Tooltip";
-import styles from "./Table.module.css";
+import { Tooltip } from "./Tooltip";
 
 export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
     fixed?: boolean;
@@ -14,10 +13,14 @@ export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> 
 export const Table = forwardRef<HTMLTableElement, TableProps>(
     ({ fixed = true, wrapperClassName, className, children, ...props }, ref) => {
         return (
-            <div className={cn(styles.tableWrapper, wrapperClassName)}>
+            <div className={cn("w-full overflow-x-auto", wrapperClassName)}>
                 <table
                     ref={ref}
-                    className={cn(styles.table, fixed && styles.fixed, className)}
+                    className={cn(
+                        "w-full border-collapse text-left",
+                        fixed && "table-fixed",
+                        className
+                    )}
                     {...props}
                 >
                     {children}
@@ -68,9 +71,9 @@ export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
                 ref={ref}
                 onClick={onClick}
                 className={cn(
-                    styles.row,
-                    isClickable && styles.clickable,
-                    selected && styles.selectedRow,
+                    "transition-colors duration-150 hover:bg-[var(--color-surface-base)]",
+                    isClickable && "cursor-pointer",
+                    selected && "!bg-[var(--color-surface-card)]",
                     className
                 )}
                 {...props}
@@ -90,17 +93,17 @@ export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElem
 export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
     ({ width, align = "left", style, className, children, ...props }, ref) => {
         const alignClass =
-            align === "right"
-                ? styles.alignRight
-                : align === "center"
-                  ? styles.alignCenter
-                  : styles.alignLeft;
+            align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
 
         return (
             <th
                 ref={ref}
                 style={{ width, ...style }}
-                className={cn(styles.th, alignClass, className)}
+                className={cn(
+                    "text-[11px] font-bold text-[var(--color-status-offline-text)] uppercase tracking-wider px-[18px] py-3.5 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] whitespace-nowrap overflow-hidden text-ellipsis",
+                    alignClass,
+                    className
+                )}
                 {...props}
             >
                 {children}
@@ -142,11 +145,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
         ref
     ) => {
         const alignClass =
-            align === "right"
-                ? styles.alignRight
-                : align === "center"
-                  ? styles.alignCenter
-                  : styles.alignLeft;
+            align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
 
         let content = children;
 
@@ -154,12 +153,12 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
             content = (
                 <span
                     className={cn(
-                        truncate && styles.truncate,
-                        mono && styles.mono,
-                        bold && styles.bold,
-                        muted && styles.muted,
-                        subtle && styles.subtle,
-                        darkText && styles.darkText
+                        truncate && "block max-w-full truncate",
+                        mono && "font-mono",
+                        bold && "font-semibold",
+                        muted && "text-[var(--color-text-secondary)] font-medium",
+                        subtle && "text-[var(--color-text-muted)]",
+                        darkText && "text-[var(--color-border-dark)]"
                     )}
                 >
                     {content}
@@ -179,7 +178,11 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
             <td
                 ref={ref}
                 style={{ width, ...style }}
-                className={cn(styles.td, alignClass, className)}
+                className={cn(
+                    "px-[18px] py-3.5 text-[13px] text-[var(--color-text-primary)] border-b border-[var(--color-border-subtle)] whitespace-nowrap",
+                    alignClass,
+                    className
+                )}
                 {...props}
             >
                 {content}
@@ -206,3 +209,5 @@ export function TableLoading({ colSpan = 1, message = "Loading..." }: TableLoadi
         </tr>
     );
 }
+
+export default Table;

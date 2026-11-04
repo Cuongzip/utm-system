@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useMemo, useCallback, useEffect, useRef } from "react";
 import type { Hub } from "@/types";
+import { useWaypointManager } from "@/hooks/useWaypointManager";
 import { calculateFlightDistance, convertWaypointsToLineString } from "./flightUtils";
 
 export interface FlightWaypoint {
@@ -95,10 +96,28 @@ export function useFlightRoute({
     isReadOnly = false,
     onClearErrors,
 }: UseFlightRouteOptions) {
-    const [waypoints, setWaypoints] = useState<FlightWaypoint[]>(() =>
-        parseInitialRouteWaypoints(initialRoute, departureHub, arrivalHub, cruisingAltitude)
-    );
-    const [selectedWaypointId, setSelectedWaypointId] = useState<string | null>(null);
+    const {
+        waypoints,
+        setWaypoints,
+        selectedWaypointId,
+        setSelectedWaypointId,
+        selectedWaypoint,
+        removeWaypoint,
+        reorderWaypoints: moveWaypointOrder,
+        undoWaypoint,
+        clearWaypoints,
+        matchesId,
+    } = useWaypointManager<FlightWaypoint>({
+        initialWaypoints: parseInitialRouteWaypoints(
+            initialRoute,
+            departureHub,
+            arrivalHub,
+            cruisingAltitude
+        ),
+        isReadOnly,
+        onClearErrors,
+    });
+
     const initializedRouteRef = useRef(false);
 
     useEffect(() => {
@@ -113,19 +132,7 @@ export function useFlightRoute({
             initializedRouteRef.current = true;
             setWaypoints(parsed);
         }
-    }, [initialRoute, departureHub, arrivalHub, cruisingAltitude]);
-
-    const selectedWaypoint = useMemo(() => {
-        if (!selectedWaypointId) return null;
-        return (
-            waypoints.find(
-                (w) =>
-                    w.id === selectedWaypointId ||
-                    w.tempId === selectedWaypointId ||
-                    `wp-${w.id}` === selectedWaypointId
-            ) || null
-        );
-    }, [waypoints, selectedWaypointId]);
+    }, [initialRoute, departureHub, arrivalHub, cruisingAltitude, setWaypoints]);
 
     const addWaypoint = useCallback(
         (lat: number, lng: number, altitude?: number) => {
@@ -145,91 +152,36 @@ export function useFlightRoute({
             setSelectedWaypointId(idStr);
             onClearErrors?.();
         },
-        [isReadOnly, waypoints.length, cruisingAltitude, onClearErrors]
+        [
+            isReadOnly,
+            waypoints.length,
+            cruisingAltitude,
+            onClearErrors,
+            setWaypoints,
+            setSelectedWaypointId,
+        ]
     );
 
     const updateWaypoint = useCallback(
         (id: string, updates: Partial<FlightWaypoint>) => {
             if (isReadOnly) return;
             setWaypoints((prev) =>
-                prev.map((wp) => {
-                    if (wp.id === id || wp.tempId === id) {
-                        return { ...wp, ...updates };
-                    }
-                    return wp;
-                })
+                prev.map((wp) => (matchesId(wp, id) ? { ...wp, ...updates } : wp))
             );
             onClearErrors?.();
         },
-        [isReadOnly, onClearErrors]
+        [isReadOnly, onClearErrors, matchesId, setWaypoints]
     );
 
     const moveWaypoint = useCallback(
         (id: string, lat: number, lng: number) => {
             if (isReadOnly) return;
             setWaypoints((prev) =>
-                prev.map((wp) => {
-                    if (wp.id === id || wp.tempId === id) {
-                        return { ...wp, lat, lng };
-                    }
-                    return wp;
-                })
+                prev.map((wp) => (matchesId(wp, id) ? { ...wp, lat, lng } : wp))
             );
         },
-        [isReadOnly]
+        [isReadOnly, matchesId, setWaypoints]
     );
-
-    const removeWaypoint = useCallback(
-        (id: string) => {
-            if (isReadOnly) return;
-            setWaypoints((prev) => {
-                const next = prev.filter((wp) => wp.id !== id && wp.tempId !== id);
-                return next.map((wp, idx) => ({ ...wp, sequence: idx + 1 }));
-            });
-            setSelectedWaypointId((prev) => (prev === id ? null : prev));
-            onClearErrors?.();
-        },
-        [isReadOnly, onClearErrors]
-    );
-
-    const moveWaypointOrder = useCallback(
-        (fromIndex: number, toIndex: number) => {
-            if (isReadOnly) return;
-            setWaypoints((prev) => {
-                if (
-                    fromIndex < 0 ||
-                    fromIndex >= prev.length ||
-                    toIndex < 0 ||
-                    toIndex >= prev.length
-                ) {
-                    return prev;
-                }
-                const reordered = [...prev];
-                const [moved] = reordered.splice(fromIndex, 1);
-                reordered.splice(toIndex, 0, moved);
-                return reordered.map((wp, idx) => ({
-                    ...wp,
-                    sequence: idx + 1,
-                }));
-            });
-            onClearErrors?.();
-        },
-        [isReadOnly, onClearErrors]
-    );
-
-    const undoWaypoint = useCallback(() => {
-        if (isReadOnly) return;
-        setWaypoints((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
-        setSelectedWaypointId(null);
-        onClearErrors?.();
-    }, [isReadOnly, onClearErrors]);
-
-    const clearWaypoints = useCallback(() => {
-        if (isReadOnly) return;
-        setWaypoints([]);
-        setSelectedWaypointId(null);
-        onClearErrors?.();
-    }, [isReadOnly, onClearErrors]);
 
     const totalDistanceM = useMemo(() => {
         return calculateFlightDistance(waypoints, departureHub, arrivalHub, cruisingAltitude);
@@ -256,3 +208,5 @@ export function useFlightRoute({
         computedGeoJsonLineString,
     };
 }
+
+export default useFlightRoute;

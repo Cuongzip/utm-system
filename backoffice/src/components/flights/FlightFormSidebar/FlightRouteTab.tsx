@@ -4,7 +4,7 @@ import { X, MapPin, ChevronUp, ChevronDown, Trash2, AlertCircle } from "lucide-r
 import { FormInput } from "@/components/ui";
 import { cn } from "@/utils";
 import type { Drone } from "@/types";
-import type { FlightWaypoint } from "../../useFlightRoute";
+import type { FlightWaypoint } from "../useFlightRoute";
 
 export interface FlightRouteTabProps {
     waypoints: FlightWaypoint[];

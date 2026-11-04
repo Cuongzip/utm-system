@@ -5,9 +5,9 @@ import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import type { Drone, Hub, FeasibilityVerdict } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
-import { FlightDetailsTab } from "./sidebar/FlightDetailsTab";
-import { FlightRouteTab } from "./sidebar/FlightRouteTab";
-import { FlightScheduleTab } from "./sidebar/FlightScheduleTab";
+import { FlightDetailsTab } from "./FlightDetailsTab";
+import { FlightRouteTab } from "./FlightRouteTab";
+import { FlightScheduleTab } from "./FlightScheduleTab";
 
 export interface FlightFormSidebarProps {
     flightId?: string;

@@ -1,4 +1,4 @@
 export * from "./FlightFormSidebar";
-export * from "./sidebar/FlightDetailsTab";
-export * from "./sidebar/FlightRouteTab";
-export * from "./sidebar/FlightScheduleTab";
+export * from "./FlightDetailsTab";
+export * from "./FlightRouteTab";
+export * from "./FlightScheduleTab";

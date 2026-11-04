@@ -1,4 +1,4 @@
-import { calculatePathDistance } from "@/utils/geo";
+import { calculatePathDistance, isDuplicateCoord } from "@/utils/geo";
 import type { Drone, Hub, ProfilePoint, Waypoint } from "@/types";
 import { buildMissionRoutePoints } from "@/components/missions/missionUtils";
 import type { FlightWaypoint } from "./useFlightRoute";
@@ -56,8 +56,11 @@ export function convertWaypointsToLineString(
         const last = coords[coords.length - 1];
         const isSame =
             last &&
-            Math.abs(last[0] - arrivalHub.location.lng) < 0.00001 &&
-            Math.abs(last[1] - arrivalHub.location.lat) < 0.00001;
+            isDuplicateCoord(
+                { lng: last[0], lat: last[1] },
+                { lng: arrivalHub.location.lng, lat: arrivalHub.location.lat },
+                0.00001
+            );
 
         if (!isSame || coords.length === 1) {
             coords.push([

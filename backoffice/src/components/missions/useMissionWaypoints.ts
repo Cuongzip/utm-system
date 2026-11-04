@@ -1,6 +1,9 @@
+"use client";
+
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import type { Waypoint, Hub } from "@/types";
+import { useWaypointManager } from "@/hooks/useWaypointManager";
 import { calculateMissionDistance, generateHubToHubWaypoints } from "./missionUtils";
 
 export interface UseMissionWaypointsOptions {
@@ -20,32 +23,42 @@ export function useMissionWaypoints({
     arrivalHub,
     onClearWaypointErrors,
 }: UseMissionWaypointsOptions = {}) {
-    const [waypoints, setWaypoints] = useState<Waypoint[]>(initialWaypoints);
-    const [selectedWaypointId, setSelectedWaypointId] = useState<string | null>(null);
+    const {
+        waypoints,
+        setWaypoints,
+        selectedWaypointId,
+        setSelectedWaypointId,
+        selectedWaypoint,
+        removeWaypoint: handleDeleteWaypoint,
+        reorderWaypoints: handleMoveWaypointOrder,
+        undoWaypoint: handleUndoWaypoint,
+        clearWaypoints: handleClearWaypoints,
+        matchesId,
+    } = useWaypointManager<Waypoint>({
+        initialWaypoints,
+        isReadOnly,
+        onClearErrors: onClearWaypointErrors,
+    });
+
     const [defaultAltitude, setDefaultAltitude] = useState(initialAltitude);
 
     useEffect(() => {
         if (initialWaypoints && initialWaypoints.length > 0 && waypoints.length === 0) {
             setWaypoints(initialWaypoints);
         }
-    }, [initialWaypoints, waypoints.length]);
+    }, [initialWaypoints, waypoints.length, setWaypoints]);
 
     const totalDistanceM = useMemo(
         () => calculateMissionDistance(waypoints, departureHub, arrivalHub),
         [waypoints, departureHub, arrivalHub]
     );
 
-    const selectedWaypoint = useMemo(() => {
-        if (!selectedWaypointId) return null;
-        return (
-            waypoints.find((w) => w.id === selectedWaypointId || w.tempId === selectedWaypointId) ||
-            null
-        );
-    }, [waypoints, selectedWaypointId]);
-
-    const handleSelectWaypoint = useCallback((wp: Waypoint | null) => {
-        setSelectedWaypointId(wp ? String(wp.id || wp.tempId) : null);
-    }, []);
+    const handleSelectWaypoint = useCallback(
+        (wp: Waypoint | null) => {
+            setSelectedWaypointId(wp ? String(wp.id || wp.tempId) : null);
+        },
+        [setSelectedWaypointId]
+    );
 
     const handleAddWaypoint = useCallback(
         (lat: number, lng: number, altitude: number) => {
@@ -62,7 +75,7 @@ export function useMissionWaypoints({
             setWaypoints((prev) => [...prev, newWp]);
             onClearWaypointErrors?.();
         },
-        [isReadOnly, waypoints.length, defaultAltitude, onClearWaypointErrors]
+        [isReadOnly, waypoints.length, defaultAltitude, onClearWaypointErrors, setWaypoints]
     );
 
     const handleUpdateWaypoint = useCallback(
@@ -76,72 +89,22 @@ export function useMissionWaypoints({
                 })
             );
         },
-        [isReadOnly]
+        [isReadOnly, setWaypoints]
     );
-
-    const handleDeleteWaypoint = useCallback(
-        (idOrTempId: string) => {
-            if (isReadOnly) return;
-            setWaypoints((prev) => {
-                const filtered = prev.filter((w) => w.id !== idOrTempId && w.tempId !== idOrTempId);
-                return filtered.map((w, idx) => ({ ...w, sequence: idx + 1 }));
-            });
-            setSelectedWaypointId((prev) => (prev === idOrTempId ? null : prev));
-        },
-        [isReadOnly]
-    );
-
-    const handleUndoWaypoint = useCallback(() => {
-        if (isReadOnly) return;
-        setWaypoints((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
-        setSelectedWaypointId(null);
-        onClearWaypointErrors?.();
-    }, [isReadOnly, onClearWaypointErrors]);
-
-    const handleClearWaypoints = useCallback(() => {
-        if (isReadOnly) return;
-        setWaypoints([]);
-        setSelectedWaypointId(null);
-        onClearWaypointErrors?.();
-    }, [isReadOnly, onClearWaypointErrors]);
 
     const handleMoveWaypoint = useCallback(
         (wpId: string, lat: number, lng: number) => {
             if (isReadOnly) return;
             setWaypoints((prev) =>
                 prev.map((wp) => {
-                    if (String(wp.id || wp.tempId) === wpId) {
+                    if (matchesId(wp, wpId)) {
                         return { ...wp, latitude: lat, longitude: lng };
                     }
                     return wp;
                 })
             );
         },
-        [isReadOnly]
-    );
-
-    const handleMoveWaypointOrder = useCallback(
-        (fromIndex: number, toIndex: number) => {
-            if (isReadOnly) return;
-            setWaypoints((prev) => {
-                if (
-                    fromIndex < 0 ||
-                    fromIndex >= prev.length ||
-                    toIndex < 0 ||
-                    toIndex >= prev.length
-                ) {
-                    return prev;
-                }
-                const reordered = [...prev];
-                const [moved] = reordered.splice(fromIndex, 1);
-                reordered.splice(toIndex, 0, moved);
-                return reordered.map((wp, idx) => ({
-                    ...wp,
-                    sequence: idx + 1,
-                }));
-            });
-        },
-        [isReadOnly]
+        [isReadOnly, matchesId, setWaypoints]
     );
 
     const handleGenerateHubToHub = useCallback(() => {
@@ -162,7 +125,14 @@ export function useMissionWaypoints({
         toast.success(
             `Generated direct route from ${departureHub.code || departureHub.name} to ${arrivalHub.code || arrivalHub.name}`
         );
-    }, [isReadOnly, departureHub, arrivalHub, defaultAltitude, onClearWaypointErrors]);
+    }, [
+        isReadOnly,
+        departureHub,
+        arrivalHub,
+        defaultAltitude,
+        onClearWaypointErrors,
+        setWaypoints,
+    ]);
 
     return {
         waypoints,
@@ -184,3 +154,5 @@ export function useMissionWaypoints({
         handleGenerateHubToHub,
     };
 }
+
+export default useMissionWaypoints;

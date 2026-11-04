@@ -44,71 +44,8 @@ export default function EditFlightPage() {
         meta: { defaultErrorMessage: "Failed to update flight plan" },
     });
 
-    const authorizeMutation = useMutation({
-        mutationFn: () => flightService.authorizeFlight(flightId),
-        onSuccess: () => {
-            toast.success("Flight authorized by ATC");
-            invalidateAll();
-            refetch();
-        },
-        meta: { defaultErrorMessage: "Failed to authorize flight" },
-    });
-
-    const startMutation = useMutation({
-        mutationFn: async () => {
-            const status = (flight?.status || "planned").toLowerCase();
-            const authStatus = ((flight as any)?.authorizationStatus || "").toLowerCase();
-            if (status !== "authorized" && authStatus !== "approved") {
-                await flightService.authorizeFlight(flightId);
-            }
-            return flightService.startFlight(flightId);
-        },
-        onSuccess: () => {
-            toast.success("Flight started successfully");
-            invalidateAll();
-            refetch();
-        },
-        meta: { defaultErrorMessage: "Failed to start flight" },
-    });
-
-    const completeMutation = useMutation({
-        mutationFn: () => flightService.completeFlight(flightId),
-        onSuccess: () => {
-            toast.success("Flight completed successfully");
-            invalidateAll();
-            refetch();
-        },
-        meta: { defaultErrorMessage: "Failed to complete flight" },
-    });
-
-    const abortMutation = useMutation({
-        mutationFn: () => flightService.abortFlight(flightId),
-        onSuccess: () => {
-            toast.success("Flight aborted");
-            invalidateAll();
-            refetch();
-        },
-        meta: { defaultErrorMessage: "Failed to abort flight" },
-    });
-
     const handleSave = async (payload: unknown) => {
         await updateMutation.mutateAsync(payload as UpdateFlightPayload);
-    };
-
-    const handleAuthorize = async () => {
-        await authorizeMutation.mutateAsync();
-    };
-
-    const handleStart = async () => {
-        await startMutation.mutateAsync();
-    };
-
-    const handleComplete = async () => {
-        await completeMutation.mutateAsync();
-    };
-
-    const handleAbort = async () => {
-        await abortMutation.mutateAsync();
     };
 
     if (flightLoading || hubsLoading || dronesLoading) {
@@ -148,17 +85,7 @@ export default function EditFlightPage() {
             hubs={hubs}
             drones={drones}
             onSave={handleSave}
-            onAuthorize={handleAuthorize}
-            onStart={handleStart}
-            onComplete={handleComplete}
-            onAbort={handleAbort}
-            loading={
-                updateMutation.isPending ||
-                authorizeMutation.isPending ||
-                startMutation.isPending ||
-                completeMutation.isPending ||
-                abortMutation.isPending
-            }
+            loading={updateMutation.isPending}
         />
     );
 }

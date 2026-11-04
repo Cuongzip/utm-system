@@ -1,14 +1,27 @@
 "use client";
 
-import { useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
+import {
+    ChamferButton,
+    PageHeader,
+    AlertBanner,
+    TableFilterBar,
+    type SelectOption,
+} from "@/components/ui";
 import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
 import type { Hub, CreateHubPayload, UpdateHubPayload } from "@/types";
+
+const STATUS_OPTIONS: SelectOption[] = [
+    { value: "all", label: "All Statuses" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+    { value: "maintenance", label: "Maintenance" },
+];
 
 export default function HubsPage() {
     const fetchHubs = useCallback(() => hubService.getHubs({ limit: 0 }), []);
@@ -59,6 +72,24 @@ export default function HubsPage() {
         meta: { defaultErrorMessage: "Failed to save hub" },
     });
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+
+    const filteredHubs = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const status = statusFilter.toLowerCase();
+        return hubs.filter((h) => {
+            const matchesSearch =
+                !query ||
+                (h.name || "").toLowerCase().includes(query) ||
+                (h.code || "").toLowerCase().includes(query);
+
+            const matchesStatus = status === "all" || (h.status || "").toLowerCase() === status;
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [hubs, searchQuery, statusFilter]);
+
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="HUBS">
@@ -70,9 +101,18 @@ export default function HubsPage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
+            <TableFilterBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search hubs..."
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                statusOptions={STATUS_OPTIONS}
+            />
+
             <div className="flex flex-col gap-6 w-full">
                 <HubsTable
-                    hubs={hubs}
+                    hubs={filteredHubs}
                     loading={loading}
                     selectedHubId={highlightedHubId}
                     onSelectHub={handleSelectHub}

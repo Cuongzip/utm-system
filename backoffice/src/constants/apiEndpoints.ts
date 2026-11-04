@@ -11,9 +11,6 @@ export const API_ENDPOINTS = {
     FLIGHTS: {
         BASE: "/api/api/v1/flights",
         BY_ID: (id: string) => `/api/api/v1/flights/${id}`,
-        CHECK_FEASIBILITY: (id: string) => `/api/api/v1/flights/${id}/feasibility/check`,
-        OVERRIDE_FEASIBILITY: (id: string) => `/api/api/v1/flights/${id}/feasibility/override`,
-        FEASIBILITY_HISTORY: "/api/api/v1/flights/feasibility/history",
     },
     AIRSPACES: {
         ZONES: "/api/api/v1/airspace/zones",

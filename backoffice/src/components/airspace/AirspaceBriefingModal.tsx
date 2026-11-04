@@ -31,27 +31,46 @@ const PRESET_ROUTES = [
     },
 ];
 
+interface RouteFormState {
+    startLat: string;
+    startLon: string;
+    startAlt: string;
+    endLat: string;
+    endLon: string;
+    endAlt: string;
+    spacingM: string;
+}
+
+const INITIAL_FORM: RouteFormState = {
+    startLat: "10.8185",
+    startLon: "106.6588",
+    startAlt: "100",
+    endLat: "10.7715",
+    endLon: "106.7214",
+    endAlt: "120",
+    spacingM: "200",
+};
+
 export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModalProps) {
-    const [startLat, setStartLat] = useState("10.8185");
-    const [startLon, setStartLon] = useState("106.6588");
-    const [startAlt, setStartAlt] = useState("100");
-
-    const [endLat, setEndLat] = useState("10.7715");
-    const [endLon, setEndLon] = useState("106.7214");
-    const [endAlt, setEndAlt] = useState("120");
-
-    const [spacingM, setSpacingM] = useState("200");
+    const [form, setForm] = useState<RouteFormState>(INITIAL_FORM);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [checkResult, setCheckResult] = useState<CheckPathResult | null>(null);
 
+    const updateField = (field: keyof RouteFormState, value: string) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+    };
+
     const loadPreset = (preset: (typeof PRESET_ROUTES)[0]) => {
-        setStartLat(String(preset.start.lat));
-        setStartLon(String(preset.start.lon));
-        setStartAlt(String(preset.start.alt));
-        setEndLat(String(preset.end.lat));
-        setEndLon(String(preset.end.lon));
-        setEndAlt(String(preset.end.alt));
+        setForm((prev) => ({
+            ...prev,
+            startLat: String(preset.start.lat),
+            startLon: String(preset.start.lon),
+            startAlt: String(preset.start.alt),
+            endLat: String(preset.end.lat),
+            endLon: String(preset.end.lon),
+            endAlt: String(preset.end.alt),
+        }));
         setCheckResult(null);
         setError(null);
     };
@@ -59,10 +78,18 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
     const handleRunCheck = async () => {
         const payload = {
             points: [
-                { lat: Number(startLat), lon: Number(startLon), alt: Number(startAlt) || 100 },
-                { lat: Number(endLat), lon: Number(endLon), alt: Number(endAlt) || 100 },
+                {
+                    lat: Number(form.startLat),
+                    lon: Number(form.startLon),
+                    alt: Number(form.startAlt) || 100,
+                },
+                {
+                    lat: Number(form.endLat),
+                    lon: Number(form.endLon),
+                    alt: Number(form.endAlt) || 100,
+                },
             ],
-            spacingM: Number(spacingM) || 200,
+            spacingM: Number(form.spacingM) || 200,
         };
 
         const validation = validateSchema(checkPathBody, payload);
@@ -126,8 +153,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <input
                                 type="number"
                                 step="any"
-                                value={startLat}
-                                onChange={(e) => setStartLat(e.target.value)}
+                                value={form.startLat}
+                                onChange={(e) => updateField("startLat", e.target.value)}
                                 className="form-input font-mono text-xs"
                                 placeholder="10.8185"
                             />
@@ -139,8 +166,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <input
                                 type="number"
                                 step="any"
-                                value={startLon}
-                                onChange={(e) => setStartLon(e.target.value)}
+                                value={form.startLon}
+                                onChange={(e) => updateField("startLon", e.target.value)}
                                 className="form-input font-mono text-xs"
                                 placeholder="106.6588"
                             />
@@ -152,8 +179,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <input
                                 type="number"
                                 step="any"
-                                value={startAlt}
-                                onChange={(e) => setStartAlt(e.target.value)}
+                                value={form.startAlt}
+                                onChange={(e) => updateField("startAlt", e.target.value)}
                                 className="form-input font-mono text-xs"
                                 placeholder="100"
                             />
@@ -173,8 +200,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <input
                                 type="number"
                                 step="any"
-                                value={endLat}
-                                onChange={(e) => setEndLat(e.target.value)}
+                                value={form.endLat}
+                                onChange={(e) => updateField("endLat", e.target.value)}
                                 className="form-input font-mono text-xs"
                                 placeholder="10.7715"
                             />
@@ -186,8 +213,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <input
                                 type="number"
                                 step="any"
-                                value={endLon}
-                                onChange={(e) => setEndLon(e.target.value)}
+                                value={form.endLon}
+                                onChange={(e) => updateField("endLon", e.target.value)}
                                 className="form-input font-mono text-xs"
                                 placeholder="106.7214"
                             />
@@ -199,8 +226,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <input
                                 type="number"
                                 step="any"
-                                value={endAlt}
-                                onChange={(e) => setEndAlt(e.target.value)}
+                                value={form.endAlt}
+                                onChange={(e) => updateField("endAlt", e.target.value)}
                                 className="form-input font-mono text-xs"
                                 placeholder="120"
                             />
@@ -215,8 +242,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                         </span>
                         <input
                             type="number"
-                            value={spacingM}
-                            onChange={(e) => setSpacingM(e.target.value)}
+                            value={form.spacingM}
+                            onChange={(e) => updateField("spacingM", e.target.value)}
                             className="w-20 form-input font-mono text-xs py-1 px-2"
                         />
                         <span className="text-xs text-slate-500">meters</span>

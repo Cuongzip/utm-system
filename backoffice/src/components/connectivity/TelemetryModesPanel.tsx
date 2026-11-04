@@ -2,7 +2,6 @@
 
 import { Radio, Gauge, Zap, AlertTriangle } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
-import styles from "./TelemetryModesPanel.module.css";
 
 interface TelemetryModesPanelProps {
     counts?: Record<string, number>;
@@ -67,29 +66,42 @@ export function TelemetryModesPanel({
                     </h2>
                 </div>
 
-                <div className={styles.grid}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                     {modes.map((mode) => {
                         const Icon = mode.icon;
                         return (
-                            <div key={mode.id} className={styles.modeCard}>
-                                <div className={styles.header}>
+                            <div
+                                key={mode.id}
+                                className="rounded border border-slate-200 bg-white p-4 flex flex-col justify-between gap-3 hover:border-slate-300 hover:shadow-xs transition-all"
+                            >
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Icon className={`w-4 h-4 ${mode.color}`} />
-                                        <span className={styles.title}>{mode.name}</span>
+                                        <span className="text-sm font-bold text-slate-900">
+                                            {mode.name}
+                                        </span>
                                     </div>
-                                    <span className={styles.rateBadge}>{mode.rate}</span>
+                                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-900">
+                                        {mode.rate}
+                                    </span>
                                 </div>
 
-                                <p className={styles.desc}>{mode.description}</p>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    {mode.description}
+                                </p>
 
-                                <div className={styles.footer}>
+                                <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-2 border-t border-slate-100">
                                     <span>
                                         Bandwidth:{" "}
-                                        <span className={styles.statValue}>{mode.bandwidth}</span>
+                                        <span className="font-bold text-slate-800">
+                                            {mode.bandwidth}
+                                        </span>
                                     </span>
                                     <span>
                                         Active Devices:{" "}
-                                        <span className={styles.statValue}>{mode.activeCount}</span>
+                                        <span className="font-bold text-slate-800">
+                                            {mode.activeCount}
+                                        </span>
                                     </span>
                                 </div>
                             </div>

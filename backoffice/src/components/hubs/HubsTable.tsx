@@ -16,8 +16,10 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
 import { formatDistance } from "@/utils";
+import { usePagination } from "@/hooks";
 import type { Hub } from "@/types";
 
 interface HubsTableProps {
@@ -38,6 +40,8 @@ export function HubsTable({
     onDeleteHub,
 }: HubsTableProps) {
     const [hubToDelete, setHubToDelete] = useState<Hub | null>(null);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(hubs);
 
     const getActions = (hub: Hub): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
@@ -98,7 +102,7 @@ export function HubsTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            hubs.map((hub) => {
+                            paginatedItems.map((hub) => {
                                 const isSelected = selectedHubId === hub.id;
                                 const availableDrones = hub.availableDronesCount ?? "—";
                                 const radius = hub.airspaceRadius
@@ -138,6 +142,12 @@ export function HubsTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
 
             <ConfirmDialog

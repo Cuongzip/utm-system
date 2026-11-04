@@ -1,5 +1,5 @@
 import { addWaypointBody } from "@/generated/mission";
-import { calculatePathDistance, interpolatePoint } from "@/utils/geo";
+import { calculatePathDistance, interpolatePoint, isDuplicateCoord } from "@/utils/geo";
 import type { Hub, Waypoint, AddWaypointPayload, ProfilePoint } from "@/types";
 import { missionService } from "@/services/missionService";
 import zod from "zod";
@@ -66,10 +66,7 @@ export function buildMissionRoutePoints(
         const alt = wp.altitude ?? defaultAltitude;
 
         const last = pts[pts.length - 1];
-        const isDup =
-            last &&
-            Math.abs(last.latitude - lat) < 0.0001 &&
-            Math.abs(last.longitude - lng) < 0.0001;
+        const isDup = last && isDuplicateCoord(last, { latitude: lat, longitude: lng });
 
         if (!isDup) {
             pts.push({
@@ -87,10 +84,7 @@ export function buildMissionRoutePoints(
         const arrLat = arrivalHub.location!.lat;
         const arrLng = arrivalHub.location!.lng;
         const last = pts[pts.length - 1];
-        const isDup =
-            last &&
-            Math.abs(last.latitude - arrLat) < 0.0001 &&
-            Math.abs(last.longitude - arrLng) < 0.0001;
+        const isDup = last && isDuplicateCoord(last, { latitude: arrLat, longitude: arrLng });
 
         if (!isDup) {
             pts.push({

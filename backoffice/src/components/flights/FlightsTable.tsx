@@ -8,7 +8,7 @@ import {
     AlertTriangle,
     ShieldCheck,
     Pencil,
-    Zap,
+    Eye,
 } from "lucide-react";
 import {
     ChamferCard,
@@ -24,7 +24,9 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import type { Flight } from "@/types";
 import { formatDateTime } from "@/utils";
 
@@ -37,7 +39,6 @@ export interface FlightsTableProps {
     onStartFlight?: (flight: Flight) => void;
     onCompleteFlight?: (flight: Flight) => void;
     onAbortFlight?: (flight: Flight) => void;
-    onCheckFeasibility?: (flight: Flight) => void;
     onNewFlight?: () => void;
     hubMap?: Map<string, string>;
     droneMap?: Map<string, string>;
@@ -52,25 +53,34 @@ export function FlightsTable({
     onStartFlight,
     onCompleteFlight,
     onAbortFlight,
-    onCheckFeasibility,
     onNewFlight,
     hubMap = new Map(),
     droneMap = new Map(),
 }: FlightsTableProps) {
     const [flightToAbort, setFlightToAbort] = useState<Flight | null>(null);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(flights);
 
     const getActions = (flight: Flight): ActionMenuItem[] => {
+        const status = (flight.status || "planned").toLowerCase();
+        const authStatus = (flight.authorizationStatus || "pending").toLowerCase();
+        const isEditable =
+            status === "planned" || status === "scheduled" || status === "authorized";
+
         const items: ActionMenuItem[] = [
             {
-                label: "View Details",
-                icon: <Pencil className="w-3.5 h-3.5 text-cyan-500" />,
+                label: isEditable ? "Edit Flight Plan" : "View Details",
+                icon: isEditable ? (
+                    <Pencil className="w-3.5 h-3.5 text-cyan-500" />
+                ) : (
+                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                ),
                 onClick: () => onSelectFlight?.(flight),
             },
         ];
 
-        const status = (flight.status || "planned").toLowerCase();
-
-        if (status === "planned" || status === "scheduled") {
+        // 1. Authorize: Only planned or scheduled flights with pending authorization
+        if ((status === "planned" || status === "scheduled") && authStatus === "pending") {
             if (onAuthorizeFlight) {
                 items.push({
                     label: "Authorize Flight",
@@ -80,7 +90,8 @@ export function FlightsTable({
             }
         }
 
-        if (status === "planned" || status === "scheduled" || status === "authorized") {
+        // 2. Start Flight: Only authorized flights (approved by ATC)
+        if (status === "authorized") {
             if (onStartFlight) {
                 items.push({
                     label: "Start Flight",
@@ -90,6 +101,7 @@ export function FlightsTable({
             }
         }
 
+        // 3. Complete Flight: Only active flights
         if (status === "active" || status === "in_flight") {
             if (onCompleteFlight) {
                 items.push({
@@ -100,15 +112,8 @@ export function FlightsTable({
             }
         }
 
-        if (status !== "completed" && status !== "cancelled" && status !== "aborted") {
-            if (onCheckFeasibility) {
-                items.push({
-                    label: "Evaluate Feasibility",
-                    icon: <Zap className="w-3.5 h-3.5 text-cyan-600" />,
-                    onClick: () => onCheckFeasibility(flight),
-                });
-            }
-
+        // 4. Abort Flight: Only active airborne flights can be aborted for emergency landing
+        if (status === "active" || status === "in_flight") {
             if (onAbortFlight) {
                 items.push({
                     label: "Abort Flight",
@@ -161,7 +166,7 @@ export function FlightsTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            flights.map((flight) => {
+                            paginatedItems.map((flight) => {
                                 const isSelected = selectedFlightId === flight.id;
                                 const flightNum =
                                     flight.flightNumber ||
@@ -230,6 +235,12 @@ export function FlightsTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
 
             <ConfirmDialog

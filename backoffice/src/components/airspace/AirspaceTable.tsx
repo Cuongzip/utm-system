@@ -16,7 +16,9 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import type { AirspaceZone } from "@/types";
 
 interface AirspaceTableProps {
@@ -39,6 +41,8 @@ export function AirspaceTable({
     hubMap = new Map(),
 }: AirspaceTableProps) {
     const [zoneToDelete, setZoneToDelete] = useState<AirspaceZone | null>(null);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(zones);
 
     const getActions = (zone: AirspaceZone): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
@@ -91,7 +95,7 @@ export function AirspaceTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            zones.map((zone) => {
+                            paginatedItems.map((zone) => {
                                 const isSelected = selectedZoneId === zone.id;
                                 const hubName = zone.hubId
                                     ? hubMap.get(zone.hubId) || zone.hubId
@@ -144,6 +148,12 @@ export function AirspaceTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
 
             <ConfirmDialog

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { showApiError } from "@/utils";
 
 export interface UseCrudListOptions<T extends { id?: string }> {
     queryKey?: readonly unknown[];
@@ -77,25 +76,27 @@ export function useCrudList<T extends { id?: string }>({
         setHighlightedId(item?.id || null);
     }, []);
 
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => {
+            if (!deleteFn) throw new Error("Delete function not provided");
+            return deleteFn(id);
+        },
+        onSuccess: (_data, id) => {
+            if (highlightedId === id) {
+                setHighlightedId(null);
+            }
+            toast.success(`${entityName} deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: effectiveKey });
+        },
+        meta: { defaultErrorMessage: `Failed to delete ${entityName.toLowerCase()}` },
+    });
+
     const handleDelete = useCallback(
         async (id: string) => {
             if (!deleteFn) return;
-            try {
-                await deleteFn(id);
-                if (highlightedId === id) {
-                    setHighlightedId(null);
-                }
-                toast.success(`${entityName} deleted successfully`);
-                queryClient.invalidateQueries({ queryKey: effectiveKey });
-            } catch (err: unknown) {
-                const { message } = showApiError(
-                    err,
-                    `Failed to delete ${entityName.toLowerCase()}`
-                );
-                setCustomError(message);
-            }
+            await deleteMutation.mutateAsync(id);
         },
-        [deleteFn, entityName, highlightedId, queryClient, effectiveKey]
+        [deleteFn, deleteMutation]
     );
 
     return {

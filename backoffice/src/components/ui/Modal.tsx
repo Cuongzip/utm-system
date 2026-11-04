@@ -10,7 +10,6 @@ import {
     type ChamferButtonVariant,
 } from "@/components/ui";
 import { cn } from "@/lib";
-import styles from "./Modal.module.css";
 
 export interface ModalProps {
     isOpen: boolean;
@@ -55,26 +54,32 @@ export function Modal({
     return (
         <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className={styles.overlay} />
+                <DialogPrimitive.Overlay className="fixed inset-0 bg-slate-900/45 backdrop-blur-sm z-50 flex items-center justify-center p-4" />
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                     <DialogPrimitive.Content asChild aria-describedby={undefined}>
                         <div
-                            className={cn(styles.modal, "pointer-events-auto", className)}
+                            className={cn("w-full drop-shadow-2xl pointer-events-auto", className)}
                             style={{ maxWidth: styleMaxWidth }}
                             onClick={(e) => e.stopPropagation()}
                         >
                             <ChamferCard size="lg" className="w-full">
-                                <div className={styles.modalHeader}>
-                                    <div className={styles.headerLeft}>
-                                        {icon && <span className={styles.icon}>{icon}</span>}
+                                <div className="px-6 py-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        {icon && (
+                                            <span className="flex items-center justify-center">
+                                                {icon}
+                                            </span>
+                                        )}
                                         <DialogPrimitive.Title asChild>
-                                            <h3 className={styles.title}>{title}</h3>
+                                            <h3 className="text-[17px] font-bold text-[var(--color-text-primary)] tracking-tight">
+                                                {title}
+                                            </h3>
                                         </DialogPrimitive.Title>
                                     </div>
                                     <DialogPrimitive.Close asChild>
                                         <button
                                             type="button"
-                                            className={styles.closeButton}
+                                            className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)] transition-all -mt-0.5 -mr-1"
                                             aria-label="Close modal"
                                         >
                                             <X className="w-4 h-4" />
@@ -83,13 +88,21 @@ export function Modal({
                                 </div>
 
                                 {onSubmit ? (
-                                    <form onSubmit={onSubmit} className={styles.form} noValidate>
-                                        {error && <div className={styles.errorAlert}>{error}</div>}
+                                    <form
+                                        onSubmit={onSubmit}
+                                        className="px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto"
+                                        noValidate
+                                    >
+                                        {error && (
+                                            <div className="p-3 bg-[var(--color-status-alert-bg)] border border-[var(--color-status-alert-border)] text-[var(--color-status-alert-text)] text-xs rounded-md">
+                                                {error}
+                                            </div>
+                                        )}
                                         {children}
                                         {footer ? (
                                             footer
                                         ) : (
-                                            <div className={styles.actions}>
+                                            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
                                                 <OutlineButton
                                                     size="sm"
                                                     type="button"
@@ -117,10 +130,18 @@ export function Modal({
                                         )}
                                     </form>
                                 ) : (
-                                    <div className={styles.body}>
-                                        {error && <div className={styles.errorAlert}>{error}</div>}
+                                    <div className="px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto">
+                                        {error && (
+                                            <div className="p-3 bg-[var(--color-status-alert-bg)] border border-[var(--color-status-alert-border)] text-[var(--color-status-alert-text)] text-xs rounded-md">
+                                                {error}
+                                            </div>
+                                        )}
                                         {children}
-                                        {footer && <div className={styles.actions}>{footer}</div>}
+                                        {footer && (
+                                            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
+                                                {footer}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </ChamferCard>

@@ -16,7 +16,9 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import type { Drone } from "@/types";
 
 interface DronesTableProps {
@@ -35,6 +37,8 @@ export function DronesTable({
     onDeleteDrone,
 }: DronesTableProps) {
     const [droneToDelete, setDroneToDelete] = useState<Drone | null>(null);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(drones);
 
     const getActions = (drone: Drone): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [];
@@ -96,7 +100,7 @@ export function DronesTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            drones.map((drone) => {
+                            paginatedItems.map((drone) => {
                                 const regText = drone.registrationNumber || drone.id;
                                 const mfgText = drone.manufacturer || "Unknown";
                                 const modelText = drone.model || "—";
@@ -139,6 +143,12 @@ export function DronesTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
 
             <ConfirmDialog

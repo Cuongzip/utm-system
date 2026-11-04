@@ -2,7 +2,7 @@
 
 import { CustomSelect, FormInput, type SelectOption } from "@/components/ui";
 import { cn } from "@/utils";
-import { FlightFeasibilityCard } from "../../FlightFeasibilityCard";
+import { FlightFeasibilityCard } from "../FlightFeasibilityCard";
 import type { Drone, FeasibilityVerdict } from "@/types";
 
 export interface FlightDetailsTabProps {

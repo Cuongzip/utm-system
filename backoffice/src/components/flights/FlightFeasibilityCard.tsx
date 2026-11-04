@@ -8,7 +8,7 @@ import { estimateRouteFeasibility } from "./flightUtils";
 
 export interface FlightFeasibilityCardProps {
     flightId?: string;
-    mode: "create" | "edit";
+    mode?: "create" | "edit";
     initialVerdict?: FeasibilityVerdict;
     initialOverride?: string;
     isReadOnly?: boolean;
@@ -18,8 +18,6 @@ export interface FlightFeasibilityCardProps {
 }
 
 export function FlightFeasibilityCard({
-    mode: _mode,
-    initialVerdict: _initialVerdict,
     initialOverride,
     distanceM = 0,
     drone = null,

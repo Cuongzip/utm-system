@@ -61,15 +61,3 @@ export function formatDistance(meters?: number | null, decimals = 1): string {
     }
     return `${Math.round(meters)} m`;
 }
-
-export function estimateFlightDurationMinutes(distanceMeters: number, cruiseSpeedKmh = 60): number {
-    if (!distanceMeters || distanceMeters <= 0) return 0;
-    const distanceKm = distanceMeters / 1000;
-    return Math.ceil((distanceKm / cruiseSpeedKmh) * 60);
-}
-
-export function estimateBatteryPercentage(distanceMeters: number, pctPerKm = 4): number {
-    if (!distanceMeters || distanceMeters <= 0) return 0;
-    const distanceKm = distanceMeters / 1000;
-    return Math.min(100, Math.ceil(distanceKm * pctPerKm));
-}

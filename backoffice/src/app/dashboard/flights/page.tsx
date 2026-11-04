@@ -4,12 +4,31 @@ import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
-import { ChamferButton, OutlineButton, PageHeader, AlertBanner } from "@/components/ui";
+import {
+    ChamferButton,
+    OutlineButton,
+    PageHeader,
+    AlertBanner,
+    TableFilterBar,
+    type SelectOption,
+} from "@/components/ui";
 import { FlightsTable } from "@/components/flights";
 import { flightService } from "@/services/flightService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Flight } from "@/types";
+
+const STATUS_OPTIONS: SelectOption[] = [
+    { value: "all", label: "All Statuses" },
+    { value: "planned", label: "Planned" },
+    { value: "scheduled", label: "Scheduled" },
+    { value: "authorized", label: "Authorized" },
+    { value: "active", label: "Active" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+    { value: "diverted", label: "Diverted" },
+    { value: "emergency_landing", label: "Emergency Landing" },
+];
 
 export default function FlightsPage() {
     const router = useRouter();
@@ -48,18 +67,6 @@ export default function FlightsPage() {
 
     const queryClient = useQueryClient();
 
-    const checkFeasibilityMutation = useMutation({
-        mutationFn: (flight: Flight) => flightService.checkFeasibility(flight.id),
-        onSuccess: (data, flight) => {
-            const verdict = data.verdict
-                ? data.verdict.toUpperCase().replace("_", " ")
-                : "EVALUATED";
-            toast.success(`Flight ${flight.flightNumber || flight.id}: Feasibility ${verdict}`);
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
-        },
-        meta: { defaultErrorMessage: "Failed to evaluate flight feasibility" },
-    });
-
     const authorizeFlightMutation = useMutation({
         mutationFn: (flight: Flight) => flightService.authorizeFlight(flight.id),
         onSuccess: (_data, flight) => {
@@ -72,9 +79,8 @@ export default function FlightsPage() {
     const startFlightMutation = useMutation({
         mutationFn: async (flight: Flight) => {
             const status = (flight.status || "planned").toLowerCase();
-            const authStatus = ((flight as any).authorizationStatus || "").toLowerCase();
-            if (status !== "authorized" && authStatus !== "approved") {
-                await flightService.authorizeFlight(flight.id);
+            if (status !== "authorized") {
+                throw new Error("Flight must be authorized by ATC prior to departure");
             }
             return flightService.startFlight(flight.id);
         },
@@ -103,6 +109,36 @@ export default function FlightsPage() {
         meta: { defaultErrorMessage: "Failed to abort flight operation" },
     });
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+
+    const filteredFlights = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const status = statusFilter.toLowerCase();
+        return flights.filter((f) => {
+            const depHubName = (f.departureHubId ? hubMap.get(f.departureHubId) : "") || "";
+            const arrHubName = (f.arrivalHubId ? hubMap.get(f.arrivalHubId) : "") || "";
+            const droneName = (f.droneId ? droneMap.get(f.droneId) : "") || "";
+
+            const matchesSearch =
+                !query ||
+                (f.flightNumber || "").toLowerCase().includes(query) ||
+                (f.pilotId || "").toLowerCase().includes(query) ||
+                depHubName.toLowerCase().includes(query) ||
+                arrHubName.toLowerCase().includes(query) ||
+                droneName.toLowerCase().includes(query);
+
+            const fStatus = (f.status || "").toLowerCase();
+            const matchesStatus =
+                status === "all" ||
+                (status === "active"
+                    ? fStatus === "active" || fStatus === "in_flight"
+                    : fStatus === status);
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [flights, searchQuery, statusFilter, hubMap, droneMap]);
+
     const handleSelectFlight = (flight: Flight | null) => {
         if (flight?.id) {
             router.push(`/dashboard/flights/${flight.id}`);
@@ -129,8 +165,17 @@ export default function FlightsPage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
+            <TableFilterBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search flights..."
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                statusOptions={STATUS_OPTIONS}
+            />
+
             <FlightsTable
-                flights={flights}
+                flights={filteredFlights}
                 loading={loading}
                 selectedFlightId={highlightedFlightId}
                 onSelectFlight={handleSelectFlight}
@@ -138,7 +183,6 @@ export default function FlightsPage() {
                 onStartFlight={startFlightMutation.mutate}
                 onCompleteFlight={completeFlightMutation.mutate}
                 onAbortFlight={abortFlightMutation.mutate}
-                onCheckFeasibility={checkFeasibilityMutation.mutate}
                 onNewFlight={() => router.push("/dashboard/flights/new")}
                 hubMap={hubMap}
                 droneMap={droneMap}

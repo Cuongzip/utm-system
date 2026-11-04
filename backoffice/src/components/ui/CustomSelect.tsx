@@ -12,6 +12,8 @@ export interface SelectOption {
     icon?: React.ReactNode;
 }
 
+export type CustomSelectOption = SelectOption;
+
 export interface CustomSelectProps {
     value?: string;
     defaultValue?: string;

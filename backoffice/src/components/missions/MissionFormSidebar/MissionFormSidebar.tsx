@@ -3,9 +3,9 @@
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import type { Waypoint, Drone, Hub, MissionScheduleType } from "@/types";
-import { MissionDetailsTab } from "./sidebar/MissionDetailsTab";
-import { MissionWaypointsTab } from "./sidebar/MissionWaypointsTab";
-import { MissionScheduleTab } from "./sidebar/MissionScheduleTab";
+import { MissionDetailsTab } from "./MissionDetailsTab";
+import { MissionWaypointsTab } from "./MissionWaypointsTab";
+import { MissionScheduleTab } from "./MissionScheduleTab";
 
 export interface MissionFormSidebarProps {
     name: string;

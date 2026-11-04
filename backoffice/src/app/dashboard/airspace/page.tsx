@@ -3,11 +3,24 @@
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw, ShieldCheck } from "lucide-react";
-import { ChamferButton, OutlineButton, PageHeader, AlertBanner } from "@/components/ui";
+import {
+    ChamferButton,
+    OutlineButton,
+    PageHeader,
+    AlertBanner,
+    TableFilterBar,
+    type SelectOption,
+} from "@/components/ui";
 import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
 import type { AirspaceZone } from "@/types";
+
+const STATUS_OPTIONS: SelectOption[] = [
+    { value: "all", label: "All Statuses" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+];
 
 export default function AirspacePage() {
     const router = useRouter();
@@ -41,6 +54,27 @@ export default function AirspacePage() {
         [hubs]
     );
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+
+    const filteredZones = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const status = statusFilter.toLowerCase();
+        return zones.filter((z) => {
+            const hubName = (z.hubId ? hubMap.get(z.hubId) : "") || "";
+            const matchesSearch =
+                !query ||
+                (z.name || "").toLowerCase().includes(query) ||
+                (z.zoneType || "").toLowerCase().includes(query) ||
+                (z.description || "").toLowerCase().includes(query) ||
+                hubName.toLowerCase().includes(query);
+
+            const matchesStatus = status === "all" || (z.status || "").toLowerCase() === status;
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [zones, searchQuery, statusFilter, hubMap]);
+
     const handleSelectZone = (zone: AirspaceZone) => {
         router.push(`/dashboard/airspace/${zone.id}`);
     };
@@ -70,8 +104,17 @@ export default function AirspacePage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
+            <TableFilterBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search zones..."
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                statusOptions={STATUS_OPTIONS}
+            />
+
             <AirspaceTable
-                zones={zones}
+                zones={filteredZones}
                 loading={loading}
                 selectedZoneId={highlightedZoneId}
                 onSelectZone={handleSelectZone}

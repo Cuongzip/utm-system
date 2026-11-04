@@ -4,7 +4,6 @@ import { WifiOff, Activity, Trash2, Loader2 } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
 import type { DeviceRegistration } from "@/types";
 import { formatRelativeTime } from "@/utils";
-import styles from "./ConnectedDevicesPanel.module.css";
 
 interface ConnectedDevicesPanelProps {
     status?: string;
@@ -97,41 +96,54 @@ export function ConnectedDevicesPanel({
                         </div>
                     </EmptyState>
                 ) : (
-                    <div className={`${styles.tableWrapper} pt-2`}>
-                        <table className={styles.table}>
+                    <div className="w-full overflow-x-auto pt-2">
+                        <table className="w-full border-collapse text-left">
                             <thead>
                                 <tr>
-                                    <th className={styles.th}>Device Identifier</th>
-                                    <th className={styles.th}>Drone ID / Model</th>
-                                    <th className={styles.th}>Status</th>
-                                    <th className={styles.th}>Socket ID</th>
-                                    <th className={styles.th}>Last Seen</th>
-                                    <th className={`${styles.th} text-right`}>Actions</th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3 px-4 border-b border-slate-200 bg-slate-50/50">
+                                        Device Identifier
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3 px-4 border-b border-slate-200 bg-slate-50/50">
+                                        Drone ID / Model
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3 px-4 border-b border-slate-200 bg-slate-50/50">
+                                        Status
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3 px-4 border-b border-slate-200 bg-slate-50/50">
+                                        Socket ID
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3 px-4 border-b border-slate-200 bg-slate-50/50">
+                                        Last Seen
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3 px-4 border-b border-slate-200 bg-slate-50/50 text-right">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {devices.map((device) => (
-                                    <tr key={device.id} className={styles.row}>
-                                        <td
-                                            className={`${styles.td} font-mono font-bold text-[#0f172a]`}
-                                        >
+                                    <tr
+                                        key={device.id}
+                                        className="hover:bg-slate-50/80 transition-colors border-b border-slate-100"
+                                    >
+                                        <td className="py-3 px-4 text-xs font-mono font-bold text-slate-900">
                                             {device.deviceIdentifier}
                                         </td>
-                                        <td className={styles.td}>
+                                        <td className="py-3 px-4 text-xs text-slate-700">
                                             <div className="flex flex-col">
-                                                <span className="font-medium text-[#1e293b]">
+                                                <span className="font-medium text-slate-800">
                                                     {device.droneRegistrationNumber ||
                                                         device.droneId?.substring(0, 8) ||
                                                         "—"}
                                                 </span>
                                                 {device.droneModel && (
-                                                    <span className="text-[11px] text-[#94a3b8]">
+                                                    <span className="text-[11px] text-slate-400">
                                                         {device.droneModel}
                                                     </span>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className={styles.td}>
+                                        <td className="py-3 px-4 text-xs text-slate-700">
                                             <StatusBadge
                                                 status={
                                                     isOnline(device)
@@ -143,17 +155,15 @@ export function ConnectedDevicesPanel({
                                                 ).toUpperCase()}
                                             />
                                         </td>
-                                        <td
-                                            className={`${styles.td} font-mono text-[11px] text-[#64748b]`}
-                                        >
+                                        <td className="py-3 px-4 text-xs font-mono text-[11px] text-slate-500">
                                             {device.socketId || "—"}
                                         </td>
-                                        <td className={`${styles.td} text-[12px] text-[#64748b]`}>
+                                        <td className="py-3 px-4 text-[12px] text-slate-500">
                                             {device.lastSeenAt
                                                 ? formatRelativeTime(device.lastSeenAt)
                                                 : "Never"}
                                         </td>
-                                        <td className={`${styles.td} text-right`}>
+                                        <td className="py-3 px-4 text-xs text-slate-700 text-right">
                                             <div className="flex items-center justify-end gap-1.5">
                                                 <button
                                                     type="button"

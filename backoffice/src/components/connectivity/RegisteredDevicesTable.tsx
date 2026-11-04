@@ -13,7 +13,6 @@ import {
 } from "@/components/ui";
 import type { DeviceRegistration, DeviceConnectionStatus } from "@/types";
 import { formatDateTime, formatRelativeTime } from "@/utils";
-import styles from "./RegisteredDevicesTable.module.css";
 
 interface RegisteredDevicesTableProps {
     devices: DeviceRegistration[];
@@ -58,36 +57,38 @@ export function RegisteredDevicesTable({
     return (
         <ChamferCard size="lg" className="min-h-[420px]">
             <div className="p-5 flex flex-col h-full w-full gap-4">
-                <div className={styles.toolbar}>
-                    <div className={styles.filterGroup}>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-1.5">
                         <button
                             type="button"
                             onClick={() => setStatusFilter("all")}
-                            className={
-                                statusFilter === "all" ? styles.filterBtnActive : styles.filterBtn
-                            }
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
+                                statusFilter === "all"
+                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
+                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
                         >
                             All ({devices.length})
                         </button>
                         <button
                             type="button"
                             onClick={() => setStatusFilter("online")}
-                            className={
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
                                 statusFilter === "online"
-                                    ? styles.filterBtnActive
-                                    : styles.filterBtn
-                            }
+                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
+                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
                         >
                             Online ({devices.filter((d) => d.connectionStatus === "online").length})
                         </button>
                         <button
                             type="button"
                             onClick={() => setStatusFilter("offline")}
-                            className={
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
                                 statusFilter === "offline"
-                                    ? styles.filterBtnActive
-                                    : styles.filterBtn
-                            }
+                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
+                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
                         >
                             Offline (
                             {devices.filter((d) => d.connectionStatus === "offline").length})
@@ -95,11 +96,11 @@ export function RegisteredDevicesTable({
                         <button
                             type="button"
                             onClick={() => setStatusFilter("connecting")}
-                            className={
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
                                 statusFilter === "connecting"
-                                    ? styles.filterBtnActive
-                                    : styles.filterBtn
-                            }
+                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
+                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
                         >
                             Connecting (
                             {devices.filter((d) => d.connectionStatus === "connecting").length})
@@ -128,29 +129,44 @@ export function RegisteredDevicesTable({
                 ) : filteredDevices.length === 0 ? (
                     <EmptyState title="No devices found matching current filters" compact />
                 ) : (
-                    <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
+                    <div className="w-full overflow-x-auto">
+                        <table className="w-full border-collapse text-left">
                             <thead>
                                 <tr>
-                                    <th className={styles.th}>Device Identifier</th>
-                                    <th className={styles.th}>Drone ID / Model</th>
-                                    <th className={styles.th}>Status</th>
-                                    <th className={styles.th}>Socket ID</th>
-                                    <th className={styles.th}>Certificate Fingerprint</th>
-                                    <th className={styles.th}>Last Seen</th>
-                                    <th className={`${styles.th} text-right`}>Actions</th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
+                                        Device Identifier
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
+                                        Drone ID / Model
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
+                                        Status
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
+                                        Socket ID
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
+                                        Certificate Fingerprint
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
+                                        Last Seen
+                                    </th>
+                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200 text-right">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredDevices.map((device) => {
                                     return (
-                                        <tr key={device.id} className={styles.row}>
-                                            <td
-                                                className={`${styles.td} font-mono font-bold text-[#0f172a]`}
-                                            >
+                                        <tr
+                                            key={device.id}
+                                            className="hover:bg-slate-50/80 transition-colors"
+                                        >
+                                            <td className="p-3 text-[13px] font-mono font-bold text-[#0f172a] border-b border-slate-100">
                                                 {device.deviceIdentifier}
                                             </td>
-                                            <td className={styles.td}>
+                                            <td className="p-3 text-[13px] text-slate-800 border-b border-slate-100">
                                                 <div className="flex flex-col">
                                                     <span className="font-medium text-[#1e293b]">
                                                         {device.droneRegistrationNumber ||
@@ -164,7 +180,7 @@ export function RegisteredDevicesTable({
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className={styles.td}>
+                                            <td className="p-3 text-[13px] text-slate-800 border-b border-slate-100">
                                                 <StatusBadge
                                                     status={device.connectionStatus || "offline"}
                                                     label={(
@@ -172,26 +188,20 @@ export function RegisteredDevicesTable({
                                                     ).toUpperCase()}
                                                 />
                                             </td>
-                                            <td
-                                                className={`${styles.td} font-mono text-[11px] text-[#64748b]`}
-                                            >
+                                            <td className="p-3 text-[13px] font-mono text-[11px] text-[#64748b] border-b border-slate-100">
                                                 {device.socketId || "—"}
                                             </td>
-                                            <td
-                                                className={`${styles.td} font-mono text-[11px] text-[#64748b]`}
-                                            >
+                                            <td className="p-3 text-[13px] font-mono text-[11px] text-[#64748b] border-b border-slate-100">
                                                 {device.certificateFingerprint
                                                     ? `${device.certificateFingerprint.substring(0, 16)}...`
                                                     : "None"}
                                             </td>
-                                            <td
-                                                className={`${styles.td} text-[12px] text-[#64748b]`}
-                                            >
+                                            <td className="p-3 text-[12px] text-[#64748b] border-b border-slate-100">
                                                 {device.lastSeenAt
                                                     ? `${formatDateTime(device.lastSeenAt, "MMM dd, HH:mm")} (${formatRelativeTime(device.lastSeenAt)})`
                                                     : "Never"}
                                             </td>
-                                            <td className={`${styles.td} text-right`}>
+                                            <td className="p-3 text-[13px] text-slate-800 border-b border-slate-100 text-right">
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <Tooltip content="Ping Heartbeat">
                                                         <button

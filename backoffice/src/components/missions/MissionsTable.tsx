@@ -16,7 +16,9 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import type { Mission } from "@/types";
 import { formatDate } from "@/utils";
 
@@ -44,6 +46,8 @@ export function MissionsTable({
     hubMap = new Map(),
 }: MissionsTableProps) {
     const [missionToDelete, setMissionToDelete] = useState<Mission | null>(null);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(missions);
 
     const getActions = (mission: Mission): ActionMenuItem[] => {
         const status = (mission.status || "draft").toLowerCase();
@@ -129,7 +133,7 @@ export function MissionsTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            missions.map((mission) => {
+                            paginatedItems.map((mission) => {
                                 const isSelected = mission.id === selectedMissionId;
 
                                 const depName =
@@ -165,16 +169,9 @@ export function MissionsTable({
                                             bold
                                             tooltip={mission.name || mission.id}
                                         >
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-slate-900">
-                                                    {mission.name || "Untitled Mission"}
-                                                </span>
-                                                {mission.description && (
-                                                    <span className="text-xs text-slate-500 truncate max-w-[200px]">
-                                                        {mission.description}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <span className="font-semibold text-slate-900">
+                                                {mission.name || "Untitled Mission"}
+                                            </span>
                                         </TableCell>
 
                                         <TableCell>
@@ -232,6 +229,12 @@ export function MissionsTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
 
             <ConfirmDialog

@@ -8,9 +8,8 @@ import {
     PageHeader,
     ChamferButton,
     OutlineButton,
-    SearchInput,
     AlertBanner,
-    CustomSelect,
+    TableFilterBar,
     type SelectOption,
 } from "@/components/ui";
 import { MissionsTable } from "@/components/missions";
@@ -129,24 +128,14 @@ export default function MissionsPage() {
 
             {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
-            <div className="flex items-center gap-3">
-                <SearchInput
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    placeholder="Search missions..."
-                    className="w-72"
-                />
-
-                <div className="w-48">
-                    <CustomSelect
-                        value={statusFilter}
-                        onValueChange={(val) => setStatusFilter(val || "all")}
-                        options={STATUS_OPTIONS}
-                        placeholder="All Statuses"
-                        className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
-                    />
-                </div>
-            </div>
+            <TableFilterBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search missions..."
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                statusOptions={STATUS_OPTIONS}
+            />
 
             <MissionsTable
                 missions={filteredMissions}
