@@ -6,7 +6,7 @@ import { AlertBanner } from "./AlertBanner";
 import { cn } from "@/lib";
 
 export interface SplitMapLayoutProps {
-    title: string;
+    title: string | React.ReactNode;
     badges?: React.ReactNode;
     headerActions?: React.ReactNode;
     error?: string | null;
@@ -36,11 +36,8 @@ export function SplitMapLayout({
 
     return (
         <div className={cn("p-8 flex flex-col gap-6 w-full min-h-[calc(100vh-80px)]", className)}>
-            <PageHeader title={title}>
-                <div className="flex items-center gap-3">
-                    {badges}
-                    {headerActions}
-                </div>
+            <PageHeader title={title} badges={badges}>
+                {headerActions}
             </PageHeader>
 
             {error && <AlertBanner message={error} onDismiss={onErrorDismiss || (() => {})} />}

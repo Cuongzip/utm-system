@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { PlaneTakeoff, Play, CheckCircle2, AlertTriangle, ShieldCheck, Pencil } from "lucide-react";
+import {
+    PlaneTakeoff,
+    Play,
+    CheckCircle2,
+    AlertTriangle,
+    ShieldCheck,
+    Pencil,
+    Zap,
+} from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
@@ -29,6 +37,7 @@ export interface FlightsTableProps {
     onStartFlight?: (flight: Flight) => void;
     onCompleteFlight?: (flight: Flight) => void;
     onAbortFlight?: (flight: Flight) => void;
+    onCheckFeasibility?: (flight: Flight) => void;
     onNewFlight?: () => void;
     hubMap?: Map<string, string>;
     droneMap?: Map<string, string>;
@@ -43,6 +52,7 @@ export function FlightsTable({
     onStartFlight,
     onCompleteFlight,
     onAbortFlight,
+    onCheckFeasibility,
     onNewFlight,
     hubMap = new Map(),
     droneMap = new Map(),
@@ -91,6 +101,14 @@ export function FlightsTable({
         }
 
         if (status !== "completed" && status !== "cancelled" && status !== "aborted") {
+            if (onCheckFeasibility) {
+                items.push({
+                    label: "Evaluate Feasibility",
+                    icon: <Zap className="w-3.5 h-3.5 text-cyan-600" />,
+                    onClick: () => onCheckFeasibility(flight),
+                });
+            }
+
             if (onAbortFlight) {
                 items.push({
                     label: "Abort Flight",

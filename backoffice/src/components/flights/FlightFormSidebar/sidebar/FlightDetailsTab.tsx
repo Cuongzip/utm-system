@@ -1,15 +1,12 @@
 "use client";
 
-import { AlertCircle, ShieldCheck } from "lucide-react";
 import { CustomSelect, FormInput, type SelectOption } from "@/components/ui";
-import {
-    cn,
-    formatDistance,
-    estimateFlightDurationMinutes,
-    estimateBatteryPercentage,
-} from "@/utils";
+import { cn } from "@/utils";
+import { FlightFeasibilityCard } from "../../FlightFeasibilityCard";
+import type { Drone, FeasibilityVerdict } from "@/types";
 
 export interface FlightDetailsTabProps {
+    flightId?: string;
     mode: "create" | "edit";
     flightNumber: string;
     onFlightNumberChange: (val: string) => void;
@@ -27,16 +24,22 @@ export interface FlightDetailsTabProps {
     onNotesChange: (val: string) => void;
     executionId?: string;
     onExecutionIdChange?: (val: string) => void;
+    drones?: Drone[];
     droneOptions: SelectOption[];
     hubOptions: SelectOption[];
     totalDistanceM: number;
     waypointsCount: number;
+    feasibilityVerdict?: FeasibilityVerdict;
+    feasibilityOverride?: string;
+    onFeasibilityOverrideChange?: (val: string) => void;
+    isFeasibilityWarning?: boolean;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
     onClearFieldError?: (field: string) => void;
 }
 
 export function FlightDetailsTab({
+    flightId,
     mode,
     flightNumber,
     onFlightNumberChange,
@@ -54,18 +57,20 @@ export function FlightDetailsTab({
     onNotesChange,
     executionId = "",
     onExecutionIdChange,
+    drones = [],
     droneOptions,
     hubOptions,
     totalDistanceM,
-    waypointsCount,
+    waypointsCount: _waypointsCount,
+    feasibilityVerdict,
+    feasibilityOverride = "",
+    onFeasibilityOverrideChange,
+    isFeasibilityWarning = false,
     isReadOnly = false,
     fieldErrors = {},
     onClearFieldError,
 }: FlightDetailsTabProps) {
-    const isFeasible = Boolean(departureHubId && arrivalHubId);
-    const estimatedMinutes = estimateFlightDurationMinutes(totalDistanceM);
-    const estimatedBatteryPct = estimateBatteryPercentage(totalDistanceM);
-
+    const selectedDrone = drones.find((d) => d.id === droneId) || null;
     return (
         <div className="space-y-4">
             <div className="form-group">
@@ -82,11 +87,6 @@ export function FlightDetailsTab({
                     placeholder="e.g. FL-2026-001"
                     error={fieldErrors.flightNumber}
                 />
-                {mode === "edit" && (
-                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1 font-mono">
-                        Flight number cannot be changed once created.
-                    </p>
-                )}
             </div>
 
             <div className="form-group">
@@ -224,50 +224,57 @@ export function FlightDetailsTab({
                 />
             </div>
 
-            <div className="pt-2">
-                <label className="form-label mb-1.5 block">Flight Route Feasibility</label>
-                <div className="p-3.5 border border-dashed border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-card)]/60 text-xs text-[var(--color-text-secondary)]">
-                    {!isFeasible ? (
-                        <div className="flex items-start gap-2 text-[var(--color-text-muted)]">
-                            <AlertCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                            <span>
-                                Select departure and arrival vertiports to verify route distance and
-                                feasibility.
-                            </span>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs font-mono">
-                                <span className="text-emerald-700 font-bold flex items-center gap-1.5">
-                                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                                    ROUTE FEASIBLE
-                                </span>
-                                <span className="text-[var(--color-text-primary)] font-bold">
-                                    {formatDistance(totalDistanceM)}
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-border-default)] text-[11px] font-mono">
-                                <div>
-                                    <span className="text-[var(--color-text-muted)]">
-                                        Est. Flight:
-                                    </span>{" "}
-                                    <span className="text-[var(--color-text-primary)] font-semibold">
-                                        ~{estimatedMinutes} mins
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[var(--color-text-muted)]">
-                                        Est. Battery:
-                                    </span>{" "}
-                                    <span className="text-[var(--color-text-primary)] font-semibold">
-                                        ~{estimatedBatteryPct}%
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+            <FlightFeasibilityCard
+                flightId={flightId}
+                mode={mode}
+                initialVerdict={feasibilityVerdict}
+                initialOverride={feasibilityOverride}
+                isReadOnly={isReadOnly}
+                distanceM={totalDistanceM}
+                drone={selectedDrone}
+            />
+
+            {isFeasibilityWarning && (
+                <div className="form-group pt-1">
+                    <label className="form-label" htmlFor="feasibilityOverride">
+                        Feasibility Reason ({feasibilityVerdict === "no_go" ? "No Go" : "Marginal"}){" "}
+                        <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        id="feasibilityOverride"
+                        rows={2}
+                        value={feasibilityOverride}
+                        disabled={isReadOnly}
+                        placeholder="Enter reason..."
+                        onChange={(e) => {
+                            onFeasibilityOverrideChange?.(e.target.value);
+                            onClearFieldError?.("feasibilityOverride");
+                        }}
+                        className={cn(
+                            "w-full rounded-md border bg-[var(--color-surface-panel)] p-2.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-hidden font-sans resize-none",
+                            fieldErrors.feasibilityOverride
+                                ? "border-red-500 focus:border-red-500"
+                                : "border-[var(--color-border-default)] focus:border-[var(--color-border-dark)]"
+                        )}
+                    />
+                    {fieldErrors.feasibilityOverride && (
+                        <p className="text-xs text-red-500 mt-1">
+                            {fieldErrors.feasibilityOverride}
+                        </p>
                     )}
                 </div>
-            </div>
+            )}
+
+            {!isFeasibilityWarning && feasibilityOverride && (
+                <div className="form-group pt-1">
+                    <label className="form-label text-[var(--color-text-muted)]">
+                        Feasibility Reason
+                    </label>
+                    <p className="text-xs text-[var(--color-text-primary)] font-mono">
+                        {feasibilityOverride}
+                    </p>
+                </div>
+            )}
         </div>
     );
 }

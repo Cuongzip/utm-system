@@ -23,6 +23,7 @@ import {
     FlightFormSidebar,
     useFlightRoute,
     determineActiveTabFromFlightErrors,
+    estimateRouteFeasibility,
 } from "@/components/flights";
 import { createFieldErrorCleaner, validateSchema } from "@/utils";
 import { createFlightBody, updateFlightBody } from "@/generated/flight";
@@ -80,6 +81,9 @@ export function FlightEditor({
         initialData?.scheduledDeparture || ""
     );
     const [scheduledArrival, setScheduledArrival] = useState(initialData?.scheduledArrival || "");
+    const [feasibilityOverride, setFeasibilityOverride] = useState(
+        initialData?.feasibilityOverride || ""
+    );
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
         "details"
@@ -138,6 +142,7 @@ export function FlightEditor({
             setExecutionId(initialData.executionId || "");
             setScheduledDeparture(initialData.scheduledDeparture || "");
             setScheduledArrival(initialData.scheduledArrival || "");
+            setFeasibilityOverride(initialData.feasibilityOverride || "");
         }
     }, [initialData]);
 
@@ -157,6 +162,11 @@ export function FlightEditor({
     const selectedArrHub = useMemo(
         () => hubs.find((h) => h.id === arrivalHubId) || null,
         [hubs, arrivalHubId]
+    );
+
+    const selectedDrone = useMemo(
+        () => drones.find((d) => d.id === droneId) || null,
+        [drones, droneId]
     );
 
     const onClearRouteErrors = useCallback(() => {
@@ -192,12 +202,29 @@ export function FlightEditor({
         onClearErrors: onClearRouteErrors,
     });
 
+    const routeFeasibility = useMemo(() => {
+        return estimateRouteFeasibility(totalDistanceM, selectedDrone);
+    }, [totalDistanceM, selectedDrone]);
+
+    const isFeasibilityWarning = Boolean(
+        totalDistanceM > 0 &&
+        (routeFeasibility.verdict === "marginal" || routeFeasibility.verdict === "no_go")
+    );
+
     const handleSave = async () => {
         setFieldErrors({});
 
         if (departureHubId && arrivalHubId && departureHubId === arrivalHubId && hubs.length > 1) {
             setFieldErrors({
                 arrivalHubId: "Departure and arrival vertiports must be different",
+            });
+            setActiveSidebarTab("details");
+            return;
+        }
+
+        if (isFeasibilityWarning && !feasibilityOverride.trim()) {
+            setFieldErrors({
+                feasibilityOverride: "Reason is required",
             });
             setActiveSidebarTab("details");
             return;
@@ -247,6 +274,8 @@ export function FlightEditor({
                 scheduledDeparture: formatIsoSafe(scheduledDeparture),
                 scheduledArrival: formatIsoSafe(scheduledArrival),
                 plannedRoute: plannedRoute ?? undefined,
+                feasibilityOverride: feasibilityOverride.trim() || undefined,
+                feasibilityVerdict: routeFeasibility.verdict,
             };
 
             const validation = validateSchema(createFlightBody, payload);
@@ -273,6 +302,8 @@ export function FlightEditor({
                 scheduledDeparture: formatIsoSafe(scheduledDeparture) || undefined,
                 scheduledArrival: formatIsoSafe(scheduledArrival) || undefined,
                 plannedRoute: plannedRoute ?? undefined,
+                feasibilityOverride: feasibilityOverride.trim() || undefined,
+                feasibilityVerdict: routeFeasibility.verdict,
             };
 
             const validation = validateSchema(updateFlightBody, payload);
@@ -420,6 +451,7 @@ export function FlightEditor({
                 }
                 sidebarContent={
                     <FlightFormSidebar
+                        flightId={initialData?.id}
                         mode={mode}
                         flightNumber={flightNumber}
                         onFlightNumberChange={setFlightNumber}
@@ -450,6 +482,10 @@ export function FlightEditor({
                         onRemoveWaypoint={removeWaypoint}
                         onMoveWaypointOrder={moveWaypointOrder}
                         totalDistanceM={totalDistanceM}
+                        feasibilityVerdict={routeFeasibility.verdict}
+                        feasibilityOverride={feasibilityOverride}
+                        onFeasibilityOverrideChange={setFeasibilityOverride}
+                        isFeasibilityWarning={isFeasibilityWarning}
                         activeTab={activeSidebarTab}
                         onTabChange={setActiveSidebarTab}
                         fieldErrors={fieldErrors}

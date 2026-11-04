@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
@@ -47,6 +47,18 @@ export default function FlightsPage() {
     );
 
     const queryClient = useQueryClient();
+
+    const checkFeasibilityMutation = useMutation({
+        mutationFn: (flight: Flight) => flightService.checkFeasibility(flight.id),
+        onSuccess: (data, flight) => {
+            const verdict = data.verdict
+                ? data.verdict.toUpperCase().replace("_", " ")
+                : "EVALUATED";
+            toast.success(`Flight ${flight.flightNumber || flight.id}: Feasibility ${verdict}`);
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+        },
+        meta: { defaultErrorMessage: "Failed to evaluate flight feasibility" },
+    });
 
     const authorizeFlightMutation = useMutation({
         mutationFn: (flight: Flight) => flightService.authorizeFlight(flight.id),
@@ -126,6 +138,7 @@ export default function FlightsPage() {
                 onStartFlight={startFlightMutation.mutate}
                 onCompleteFlight={completeFlightMutation.mutate}
                 onAbortFlight={abortFlightMutation.mutate}
+                onCheckFeasibility={checkFeasibilityMutation.mutate}
                 onNewFlight={() => router.push("/dashboard/flights/new")}
                 hubMap={hubMap}
                 droneMap={droneMap}

@@ -5,6 +5,11 @@ import type {
     getFlightByIdResponse,
     getFlightsResponse,
     getFlightsQueryParams,
+    checkFeasibilityBody,
+    checkFeasibilityResponse,
+    overrideFeasibilityBody,
+    getHistoryQueryParams,
+    getHistoryResponse,
 } from "@/generated/flight";
 
 export type CreateFlightPayload = zod.infer<typeof createFlightBody>;
@@ -22,3 +27,11 @@ export type FlightListResponse = Omit<
 > & {
     items?: Flight[];
 };
+
+export type CheckFeasibilityPayload = zod.infer<typeof checkFeasibilityBody>;
+export type FeasibilityResult = NonNullable<zod.infer<typeof checkFeasibilityResponse>>;
+export type FeasibilityVerdict = NonNullable<FeasibilityResult["verdict"]>;
+export type OverrideFeasibilityPayload = zod.infer<typeof overrideFeasibilityBody>;
+export type FeasibilityHistoryParams = zod.infer<typeof getHistoryQueryParams>;
+export type FeasibilityHistoryResponse = NonNullable<zod.infer<typeof getHistoryResponse>>;
+export type FeasibilityHistoryItem = NonNullable<FeasibilityHistoryResponse["items"]>[number];

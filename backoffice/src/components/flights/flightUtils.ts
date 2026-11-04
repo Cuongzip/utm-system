@@ -1,5 +1,5 @@
 import { calculatePathDistance } from "@/utils/geo";
-import type { Hub, ProfilePoint, Waypoint } from "@/types";
+import type { Drone, Hub, ProfilePoint, Waypoint } from "@/types";
 import { buildMissionRoutePoints } from "@/components/missions/missionUtils";
 import type { FlightWaypoint } from "./useFlightRoute";
 
@@ -87,7 +87,8 @@ export function determineActiveTabFromFlightErrors(
         errors.pilotId ||
         errors.cruisingAltitudeM ||
         errors.executionId ||
-        errors.notes
+        errors.notes ||
+        errors.feasibilityOverride
     ) {
         return "details";
     }
@@ -98,4 +99,60 @@ export function determineActiveTabFromFlightErrors(
         return "schedule";
     }
     return "details";
+}
+
+export interface RouteFeasibilityEstimate {
+    distanceM: number;
+    requiredWh: number;
+    usableWh: number;
+    marginPct: number;
+    verdict: "go" | "marginal" | "no_go";
+    estimatedDurationMin: number;
+}
+
+export function estimateRouteFeasibility(
+    distanceM: number,
+    drone?: Drone | null,
+    payloadKg = 0
+): RouteFeasibilityEstimate {
+    const batteryCapacityWh =
+        drone?.batteryCapacityWh && drone.batteryCapacityWh > 0 ? drone.batteryCapacityWh : 500;
+    const maxPayloadKg = drone?.maxPayload && drone.maxPayload > 0 ? drone.maxPayload : 5.0;
+    const usableWh = batteryCapacityWh * 0.95 * 0.8;
+
+    const cruisePowerW = 250;
+    const hoverPowerW = 400;
+    const cruiseSpeedMs = 15;
+    const hoverTimeS = 60;
+
+    const payloadFactor = 1.0 + 0.15 * Math.min(1.0, payloadKg / maxPayloadKg);
+    const cruiseTimeHours = distanceM / cruiseSpeedMs / 3600;
+    const cruiseWh = cruisePowerW * cruiseTimeHours * payloadFactor;
+    const hoverTimeHours = (hoverTimeS / 3600) * payloadFactor;
+    const hoverWh = hoverPowerW * hoverTimeHours;
+    const climbWh = (cruiseWh + hoverWh) * 0.05;
+    const requiredWh = cruiseWh + hoverWh + climbWh;
+
+    const marginPct = usableWh > 0 ? ((usableWh - requiredWh) / usableWh) * 100 : -100;
+
+    let verdict: "go" | "marginal" | "no_go" = "go";
+    if (marginPct < 0 || payloadKg > maxPayloadKg) {
+        verdict = "no_go";
+    } else if (marginPct < 20) {
+        verdict = "marginal";
+    }
+
+    const estimatedDurationMin = Math.max(
+        1,
+        Math.round((distanceM / cruiseSpeedMs + hoverTimeS) / 60)
+    );
+
+    return {
+        distanceM,
+        requiredWh,
+        usableWh,
+        marginPct,
+        verdict,
+        estimatedDurationMin,
+    };
 }

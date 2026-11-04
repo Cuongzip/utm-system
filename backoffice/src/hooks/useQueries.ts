@@ -16,6 +16,8 @@ export const QUERY_KEYS = {
     droneCommands: (droneId: string) => ["drones", droneId, "commands"] as const,
     flights: ["flights"] as const,
     flightsAll: ["flights", "all"] as const,
+    flightFeasibilityHistory: (flightId?: string) =>
+        ["flights", "feasibility", "history", flightId ?? "all"] as const,
     airspace: ["airspace"] as const,
     missions: ["missions"] as const,
     connectivityDevices: ["connectivity", "devices"] as const,
@@ -44,6 +46,15 @@ export function useFlightsAll() {
         queryKey: QUERY_KEYS.flightsAll,
         queryFn: () => flightService.getAll(),
         staleTime: 1000 * 15,
+    });
+}
+
+export function useFlightFeasibilityHistory(flightId?: string | null) {
+    return useQuery({
+        queryKey: QUERY_KEYS.flightFeasibilityHistory(flightId || undefined),
+        queryFn: () => flightService.getFeasibilityHistory({ flightId: flightId!, limit: 10 }),
+        enabled: Boolean(flightId),
+        staleTime: 1000 * 30,
     });
 }
 

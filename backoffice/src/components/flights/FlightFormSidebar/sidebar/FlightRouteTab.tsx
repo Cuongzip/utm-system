@@ -3,6 +3,7 @@
 import { X, MapPin, ChevronUp, ChevronDown, Trash2, AlertCircle } from "lucide-react";
 import { FormInput } from "@/components/ui";
 import { cn } from "@/utils";
+import type { Drone } from "@/types";
 import type { FlightWaypoint } from "../../useFlightRoute";
 
 export interface FlightRouteTabProps {
@@ -12,6 +13,9 @@ export interface FlightRouteTabProps {
     onUpdateWaypoint?: (id: string, updates: Partial<FlightWaypoint>) => void;
     onRemoveWaypoint?: (id: string) => void;
     onMoveWaypointOrder?: (fromIndex: number, toIndex: number) => void;
+    mode?: "create" | "edit";
+    distanceM?: number;
+    drone?: Drone | null;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
     onClearFieldError?: (field: string) => void;
@@ -24,6 +28,9 @@ export function FlightRouteTab({
     onUpdateWaypoint,
     onRemoveWaypoint,
     onMoveWaypointOrder,
+    mode = "create",
+    distanceM = 0,
+    drone = null,
     isReadOnly = false,
     fieldErrors = {},
     onClearFieldError,

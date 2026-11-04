@@ -57,7 +57,8 @@ export function StatusBadge({
         normalized === "completed" ||
         normalized === "success" ||
         normalized === "resolved" ||
-        normalized === "ok"
+        normalized === "ok" ||
+        normalized === "go"
             ? styles.online
             : normalized === "alert" ||
                 normalized === "error" ||
@@ -68,7 +69,8 @@ export function StatusBadge({
                 normalized === "no_fly_zone" ||
                 normalized === "nfz" ||
                 normalized === "critical" ||
-                normalized === "emergency"
+                normalized === "emergency" ||
+                normalized === "no_go"
               ? styles.alert
               : normalized === "high" ||
                   normalized === "warning" ||
@@ -83,7 +85,8 @@ export function StatusBadge({
                   normalized === "restricted" ||
                   normalized === "paused" ||
                   normalized === "medium" ||
-                  normalized === "low"
+                  normalized === "low" ||
+                  normalized === "marginal"
                 ? styles.warning
                 : normalized === "in_flight" ||
                     normalized === "executing" ||

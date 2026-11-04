@@ -6,6 +6,11 @@ import type {
     FlightQueryParams,
     CreateFlightPayload,
     UpdateFlightPayload,
+    CheckFeasibilityPayload,
+    FeasibilityResult,
+    OverrideFeasibilityPayload,
+    FeasibilityHistoryParams,
+    FeasibilityHistoryResponse,
 } from "@/types";
 
 export const flightService = {
@@ -63,5 +68,35 @@ export const flightService = {
         return apiClient<Flight>(`${API_ENDPOINTS.FLIGHTS.BY_ID(id)}/abort`, {
             method: "POST",
         });
+    },
+
+    checkFeasibility: async (
+        flightId: string,
+        payload?: CheckFeasibilityPayload
+    ): Promise<FeasibilityResult> => {
+        return apiClient<FeasibilityResult>(API_ENDPOINTS.FLIGHTS.CHECK_FEASIBILITY(flightId), {
+            method: "POST",
+            body: payload ? JSON.stringify(payload) : "{}",
+        });
+    },
+
+    overrideFeasibility: async (
+        flightId: string,
+        payload: OverrideFeasibilityPayload
+    ): Promise<Flight> => {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.OVERRIDE_FEASIBILITY(flightId), {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+    },
+
+    getFeasibilityHistory: async (
+        params?: FeasibilityHistoryParams
+    ): Promise<FeasibilityHistoryResponse> => {
+        const endpoint = buildUrl(
+            API_ENDPOINTS.FLIGHTS.FEASIBILITY_HISTORY,
+            params as Record<string, unknown>
+        );
+        return apiClient<FeasibilityHistoryResponse>(endpoint);
     },
 };

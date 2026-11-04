@@ -169,8 +169,6 @@ export function MissionFormSidebar({
                             droneOptions={droneOptions}
                             hubOptions={hubOptions}
                             arrivalHubOptions={arrivalHubOptions}
-                            totalDistanceM={totalDistanceM}
-                            waypointsCount={waypoints.length}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}

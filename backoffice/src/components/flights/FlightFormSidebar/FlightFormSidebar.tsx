@@ -3,13 +3,14 @@
 import { useMemo } from "react";
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
-import type { Drone, Hub } from "@/types";
+import type { Drone, Hub, FeasibilityVerdict } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 import { FlightDetailsTab } from "./sidebar/FlightDetailsTab";
 import { FlightRouteTab } from "./sidebar/FlightRouteTab";
 import { FlightScheduleTab } from "./sidebar/FlightScheduleTab";
 
 export interface FlightFormSidebarProps {
+    flightId?: string;
     mode: "create" | "edit";
     flightNumber: string;
     onFlightNumberChange: (val: string) => void;
@@ -41,6 +42,10 @@ export interface FlightFormSidebarProps {
     onRemoveWaypoint?: (id: string) => void;
     onMoveWaypointOrder?: (fromIndex: number, toIndex: number) => void;
     totalDistanceM?: number;
+    feasibilityVerdict?: FeasibilityVerdict;
+    feasibilityOverride?: string;
+    onFeasibilityOverrideChange?: (val: string) => void;
+    isFeasibilityWarning?: boolean;
 
     activeTab: "details" | "waypoints" | "schedule";
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
@@ -51,6 +56,7 @@ export interface FlightFormSidebarProps {
 }
 
 export function FlightFormSidebar({
+    flightId,
     mode,
     flightNumber,
     onFlightNumberChange,
@@ -82,6 +88,10 @@ export function FlightFormSidebar({
     onRemoveWaypoint,
     onMoveWaypointOrder,
     totalDistanceM = 0,
+    feasibilityVerdict,
+    feasibilityOverride,
+    onFeasibilityOverrideChange,
+    isFeasibilityWarning = false,
 
     activeTab,
     onTabChange,
@@ -126,7 +136,8 @@ export function FlightFormSidebar({
         fieldErrors.pilotId ||
         fieldErrors.cruisingAltitudeM ||
         fieldErrors.executionId ||
-        fieldErrors.notes
+        fieldErrors.notes ||
+        fieldErrors.feasibilityOverride
     );
 
     const hasRouteErrors = Boolean(
@@ -136,6 +147,8 @@ export function FlightFormSidebar({
     const hasScheduleErrors = Boolean(
         fieldErrors.scheduledDeparture || fieldErrors.scheduledArrival
     );
+
+    const selectedDrone = drones.find((d) => d.id === droneId) || null;
 
     return (
         <ChamferCard size="lg" className={cn("w-full h-full", className)}>
@@ -194,6 +207,7 @@ export function FlightFormSidebar({
                 <div className="flex-1 overflow-y-auto p-4 select-text">
                     {activeTab === "details" && (
                         <FlightDetailsTab
+                            flightId={flightId}
                             mode={mode}
                             flightNumber={flightNumber}
                             onFlightNumberChange={onFlightNumberChange}
@@ -211,10 +225,15 @@ export function FlightFormSidebar({
                             onNotesChange={onNotesChange}
                             executionId={executionId}
                             onExecutionIdChange={onExecutionIdChange}
+                            drones={drones}
                             droneOptions={droneOptions}
                             hubOptions={hubOptions}
                             totalDistanceM={totalDistanceM}
                             waypointsCount={waypoints.length}
+                            feasibilityVerdict={feasibilityVerdict}
+                            feasibilityOverride={feasibilityOverride}
+                            onFeasibilityOverrideChange={onFeasibilityOverrideChange}
+                            isFeasibilityWarning={isFeasibilityWarning}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}
@@ -229,6 +248,9 @@ export function FlightFormSidebar({
                             onUpdateWaypoint={onUpdateWaypoint}
                             onRemoveWaypoint={onRemoveWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
+                            mode={mode}
+                            distanceM={totalDistanceM}
+                            drone={selectedDrone}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}

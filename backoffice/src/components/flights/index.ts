@@ -5,3 +5,5 @@ export * from "./FlightMapEditor";
 export { AltitudeProfile } from "@/components/map/AltitudeProfile";
 export * from "./flightUtils";
 export * from "./useFlightRoute";
+export * from "./FlightFeasibilityCard";
+export * from "./OverrideFeasibilityModal";

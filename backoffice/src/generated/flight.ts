@@ -163,6 +163,16 @@ export const updateFlightBody = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe(
+                "Updated operational justification / reason if feasibility is marginal or no-go"
+            ),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Updated pre-flight feasibility evaluation verdict"),
     })
     .describe("Request payload for updating an existing Flight Plan before departure");
 
@@ -478,6 +488,14 @@ export const createFlightBody = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
+        feasibilityOverride: zod
+            .string()
+            .optional()
+            .describe("Operational justification / reason if feasibility is marginal or no-go"),
+        feasibilityVerdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Pre-flight feasibility evaluation verdict"),
     })
     .describe("Request payload for registering a new Flight Plan");
 
