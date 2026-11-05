@@ -31,5 +31,7 @@ public interface SimulationService {
     SimulationSessionVm stopSession(String id);
 
     List<ScenarioCatalogVm> getScenarioCatalog();
+
+    List<com.utm.simulation.viewmodel.session.SimulationEventVm> getSessionEvents(String id);
 }
 

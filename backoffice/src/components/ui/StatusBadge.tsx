@@ -38,6 +38,7 @@ const DOT_COLOR_MAP: Record<string, string> = {
     online: "bg-emerald-600",
     live: "bg-emerald-600",
     active: "bg-emerald-600",
+    running: "bg-emerald-600",
     available: "bg-emerald-600",
     conforming: "bg-emerald-600",
     approved: "bg-emerald-600",
@@ -45,6 +46,7 @@ const DOT_COLOR_MAP: Record<string, string> = {
     success: "bg-emerald-600",
     resolved: "bg-emerald-600",
     ok: "bg-emerald-600",
+    nominal: "bg-emerald-600",
     go: "bg-emerald-600",
 
     alert: "bg-red-600",
@@ -60,10 +62,17 @@ const DOT_COLOR_MAP: Record<string, string> = {
     emergency_landing: "bg-red-600",
     diverted: "bg-red-600",
     no_go: "bg-red-600",
+    battery_drain: "bg-red-600",
+    gps_failure: "bg-red-600",
+    c2_lost: "bg-red-600",
+    motor_failure: "bg-red-600",
+    geofence_breach: "bg-red-600",
 
     warning: "bg-amber-500",
     restricted: "bg-amber-500",
     high: "bg-amber-500",
+    medium: "bg-amber-500",
+    paused: "bg-amber-500",
     elevated: "bg-amber-500",
     marginal: "bg-amber-500",
 
@@ -80,13 +89,15 @@ const DOT_COLOR_MAP: Record<string, string> = {
     planned: "bg-indigo-500",
     standby: "bg-indigo-500",
     authorized: "bg-indigo-500",
+    corridor_transit: "bg-indigo-500",
 
     offline: "bg-slate-400",
     inactive: "bg-slate-400",
     idle: "bg-slate-400",
     draft: "bg-slate-400",
+    stopped: "bg-slate-400",
     low: "bg-slate-400",
-    medium: "bg-slate-400",
+    info: "bg-slate-400",
 };
 
 export function StatusBadge({

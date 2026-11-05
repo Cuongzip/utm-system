@@ -114,6 +114,7 @@ export default function SimulationPage() {
                 onResumeSession={(id) => resumeSessionMutation.mutate(id)}
                 onStopSession={(id) => stopSessionMutation.mutate(id)}
                 onDeleteSession={handleDeleteSession}
+                onRefresh={refresh}
             />
 
             <DeviceHeartbeatTable

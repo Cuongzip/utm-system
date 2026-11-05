@@ -1,9 +1,17 @@
 import type zod from "zod";
-import type { getAllSessionsResponseItem, createSessionBody } from "@/generated/simulation";
+import type {
+    getSessionByIdResponse,
+    createSessionBody,
+    injectScenarioBody,
+    injectScenarioResponse,
+    getSessionEventsResponseItem,
+} from "@/generated/simulation";
 
 export type CreateSimulationSessionPayload = zod.infer<typeof createSessionBody>;
+export type InjectScenarioPayload = zod.infer<typeof injectScenarioBody>;
+export type InjectScenarioResult = zod.infer<typeof injectScenarioResponse>;
 
-export type SimulationSessionGenerated = NonNullable<zod.infer<typeof getAllSessionsResponseItem>>;
+export type SimulationSessionGenerated = NonNullable<zod.infer<typeof getSessionByIdResponse>>;
 
 export type SimulationSession = SimulationSessionGenerated & {
     id: string;
@@ -15,3 +23,7 @@ export type SimulationStatus =
     | "PAUSED"
     | "STOPPED"
     | "COMPLETED";
+
+export type SimulationEvent = zod.infer<typeof getSessionEventsResponseItem> & {
+    configJson?: string;
+};

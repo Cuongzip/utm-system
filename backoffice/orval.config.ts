@@ -113,4 +113,14 @@ export default defineConfig({
             client: "zod",
         },
     },
+    emergency: {
+        input: {
+            target: "http://localhost:8081/emergency/v3/api-docs",
+            override: { transformer },
+        },
+        output: {
+            target: "src/generated/emergency.ts",
+            client: "zod",
+        },
+    },
 });

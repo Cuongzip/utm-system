@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { PlayCircle, Pause, Play, Square, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { PlayCircle, Pause, Play, Square, Trash2, Eye, AlertTriangle } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
@@ -17,6 +19,7 @@ import {
     TableLoading,
     EmptyState,
 } from "@/components/ui";
+import { InjectScenarioModal } from "./InjectScenarioModal";
 import type { SimulationSession } from "@/types";
 
 interface SimulationTableProps {
@@ -26,6 +29,7 @@ interface SimulationTableProps {
     onResumeSession?: (id: string) => void;
     onStopSession?: (id: string) => void;
     onDeleteSession?: (id: string) => void;
+    onRefresh?: () => void;
 }
 
 export function SimulationTable({
@@ -35,14 +39,28 @@ export function SimulationTable({
     onResumeSession,
     onStopSession,
     onDeleteSession,
+    onRefresh,
 }: SimulationTableProps) {
+    const router = useRouter();
     const [sessionToDelete, setSessionToDelete] = useState<SimulationSession | null>(null);
+    const [sessionForInject, setSessionForInject] = useState<SimulationSession | null>(null);
 
     const getActions = (session: SimulationSession): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [];
         const normStatus = String(session.status || "").toLowerCase();
 
+        items.push({
+            label: "View Details",
+            icon: <Eye className="w-3.5 h-3.5 text-slate-600" />,
+            onClick: () => router.push(`/dashboard/simulation/${session.id}`),
+        });
+
         if (normStatus === "running") {
+            items.push({
+                label: "Inject Scenario",
+                icon: <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />,
+                onClick: () => setSessionForInject(session),
+            });
             if (onPauseSession) {
                 items.push({
                     label: "Pause",
@@ -141,9 +159,20 @@ export function SimulationTable({
                                         : "";
 
                                 return (
-                                    <TableRow key={session.id}>
+                                    <TableRow
+                                        key={session.id}
+                                        className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                                        onClick={() =>
+                                            router.push(`/dashboard/simulation/${session.id}`)
+                                        }
+                                    >
                                         <TableCell mono bold truncate tooltip={sessionIdText}>
-                                            {sessionIdText}
+                                            <Link
+                                                href={`/dashboard/simulation/${session.id}`}
+                                                className="text-slate-900 hover:text-cyan-600 hover:underline transition-colors cursor-pointer"
+                                            >
+                                                {sessionIdText}
+                                            </Link>
                                         </TableCell>
                                         <TableCell mono truncate tooltip={flightText}>
                                             {flightText}
@@ -214,6 +243,15 @@ export function SimulationTable({
                 confirmText="Delete Session"
                 variant="danger"
             />
+
+            {sessionForInject && (
+                <InjectScenarioModal
+                    isOpen={Boolean(sessionForInject)}
+                    sessionId={sessionForInject.id}
+                    onClose={() => setSessionForInject(null)}
+                    onSuccess={onRefresh}
+                />
+            )}
         </div>
     );
 }

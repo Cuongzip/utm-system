@@ -9,3 +9,4 @@ export * from "./telemetry";
 export * from "./organization";
 export * from "./mission";
 export * from "./simulation";
+export * from "./emergency";

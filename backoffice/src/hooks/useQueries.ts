@@ -7,6 +7,8 @@ import { flightService } from "@/services/flightService";
 import { alertService } from "@/services/alertService";
 import { airspaceService } from "@/services/airspaceService";
 import { connectivityService } from "@/services/connectivityService";
+import { emergencyService } from "@/services/emergencyService";
+import type { IncidentQueryParams } from "@/types";
 
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
@@ -21,6 +23,18 @@ export const QUERY_KEYS = {
     connectivityDevices: ["connectivity", "devices"] as const,
     alertsActive: ["alerts", "active"] as const,
     simulation: ["simulation"] as const,
+    simulationDetail: (id: string) => ["simulation", "detail", id] as const,
+    simulationScenarios: ["simulation", "scenarios"] as const,
+    simulationEvents: (id: string) => ["simulation", "events", id] as const,
+    emergencyStats: ["emergency", "stats"] as const,
+    emergencyTrends: ["emergency", "trends"] as const,
+    emergencyActive: ["emergency", "active"] as const,
+    emergencyConfig: ["emergency", "config"] as const,
+    emergencyProtocols: ["emergency", "protocols"] as const,
+    emergencyIncidents: (params?: IncidentQueryParams) =>
+        params
+            ? (["emergency", "incidents", params] as const)
+            : (["emergency", "incidents"] as const),
 };
 
 export function useHubsAll() {
@@ -83,5 +97,53 @@ export function useConnectivityDevices() {
             return res.items || [];
         },
         refetchInterval: 3000,
+    });
+}
+
+export function useEmergencyStats(from?: string, to?: string) {
+    return useQuery({
+        queryKey: [...QUERY_KEYS.emergencyStats, from, to],
+        queryFn: () => emergencyService.getStats(from && to ? { from, to } : undefined),
+        refetchInterval: 5000,
+    });
+}
+
+export function useEmergencyActiveIncidents() {
+    return useQuery({
+        queryKey: QUERY_KEYS.emergencyActive,
+        queryFn: () => emergencyService.getActiveIncidents(),
+        refetchInterval: 3000,
+    });
+}
+
+export function useEmergencyConfig() {
+    return useQuery({
+        queryKey: QUERY_KEYS.emergencyConfig,
+        queryFn: () => emergencyService.getConfig(),
+        staleTime: 1000 * 30,
+    });
+}
+
+export function useEmergencyProtocols(active?: boolean) {
+    return useQuery({
+        queryKey: [...QUERY_KEYS.emergencyProtocols, active],
+        queryFn: () => emergencyService.getProtocols(active),
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useEmergencyTrends(from?: string, to?: string, interval?: string) {
+    return useQuery({
+        queryKey: [...QUERY_KEYS.emergencyTrends, from, to, interval],
+        queryFn: () => emergencyService.getTrends({ from, to, interval }),
+        staleTime: 1000 * 60,
+    });
+}
+
+export function useEmergencyResolvedHistory(limit = 10) {
+    return useQuery({
+        queryKey: QUERY_KEYS.emergencyIncidents({ status: "resolved", limit }),
+        queryFn: () => emergencyService.getIncidents({ status: "resolved", limit }),
+        staleTime: 1000 * 15,
     });
 }

@@ -274,7 +274,7 @@ export function BaseCesiumMap({
 
                 {!isLoaded && !mapError && (
                     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-slate-900/80 text-white backdrop-blur-xs">
-                        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
                         <span className="text-xs font-mono font-medium tracking-wide">
                             {loadingText}
                         </span>

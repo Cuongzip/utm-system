@@ -3,11 +3,11 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { useHubsAll, useAirspaceAll, QUERY_KEYS } from "@/hooks";
 import { airspaceService } from "@/services/airspaceService";
 import { AirspaceEditor } from "@/components/airspace";
-import { AlertBanner, OutlineButton, PageHeader } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import type { UpdateAirspaceZonePayload } from "@/types";
 
 export default function EditAirspacePage() {
@@ -50,7 +50,7 @@ export default function EditAirspacePage() {
     if (zoneLoading || hubsLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin" />
                 <p className="text-xs font-mono text-[var(--color-text-muted)]">
                     Loading airspace zone details...
                 </p>
@@ -60,18 +60,21 @@ export default function EditAirspacePage() {
 
     if (zoneError || !zone) {
         return (
-            <div className="p-8 flex flex-col gap-6 max-w-4xl mx-auto">
-                <PageHeader title="AIRSPACE ZONE NOT FOUND">
-                    <OutlineButton size="sm" onClick={() => router.push("/dashboard/airspace")}>
-                        Back to Airspace List
-                    </OutlineButton>
-                </PageHeader>
-                <AlertBanner
-                    message={
+            <div className="flex items-center justify-center min-h-[60vh] p-8">
+                <EmptyState
+                    icon={AlertCircle}
+                    title="Airspace Zone Not Found"
+                    description={
                         zoneError instanceof Error
                             ? zoneError.message
-                            : "Could not find the requested airspace zone profile."
+                            : "The requested airspace zone does not exist or may have been removed."
                     }
+                    action={{
+                        label: "Back to Airspace Management",
+                        onClick: () => router.push("/dashboard/airspace"),
+                        icon: ArrowLeft,
+                        variant: "chamfer",
+                    }}
                 />
             </div>
         );

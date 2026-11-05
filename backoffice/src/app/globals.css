@@ -317,3 +317,10 @@ body {
     color: var(--color-tech-cyan);
     border-bottom: 2px solid var(--color-tech-cyan);
 }
+
+[data-sonner-toast] [data-close-button] {
+    left: auto !important;
+    right: 10px !important;
+    top: 10px !important;
+    transform: none !important;
+}

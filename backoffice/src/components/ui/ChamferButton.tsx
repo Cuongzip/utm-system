@@ -14,7 +14,7 @@ interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const SIZE_CLASSES: Record<ChamferButtonSize, string> = {
     sm: "chamfer-sm h-8 px-4 text-xs",
-    md: "chamfer-md h-10 px-5 text-sm",
+    md: "chamfer-sm h-10 px-5 text-sm",
 };
 
 const VARIANT_CLASSES: Record<ChamferButtonVariant, string> = {

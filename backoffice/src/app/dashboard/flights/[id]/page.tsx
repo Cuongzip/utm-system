@@ -3,11 +3,11 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { flightService } from "@/services/flightService";
 import { FlightEditor } from "@/components/flights";
-import { AlertBanner, OutlineButton, PageHeader } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import type { UpdateFlightPayload } from "@/types";
 
 export default function EditFlightPage() {
@@ -51,7 +51,7 @@ export default function EditFlightPage() {
     if (flightLoading || hubsLoading || dronesLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin" />
                 <p className="text-xs font-mono text-[var(--color-text-muted)]">
                     Loading flight operation details...
                 </p>
@@ -61,18 +61,21 @@ export default function EditFlightPage() {
 
     if (flightError || !flight) {
         return (
-            <div className="p-8 flex flex-col gap-6 max-w-4xl mx-auto">
-                <PageHeader title="FLIGHT PLAN NOT FOUND">
-                    <OutlineButton size="sm" onClick={() => router.push("/dashboard/flights")}>
-                        Back to Flights
-                    </OutlineButton>
-                </PageHeader>
-                <AlertBanner
-                    message={
+            <div className="flex items-center justify-center min-h-[60vh] p-8">
+                <EmptyState
+                    icon={AlertCircle}
+                    title="Flight Plan Not Found"
+                    description={
                         flightError instanceof Error
                             ? flightError.message
-                            : "Could not find the requested flight operation."
+                            : "The requested flight operation does not exist or may have been removed."
                     }
+                    action={{
+                        label: "Back to Flights Management",
+                        onClick: () => router.push("/dashboard/flights"),
+                        icon: ArrowLeft,
+                        variant: "chamfer",
+                    }}
                 />
             </div>
         );

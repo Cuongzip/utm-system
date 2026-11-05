@@ -32,7 +32,7 @@ export function Toaster({ position = "top-right", duration = 3200, className }: 
                     title: "text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight",
                     description: "text-[11px] text-slate-500 dark:text-slate-400 mt-0.5",
                     closeButton:
-                        "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-900",
+                        "!left-auto !right-2.5 !top-2.5 !transform-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
                 },
             }}
         />

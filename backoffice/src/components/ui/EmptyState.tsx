@@ -3,6 +3,7 @@
 import React from "react";
 import { cn } from "@/lib";
 import { OutlineButton } from "./OutlineButton";
+import { ChamferButton } from "./ChamferButton";
 
 export interface EmptyStateProps {
     icon?: React.ComponentType<{ className?: string }>;
@@ -12,6 +13,7 @@ export interface EmptyStateProps {
         label: string;
         onClick: () => void;
         icon?: React.ComponentType<{ className?: string }>;
+        variant?: "outline" | "chamfer";
     };
     children?: React.ReactNode;
     className?: string;
@@ -67,16 +69,27 @@ export function EmptyState({
                     {description}
                 </p>
             )}
-            {action && (
-                <OutlineButton
-                    size="sm"
-                    onClick={action.onClick}
-                    className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
-                >
-                    {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-slate-600" />}
-                    <span>{action.label}</span>
-                </OutlineButton>
-            )}
+            {action &&
+                (action.variant === "chamfer" ? (
+                    <ChamferButton
+                        size="sm"
+                        variant="dark"
+                        onClick={action.onClick}
+                        className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
+                    >
+                        {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-white" />}
+                        <span>{action.label}</span>
+                    </ChamferButton>
+                ) : (
+                    <OutlineButton
+                        size="sm"
+                        onClick={action.onClick}
+                        className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
+                    >
+                        {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-slate-600" />}
+                        <span>{action.label}</span>
+                    </OutlineButton>
+                ))}
             {children}
         </div>
     );

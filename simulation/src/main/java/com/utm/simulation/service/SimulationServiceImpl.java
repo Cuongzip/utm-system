@@ -34,6 +34,7 @@ import com.utm.simulation.viewmodel.client.FlightDetailVm;
 import com.utm.simulation.viewmodel.scenario.InjectScenarioResultVm;
 import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
 import com.utm.simulation.viewmodel.scenario.ScenarioCatalogVm;
+import com.utm.simulation.viewmodel.session.SimulationEventVm;
 import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
 import com.utm.simulation.viewmodel.session.SimulationSessionVm;
 import com.utm.simulation.viewmodel.client.TelemetryPushVm;
@@ -345,6 +346,14 @@ public class SimulationServiceImpl implements SimulationService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<SimulationEventVm> getSessionEvents(String id) {
+        return eventRepository.findBySessionIdOrderByCreatedOnAsc(id).stream()
+                .map(simulationMapper::toVm)
+                .toList();
+    }
+
     private void runSimulationTick(SimulationSessionRuntime runtime) {
         try {
             synchronized (runtime) {
@@ -361,7 +370,6 @@ public class SimulationServiceImpl implements SimulationService {
                     double effectiveHeading = runtime.currentHeading;
                     double effectiveSpeed = runtime.speed;
 
-                    // Box-Muller Gaussian sensor noise
                     double noiseDistMeters = ThreadLocalRandom.current().nextGaussian() * 0.5;
                     double noiseLat = (noiseDistMeters / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
                     double noiseLon = (noiseDistMeters / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(effectiveLat))))
@@ -376,15 +384,12 @@ public class SimulationServiceImpl implements SimulationService {
                     effectiveHeading = (effectiveHeading + noiseHeading + 360.0) % 360.0;
                     effectiveSpeed = Math.max(0.0, effectiveSpeed + noiseSpeed);
 
-                    // Scenario fault injection effects
                     if ("gps_failure".equalsIgnoreCase(runtime.activeScenario)) {
-                        // Large GPS deviation (up to ~50m)
                         effectiveLat += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
                         effectiveLon += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
                     } else if ("geofence_breach".equalsIgnoreCase(runtime.activeScenario)) {
-                        // Drift sideways by ~25m to trigger geofence/corridor breach
                         double perpHeading = Math.toRadians((runtime.currentHeading + 90.0) % 360.0);
-                        double driftDist = 25.0; // meters
+                        double driftDist = 25.0;
                         effectiveLat += (driftDist * Math.cos(perpHeading) / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
                         effectiveLon += (driftDist * Math.sin(perpHeading)
                                 / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat))))

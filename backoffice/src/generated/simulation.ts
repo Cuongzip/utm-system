@@ -164,6 +164,7 @@ export const injectScenarioResponse = zod
             .describe("Whether the scenario injection was accepted and active"),
         event: zod
             .object({
+                id: zod.string().optional().describe("Event UUID"),
                 type: zod.string().optional().describe("Event type"),
                 scenario: zod.string().optional().describe("Incident scenario identifier"),
                 message: zod
@@ -174,6 +175,10 @@ export const injectScenarioResponse = zod
                     .string()
                     .optional()
                     .describe("Incident severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+                createdOn: zod.iso
+                    .datetime({})
+                    .optional()
+                    .describe("Timestamp when the event occurred"),
             })
             .optional()
             .describe("Details of an emergency incident event generated during simulation"),
@@ -412,6 +417,32 @@ export const getSessionByIdResponse = zod
 export const deleteSessionParams = zod.object({
     id: zod.string().describe("Simulation session UUID"),
 });
+
+/**
+ * Retrieve incident and activity events recorded for the session.
+ * @summary Get simulation session events
+ */
+export const getSessionEventsParams = zod.object({
+    id: zod.string().describe("Simulation session UUID"),
+});
+
+export const getSessionEventsResponseItem = zod
+    .object({
+        id: zod.string().optional().describe("Event UUID"),
+        type: zod.string().optional().describe("Event type"),
+        scenario: zod.string().optional().describe("Incident scenario identifier"),
+        message: zod
+            .string()
+            .optional()
+            .describe("Human-readable diagnostic description of the incident"),
+        severity: zod
+            .string()
+            .optional()
+            .describe("Incident severity level: LOW, MEDIUM, HIGH, CRITICAL"),
+        createdOn: zod.iso.datetime({}).optional().describe("Timestamp when the event occurred"),
+    })
+    .describe("Details of an emergency incident event generated during simulation");
+export const getSessionEventsResponse = zod.array(getSessionEventsResponseItem);
 
 /**
  * Retrieve all currently running or paused simulation sessions.

@@ -8,3 +8,5 @@ export * from "./hubService";
 export * from "./missionService";
 export * from "./telemetryService";
 export * from "./alertService";
+export * from "./simulationService";
+export * from "./emergencyService";
