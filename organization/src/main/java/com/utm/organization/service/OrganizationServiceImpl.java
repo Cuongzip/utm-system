@@ -1,6 +1,7 @@
 package com.utm.organization.service;
 
 import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.organization.mapper.OrganizationMapper;
@@ -8,6 +9,7 @@ import com.utm.organization.model.Organization;
 import com.utm.organization.model.enumeration.OrganizationStatus;
 import com.utm.organization.model.enumeration.OrganizationType;
 import com.utm.organization.repository.OrganizationRepository;
+import com.utm.organization.service.client.DroneClientService;
 import com.utm.organization.viewmodel.organization.OrganizationListVm;
 import com.utm.organization.viewmodel.organization.OrganizationPostVm;
 import com.utm.organization.viewmodel.organization.OrganizationPutVm;
@@ -33,6 +35,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationMapper organizationMapper;
+    private final DroneClientService droneClientService;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,9 +71,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         Page<Organization> page = organizationRepository.findAll(spec, pageable);
 
-        List<OrganizationVm> items = page.getContent().stream()
-                .map(organizationMapper::toVm)
-                .toList();
+        List<OrganizationVm> items = organizationMapper.toVmList(page.getContent());
 
         return OrganizationListVm.of(items, page.getTotalElements());
     }
@@ -119,6 +120,10 @@ public class OrganizationServiceImpl implements OrganizationService {
     public void deleteOrganization(String id) {
         Organization organization = organizationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, id));
+
+        if (droneClientService.hasActiveInFlightDrones(id)) {
+            throw new BadRequestException("Cannot deactivate organization with drones currently in active flight");
+        }
 
         organization.setStatus(OrganizationStatus.INACTIVE);
         organizationRepository.saveAndFlush(organization);

@@ -1,12 +1,14 @@
 package com.utm.hub.service;
 
 import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.hub.mapper.HubMapper;
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.repository.HubRepository;
+import com.utm.hub.service.client.FlightClientService;
 import com.utm.hub.viewmodel.hub.HubListVm;
 import com.utm.hub.viewmodel.hub.HubPostVm;
 import com.utm.hub.viewmodel.hub.HubPutVm;
@@ -32,6 +34,7 @@ public class HubServiceImpl implements HubService {
 
     private final HubRepository hubRepository;
     private final HubMapper hubMapper;
+    private final FlightClientService flightClientService;
 
     @Override
     @Transactional(readOnly = true)
@@ -53,8 +56,7 @@ public class HubServiceImpl implements HubService {
 
         if (limit <= 0) {
             List<Hub> all = hubRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
-            List<HubVm> items = all.stream().map(hubMapper::toVm).toList();
-            return HubListVm.of(items, items.size());
+            return HubListVm.of(hubMapper.toVmList(all), all.size());
         }
 
         int pageSize = limit;
@@ -62,11 +64,7 @@ public class HubServiceImpl implements HubService {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdOn"));
 
         Page<Hub> page = hubRepository.findAll(spec, pageable);
-        List<HubVm> items = page.getContent().stream()
-                .map(hubMapper::toVm)
-                .toList();
-
-        return HubListVm.of(items, page.getTotalElements());
+        return HubListVm.of(hubMapper.toVmList(page.getContent()), page.getTotalElements());
     }
 
     @Override
@@ -111,9 +109,13 @@ public class HubServiceImpl implements HubService {
     public void deactivateHub(String id) {
         Hub hub = hubRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, id));
+
+        if (flightClientService.hasActiveFlightsAtHub(id)) {
+            throw new BadRequestException("Cannot deactivate hub with flights currently active");
+        }
+
         hub.setStatus(HubStatus.INACTIVE);
         hubRepository.save(hub);
         log.info("Deactivated Hub with ID: {}", id);
     }
 }
-

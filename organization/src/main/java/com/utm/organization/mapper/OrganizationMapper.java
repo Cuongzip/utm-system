@@ -1,25 +1,31 @@
 package com.utm.organization.mapper;
 
-import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.organization.model.Organization;
 import com.utm.organization.viewmodel.organization.OrganizationPostVm;
 import com.utm.organization.viewmodel.organization.OrganizationPutVm;
 import com.utm.organization.viewmodel.organization.OrganizationVm;
 import org.mapstruct.BeanMapping;
-import org.mapstruct.BeforeMapping;
+import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
 
 @Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        builder = @Builder(disableBuilder = true),
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 public interface OrganizationMapper {
 
     OrganizationVm toVm(Organization organization);
+
+    List<OrganizationVm> toVmList(List<Organization> organizations);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", constant = "ACTIVE")
@@ -43,32 +49,6 @@ public interface OrganizationMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     void updateEntityFromPutVm(@MappingTarget Organization organization, OrganizationPutVm organizationPutVm);
 
-    @BeforeMapping
-    default void validatePostVm(OrganizationPostVm postVm) {
-        if (postVm == null) {
-            throw new BadRequestException("Request body cannot be null");
-        }
-        if (postVm.name() == null || postVm.name().trim().isBlank()) {
-            throw new BadRequestException("Organization name is required");
-        }
-        if (postVm.type() == null) {
-            throw new BadRequestException("Organization type is required");
-        }
-        if (postVm.registrationNumber() == null || postVm.registrationNumber().trim().isBlank()) {
-            throw new BadRequestException("Registration number is required");
-        }
-    }
-
-    @BeforeMapping
-    default void validatePutVm(OrganizationPutVm putVm, @MappingTarget Organization target) {
-        if (putVm == null) {
-            throw new BadRequestException("Request body cannot be null");
-        }
-        if (putVm.name() != null && putVm.name().trim().isBlank()) {
-            throw new BadRequestException("Organization name cannot be blank");
-        }
-    }
-
     @Named("trimString")
     default String trimString(String value) {
         if (value == null) {
@@ -78,5 +58,3 @@ public interface OrganizationMapper {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-
-
