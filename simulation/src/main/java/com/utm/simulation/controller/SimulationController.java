@@ -1,11 +1,13 @@
 package com.utm.simulation.controller;
 
+import com.utm.simulation.model.enumeration.SimulationStatus;
 import com.utm.simulation.service.SimulationService;
 import com.utm.simulation.viewmodel.scenario.InjectScenarioResultVm;
 import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
 import com.utm.simulation.viewmodel.scenario.ScenarioCatalogVm;
 import com.utm.simulation.viewmodel.session.SimulationEventVm;
 import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionListVm;
 import com.utm.simulation.viewmodel.session.SimulationSessionVm;
 import com.utm.simulation.viewmodel.session.TimeScaleUpdateVm;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -57,12 +60,24 @@ public class SimulationController {
         }
 
         @GetMapping("/sessions")
-        @Operation(summary = "List all simulation sessions", description = "Retrieve history of all simulation sessions.")
+        @Operation(summary = "List simulation sessions", description = "Retrieve filtered and paginated simulation sessions, ordered by creation time descending.")
         @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "List of all simulation sessions", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = SimulationSessionVm.class))))
+                        @ApiResponse(responseCode = "200", description = "Paginated list of simulation sessions", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionListVm.class)))
         })
-        public ResponseEntity<List<SimulationSessionVm>> getAllSessions() {
-                return ResponseEntity.ok(simulationService.getAllSessions());
+        public ResponseEntity<SimulationSessionListVm> getSessions(
+                        @Parameter(description = "Filter by simulation status (running, paused, stopped, completed)")
+                        @RequestParam(required = false) SimulationStatus status,
+                        @Parameter(description = "Filter by drone ID")
+                        @RequestParam(required = false) String droneId,
+                        @Parameter(description = "Filter by flight plan ID")
+                        @RequestParam(required = false) String flightId,
+                        @Parameter(description = "Search term for flight ID, drone ID, or scenario")
+                        @RequestParam(required = false) String search,
+                        @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
+                        @RequestParam(defaultValue = "20") int limit,
+                        @Parameter(description = "Offset index (default: 0)")
+                        @RequestParam(defaultValue = "0") int offset) {
+                return ResponseEntity.ok(simulationService.getSessions(status, droneId, flightId, search, limit, offset));
         }
 
         @GetMapping("/sessions/active")

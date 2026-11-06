@@ -27,3 +27,17 @@ export type SimulationStatus =
 export type SimulationEvent = zod.infer<typeof getSessionEventsResponseItem> & {
     configJson?: string;
 };
+
+export interface SimulationSessionList {
+    items: SimulationSession[];
+    total: number;
+}
+
+export interface SimulationSessionFilterParams {
+    status?: string;
+    droneId?: string;
+    flightId?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+}

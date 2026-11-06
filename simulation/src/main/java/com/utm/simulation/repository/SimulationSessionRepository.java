@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface SimulationSessionRepository extends JpaRepository<SimulationSession, String>, JpaSpecificationExecutor<SimulationSession> {
     List<SimulationSession> findByStatus(SimulationStatus status);
     List<SimulationSession> findByStatusIn(Collection<SimulationStatus> statuses);
+    List<SimulationSession> findByStatusInOrderByCreatedOnDesc(Collection<SimulationStatus> statuses);
     Optional<SimulationSession> findFirstByDroneIdAndStatus(String droneId, SimulationStatus status);
     List<SimulationSession> findByDroneIdOrderByCreatedOnDesc(String droneId);
     boolean existsByDroneIdAndStatusIn(String droneId, Collection<SimulationStatus> statuses);

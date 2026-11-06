@@ -39,14 +39,15 @@ public class DroneClientServiceImpl implements DroneClientService {
         log.warn("EMERGENCY COMMAND DISPATCH: Sending {} to drone {} (flight: {}, incident: {})", command, droneId, flightId, incidentId);
         try {
             var url = (serviceUrlConfig.drone() != null ? serviceUrlConfig.drone() : "http://drone:8085") + "/drone/api/v1/drones/" + droneId + "/commands";
+            String mappedCommand = "RTH".equalsIgnoreCase(command) ? "RTL" : ("ESTOP".equalsIgnoreCase(command) ? "EMERGENCY_STOP" : command);
             restClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of(
-                            "command", command,
-                            "emergency", true,
+                            "commandType", mappedCommand,
                             "flightId", flightId != null ? flightId : "",
-                            "incidentId", incidentId != null ? incidentId : ""
+                            "priority", 0,
+                            "parameters", String.format("{\"incidentId\":\"%s\"}", incidentId != null ? incidentId : "")
                     ))
                     .retrieve()
                     .toBodilessEntity();

@@ -23,6 +23,10 @@ export const API_ENDPOINTS = {
     },
     CONFLICTS: {
         ALERTS: "/api/api/v1/alerts",
+        BASE: "/api/api/v1/conflicts",
+        ACTIVE: "/api/api/v1/conflicts/active",
+        RESOLVE: (id: string) => `/api/api/v1/conflicts/${id}/resolve`,
+        ACKNOWLEDGE: (id: string) => `/api/api/v1/conflicts/${id}/acknowledge`,
     },
     CONNECTIVITY: {
         BASE: "/api/api/v1/connectivity/devices",

@@ -10,7 +10,6 @@ import {
     Check,
     ExternalLink,
     ScrollText,
-    Wifi,
     Satellite,
 } from "lucide-react";
 import {
@@ -44,15 +43,21 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
 
     const normStatus = String(session.status || "").toLowerCase();
     const isRunning = normStatus === "running";
+    const isC2Lost = String(session.activeScenario || "").toLowerCase() === "c2_lost";
 
-    const handleIncomingRecord = useCallback((rec: TelemetryRecord) => {
-        if (!rec) return;
-        setRecords((prev) => [rec, ...prev.slice(0, 49)]);
-    }, []);
+    const handleIncomingRecord = useCallback(
+        (rec: TelemetryRecord) => {
+            if (!rec || isC2Lost) return;
+            setRecords((prev) => [rec, ...prev.slice(0, 49)]);
+        },
+        [isC2Lost]
+    );
 
-    useTelemetryStream(handleIncomingRecord, session.flightId, isRunning);
+    useTelemetryStream(handleIncomingRecord, session.flightId, isRunning && !isC2Lost);
 
     useEffect(() => {
+        if (isC2Lost) return;
+
         if (session.currentLat != null && session.currentLon != null) {
             const snap: TelemetryRecord = {
                 id: `snap-${Date.now()}`,
@@ -80,6 +85,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
             });
         }
     }, [
+        isC2Lost,
         session.currentLat,
         session.currentLon,
         session.currentAlt,

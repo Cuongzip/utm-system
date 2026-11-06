@@ -7,7 +7,9 @@ import com.utm.emergency.model.EmergencyIncident;
 import com.utm.emergency.model.enumeration.EmergencySeverity;
 import com.utm.emergency.model.enumeration.EmergencyType;
 import com.utm.emergency.model.enumeration.IncidentStatus;
+import com.utm.emergency.model.enumeration.OperationMode;
 import com.utm.emergency.repository.EmergencyIncidentRepository;
+import com.utm.emergency.viewmodel.incident.EmergencyIncidentPostVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentPageVm;
 import com.utm.emergency.viewmodel.incident.RootCauseVm;
@@ -15,6 +17,7 @@ import com.utm.emergency.viewmodel.stats.EmergencyStatsVm;
 import com.utm.emergency.viewmodel.stats.EmergencyTrendVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,11 +38,39 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
 
     private final EmergencyIncidentRepository incidentRepo;
     private final EmergencyIncidentMapper incidentMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final DecisionEngineService decisionEngine;
+
+    @Override
+    @Transactional
+    public EmergencyIncidentVm createIncident(EmergencyIncidentPostVm postVm, String reportedBy) {
+        EmergencyIncident entity = incidentMapper.toEntity(postVm);
+        entity.setStatus(decisionEngine.getMode() == OperationMode.supervised
+                ? IncidentStatus.pending_confirmation
+                : IncidentStatus.active);
+        entity.setCreatedBy(reportedBy != null && !reportedBy.isBlank() ? reportedBy : "system");
+
+        EmergencyIncident saved = incidentRepo.save(entity);
+        log.warn("Emergency incident reported: id={}, type={}, severity={}, drone={}, flight={}",
+                saved.getId(), saved.getEmergencyType(), saved.getSeverity(), saved.getDroneId(), saved.getFlightId());
+
+        decisionEngine.processEmergency(saved);
+
+        EmergencyIncidentVm vm = incidentMapper.toVm(saved);
+        messagingTemplate.convertAndSend("/topic/emergency/incidents", vm);
+        if (saved.getDroneId() != null && !saved.getDroneId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/drone/" + saved.getDroneId(), vm);
+        }
+        if (saved.getFlightId() != null && !saved.getFlightId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/emergency/flight/" + saved.getFlightId(), vm);
+        }
+        return vm;
+    }
 
     @Override
     @Transactional(readOnly = true)

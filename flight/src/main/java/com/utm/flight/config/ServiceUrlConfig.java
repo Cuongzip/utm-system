@@ -8,6 +8,7 @@ public record ServiceUrlConfig(
         String hub,
         String telemetry,
         String alert,
-        String conflict
+        String conflict,
+        String emergency
 ) {
 }

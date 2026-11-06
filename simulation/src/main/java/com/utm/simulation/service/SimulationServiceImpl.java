@@ -36,13 +36,20 @@ import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
 import com.utm.simulation.viewmodel.scenario.ScenarioCatalogVm;
 import com.utm.simulation.viewmodel.session.SimulationEventVm;
 import com.utm.simulation.viewmodel.session.SimulationSessionCreateVm;
+import com.utm.simulation.viewmodel.session.SimulationSessionListVm;
 import com.utm.simulation.viewmodel.session.SimulationSessionVm;
 import com.utm.simulation.viewmodel.client.TelemetryPushVm;
 import com.utm.simulation.viewmodel.client.WaypointVm;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 @RequiredArgsConstructor
@@ -135,17 +142,63 @@ public class SimulationServiceImpl implements SimulationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SimulationSessionVm> getAllSessions() {
-        return sessionRepository.findAll().stream()
+    public SimulationSessionListVm getSessions(SimulationStatus status, String droneId, String flightId, String search,
+            int limit, int offset) {
+        Specification<SimulationSession> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (droneId != null && !droneId.trim().isBlank()) {
+                predicates.add(cb.equal(root.get("droneId"), droneId.trim()));
+            }
+            if (flightId != null && !flightId.trim().isBlank()) {
+                predicates.add(cb.equal(root.get("flightId"), flightId.trim()));
+            }
+            if (search != null && !search.trim().isBlank()) {
+                String searchPattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("flightId")), searchPattern),
+                        cb.like(cb.lower(root.get("droneId")), searchPattern),
+                        cb.like(cb.lower(root.get("activeScenario")), searchPattern)));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdOn");
+
+        if (limit <= 0) {
+            List<SimulationSession> all = sessionRepository.findAll(spec, sort);
+            List<SimulationSessionVm> items = all.stream()
+                    .map(this::syncWithRuntime)
+                    .map(simulationMapper::toVm)
+                    .toList();
+            return SimulationSessionListVm.of(items, items.size());
+        }
+
+        int pageSize = limit;
+        int pageNumber = offset > 0 ? (offset / pageSize) : 0;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
+
+        Page<SimulationSession> page = sessionRepository.findAll(spec, pageable);
+        List<SimulationSessionVm> items = page.getContent().stream()
                 .map(this::syncWithRuntime)
                 .map(simulationMapper::toVm)
                 .toList();
+
+        return SimulationSessionListVm.of(items, page.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SimulationSessionVm> getAllSessions() {
+        return getSessions(null, null, null, null, 0, 0).items();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SimulationSessionVm> getActiveSessions() {
-        return sessionRepository.findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
+        return sessionRepository.findByStatusInOrderByCreatedOnDesc(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
                 .map(this::syncWithRuntime)
                 .map(simulationMapper::toVm)
                 .toList();
@@ -361,7 +414,20 @@ public class SimulationServiceImpl implements SimulationService {
                     return;
                 }
 
-                boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario);
+                if (runtime.currentBattery <= 0.0) {
+                    runtime.status = SimulationStatus.STOPPED;
+                    if (runtime.scheduledFuture != null) {
+                        runtime.scheduledFuture.cancel(false);
+                    }
+                    activeRuntimes.remove(runtime.sessionId);
+                    persistRuntimeState(runtime);
+                    recordEvent(runtime.sessionId, "BATTERY_EXHAUSTED", runtime.activeScenario,
+                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.", "CRITICAL", null);
+                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId, runtime.droneId);
+                    return;
+                }
+
+                boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario) && runtime.currentBattery > 0.0;
 
                 if (sendTelemetry) {
                     double effectiveLat = runtime.currentLat;
@@ -389,7 +455,7 @@ public class SimulationServiceImpl implements SimulationService {
                         effectiveLon += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
                     } else if ("geofence_breach".equalsIgnoreCase(runtime.activeScenario)) {
                         double perpHeading = Math.toRadians((runtime.currentHeading + 90.0) % 360.0);
-                        double driftDist = 25.0;
+                        double driftDist = 75.0;
                         effectiveLat += (driftDist * Math.cos(perpHeading) / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
                         effectiveLon += (driftDist * Math.sin(perpHeading)
                                 / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat))))
@@ -430,9 +496,19 @@ public class SimulationServiceImpl implements SimulationService {
 
                 if ("motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
                     runtime.speed = Math.max(3.0, runtime.speed * 0.8);
-                    runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (5.0 * timeStepSeconds));
+                    runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (8.0 * timeStepSeconds));
                     if (runtime.currentAlt <= 0.0) {
                         runtime.speed = 0.0;
+                        runtime.status = SimulationStatus.STOPPED;
+                        if (runtime.scheduledFuture != null) {
+                            runtime.scheduledFuture.cancel(false);
+                        }
+                        activeRuntimes.remove(runtime.sessionId);
+                        persistRuntimeState(runtime);
+                        recordEvent(runtime.sessionId, "MOTOR_CRASH", runtime.activeScenario,
+                                "Drone reached ground after motor failure. Flight simulation stopped.", "CRITICAL", null);
+                        log.warn("Simulation session '{}' stopped: drone grounded due to motor failure", runtime.sessionId);
+                        return;
                     }
                 }
 
@@ -446,6 +522,25 @@ public class SimulationServiceImpl implements SimulationService {
                     }
                 } else {
                     runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (0.0333 * timeStepSeconds));
+                    if (runtime.currentBattery <= 5.0) {
+                        runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (3.0 * timeStepSeconds));
+                        if (runtime.currentAlt <= 0.0) {
+                            runtime.speed = 0.0;
+                        }
+                    }
+                }
+
+                if (runtime.currentBattery <= 0.0 || (runtime.currentBattery <= 5.0 && runtime.currentAlt <= 0.0)) {
+                    runtime.status = SimulationStatus.STOPPED;
+                    if (runtime.scheduledFuture != null) {
+                        runtime.scheduledFuture.cancel(false);
+                    }
+                    activeRuntimes.remove(runtime.sessionId);
+                    persistRuntimeState(runtime);
+                    recordEvent(runtime.sessionId, "BATTERY_EXHAUSTED", runtime.activeScenario,
+                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.", "CRITICAL", null);
+                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId, runtime.droneId);
+                    return;
                 }
 
                 runtime.advance(stepDist);

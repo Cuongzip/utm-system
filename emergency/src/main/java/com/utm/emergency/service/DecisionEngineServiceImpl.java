@@ -205,6 +205,13 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
 
         if (!requiresConfirm) {
             incident.setWasAutoExecuted(true);
+            alertClient.publishAlert(new AlertClientService.AlertPostVm(
+                    incident.getDroneId(),
+                    incident.getFlightId(),
+                    incident.getEmergencyType().name(),
+                    incident.getSeverity().name(),
+                    "AUTO FAILSAFE: " + protocol.getResponseAction() + " executing for " + incident.getEmergencyType() + ". " + incident.getMessage(),
+                    "active"));
             responseExecutorService.executeResponse(incident, protocol.getResponseAction(),
                     protocol.getFallbackAction());
         } else {

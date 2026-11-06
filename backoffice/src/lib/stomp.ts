@@ -1,47 +1,72 @@
 import { Client, type IMessage, type StompSubscription } from "@stomp/stompjs";
 
-let stompClient: Client | null = null;
-const connectionListeners = new Set<(connected: boolean) => void>();
+export type StompServiceName = "telemetry" | "alert" | "emergency";
 
-export function getDefaultBrokerUrl(): string {
+const serviceClients = new Map<StompServiceName, Client>();
+const serviceConnectionListeners = new Map<StompServiceName, Set<(connected: boolean) => void>>();
+
+export function getServiceBrokerUrl(service: StompServiceName): string {
     if (process.env.NEXT_PUBLIC_WS_URL) {
-        return process.env.NEXT_PUBLIC_WS_URL;
+        if (service === "telemetry") {
+            return process.env.NEXT_PUBLIC_WS_URL;
+        }
+        try {
+            const parsed = new URL(process.env.NEXT_PUBLIC_WS_URL);
+            const newPathname = parsed.pathname.replace(/\/telemetry\/ws$/, `/${service}/ws`);
+            return `${parsed.protocol}//${parsed.host}${newPathname}`;
+        } catch {
+            return process.env.NEXT_PUBLIC_WS_URL.replace(/telemetry\/ws$/, `${service}/ws`);
+        }
     }
     if (typeof window !== "undefined") {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const host = window.location.hostname;
-        return `${protocol}//${host}:8081/telemetry/ws`;
+        return `${protocol}//${host}:8081/${service}/ws`;
     }
-    return "ws://localhost:8081/telemetry/ws";
+    return `ws://localhost:8081/${service}/ws`;
 }
 
-export function getStompClient(brokerUrl?: string): Client {
-    if (!stompClient) {
-        const url = brokerUrl || getDefaultBrokerUrl();
-        stompClient = new Client({
-            brokerURL: url,
+export function getDefaultBrokerUrl(): string {
+    return getServiceBrokerUrl("telemetry");
+}
+
+function getServiceListeners(service: StompServiceName): Set<(connected: boolean) => void> {
+    let listeners = serviceConnectionListeners.get(service);
+    if (!listeners) {
+        listeners = new Set();
+        serviceConnectionListeners.set(service, listeners);
+    }
+    return listeners;
+}
+
+export function getServiceClient(service: StompServiceName): Client {
+    let client = serviceClients.get(service);
+    if (!client) {
+        client = new Client({
+            brokerURL: getServiceBrokerUrl(service),
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
             onConnect: () => {
-                connectionListeners.forEach((listener) => listener(true));
+                getServiceListeners(service).forEach((listener) => listener(true));
             },
             onDisconnect: () => {
-                connectionListeners.forEach((listener) => listener(false));
+                getServiceListeners(service).forEach((listener) => listener(false));
             },
             onStompError: (frame) => {
-                console.error("STOMP error:", frame.headers["message"], frame.body);
+                console.error(`STOMP error [${service}]:`, frame.headers["message"], frame.body);
             },
             onWebSocketClose: () => {
-                connectionListeners.forEach((listener) => listener(false));
+                getServiceListeners(service).forEach((listener) => listener(false));
             },
         });
+        serviceClients.set(service, client);
     }
-    return stompClient;
+    return client;
 }
 
-export function connectStomp(token?: string): void {
-    const client = getStompClient();
+export function connectServiceStomp(service: StompServiceName, token?: string): void {
+    const client = getServiceClient(service);
     if (token) {
         client.connectHeaders = {
             Authorization: `Bearer ${token}`,
@@ -53,18 +78,21 @@ export function connectStomp(token?: string): void {
     }
 }
 
-export function disconnectStomp(): void {
-    if (stompClient && stompClient.active) {
-        stompClient.deactivate();
+export function disconnectServiceStomp(service: StompServiceName): void {
+    const client = serviceClients.get(service);
+    if (client && client.active) {
+        client.deactivate();
     }
 }
 
-export function subscribeStomp<T = unknown>(
+export function subscribeServiceStomp<T = unknown>(
+    service: StompServiceName,
     destination: string,
     callback: (data: T, message: IMessage) => void
 ): () => void {
-    const client = getStompClient();
+    const client = getServiceClient(service);
     let subscription: StompSubscription | null = null;
+    const listeners = getServiceListeners(service);
 
     const doSubscribe = () => {
         if (client.connected && !subscription) {
@@ -91,10 +119,10 @@ export function subscribeStomp<T = unknown>(
         }
     };
 
-    connectionListeners.add(listener);
+    listeners.add(listener);
 
     return () => {
-        connectionListeners.delete(listener);
+        listeners.delete(listener);
         if (subscription) {
             subscription.unsubscribe();
             subscription = null;
@@ -102,12 +130,52 @@ export function subscribeStomp<T = unknown>(
     };
 }
 
+export function onServiceStompConnectionChange(
+    service: StompServiceName,
+    callback: (connected: boolean) => void
+): () => void {
+    const listeners = getServiceListeners(service);
+    listeners.add(callback);
+    const client = serviceClients.get(service);
+    if (client) {
+        callback(client.connected);
+    } else {
+        callback(false);
+    }
+    return () => {
+        listeners.delete(callback);
+    };
+}
+
+export function getStompClient(brokerUrl?: string): Client {
+    const client = getServiceClient("telemetry");
+    if (brokerUrl && client.brokerURL !== brokerUrl) {
+        client.brokerURL = brokerUrl;
+    }
+    return client;
+}
+
+export function connectStomp(token?: string): void {
+    connectServiceStomp("telemetry", token);
+}
+
+export function disconnectStomp(): void {
+    disconnectServiceStomp("telemetry");
+}
+
+export function subscribeStomp<T = unknown>(
+    destination: string,
+    callback: (data: T, message: IMessage) => void
+): () => void {
+    return subscribeServiceStomp<T>("telemetry", destination, callback);
+}
+
 export function publishStomp(
     destination: string,
     body: unknown,
     headers: Record<string, string> = {}
 ): void {
-    const client = getStompClient();
+    const client = getServiceClient("telemetry");
     if (client.connected) {
         client.publish({
             destination,
@@ -118,11 +186,5 @@ export function publishStomp(
 }
 
 export function onStompConnectionChange(callback: (connected: boolean) => void): () => void {
-    connectionListeners.add(callback);
-    if (stompClient) {
-        callback(stompClient.connected);
-    }
-    return () => {
-        connectionListeners.delete(callback);
-    };
+    return onServiceStompConnectionChange("telemetry", callback);
 }

@@ -147,6 +147,7 @@ services:
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
       - ALERT_SERVICE_URL=http://alert:8093
       - CONFLICT_SERVICE_URL=http://conflict:8092
+      - EMERGENCY_SERVICE_URL=http://emergency:8096
       - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-Admin123@}
     depends_on:
       - postgres

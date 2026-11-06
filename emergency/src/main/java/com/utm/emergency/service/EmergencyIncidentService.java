@@ -2,6 +2,7 @@ package com.utm.emergency.service;
 
 import com.utm.emergency.model.enumeration.EmergencySeverity;
 import com.utm.emergency.model.enumeration.EmergencyType;
+import com.utm.emergency.viewmodel.incident.EmergencyIncidentPostVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentPageVm;
 import com.utm.emergency.viewmodel.incident.RootCauseVm;
@@ -12,6 +13,8 @@ import java.time.ZonedDateTime;
 import java.util.List;
 
 public interface EmergencyIncidentService {
+    EmergencyIncidentVm createIncident(EmergencyIncidentPostVm postVm, String reportedBy);
+
     IncidentPageVm searchIncidents(String status, EmergencySeverity severity, EmergencyType type, String droneId,
             ZonedDateTime from, ZonedDateTime to, int limit, int offset);
 

@@ -26,9 +26,12 @@ export const QUERY_KEYS = {
     simulationDetail: (id: string) => ["simulation", "detail", id] as const,
     simulationScenarios: ["simulation", "scenarios"] as const,
     simulationEvents: (id: string) => ["simulation", "events", id] as const,
+    conflicts: ["conflicts"] as const,
+    conflictsActive: ["conflicts", "active"] as const,
     emergencyStats: ["emergency", "stats"] as const,
     emergencyTrends: ["emergency", "trends"] as const,
     emergencyActive: ["emergency", "active"] as const,
+    emergencyPending: ["emergency", "pending"] as const,
     emergencyConfig: ["emergency", "config"] as const,
     emergencyProtocols: ["emergency", "protocols"] as const,
     emergencyIncidents: (params?: IncidentQueryParams) =>

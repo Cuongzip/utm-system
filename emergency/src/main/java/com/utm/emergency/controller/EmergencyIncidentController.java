@@ -5,6 +5,7 @@ import com.utm.emergency.model.enumeration.EmergencyType;
 import com.utm.emergency.service.DecisionEngineService;
 import com.utm.emergency.service.EmergencyIncidentService;
 import com.utm.emergency.viewmodel.incident.ConfirmIncidentVm;
+import com.utm.emergency.viewmodel.incident.EmergencyIncidentPostVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentPageVm;
 import com.utm.emergency.viewmodel.incident.PendingConfirmationVm;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,6 +54,17 @@ public class EmergencyIncidentController {
             @RequestParam(defaultValue = "0") int offset) {
         return ResponseEntity
                 .ok(incidentService.searchIncidents(status, severity, type, droneId, from, to, limit, offset));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'pilot', 'operator')")
+    @Operation(summary = "Report and ingest a new emergency incident from flight watchdog or telemetry")
+    public ResponseEntity<EmergencyIncidentVm> createIncident(
+            @Valid @RequestBody EmergencyIncidentPostVm postVm,
+            @AuthenticationPrincipal Jwt jwt) {
+        String reportedBy = jwt != null ? jwt.getSubject() : "system";
+        EmergencyIncidentVm created = incidentService.createIncident(postVm, reportedBy);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @GetMapping("/active")

@@ -2,6 +2,7 @@ package com.utm.flight.service;
 
 import com.utm.flight.service.client.TelemetryClientService;
 import com.utm.flight.service.client.ConflictClientService;
+import com.utm.flight.service.client.EmergencyClientService;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +28,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -42,6 +44,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     private final FlightConformanceRepository conformanceRepository;
     private final TelemetryClientService telemetryClientService;
     private final ConflictClientService conflictClientService;
+    private final EmergencyClientService emergencyClientService;
     private final FlightConformanceMapper conformanceMapper;
     private final ObjectMapper objectMapper;
 
@@ -93,6 +96,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
         ZonedDateTime now = ZonedDateTime.now();
         conformance.setLastEvaluatedAt(now);
+        boolean wasContingent = conformance.getStatus() == ConformanceStatus.CONTINGENT;
 
         Optional<TelemetryBriefVm> telemetryOpt = telemetryClientService.getLatestFlightTelemetry(flight.getId());
         if (telemetryOpt.isEmpty()) {
@@ -102,13 +106,19 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         }
 
         TelemetryBriefVm telemetry = telemetryOpt.get();
+        Double prevAlt = conformance.getCurrentAltitude();
+        ZonedDateTime prevTime = conformance.getLastTelemetryTime();
         conformanceMapper.updateFromTelemetry(conformance, telemetry);
 
         long ageSeconds = Math.max(0, Duration.between(telemetry.getEffectiveTimestamp(), now).getSeconds());
         if (ageSeconds > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
-            transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT,
-                    String.format("Telemetry lost for %d seconds (exceeded %ds emergency threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC), telemetry);
+            String msg = String.format("Telemetry lost for %d seconds (exceeded %ds emergency threshold)",
+                    ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC);
+            transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, telemetry);
+            if (!wasContingent) {
+                emergencyClientService.reportIncident(flight, "signal_lost", "critical", msg, telemetry,
+                        Map.of("lostSeconds", ageSeconds));
+            }
             updateFlightStatusAndSave(flight, conformance);
             return conformanceRepository.save(conformance);
         }
@@ -116,9 +126,50 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (ageSeconds > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
                     String.format("Telemetry lost for %d seconds (exceeded %ds warning threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC), telemetry);
+                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC),
+                    telemetry);
             updateFlightStatusAndSave(flight, conformance);
             return conformanceRepository.save(conformance);
+        }
+
+        if (prevAlt != null && prevTime != null && telemetry.altitude() != null) {
+            long dtMs = Duration.between(prevTime, telemetry.getEffectiveTimestamp()).toMillis();
+            if (dtMs >= 500 && dtMs <= 10000) {
+                double dtSec = dtMs / 1000.0;
+                double vz = (telemetry.altitude() - prevAlt) / dtSec;
+                if (vz < -5.0) {
+                    String msg = String
+                            .format("Rapid descent rate %.1f m/s detected! Suspected motor or propulsion failure", vz);
+                    transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, telemetry);
+                    if (!wasContingent) {
+                        emergencyClientService.reportIncident(flight, "motor_failure", "critical", msg, telemetry,
+                                Map.of("descentRateMs", Math.round(vz * 10.0) / 10.0, "previousAltitude", prevAlt,
+                                        "currentAltitude", telemetry.altitude()));
+                    }
+                    updateFlightStatusAndSave(flight, conformance);
+                    return conformanceRepository.save(conformance);
+                }
+            }
+        }
+
+        Double battery = telemetry.batteryPercentage();
+        if (battery != null) {
+            if (battery <= 10.0) {
+                String msg = String.format(
+                        "Critical battery depletion: %.1f%%! Immediate failsafe landing or RTH required", battery);
+                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, telemetry);
+                if (!wasContingent) {
+                    emergencyClientService.reportIncident(flight, "battery_critical", "critical", msg, telemetry,
+                            Map.of("batteryPercentage", battery));
+                }
+                updateFlightStatusAndSave(flight, conformance);
+                return conformanceRepository.save(conformance);
+            } else if (battery <= 20.0 && conformance.getStatus() == ConformanceStatus.CONFORMANT) {
+                String msg = String.format("Low battery level: %.1f%%. Return to base recommended", battery);
+                transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING, msg, telemetry);
+                emergencyClientService.reportIncident(flight, "battery_low", "warning", msg, telemetry,
+                        Map.of("batteryPercentage", battery));
+            }
         }
 
         List<List<Double>> routeCoordinates = extractRouteCoordinates(flight.getPlannedRoute());
@@ -152,6 +203,11 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (result.crossTrackDistanceM() > 30.0 || (isLateralBreached && isVerticalBreached)) {
             transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT,
                     String.join("; ", violations), telemetry);
+            if (result.crossTrackDistanceM() > 50.0 && !wasContingent) {
+                emergencyClientService.reportIncident(flight, "geofence_breach", "critical",
+                        "Severe 4D trajectory deviation: " + String.join("; ", violations), telemetry,
+                        Map.of("crossTrackDistanceM", result.crossTrackDistanceM()));
+            }
         } else if (isLateralBreached || isVerticalBreached) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
                     String.join("; ", violations), telemetry);
@@ -172,13 +228,13 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     }
 
     private void transitionStatus(Flight flight, FlightConformance conformance,
-                                  ConformanceStatus newStatus, String message) {
+            ConformanceStatus newStatus, String message) {
         transitionStatus(flight, conformance, newStatus, message, null);
     }
 
     private void transitionStatus(Flight flight, FlightConformance conformance,
-                                  ConformanceStatus newStatus, String message,
-                                  TelemetryBriefVm telemetry) {
+            ConformanceStatus newStatus, String message,
+            TelemetryBriefVm telemetry) {
         ConformanceStatus prevStatus = conformance.getStatus();
         conformance.setStatus(newStatus);
 
@@ -187,7 +243,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                     flight.getId(), prevStatus, newStatus, message);
 
             if (newStatus == ConformanceStatus.NON_CONFORMING || newStatus == ConformanceStatus.CONTINGENT) {
-                log.warn("{} breach detected for Flight '{}' (Flight Number: {}). Reporting conflict to conflict service.",
+                log.warn(
+                        "{} breach detected for Flight '{}' (Flight Number: {}). Reporting conflict to conflict service.",
                         newStatus, flight.getId(), flight.getFlightNumber());
                 conflictClientService.reportConformanceConflict(flight, conformance, telemetry, message);
             }
@@ -203,8 +260,14 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             long missingSec = Math.max(0, Duration.between(referenceTime, now).getSeconds());
 
             if (missingSec > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
-                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT,
-                        "Telemetry lost for " + missingSec + " seconds");
+                boolean wasContingent = conformance.getStatus() == ConformanceStatus.CONTINGENT;
+                String msg = String.format("Telemetry stream absent for %d seconds (exceeded %ds emergency threshold)",
+                        missingSec, TELEMETRY_TIMEOUT_CONTINGENT_SEC);
+                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg);
+                if (!wasContingent) {
+                    emergencyClientService.reportIncident(flight, "signal_lost", "critical", msg, null,
+                            Map.of("lostSeconds", missingSec));
+                }
             } else if (missingSec > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
                 transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
                         "Telemetry lost for " + missingSec + " seconds");
@@ -336,5 +399,3 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     record CrossTrackResult(double crossTrackDistanceM, double verticalErrorM) {
     }
 }
-
-

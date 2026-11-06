@@ -35,7 +35,8 @@ public enum CommandType {
         }
         String trimmed = value.trim();
         for (CommandType type : values()) {
-            if (type.value.equalsIgnoreCase(trimmed) || type.name().equalsIgnoreCase(trimmed)) {
+            if (type.value.equalsIgnoreCase(trimmed) || type.name().equalsIgnoreCase(trimmed)
+                    || ("rth".equalsIgnoreCase(trimmed) && type == RTL)) {
                 return type;
             }
         }

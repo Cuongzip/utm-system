@@ -2,52 +2,61 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-    getStompClient,
-    connectStomp,
-    disconnectStomp,
-    subscribeStomp,
-    publishStomp,
-    onStompConnectionChange,
+    getServiceClient,
+    connectServiceStomp,
+    disconnectServiceStomp,
+    subscribeServiceStomp,
+    onServiceStompConnectionChange,
+    type StompServiceName,
 } from "@/lib/stomp";
+import type { IMessage } from "@stomp/stompjs";
 import type { TelemetryRecord } from "@/types";
 
 interface UseStompOptions {
+    service?: StompServiceName;
     autoConnect?: boolean;
     token?: string;
 }
 
 export function useStomp(options: UseStompOptions = {}) {
-    const { autoConnect = true, token } = options;
-    const [isConnected, setIsConnected] = useState(() => getStompClient().connected);
+    const { service = "telemetry", autoConnect = true, token } = options;
+    const [isConnected, setIsConnected] = useState(() => getServiceClient(service).connected);
 
     useEffect(() => {
-        const unsubscribe = onStompConnectionChange(setIsConnected);
+        const unsubscribe = onServiceStompConnectionChange(service, setIsConnected);
         if (autoConnect) {
-            connectStomp(token);
+            connectServiceStomp(service, token);
         }
         return () => {
             unsubscribe();
         };
-    }, [autoConnect, token]);
+    }, [service, autoConnect, token]);
 
     const subscribe = useCallback(
-        <T = unknown>(destination: string, callback: (data: T) => void) => {
-            return subscribeStomp<T>(destination, callback);
+        <T = unknown>(destination: string, callback: (data: T, message: IMessage) => void) => {
+            return subscribeServiceStomp<T>(service, destination, callback);
         },
-        []
+        [service]
     );
 
     const publish = useCallback(
-        (destination: string, body: unknown, headers?: Record<string, string>) => {
-            publishStomp(destination, body, headers);
+        (destination: string, body: unknown, headers: Record<string, string> = {}) => {
+            const client = getServiceClient(service);
+            if (client.connected) {
+                client.publish({
+                    destination,
+                    body: typeof body === "string" ? body : JSON.stringify(body),
+                    headers,
+                });
+            }
         },
-        []
+        [service]
     );
 
     return {
         isConnected,
-        connect: connectStomp,
-        disconnect: disconnectStomp,
+        connect: (t?: string) => connectServiceStomp(service, t || token),
+        disconnect: () => disconnectServiceStomp(service),
         subscribe,
         publish,
     };
@@ -55,8 +64,9 @@ export function useStomp(options: UseStompOptions = {}) {
 
 export function useStompSubscription<T = unknown>(
     destination: string | null,
-    onMessage: (data: T) => void,
-    enabled = true
+    onMessage: (data: T, message?: IMessage) => void,
+    enabled = true,
+    service: StompServiceName = "telemetry"
 ) {
     const onMessageRef = useRef(onMessage);
     useEffect(() => {
@@ -66,16 +76,16 @@ export function useStompSubscription<T = unknown>(
     useEffect(() => {
         if (!enabled || !destination) return;
 
-        connectStomp();
+        connectServiceStomp(service);
 
-        const unsubscribe = subscribeStomp<T>(destination, (data) => {
-            onMessageRef.current(data);
+        const unsubscribe = subscribeServiceStomp<T>(service, destination, (data, message) => {
+            onMessageRef.current(data, message);
         });
 
         return () => {
             unsubscribe();
         };
-    }, [destination, enabled]);
+    }, [destination, enabled, service]);
 }
 
 export function useTelemetryStream(
@@ -85,5 +95,5 @@ export function useTelemetryStream(
 ) {
     const destination = flightId ? `/topic/telemetry/flight/${flightId}` : "/topic/telemetry/live";
 
-    useStompSubscription<TelemetryRecord>(destination, onRecord, enabled);
+    useStompSubscription<TelemetryRecord>(destination, onRecord, enabled, "telemetry");
 }

@@ -24,6 +24,10 @@ public record TelemetryBriefVm(
         @Schema(description = "Heading in degrees (0-360)", example = "45.0")
         Double heading,
 
+        @Schema(description = "Remaining battery percentage (0-100%)", example = "82.5")
+        @JsonAlias({"batteryPercentage", "batteryLevel", "battery"})
+        Double batteryPercentage,
+
         @Schema(description = "Telemetry timestamp")
         @JsonAlias({"timestamp", "createdOn"})
         ZonedDateTime timestamp

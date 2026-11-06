@@ -147,16 +147,17 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
 
         recordEmergencyBlackbox(incident, actionToExecute);
 
-        incident.setStatus(IncidentStatus.resolved);
+        incident.setStatus(IncidentStatus.executing);
         incident.setActionCompletedAt(ZonedDateTime.now());
         incident.setActionSuccess(dispatched);
-        incident.setResolvedAt(ZonedDateTime.now());
-        incident.setResolvedBy("system_failsafe");
-        appendTimeline(incident, dispatched ? "action_completed" : "action_dispatch_failed", Map.of("action", actionToExecute.name()));
+        if (!dispatched) {
+            incident.setActionError("Failed to dispatch failsafe command to drone");
+        }
+        appendTimeline(incident, dispatched ? "command_dispatched" : "action_dispatch_failed", Map.of("action", actionToExecute.name()));
         incidentRepo.save(incident);
         broadcastIncident(incident);
 
-        log.info("Failsafe action {} completed for incident {}", actionToExecute, incident.getId());
+        log.info("Failsafe action {} dispatched (success: {}) for incident {}", actionToExecute, dispatched, incident.getId());
     }
 
     private void broadcastIncident(EmergencyIncident incident) {

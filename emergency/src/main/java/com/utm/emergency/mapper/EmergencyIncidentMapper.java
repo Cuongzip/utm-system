@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.utm.emergency.model.EmergencyIncident;
+import com.utm.emergency.viewmodel.incident.EmergencyIncidentPostVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentTimelineEventVm;
 import com.utm.emergency.viewmodel.incident.RootCauseVm;
@@ -37,6 +38,13 @@ public interface EmergencyIncidentMapper {
 
     List<EmergencyIncidentVm> toVmList(List<EmergencyIncident> entities);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "status", constant = "active")
+    @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
+    @Mapping(target = "detectionData", source = "detectionData", qualifiedByName = "objectToJsonString")
+    @Mapping(target = "wasAutoExecuted", constant = "false")
+    EmergencyIncident toEntity(EmergencyIncidentPostVm postVm);
+
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "rootCause", source = "rootCauseVm.rootCause")
@@ -58,10 +66,15 @@ public interface EmergencyIncidentMapper {
         }
     }
 
-    @Named("jsonNodeToString")
-    default String jsonNodeToString(JsonNode node) {
-        if (node == null || node.isNull()) return null;
-        return node.toString();
+    @Named("objectToJsonString")
+    default String objectToJsonString(Object data) {
+        if (data == null) return null;
+        if (data instanceof String str) return str;
+        try {
+            return OBJECT_MAPPER.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            return data.toString();
+        }
     }
 
     @Named("stringToTimelineList")
