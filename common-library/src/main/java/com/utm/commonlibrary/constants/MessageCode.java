@@ -6,8 +6,11 @@ public final class MessageCode {
     public static final String DRONE_NOT_FOUND = "DRONE_NOT_FOUND";
     public static final String HUB_NOT_FOUND = "HUB_NOT_FOUND";
     public static final String FLIGHT_NOT_FOUND = "FLIGHT_NOT_FOUND";
-    public static final String NAME_ALREADY_EXITED = "NAME_ALREADY_EXITED";
+    public static final String ACCESS_DENIED = "ACCESS_DENIED";
+    public static final String NAME_ALREADY_EXISTED = "NAME_ALREADY_EXISTED";
+    public static final String NAME_ALREADY_EXITED = "NAME_ALREADY_EXISTED";
     public static final String REGISTRATION_NUMBER_ALREADY_EXISTED = "REGISTRATION_NUMBER_ALREADY_EXISTED";
+    public static final String ORGANIZATION_REGISTRATION_NUMBER_ALREADY_EXISTED = "ORGANIZATION_REGISTRATION_NUMBER_ALREADY_EXISTED";
     public static final String HUB_CODE_ALREADY_EXISTED = "HUB_CODE_ALREADY_EXISTED";
     public static final String FLIGHT_NUMBER_ALREADY_EXISTED = "FLIGHT_NUMBER_ALREADY_EXISTED";
     public static final String INVALID_FLIGHT_STATE = "INVALID_FLIGHT_STATE";

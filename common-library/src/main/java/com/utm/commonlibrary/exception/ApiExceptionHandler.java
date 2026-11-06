@@ -93,29 +93,15 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(DuplicatedException.class)
-    protected ResponseEntity<ErrorVm> handleDuplicated(DuplicatedException ex) {
-        return handleBadRequest(ex, null);
-    }
-
-    @ExceptionHandler(InternalServerErrorException.class)
-    protected ResponseEntity<ErrorVm> handleInternalServerErrorException(InternalServerErrorException e) {
-        log.error("Internal server error exception: ", e);
-        ErrorVm errorVm = new ErrorVm(HttpStatus.INTERNAL_SERVER_ERROR.toString(),
-            HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage());
-        return ResponseEntity.internalServerError().body(errorVm);
+    protected ResponseEntity<ErrorVm> handleDuplicated(DuplicatedException ex, WebRequest request) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        String message = ex.getMessage();
+        return buildErrorResponse(status, message, null, ex, request, 409);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     protected ResponseEntity<ErrorVm> handleMissingParams(MissingServletRequestParameterException e) {
         return handleBadRequest(e, null);
-    }
-
-    @ExceptionHandler(ResourceExistedException.class)
-    public ResponseEntity<ErrorVm> handleResourceExistedException(ResourceExistedException ex, WebRequest request) {
-        HttpStatus status = HttpStatus.CONFLICT;
-        String message = ex.getMessage();
-
-        return buildErrorResponse(status, message, null, ex, request, 409);
     }
 
     @ExceptionHandler({

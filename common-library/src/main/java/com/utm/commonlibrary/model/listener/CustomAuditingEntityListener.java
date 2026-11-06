@@ -7,7 +7,6 @@ import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 public class CustomAuditingEntityListener {
 
@@ -43,24 +42,12 @@ public class CustomAuditingEntityListener {
             return Optional.empty();
         }
 
-
-        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-            String userId = jwtAuth.getToken().getSubject();
-            if (userId != null && !userId.isBlank()) {
-                return Optional.of(userId);
-            }
-            return Optional.ofNullable(jwtAuth.getName());
-        }
-
-
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             String userId = jwt.getSubject();
             if (userId != null && !userId.isBlank()) {
                 return Optional.of(userId);
             }
-            return Optional.ofNullable(jwt.getClaimAsString("sub"));
         }
-
 
         String name = authentication.getName();
         if (name != null && !name.isBlank() && !"anonymousUser".equals(name)) {

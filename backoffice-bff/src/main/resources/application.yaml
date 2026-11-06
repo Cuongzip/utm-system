@@ -50,5 +50,5 @@ spring:
                 - Path=/**
 logging:
   level:
-    org.springframework.security: DEBUG
-    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: INFO
+    org.springframework.cloud.gateway: INFO

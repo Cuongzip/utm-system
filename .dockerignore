@@ -4,3 +4,8 @@
 **/.vscode
 **/*.log
 .env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/dist

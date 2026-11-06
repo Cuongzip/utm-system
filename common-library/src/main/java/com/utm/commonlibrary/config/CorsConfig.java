@@ -17,10 +17,13 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+                String[] origins = allowedOrigins.contains(",")
+                        ? allowedOrigins.split(",")
+                        : new String[]{allowedOrigins.trim()};
                 registry.addMapping("/**")
-                    .allowedOriginPatterns("*")
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
-                    .allowedHeaders("*");
+                        .allowedOriginPatterns(origins)
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
+                        .allowedHeaders("*");
             }
         };
     }
