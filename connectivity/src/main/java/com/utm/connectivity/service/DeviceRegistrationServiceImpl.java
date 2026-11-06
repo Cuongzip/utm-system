@@ -1,7 +1,5 @@
 package com.utm.connectivity.service;
 
-import com.utm.connectivity.service.client.DroneClientService;
-
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
@@ -10,11 +8,12 @@ import com.utm.connectivity.mapper.DeviceRegistrationMapper;
 import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.repository.DeviceRegistrationRepository;
+import com.utm.connectivity.service.client.DroneClientService;
+import com.utm.connectivity.viewmodel.client.DroneBriefVm;
 import com.utm.connectivity.viewmodel.device.DeviceHeartbeatPostVm;
 import com.utm.connectivity.viewmodel.device.DeviceRegistrationListVm;
 import com.utm.connectivity.viewmodel.device.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.device.DeviceRegistrationVm;
-import com.utm.connectivity.viewmodel.client.DroneBriefVm;
 import com.utm.connectivity.viewmodel.device.HeartbeatResultVm;
 import com.utm.connectivity.viewmodel.device.RevokeResultVm;
 import jakarta.persistence.criteria.Predicate;
@@ -45,19 +44,26 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional
     public DeviceRegistrationVm registerDevice(DeviceRegistrationPostVm postVm) {
-        DroneBriefVm drone = droneClientService.getDroneById(postVm.droneId())
-                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, postVm.droneId()));
+        String trimmedDroneId = postVm.droneId().trim();
+        String trimmedIdentifier = postVm.deviceIdentifier().trim();
 
-        if (deviceRegistrationRepository.findByDroneId(postVm.droneId()).isPresent()) {
-            throw new DuplicatedException(MessageCode.DRONE_ALREADY_HAS_DEVICE_REGISTRATION, postVm.droneId());
+        DroneBriefVm drone = droneClientService.getDroneById(trimmedDroneId)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, trimmedDroneId));
+
+        if (deviceRegistrationRepository.findByDroneId(trimmedDroneId).isPresent()) {
+            throw new DuplicatedException(MessageCode.DRONE_ALREADY_HAS_DEVICE_REGISTRATION, trimmedDroneId);
         }
 
-        if (deviceRegistrationRepository.findByDeviceIdentifier(postVm.deviceIdentifier()).isPresent()) {
-            throw new DuplicatedException(MessageCode.DEVICE_IDENTIFIER_ALREADY_EXISTED, postVm.deviceIdentifier());
+        if (deviceRegistrationRepository.findByDeviceIdentifier(trimmedIdentifier).isPresent()) {
+            throw new DuplicatedException(MessageCode.DEVICE_IDENTIFIER_ALREADY_EXISTED, trimmedIdentifier);
         }
 
         DeviceRegistration registration = mapper.toEntity(postVm);
+        registration.setDroneId(trimmedDroneId);
+        registration.setDeviceIdentifier(trimmedIdentifier);
+
         DeviceRegistration saved = deviceRegistrationRepository.save(registration);
+        log.info("Registered device {} for drone {}", trimmedIdentifier, trimmedDroneId);
         return mapper.toVm(saved, drone);
     }
 
@@ -126,8 +132,9 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional(readOnly = true)
     public DeviceRegistrationVm getDeviceById(String id) {
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(id, id, id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, id));
+        String trimmedKey = id.trim();
+        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, trimmedKey));
 
         Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
         return mapper.toVm(reg, droneOpt.orElse(null));
@@ -136,8 +143,9 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional
     public HeartbeatResultVm processHeartbeat(String idOrIdentifier, DeviceHeartbeatPostVm heartbeatVm) {
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(idOrIdentifier, idOrIdentifier, idOrIdentifier)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, idOrIdentifier));
+        String trimmedKey = idOrIdentifier.trim();
+        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, trimmedKey));
 
         reg.setConnectionStatus(DeviceConnectionStatus.ONLINE);
         reg.setLastSeenAt(ZonedDateTime.now());
@@ -152,8 +160,9 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Override
     @Transactional
     public RevokeResultVm revokeDeviceRegistration(String id) {
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(id, id, id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, id));
+        String trimmedKey = id.trim();
+        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, trimmedKey));
 
         Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
         if (droneOpt.isPresent()) {
@@ -164,8 +173,7 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         }
 
         deviceRegistrationRepository.delete(reg);
+        log.info("Revoked device registration for ID: {}", trimmedKey);
         return new RevokeResultVm("Device registration revoked successfully");
     }
 }
-
-

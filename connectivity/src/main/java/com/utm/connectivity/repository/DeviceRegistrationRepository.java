@@ -2,13 +2,10 @@ package com.utm.connectivity.repository;
 
 import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,9 +18,5 @@ public interface DeviceRegistrationRepository extends JpaRepository<DeviceRegist
 
     Optional<DeviceRegistration> findByIdOrDeviceIdentifierOrDroneId(String id, String deviceIdentifier, String droneId);
 
-    Page<DeviceRegistration> findByConnectionStatus(DeviceConnectionStatus connectionStatus, Pageable pageable);
-
     List<DeviceRegistration> findByConnectionStatus(DeviceConnectionStatus connectionStatus);
-
-    List<DeviceRegistration> findByConnectionStatusAndLastSeenAtBefore(DeviceConnectionStatus connectionStatus, ZonedDateTime cutoff);
 }

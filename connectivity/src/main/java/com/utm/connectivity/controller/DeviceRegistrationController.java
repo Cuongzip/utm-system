@@ -10,10 +10,16 @@ import com.utm.connectivity.viewmodel.device.HeartbeatResultVm;
 import com.utm.connectivity.viewmodel.device.RevokeResultVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,7 +45,16 @@ public class DeviceRegistrationController {
     @PostMapping("/devices/register")
     @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Register drone hardware device", description = "Associates a unique hardware device identifier with a drone in a 1-to-1 relationship")
+    @Operation(summary = "Register drone hardware device", description = "Associates a unique hardware device identifier with a drone in a 1-to-1 relationship. Requires admin or hub_operator role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Device registered successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DeviceRegistrationVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Admin or hub_operator role required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Drone not found", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Conflict - Drone already registered or device identifier already in use", content = @Content)
+    })
     public ResponseEntity<DeviceRegistrationVm> registerDevice(@Valid @RequestBody DeviceRegistrationPostVm postVm) {
         DeviceRegistrationVm result = deviceRegistrationService.registerDevice(postVm);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
@@ -47,7 +62,13 @@ public class DeviceRegistrationController {
 
     @GetMapping("/devices")
     @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
-    @Operation(summary = "List registered devices", description = "Retrieve a paginated and filtered list of registered devices in the DROPS-UTM system.")
+    @Operation(summary = "List registered devices", description = "Retrieve a paginated and filtered list of registered devices in the UTM system. Requires admin or hub_operator role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Devices retrieved successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DeviceRegistrationListVm.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Admin or hub_operator role required", content = @Content)
+    })
     public ResponseEntity<DeviceRegistrationListVm> getDevices(
             @Parameter(description = "Filter by device connection status (online, offline, connecting)")
             @RequestParam(name = "connectionStatus", required = false) DeviceConnectionStatus connectionStatus,
@@ -63,24 +84,45 @@ public class DeviceRegistrationController {
     }
 
     @GetMapping("/devices/online")
-    @Operation(summary = "List currently online devices", description = "Returns list of active online devices, applying automatic deadman-switch timeout pruning (30s threshold)")
+    @Operation(summary = "List currently online devices", description = "Returns list of active online devices, applying automatic deadman-switch timeout pruning (30s threshold).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Online devices retrieved successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, array = @ArraySchema(schema = @Schema(implementation = DeviceRegistrationVm.class)))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+    })
     public ResponseEntity<List<DeviceRegistrationVm>> getOnlineDevices() {
         List<DeviceRegistrationVm> result = deviceRegistrationService.getOnlineDevices();
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/devices/{id}")
-    @Operation(summary = "Get device details by ID", description = "Returns detailed profile of a device registration including drone specifications")
-    public ResponseEntity<DeviceRegistrationVm> getDeviceById(@PathVariable("id") String id) {
+    @Operation(summary = "Get device details by ID", description = "Returns detailed profile of a device registration. Supports lookup by registration UUID, deviceIdentifier, or droneId.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Device details retrieved successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DeviceRegistrationVm.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Device registration not found", content = @Content)
+    })
+    public ResponseEntity<DeviceRegistrationVm> getDeviceById(
+            @Parameter(description = "Unique registration UUID, device identifier, or drone UUID", example = "d1b2c3d4-e5f6-7890-abcd-ef1234567890")
+            @PathVariable("id") String id
+    ) {
         DeviceRegistrationVm result = deviceRegistrationService.getDeviceById(id);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/devices/{id}/heartbeat")
-    @Operation(summary = "Send device heartbeat ping", description = "Heartbeat signal sent periodically by IoT hardware/gateway to maintain online presence")
+    @Operation(summary = "Send device heartbeat ping", description = "Heartbeat signal sent periodically by IoT hardware/gateway to maintain online presence. Supports lookup by id, deviceIdentifier, or droneId.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Heartbeat processed successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = HeartbeatResultVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid heartbeat payload", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Device registration not found", content = @Content)
+    })
     public ResponseEntity<HeartbeatResultVm> processHeartbeat(
+            @Parameter(description = "Unique registration UUID, device identifier, or drone UUID", example = "DRONE-MAC-9876543210AB")
             @PathVariable("id") String id,
-            @RequestBody(required = false) DeviceHeartbeatPostVm heartbeatVm
+            @Valid @RequestBody(required = false) DeviceHeartbeatPostVm heartbeatVm
     ) {
         HeartbeatResultVm result = deviceRegistrationService.processHeartbeat(id, heartbeatVm);
         return ResponseEntity.ok(result);
@@ -88,10 +130,20 @@ public class DeviceRegistrationController {
 
     @DeleteMapping("/devices/{id}")
     @PreAuthorize("hasRole('admin')")
-    @Operation(summary = "Revoke device registration", description = "Removes hardware device registration. Rejected if the drone is actively in flight")
-    public ResponseEntity<RevokeResultVm> revokeDeviceRegistration(@PathVariable("id") String id) {
+    @Operation(summary = "Revoke device registration", description = "Removes hardware device registration. Rejected if the drone is actively in flight or in mission. Requires admin role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Device registration revoked successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = RevokeResultVm.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Drone is actively flying/in mission", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Admin role required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Device registration not found", content = @Content)
+    })
+    public ResponseEntity<RevokeResultVm> revokeDeviceRegistration(
+            @Parameter(description = "Unique registration UUID, device identifier, or drone UUID", example = "d1b2c3d4-e5f6-7890-abcd-ef1234567890")
+            @PathVariable("id") String id
+    ) {
         RevokeResultVm result = deviceRegistrationService.revokeDeviceRegistration(id);
         return ResponseEntity.ok(result);
     }
 }
-

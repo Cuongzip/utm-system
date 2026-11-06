@@ -1,16 +1,20 @@
 package com.utm.connectivity.mapper;
 
 import com.utm.connectivity.model.DeviceRegistration;
+import com.utm.connectivity.viewmodel.client.DroneBriefVm;
 import com.utm.connectivity.viewmodel.device.DeviceRegistrationPostVm;
 import com.utm.connectivity.viewmodel.device.DeviceRegistrationVm;
-import com.utm.connectivity.viewmodel.client.DroneBriefVm;
+import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 @Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        builder = @Builder(disableBuilder = true),
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 public interface DeviceRegistrationMapper {
 
@@ -36,6 +40,7 @@ public interface DeviceRegistrationMapper {
     @Mapping(target = "lastSeenAt", ignore = true)
     @Mapping(target = "droneId", qualifiedByName = "trimString")
     @Mapping(target = "deviceIdentifier", qualifiedByName = "trimString")
+    @Mapping(target = "certificateFingerprint", qualifiedByName = "trimString")
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -47,4 +52,3 @@ public interface DeviceRegistrationMapper {
         return value != null ? value.trim() : null;
     }
 }
-
