@@ -8,15 +8,21 @@ import com.utm.airspace.viewmodel.zone.AirspaceZonePutVm;
 import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
 import com.utm.airspace.viewmodel.zone.GeoJsonPolygonVm;
 import org.mapstruct.BeanMapping;
+import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
 
 @Mapper(
-        componentModel = "spring",
-        builder = @org.mapstruct.Builder(disableBuilder = true)
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        builder = @Builder(disableBuilder = true),
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 public interface AirspaceZoneMapper {
 
@@ -32,6 +38,8 @@ public interface AirspaceZoneMapper {
 
     @Mapping(target = "geometry", source = "geometry", qualifiedByName = "stringToGeoJson")
     AirspaceZoneVm toVm(AirspaceZone entity);
+
+    List<AirspaceZoneVm> toVmList(List<AirspaceZone> entities);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
@@ -61,28 +69,8 @@ public interface AirspaceZoneMapper {
         }
         try {
             return OBJECT_MAPPER.readValue(geometryJson, GeoJsonPolygonVm.class);
-        } catch (Exception e) {
-            try {
-                com.fasterxml.jackson.databind.JsonNode root = OBJECT_MAPPER.readTree(geometryJson);
-                String type = root.path("type").asText("Polygon");
-                if ("LineString".equalsIgnoreCase(type)) {
-                    java.util.List<java.util.List<Double>> points = new java.util.ArrayList<>();
-                    for (com.fasterxml.jackson.databind.JsonNode pt : root.path("coordinates")) {
-                        if (pt.isArray() && pt.size() >= 2) {
-                            points.add(java.util.List.of(pt.get(0).asDouble(), pt.get(1).asDouble()));
-                        }
-                    }
-                    if (!points.isEmpty()) {
-                        if (!points.get(0).equals(points.get(points.size() - 1))) {
-                            points.add(points.get(0));
-                        }
-                        return new GeoJsonPolygonVm("Polygon", java.util.List.of(points));
-                    }
-                }
-            } catch (Exception ignored) {
-            }
+        } catch (JsonProcessingException e) {
             return null;
         }
     }
 }
-

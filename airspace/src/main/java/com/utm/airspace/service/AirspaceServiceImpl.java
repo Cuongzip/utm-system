@@ -1,12 +1,11 @@
 package com.utm.airspace.service;
 
-import com.utm.airspace.service.client.HubClientService;
-
 import com.utm.airspace.mapper.AirspaceZoneMapper;
 import com.utm.airspace.model.AirspaceZone;
 import com.utm.airspace.model.enumeration.AirspaceZoneStatus;
 import com.utm.airspace.model.enumeration.AirspaceZoneType;
 import com.utm.airspace.repository.AirspaceZoneRepository;
+import com.utm.airspace.service.client.HubClientService;
 import com.utm.airspace.viewmodel.check.AirspaceCheckPathResultVm;
 import com.utm.airspace.viewmodel.check.AirspaceCheckPathVm;
 import com.utm.airspace.viewmodel.check.AirspaceCheckPointVm;
@@ -247,5 +246,3 @@ public class AirspaceServiceImpl implements AirspaceService {
         log.info("Soft deleted (deactivated) AirspaceZone with ID: {}", id);
     }
 }
-
-

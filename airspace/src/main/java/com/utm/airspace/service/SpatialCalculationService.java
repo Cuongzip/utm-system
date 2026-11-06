@@ -62,14 +62,6 @@ public class SpatialCalculationService {
         return true;
     }
 
-    public boolean isPointInZone(double lat, double lon, double alt, GeoJsonPolygonVm geometry, double altitudeCeiling) {
-        if (alt > altitudeCeiling) {
-            return false;
-        }
-        return isPointInPolygon(lat, lon, geometry);
-    }
-
-
     public boolean isPointInPolygonRing(double lat, double lon, List<List<Double>> ring) {
         if (ring == null || ring.size() < 3) {
             return false;
@@ -148,4 +140,3 @@ public class SpatialCalculationService {
 
     public record SampledPoint(double lat, double lon, double alt, int segmentIndex, double distanceFromStartM) {}
 }
-

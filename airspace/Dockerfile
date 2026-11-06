@@ -1,21 +1,16 @@
 FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
+
 COPY pom.xml .
+RUN mvn -N io.vavr:vavr:0.10.4:help > /dev/null 2>&1 || true && \
+    mvn -N install -DskipTests
+
 COPY common-library ./common-library
-COPY backoffice-bff ./backoffice-bff
-COPY drone ./drone
-COPY hub ./hub
-COPY flight ./flight
-COPY airspace ./airspace
-COPY telemetry ./telemetry
-COPY simulation ./simulation
-COPY conflict ./conflict
-COPY alert ./alert
-COPY connectivity ./connectivity
-COPY organization ./organization
-COPY mission ./mission
-COPY emergency ./emergency
-RUN mvn clean package -pl airspace -am -DskipTests
+RUN mvn -f common-library/pom.xml clean install -DskipTests
+
+COPY airspace/pom.xml ./airspace/
+COPY airspace/src ./airspace/src
+RUN mvn -f airspace/pom.xml clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
