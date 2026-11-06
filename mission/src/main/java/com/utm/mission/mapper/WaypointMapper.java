@@ -11,13 +11,11 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        builder = @Builder(disableBuilder = true)
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.IGNORE, builder = @Builder(disableBuilder = true))
 public interface WaypointMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -57,4 +55,3 @@ public interface WaypointMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     Waypoint cloneEntity(Waypoint original);
 }
-

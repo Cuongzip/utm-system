@@ -18,7 +18,7 @@ public class AlertClientServiceImpl implements AlertClientService {
     @Override
     public void publishAlert(AlertPostVm alertPostVm) {
         try {
-            var url = (serviceUrlConfig.alert() != null ? serviceUrlConfig.alert() : "http://alert:8093") + "/alert/api/v1/alerts";
+            var url = serviceUrlConfig.getAlertUrl() + "/api/v1/alerts";
             restClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)

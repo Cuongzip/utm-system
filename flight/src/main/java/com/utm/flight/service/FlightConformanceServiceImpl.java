@@ -211,7 +211,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         } else if (isLateralBreached || isVerticalBreached) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
                     String.join("; ", violations), telemetry);
-        } else {
+        } else if (battery == null || battery > 20.0) {
             transitionStatus(flight, conformance, ConformanceStatus.CONFORMANT,
                     "Drone on planned 4D corridor trajectory", telemetry);
         }

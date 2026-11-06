@@ -5,12 +5,15 @@ import com.utm.drone.viewmodel.command.DroneCommandPostVm;
 import com.utm.drone.viewmodel.command.DroneCommandVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
 @Mapper(
-        componentModel = "spring",
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
         builder = @org.mapstruct.Builder(disableBuilder = true)
 )
 public interface DroneCommandMapper {

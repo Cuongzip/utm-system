@@ -30,11 +30,10 @@ public class DroneClientServiceImpl implements DroneClientService {
             return Optional.empty();
         }
 
-        String droneUrl = serviceUrlConfig.drone();
-        String basePath = droneUrl.endsWith("/drone") ? "" : "/drone";
+        String endpoint = serviceUrlConfig.getDroneUrl() + "/api/v1/drones/{id}";
         try {
             DroneBriefVm drone = restClient.get()
-                    .uri(droneUrl + basePath + "/api/v1/drones/{id}", droneId.trim())
+                    .uri(endpoint, droneId.trim())
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
                         log.warn("Drone {} verification returned status {}", droneId, response.getStatusCode());
@@ -42,7 +41,7 @@ public class DroneClientServiceImpl implements DroneClientService {
                     .body(DroneBriefVm.class);
             return Optional.ofNullable(drone);
         } catch (Exception e) {
-            log.error("Failed to fetch drone ID {} at url {}: {}", droneId, droneUrl, e.getMessage());
+            log.error("Failed to fetch drone ID {} at url {}: {}", droneId, endpoint, e.getMessage());
             return Optional.empty();
         }
     }

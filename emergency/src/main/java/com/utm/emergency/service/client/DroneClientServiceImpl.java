@@ -20,9 +20,10 @@ public class DroneClientServiceImpl implements DroneClientService {
 
     @Override
     public Optional<DroneSummaryVm> getDroneById(String droneId) {
-        if (droneId == null || droneId.isBlank()) return Optional.empty();
+        if (droneId == null || droneId.isBlank())
+            return Optional.empty();
         try {
-            var url = (serviceUrlConfig.drone() != null ? serviceUrlConfig.drone() : "http://drone:8085") + "/drone/api/v1/drones/" + droneId;
+            var url = serviceUrlConfig.getDroneUrl() + "/api/v1/drones/" + droneId;
             DroneSummaryVm vm = restClient.get()
                     .uri(url)
                     .retrieve()
@@ -38,7 +39,7 @@ public class DroneClientServiceImpl implements DroneClientService {
     public boolean sendEmergencyCommand(String droneId, String command, String flightId, String incidentId) {
         log.warn("EMERGENCY COMMAND DISPATCH: Sending {} to drone {} (flight: {}, incident: {})", command, droneId, flightId, incidentId);
         try {
-            var url = (serviceUrlConfig.drone() != null ? serviceUrlConfig.drone() : "http://drone:8085") + "/drone/api/v1/drones/" + droneId + "/commands";
+            var url = serviceUrlConfig.getDroneUrl() + "/api/v1/drones/" + droneId + "/commands";
             String mappedCommand = "RTH".equalsIgnoreCase(command) ? "RTL" : ("ESTOP".equalsIgnoreCase(command) ? "EMERGENCY_STOP" : command);
             restClient.post()
                     .uri(url)

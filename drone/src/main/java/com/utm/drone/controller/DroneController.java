@@ -201,7 +201,7 @@ public class DroneController {
                     description = "Drone removed / deactivated successfully",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            examples = @ExampleObject(value = "{\"message\": \"Drone removed successfully\"}")
+                            examples = @ExampleObject(value = "{\"message\": \"Drone deleted successfully\"}")
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Drone currently in flight cannot be deleted", content = @Content),
@@ -214,7 +214,7 @@ public class DroneController {
             @PathVariable String id
     ) {
         droneService.deleteDrone(id);
-        return ResponseEntity.ok(Map.of("message", "Drone removed successfully"));
+        return ResponseEntity.ok(Map.of("message", "Drone deleted successfully"));
     }
 }
 

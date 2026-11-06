@@ -1,5 +1,6 @@
 package com.utm.simulation.service.client;
 
+import com.utm.commonlibrary.utils.ClientUrlUtils;
 import com.utm.simulation.config.ServiceUrlConfig;
 import com.utm.simulation.viewmodel.client.FlightDetailVm;
 import com.utm.simulation.viewmodel.client.WaypointVm;
@@ -31,9 +32,8 @@ public class FlightClientServiceImpl implements FlightClientService {
             return null;
         }
 
-        String baseUrl = serviceUrlConfig.flight().url();
-        String basePath = baseUrl.endsWith("/flight") ? "" : "/flight";
-        String endpoint = baseUrl + basePath + "/api/v1/flights/" + flightId.trim();
+        String baseUrl = ClientUrlUtils.normalizeBaseUrl(serviceUrlConfig.flight().url(), "http://flight:8086", "flight");
+        String endpoint = baseUrl + "/api/v1/flights/" + flightId.trim();
 
         try {
             return restClient.get()
@@ -70,6 +70,3 @@ public class FlightClientServiceImpl implements FlightClientService {
         return Collections.emptyList();
     }
 }
-
-
-

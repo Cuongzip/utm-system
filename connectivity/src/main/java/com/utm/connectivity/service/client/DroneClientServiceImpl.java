@@ -24,15 +24,7 @@ public class DroneClientServiceImpl implements DroneClientService {
             return Optional.empty();
         }
 
-        String droneBase = serviceUrlConfig.drone();
-        if (droneBase == null || droneBase.isBlank()) {
-            droneBase = "http://drone:8085";
-        }
-
-        String cleanUrl = droneBase.replaceAll("/+$", "");
-        String basePath = cleanUrl.endsWith("/drone") ? "" : "/drone";
-        String targetUrl = cleanUrl + basePath + "/api/v1/drones/{id}";
-
+        String targetUrl = serviceUrlConfig.getDroneUrl() + "/api/v1/drones/{id}";
         try {
             ResponseEntity<DroneBriefVm> response = restClient.get()
                     .uri(targetUrl, droneId.trim())

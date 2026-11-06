@@ -13,10 +13,11 @@ import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.IGNORE, uses = {
         WaypointMapper.class }, builder = @Builder(disableBuilder = true))
 public interface MissionMapper {
 
@@ -81,9 +82,9 @@ public interface MissionMapper {
     @Mapping(target = "lastModifiedOn", source = "entity.lastModifiedOn")
     @Mapping(target = "lastModifiedBy", source = "entity.lastModifiedBy")
     MissionVm toVm(Mission entity, Integer waypointCount, Double estimatedDistanceMeters,
-                   List<com.utm.mission.viewmodel.waypoint.WaypointVm> waypoints,
-                   com.utm.mission.viewmodel.client.HubBriefVm departureHub,
-                   com.utm.mission.viewmodel.client.HubBriefVm arrivalHub);
+            List<com.utm.mission.viewmodel.waypoint.WaypointVm> waypoints,
+            com.utm.mission.viewmodel.client.HubBriefVm departureHub,
+            com.utm.mission.viewmodel.client.HubBriefVm arrivalHub);
 
     @Named("trimString")
     default String trimString(String value) {

@@ -256,9 +256,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
     private List<FlightBriefVm> fetchActiveFlights() {
         try {
-            String baseUrl = serviceUrlConfig.flight();
-            String basePath = (baseUrl != null && baseUrl.endsWith("/flight")) ? "" : "/flight";
-            String url = baseUrl + basePath + "/api/v1/flights?status=active&limit=0";
+            String url = serviceUrlConfig.getFlightUrl() + "/api/v1/flights?status=active&limit=0";
             FlightListBriefVm response = restClient.get()
                     .uri(url)
                     .retrieve()
@@ -272,9 +270,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
     private TelemetryBriefVm fetchLatestTelemetry(String flightId) {
         try {
-            String baseUrl = serviceUrlConfig.telemetry();
-            String basePath = (baseUrl != null && baseUrl.endsWith("/telemetry")) ? "" : "/telemetry";
-            String url = baseUrl + basePath + "/api/v1/telemetry/flight/" + flightId + "/latest";
+            String url = serviceUrlConfig.getTelemetryUrl() + "/api/v1/telemetry/flight/" + flightId + "/latest";
             return restClient.get()
                     .uri(url)
                     .retrieve()
@@ -286,13 +282,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     }
 
     private AirspaceCheckResponseVm checkAirspaceCompliance(TelemetryBriefVm telemetry) {
-        if (serviceUrlConfig.airspace() == null || serviceUrlConfig.airspace().isBlank()) {
-            return null;
-        }
         try {
-            String baseUrl = serviceUrlConfig.airspace();
-            String basePath = (baseUrl != null && baseUrl.endsWith("/airspace")) ? "" : "/airspace";
-            String url = baseUrl + basePath + "/api/v1/airspace/check";
+            String url = serviceUrlConfig.getAirspaceUrl() + "/api/v1/airspace/check";
             return restClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -314,13 +305,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             String message,
             Double breachValue,
             Double thresholdValue) {
-        if (serviceUrlConfig.alert() == null || serviceUrlConfig.alert().isBlank()) {
-            return;
-        }
         try {
-            String baseUrl = serviceUrlConfig.alert();
-            String basePath = (baseUrl != null && baseUrl.endsWith("/alert")) ? "" : "/alert";
-            String url = baseUrl + basePath + "/api/v1/alerts";
+            String url = serviceUrlConfig.getAlertUrl() + "/api/v1/alerts";
             String detailsJson = (breachValue != null || thresholdValue != null)
                     ? String.format(java.util.Locale.US, "{\"breachValue\": %.2f, \"thresholdValue\": %.2f}",
                             breachValue != null ? breachValue : 0.0, thresholdValue != null ? thresholdValue : 0.0)
@@ -332,8 +318,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     droneId,
                     null,
                     message,
-                    detailsJson
-            );
+                    detailsJson);
             restClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -430,4 +415,3 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     private record FlightWithTelemetry(FlightBriefVm flight, TelemetryBriefVm telemetry) {
     }
 }
-

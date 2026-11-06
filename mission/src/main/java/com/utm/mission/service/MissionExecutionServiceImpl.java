@@ -30,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -62,13 +61,11 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                 }
 
                 String droneId = postVm.droneId().trim();
-                Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(droneId);
-                if (droneOpt.isPresent()) {
-                        DroneBriefVm drone = droneOpt.get();
-                        if (drone.status() != null && !"available".equalsIgnoreCase(drone.status())
-                                        && !"idle".equalsIgnoreCase(drone.status())) {
-                                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, droneId);
-                        }
+                DroneBriefVm drone = droneClientService.getDroneById(droneId)
+                                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId));
+                if (drone.status() != null && !"available".equalsIgnoreCase(drone.status())
+                                && !"idle".equalsIgnoreCase(drone.status())) {
+                        throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, droneId);
                 }
 
                 MissionExecution execution = missionExecutionMapper.toEntity(postVm, missionId, waypoints.size());

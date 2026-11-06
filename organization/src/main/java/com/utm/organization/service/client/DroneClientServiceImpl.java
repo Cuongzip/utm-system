@@ -21,16 +21,10 @@ public class DroneClientServiceImpl implements DroneClientService {
             return false;
         }
 
-        String droneUrl = serviceUrlConfig.drone();
-        if (droneUrl == null || droneUrl.isBlank()) {
-            log.warn("Drone service URL is not configured, skipping active flight check for organization {}", organizationId);
-            return false;
-        }
-
-        String basePath = droneUrl.endsWith("/drone") ? "" : "/drone";
+        String droneUrl = serviceUrlConfig.getDroneUrl();
         try {
             DroneListClientVm response = restClient.get()
-                    .uri(droneUrl + basePath + "/api/v1/drones?ownerId={ownerId}&status=in_flight&limit=1", organizationId.trim())
+                    .uri(droneUrl + "/api/v1/drones?ownerId={ownerId}&status=in_flight&limit=1", organizationId.trim())
                     .retrieve()
                     .body(DroneListClientVm.class);
 

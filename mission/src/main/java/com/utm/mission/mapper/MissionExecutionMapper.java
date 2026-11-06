@@ -7,13 +7,11 @@ import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        builder = @Builder(disableBuilder = true)
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.IGNORE, builder = @Builder(disableBuilder = true))
 public interface MissionExecutionMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -34,4 +32,3 @@ public interface MissionExecutionMapper {
 
     List<MissionExecutionVm> toVmList(List<MissionExecution> executions);
 }
-

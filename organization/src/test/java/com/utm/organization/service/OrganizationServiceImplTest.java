@@ -37,7 +37,7 @@ import static org.mockito.Mockito.*;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Unit Tests: OrganizationServiceImpl (Based on docs/api/01-organizations.md)")
+@DisplayName("Unit Tests: OrganizationServiceImpl (Based on docs/api/02-organization.md)")
 class OrganizationServiceImplTest {
 
     @Mock

@@ -77,9 +77,7 @@ class AirspaceServiceImplTest {
                         List.of(106.70, 10.77),
                         List.of(106.70, 10.78),
                         List.of(106.69, 10.78),
-                        List.of(106.69, 10.77)
-                ))
-        );
+                        List.of(106.69, 10.77))));
 
         testZone = AirspaceZone.builder()
                 .id("z1b2c3d4-e5f6-7890-abcd-ef1234567890")
@@ -87,7 +85,8 @@ class AirspaceServiceImplTest {
                 .name("Independence Palace No-Fly Zone")
                 .zoneType(AirspaceZoneType.NO_FLY_ZONE)
                 .altitudeCeiling(120.0)
-                .geometry("{\"type\":\"Polygon\",\"coordinates\":[[[106.69,10.77],[106.70,10.77],[106.70,10.78],[106.69,10.78],[106.69,10.77]]]}")
+                .geometry(
+                        "{\"type\":\"Polygon\",\"coordinates\":[[[106.69,10.77],[106.70,10.77],[106.70,10.78],[106.69,10.78],[106.69,10.77]]]}")
                 .status(AirspaceZoneStatus.ACTIVE)
                 .description("Critical national security protection zone")
                 .build();
@@ -104,8 +103,7 @@ class AirspaceServiceImplTest {
                 ZonedDateTime.now(),
                 "admin",
                 ZonedDateTime.now(),
-                "admin"
-        );
+                "admin");
 
         testPostVm = new AirspaceZonePostVm(
                 "Independence Palace No-Fly Zone",
@@ -114,8 +112,7 @@ class AirspaceServiceImplTest {
                 testPolygon,
                 120.0,
                 AirspaceZoneStatus.ACTIVE,
-                "Critical national security protection zone"
-        );
+                "Critical national security protection zone");
 
         testPutVm = new AirspaceZonePutVm(
                 "Independence Palace No-Fly Zone (Expansion)",
@@ -124,8 +121,7 @@ class AirspaceServiceImplTest {
                 150.0,
                 testPolygon,
                 AirspaceZoneStatus.ACTIVE,
-                "Expanded security perimeter for summit"
-        );
+                "Expanded security perimeter for summit");
     }
 
     @Nested
@@ -217,7 +213,8 @@ class AirspaceServiceImplTest {
             AirspaceCheckPointVm pt2 = new AirspaceCheckPointVm(10.760, 106.660, 50.0);
             AirspaceCheckPathVm pathVm = new AirspaceCheckPathVm(List.of(pt1, pt2), 200.0);
 
-            SpatialCalculationService.SampledPoint sample1 = new SpatialCalculationService.SampledPoint(10.750, 106.650, 50.0, 0, 0.0);
+            SpatialCalculationService.SampledPoint sample1 = new SpatialCalculationService.SampledPoint(10.750, 106.650,
+                    50.0, 0, 0.0);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
             when(spatialCalculationService.samplePolyline(pathVm.points(), 200.0)).thenReturn(List.of(sample1));
             when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
@@ -237,7 +234,8 @@ class AirspaceServiceImplTest {
             AirspaceCheckPointVm pt2 = new AirspaceCheckPointVm(10.780, 106.710, 80.0);
             AirspaceCheckPathVm pathVm = new AirspaceCheckPathVm(List.of(pt1, pt2), 200.0);
 
-            SpatialCalculationService.SampledPoint conflictPt = new SpatialCalculationService.SampledPoint(10.775, 106.700, 70.0, 0, 350.0);
+            SpatialCalculationService.SampledPoint conflictPt = new SpatialCalculationService.SampledPoint(10.775,
+                    106.700, 70.0, 0, 350.0);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
             when(spatialCalculationService.samplePolyline(pathVm.points(), 200.0)).thenReturn(List.of(conflictPt));
             when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
@@ -277,8 +275,7 @@ class AirspaceServiceImplTest {
                     "no_fly_zone",
                     "active",
                     20,
-                    0
-            );
+                    0);
 
             assertThat(result).isNotNull();
             assertThat(result.total()).isEqualTo(1L);
@@ -309,7 +306,8 @@ class AirspaceServiceImplTest {
         @Test
         @DisplayName("Should return unpaged list when limit is less than or equal to zero")
         void getAllZones_limitLessThanOrEqualToZero_returnsAllUnpaged() {
-            when(airspaceZoneRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(testZone));
+            when(airspaceZoneRepository.findAll(any(Specification.class), any(Sort.class)))
+                    .thenReturn(List.of(testZone));
             when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
 
             AirspaceZoneListVm result = airspaceService.getAllZones(null, null, null, 0, 0);
@@ -434,7 +432,8 @@ class AirspaceServiceImplTest {
                     .name("Independence Palace No-Fly Zone (Expansion)")
                     .zoneType(AirspaceZoneType.NO_FLY_ZONE)
                     .altitudeCeiling(150.0)
-                    .geometry("{\"type\":\"Polygon\",\"coordinates\":[[[106.69,10.77],[106.70,10.77],[106.70,10.78],[106.69,10.78],[106.69,10.77]]]}")
+                    .geometry(
+                            "{\"type\":\"Polygon\",\"coordinates\":[[[106.69,10.77],[106.70,10.77],[106.70,10.78],[106.69,10.78],[106.69,10.77]]]}")
                     .status(AirspaceZoneStatus.ACTIVE)
                     .description("Expanded security perimeter for summit")
                     .build();
@@ -451,12 +450,12 @@ class AirspaceServiceImplTest {
                     ZonedDateTime.now(),
                     "admin",
                     ZonedDateTime.now(),
-                    "admin"
-            );
+                    "admin");
 
             when(airspaceZoneRepository.findById("z1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                     .thenReturn(Optional.of(testZone));
-            when(airspaceZoneRepository.existsByNameAndIdNot("Independence Palace No-Fly Zone (Expansion)", "z1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+            when(airspaceZoneRepository.existsByNameAndIdNot("Independence Palace No-Fly Zone (Expansion)",
+                    "z1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                     .thenReturn(false);
             when(hubClientService.existsById("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
             doNothing().when(spatialCalculationService).validatePolygon(testPolygon);
@@ -489,7 +488,8 @@ class AirspaceServiceImplTest {
         void updateZone_duplicateName_throwsDuplicatedException() {
             when(airspaceZoneRepository.findById("z1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                     .thenReturn(Optional.of(testZone));
-            when(airspaceZoneRepository.existsByNameAndIdNot("Independence Palace No-Fly Zone (Expansion)", "z1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+            when(airspaceZoneRepository.existsByNameAndIdNot("Independence Palace No-Fly Zone (Expansion)",
+                    "z1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                     .thenReturn(true);
 
             assertThatThrownBy(() -> airspaceService.updateZone("z1b2c3d4-e5f6-7890-abcd-ef1234567890", testPutVm))

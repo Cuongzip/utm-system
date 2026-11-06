@@ -2,6 +2,7 @@ package com.utm.simulation.service.client;
 
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.utils.ClientUrlUtils;
 import com.utm.simulation.config.ServiceUrlConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +31,8 @@ public class ConnectivityClientServiceImpl implements ConnectivityClientService 
             return false;
         }
 
-        String baseUrl = serviceUrlConfig.connectivity().url().replaceAll("/+$", "");
-        String basePath = baseUrl.endsWith("/connectivity") ? "" : "/connectivity";
-        String endpoint = baseUrl + basePath + "/api/v1/connectivity/devices/" + deviceId.trim() + "/heartbeat";
+        String baseUrl = ClientUrlUtils.normalizeBaseUrl(serviceUrlConfig.connectivity().url(), "http://connectivity:8094", "connectivity");
+        String endpoint = baseUrl + "/api/v1/connectivity/devices/" + deviceId.trim() + "/heartbeat";
 
         try {
             var response = restClient.post()
@@ -52,5 +52,3 @@ public class ConnectivityClientServiceImpl implements ConnectivityClientService 
         }
     }
 }
-
-

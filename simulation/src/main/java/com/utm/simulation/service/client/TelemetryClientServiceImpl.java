@@ -1,8 +1,8 @@
 package com.utm.simulation.service.client;
 
-import com.utm.simulation.viewmodel.client.TelemetryPushVm;
-
+import com.utm.commonlibrary.utils.ClientUrlUtils;
 import com.utm.simulation.config.ServiceUrlConfig;
+import com.utm.simulation.viewmodel.client.TelemetryPushVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -28,9 +28,9 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
             return;
         }
 
-        String baseUrl = serviceUrlConfig.telemetry().url();
-        String basePath = baseUrl.endsWith("/telemetry") ? "" : "/telemetry";
-        String endpoint = baseUrl + basePath + "/api/v1/telemetry";
+        String configured = serviceUrlConfig.telemetry() != null ? serviceUrlConfig.telemetry().url() : null;
+        String baseUrl = ClientUrlUtils.normalizeBaseUrl(configured, "http://telemetry:8089", "telemetry");
+        String endpoint = baseUrl + "/api/v1/telemetry";
 
         try {
             var request = restClient.post()

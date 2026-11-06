@@ -21,16 +21,10 @@ public class FlightClientServiceImpl implements FlightClientService {
             return false;
         }
 
-        String flightUrl = serviceUrlConfig.flight();
-        if (flightUrl == null || flightUrl.isBlank()) {
-            log.warn("Flight service URL is not configured, skipping active flight check for hub {}", hubId);
-            return false;
-        }
-
-        String basePath = flightUrl.endsWith("/flight") ? "" : "/flight";
+        String flightUrl = serviceUrlConfig.getFlightUrl();
         try {
             FlightListClientVm response = restClient.get()
-                    .uri(flightUrl + basePath + "/api/v1/flights?status=active&limit=100")
+                    .uri(flightUrl + "/api/v1/flights?status=active&limit=100")
                     .retrieve()
                     .body(FlightListClientVm.class);
 
@@ -47,4 +41,3 @@ public class FlightClientServiceImpl implements FlightClientService {
         }
     }
 }
-

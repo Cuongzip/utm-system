@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AlertTriangle, Radio, Layers, ShieldAlert, RotateCcw, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -8,6 +8,7 @@ import {
     ChamferCard,
     StatusBadge,
     ChamferButton,
+    OutlineButton,
     ConfirmDialog,
     Table,
     TableHeader,
@@ -15,8 +16,9 @@ import {
     TableRow,
     TableHead,
     TableCell,
+    TableFilterBar,
 } from "@/components/ui";
-import { BaseCesiumMap } from "@/components/map";
+import { TacticalMapContainer } from "@/components/map";
 import { cn } from "@/lib";
 
 interface ActiveConflictItem {
@@ -43,22 +45,22 @@ interface ResolvedConflictItem {
 const INITIAL_ACTIVE_CONFLICTS: ActiveConflictItem[] = [
     {
         id: "ACT-001",
-        title: "SEPARATION MINIMUM",
+        title: "SEPARATION MINIMUM BREACH",
         severity: "HIGH",
         description:
-            "Minimum separation breach detected between DRP-2025-0001 and DRP-2025-0003 near Thessaloniki Logistics Hub. Projected convergence at 250m altitude.",
-        detectedAt: "Sep 20, 2026, 11:16 AM",
+            "Minimum separation breach detected between DRP-2026-0001 and DRP-2026-0003 near Da Nang Logistics Hub. Projected convergence at 250m altitude.",
+        detectedAt: "Nov 06, 2026, 11:16 AM",
         separation: "180m",
         status: "DETECTED",
         typeBadge: "SEPARATION",
     },
     {
         id: "ACT-002",
-        title: "AIRSPACE VIOLATION",
+        title: "AIRSPACE RESTRICTION VIOLATION",
         severity: "MEDIUM",
         description:
-            "Flight DRP-2025-0001 trajectory enters Thessaloniki Airport Zone boundary. Rerouting recommended.",
-        detectedAt: "Sep 20, 2026, 11:16 AM",
+            "Flight DRP-2026-0002 trajectory enters Da Nang International Airport Zone boundary. Tactical rerouting recommended.",
+        detectedAt: "Nov 06, 2026, 11:20 AM",
         status: "RESOLVING",
         typeBadge: "AIRSPACE",
     },
@@ -70,21 +72,28 @@ const INITIAL_RESOLVED_CONFLICTS: ResolvedConflictItem[] = [
         type: "WEATHER",
         severity: "LOW",
         description:
-            "Wind speed exceeded operational limit for training flight DRP-2025-0008. Flight cancelled.",
+            "Wind speed exceeded operational limit for delivery flight DRP-2026-0008 near Son Tra tactical corridor. Flight safely recalled to Hub 1.",
         status: "RESOLVED",
-        detectedAt: "Sep 20, 2026, 11:16 AM",
-        resolvedAt: "Sep 20, 2026, 8:46 AM",
+        detectedAt: "Nov 06, 2026, 09:15 AM",
+        resolvedAt: "Nov 06, 2026, 09:22 AM",
     },
     {
         id: "RES-002",
         type: "AIRSPACE",
         severity: "MEDIUM",
         description:
-            "Unauthorized entry into Thessaloniki Harbor temporary restricted zone by DRP-2025-0012. Rerouted to outer tactical corridor.",
+            "Unauthorized proximity to Da Nang Port temporary restricted zone by DRP-2026-0012. Rerouted to outer tactical corridor.",
         status: "RESOLVED",
-        detectedAt: "Sep 19, 2026, 03:22 PM",
-        resolvedAt: "Sep 19, 2026, 03:28 PM",
+        detectedAt: "Nov 05, 2026, 03:22 PM",
+        resolvedAt: "Nov 05, 2026, 03:28 PM",
     },
+];
+
+const SEVERITY_OPTIONS = [
+    { value: "all", label: "All Severities" },
+    { value: "high", label: "High" },
+    { value: "medium", label: "Medium" },
+    { value: "low", label: "Low" },
 ];
 
 export default function ConflictsPage() {
@@ -97,6 +106,9 @@ export default function ConflictsPage() {
     const [showLiveTraffic, setShowLiveTraffic] = useState(true);
     const [showAirspace, setShowAirspace] = useState(true);
     const [showDroneZones, setShowDroneZones] = useState(true);
+
+    const [searchQuery, setSearchQuery] = useState("");
+    const [severityFilter, setSeverityFilter] = useState("all");
 
     const [resolvingConflict, setResolvingConflict] = useState<ActiveConflictItem | null>(null);
 
@@ -132,192 +144,224 @@ export default function ConflictsPage() {
         toast.info("Mock conflicts reset to default state");
     };
 
+    const filteredResolved = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const severity = severityFilter.toLowerCase();
+
+        return resolvedConflicts.filter((item) => {
+            const matchesQuery =
+                !query ||
+                item.id.toLowerCase().includes(query) ||
+                item.type.toLowerCase().includes(query) ||
+                item.description.toLowerCase().includes(query);
+
+            const matchesSeverity = severity === "all" || item.severity.toLowerCase() === severity;
+
+            return matchesQuery && matchesSeverity;
+        });
+    }, [resolvedConflicts, searchQuery, severityFilter]);
+
     return (
-        <div className="space-y-6">
-            <PageHeader title="CONFLICTS">
+        <div className="p-8 flex flex-col gap-6 w-full">
+            <PageHeader title="AIRSPACE CONFLICTS">
                 {activeConflicts.length < INITIAL_ACTIVE_CONFLICTS.length && (
-                    <ChamferButton
-                        size="sm"
-                        variant="dark"
-                        onClick={handleResetDemo}
-                        className="flex items-center gap-1.5"
-                    >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        Reset Demo
-                    </ChamferButton>
+                    <OutlineButton size="sm" onClick={handleResetDemo}>
+                        <RotateCcw className="w-3.5 h-3.5 text-[#334155]" />
+                        <span>Reset Demo</span>
+                    </OutlineButton>
                 )}
             </PageHeader>
 
-            <ChamferCard size="lg" className="w-full relative">
-                <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-slate-300 pointer-events-none z-10" />
-                <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-slate-300 pointer-events-none z-10" />
+            {/* Tactical Map Container */}
+            <TacticalMapContainer
+                initialMode="2d"
+                initialLayerType="satellite"
+                className="w-full h-[480px]"
+                header={
+                    <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
+                        <div className="flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4 text-amber-500" />
+                            <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
+                                TACTICAL CONFLICT RADAR & AIRSPACE
+                            </span>
+                        </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)]">
-                    <h2 className="text-xs font-bold font-mono tracking-wider text-slate-800 uppercase">
-                        CONFLICT MAP
-                    </h2>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleToggleLayer(
+                                        "Live Traffic",
+                                        showLiveTraffic,
+                                        setShowLiveTraffic
+                                    )
+                                }
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                    showLiveTraffic
+                                        ? "bg-slate-800 text-white shadow-xs"
+                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                }`}
+                            >
+                                <Radio className="w-3.5 h-3.5" />
+                                <span>LIVE TRAFFIC</span>
+                            </button>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleToggleLayer(
-                                    "Live Traffic",
-                                    showLiveTraffic,
-                                    setShowLiveTraffic
-                                )
-                            }
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono font-bold uppercase transition-all cursor-pointer rounded border",
-                                showLiveTraffic
-                                    ? "border-amber-400 text-amber-500 bg-amber-50/50 hover:bg-amber-50"
-                                    : "border-slate-200 text-slate-400 bg-white hover:bg-slate-50"
-                            )}
-                        >
-                            <Radio className="w-3.5 h-3.5" />
-                            <span>LIVE TRAFFIC</span>
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleToggleLayer("Airspace", showAirspace, setShowAirspace)
+                                }
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                    showAirspace
+                                        ? "bg-slate-800 text-white shadow-xs"
+                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                }`}
+                            >
+                                <Layers className="w-3.5 h-3.5" />
+                                <span>AIRSPACE</span>
+                            </button>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleToggleLayer("Airspace", showAirspace, setShowAirspace)
-                            }
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono font-bold uppercase transition-all cursor-pointer rounded border",
-                                showAirspace
-                                    ? "border-slate-400 text-slate-800 bg-slate-50 hover:bg-slate-100"
-                                    : "border-slate-200 text-slate-400 bg-white hover:bg-slate-50"
-                            )}
-                        >
-                            <Layers className="w-3.5 h-3.5" />
-                            <span>AIRSPACE</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleToggleLayer("Drone Zones", showDroneZones, setShowDroneZones)
-                            }
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono font-bold uppercase transition-all cursor-pointer rounded border",
-                                showDroneZones
-                                    ? "border-slate-400 text-slate-800 bg-slate-50 hover:bg-slate-100"
-                                    : "border-slate-200 text-slate-400 bg-white hover:bg-slate-50"
-                            )}
-                        >
-                            <ShieldAlert className="w-3.5 h-3.5" />
-                            <span>DRONE ZONES</span>
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleToggleLayer(
+                                        "Drone Zones",
+                                        showDroneZones,
+                                        setShowDroneZones
+                                    )
+                                }
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                    showDroneZones
+                                        ? "bg-slate-800 text-white shadow-xs"
+                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                }`}
+                            >
+                                <ShieldAlert className="w-3.5 h-3.5" />
+                                <span>DRONE ZONES</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <div className="relative w-full h-[360px] md:h-[400px] bg-slate-900 overflow-hidden">
-                    <BaseCesiumMap
-                        mode="2d"
-                        layerType="carto"
-                        height="100%"
-                        hideToolbar={true}
-                        initialCoordinates={{ lat: 40.6401, lng: 22.9444, height: 22000 }}
-                    />
-                    <div className="absolute bottom-3 left-4 z-20 pointer-events-none">
-                        <span className="font-mono text-[10px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-700/60 backdrop-blur-xs">
-                            THESSALONIKI AIRSPACE SECTOR 4 • LIVE MONITORED
+                }
+                overlay={
+                    <div className="absolute bottom-4 left-4 z-30 flex items-center gap-2 px-2.5 py-1 rounded bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300 pointer-events-none">
+                        <span>LAT 16°04&apos;N</span>
+                        <span className="text-slate-600">|</span>
+                        <span>LON 108°13&apos;E</span>
+                        <span className="text-slate-600">|</span>
+                        <span className="text-cyan-400 font-medium">
+                            ● DA NANG AIRSPACE SECTOR 1 • LIVE MONITORED
                         </span>
                     </div>
-                </div>
-            </ChamferCard>
+                }
+            />
 
-            <div className="flex items-center gap-2 text-red-500 font-bold text-sm tracking-wide pt-1">
-                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                <span>Active Conflicts ({activeConflicts.length})</span>
+            {/* Active Conflicts Section */}
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-red-500 font-bold text-sm tracking-wide">
+                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>Active Conflicts ({activeConflicts.length})</span>
+                </div>
+
+                {activeConflicts.length === 0 ? (
+                    <ChamferCard size="md" className="p-8 text-center bg-white/70">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                            <span className="text-sm font-semibold text-slate-800">
+                                Airspace Clean & Clear
+                            </span>
+                            <p className="text-xs text-slate-500 max-w-md">
+                                No active separation breaches or airspace boundary violations
+                                detected.
+                            </p>
+                        </div>
+                    </ChamferCard>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {activeConflicts.map((conflict) => {
+                            const isHigh = conflict.severity === "HIGH";
+
+                            return (
+                                <ChamferCard
+                                    key={conflict.id}
+                                    size="md"
+                                    className="relative border border-amber-300/40"
+                                >
+                                    <div className="p-5 flex flex-col justify-between h-full space-y-3.5">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <h3 className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
+                                                {conflict.title}
+                                            </h3>
+                                            <StatusBadge
+                                                status={isHigh ? "high" : "medium"}
+                                                label={conflict.severity}
+                                                className={cn(
+                                                    "px-2.5 py-0.5 rounded-[3px] text-[10px] border",
+                                                    isHigh
+                                                        ? "border-amber-300/80 bg-amber-50/70 text-amber-600"
+                                                        : "border-amber-300/80 bg-amber-50/70 text-amber-600"
+                                                )}
+                                            />
+                                        </div>
+
+                                        <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                                            {conflict.description}
+                                        </p>
+
+                                        <div className="text-[11px] text-slate-400 font-mono">
+                                            Detected: {conflict.detectedAt}
+                                            {conflict.separation &&
+                                                ` | Separation: ${conflict.separation}`}
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <StatusBadge
+                                                status={
+                                                    conflict.status === "DETECTED"
+                                                        ? "alert"
+                                                        : "warning"
+                                                }
+                                                label={conflict.status}
+                                                className={cn(
+                                                    "px-2.5 py-0.5 rounded-[3px] text-[10px] border",
+                                                    conflict.status === "DETECTED"
+                                                        ? "border-red-200/80 bg-red-50/70 text-red-600"
+                                                        : "border-amber-200/80 bg-amber-50/70 text-amber-600"
+                                                )}
+                                            />
+
+                                            <ChamferButton
+                                                size="sm"
+                                                variant="dark"
+                                                onClick={() => setResolvingConflict(conflict)}
+                                            >
+                                                Resolve
+                                            </ChamferButton>
+                                        </div>
+                                    </div>
+                                </ChamferCard>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
-            {activeConflicts.length === 0 ? (
-                <ChamferCard size="md" className="p-8 text-center bg-white/70">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                        <span className="text-sm font-semibold text-slate-800">
-                            Airspace Clean & Clear
-                        </span>
-                        <p className="text-xs text-slate-500 max-w-md">
-                            No active separation breaches or airspace boundary violations detected.
-                        </p>
-                    </div>
-                </ChamferCard>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {activeConflicts.map((conflict) => {
-                        const isHigh = conflict.severity === "HIGH";
-
-                        return (
-                            <ChamferCard
-                                key={conflict.id}
-                                size="md"
-                                className="relative border border-amber-300/40"
-                            >
-                                <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 pointer-events-none" />
-
-                                <div className="p-5 flex flex-col justify-between h-full space-y-3.5">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <h3 className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
-                                            {conflict.title}
-                                        </h3>
-                                        <StatusBadge
-                                            status={isHigh ? "high" : "medium"}
-                                            label={conflict.severity}
-                                            className={cn(
-                                                "px-2.5 py-0.5 rounded-[3px] text-[10px] border",
-                                                isHigh
-                                                    ? "border-amber-300/80 bg-amber-50/70 text-amber-600"
-                                                    : "border-amber-300/80 bg-amber-50/70 text-amber-600"
-                                            )}
-                                        />
-                                    </div>
-
-                                    <p className="text-xs text-slate-600 leading-relaxed font-sans">
-                                        {conflict.description}
-                                    </p>
-
-                                    <div className="text-[11px] text-slate-400 font-mono">
-                                        Detected: {conflict.detectedAt}
-                                        {conflict.separation &&
-                                            ` | Separation: ${conflict.separation}`}
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-1">
-                                        <StatusBadge
-                                            status={
-                                                conflict.status === "DETECTED" ? "alert" : "warning"
-                                            }
-                                            label={conflict.status}
-                                            className={cn(
-                                                "px-2.5 py-0.5 rounded-[3px] text-[10px] border",
-                                                conflict.status === "DETECTED"
-                                                    ? "border-red-200/80 bg-red-50/70 text-red-600"
-                                                    : "border-amber-200/80 bg-amber-50/70 text-amber-600"
-                                            )}
-                                        />
-
-                                        <ChamferButton
-                                            size="sm"
-                                            onClick={() => setResolvingConflict(conflict)}
-                                            className="bg-[var(--color-tech-cyan)] hover:bg-[var(--color-tech-cyan-hover)] text-white px-4 py-1.5 text-xs font-bold shadow-xs transition-colors"
-                                        >
-                                            Resolve
-                                        </ChamferButton>
-                                    </div>
-                                </div>
-                            </ChamferCard>
-                        );
-                    })}
-                </div>
-            )}
-
+            {/* Resolved Conflicts Section */}
             <div className="space-y-3 pt-2">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                    Resolved Conflicts
-                </h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                        Resolved Conflicts
+                    </h2>
+                </div>
+
+                <TableFilterBar
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    searchPlaceholder="Search resolved conflicts..."
+                    statusFilter={severityFilter}
+                    onStatusFilterChange={setSeverityFilter}
+                    statusOptions={SEVERITY_OPTIONS}
+                    statusPlaceholder="All Severities"
+                />
 
                 <ChamferCard size="lg" className="w-full">
                     <Table fixed={false}>
@@ -332,17 +376,17 @@ export default function ConflictsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {resolvedConflicts.length === 0 ? (
+                            {filteredResolved.length === 0 ? (
                                 <TableRow>
                                     <TableCell
                                         colSpan={6}
                                         className="py-8 text-center text-slate-400 text-xs"
                                     >
-                                        No resolved conflicts logged.
+                                        No resolved conflicts found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                resolvedConflicts.map((item) => (
+                                filteredResolved.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell>
                                             <span className="inline-block border border-slate-200 bg-slate-50 text-slate-600 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">
@@ -387,6 +431,7 @@ export default function ConflictsPage() {
                 </ChamferCard>
             </div>
 
+            {/* Resolve Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={Boolean(resolvingConflict)}
                 onClose={() => setResolvingConflict(null)}

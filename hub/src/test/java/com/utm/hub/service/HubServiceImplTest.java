@@ -38,7 +38,7 @@ import static org.mockito.Mockito.*;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Unit Tests: HubServiceImpl (Based on docs/api/03-hubs.md)")
+@DisplayName("Unit Tests: HubServiceImpl (Based on docs/api/03-hub.md)")
 class HubServiceImplTest {
 
     @Mock

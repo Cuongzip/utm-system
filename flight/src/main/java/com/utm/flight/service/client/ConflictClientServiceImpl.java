@@ -27,12 +27,6 @@ public class ConflictClientServiceImpl implements ConflictClientService {
             return;
         }
 
-        String baseUrl = serviceUrlConfig.conflict();
-        if (baseUrl == null || baseUrl.isBlank()) {
-            log.warn("Conflict service URL is not configured; skipping conflict reporting for flight '{}'", flight.getId());
-            return;
-        }
-
         String severity = conformance.getStatus() == ConformanceStatus.CONTINGENT ? "emergency" : "critical";
         String conflictType = "geofence_violation";
 
@@ -58,8 +52,7 @@ public class ConflictClientServiceImpl implements ConflictClientService {
                 message
         );
 
-        String basePath = baseUrl.endsWith("/conflict") ? "" : "/conflict";
-        String endpoint = baseUrl + basePath + "/api/v1/conflicts";
+        String endpoint = serviceUrlConfig.getConflictUrl() + "/api/v1/conflicts";
 
         try {
             restClient.post()

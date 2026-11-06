@@ -25,12 +25,6 @@ public class EmergencyClientServiceImpl implements EmergencyClientService {
             return;
         }
 
-        String baseUrl = serviceUrlConfig.emergency();
-        if (baseUrl == null || baseUrl.isBlank()) {
-            log.warn("Emergency service URL is not configured; skipping emergency incident reporting for flight '{}'", flight.getId());
-            return;
-        }
-
         Double lat = telemetry != null ? telemetry.latitude() : null;
         Double lon = telemetry != null ? telemetry.longitude() : null;
         Double alt = telemetry != null ? telemetry.altitude() : null;
@@ -47,8 +41,7 @@ public class EmergencyClientServiceImpl implements EmergencyClientService {
                 alt
         );
 
-        String basePath = baseUrl.endsWith("/emergency") ? "" : "/emergency";
-        String endpoint = baseUrl + basePath + "/api/v1/emergency/incidents";
+        String endpoint = serviceUrlConfig.getEmergencyUrl() + "/api/v1/emergency/incidents";
 
         try {
             restClient.post()

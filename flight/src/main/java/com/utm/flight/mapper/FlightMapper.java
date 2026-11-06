@@ -18,10 +18,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import java.util.List;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        builder = @Builder(disableBuilder = true)
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true))
 public interface FlightMapper {
 
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -102,4 +99,3 @@ public interface FlightMapper {
         }
     }
 }
-

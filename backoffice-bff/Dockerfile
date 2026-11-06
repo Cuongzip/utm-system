@@ -2,7 +2,8 @@ FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 COPY pom.xml ./
 COPY backoffice-bff ./backoffice-bff
-RUN mvn clean package -pl backoffice-bff -am -DskipTests
+RUN mvn -N install && \
+    mvn -f backoffice-bff/pom.xml clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

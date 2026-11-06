@@ -20,7 +20,7 @@ public class FlightClientServiceImpl implements FlightClientService {
     public Optional<FlightSummaryVm> getFlightById(String flightId) {
         if (flightId == null || flightId.isBlank()) return Optional.empty();
         try {
-            var url = (serviceUrlConfig.flight() != null ? serviceUrlConfig.flight() : "http://flight:8086") + "/flight/api/v1/flights/" + flightId;
+            var url = serviceUrlConfig.getFlightUrl() + "/api/v1/flights/" + flightId;
             FlightSummaryVm vm = restClient.get()
                     .uri(url)
                     .retrieve()

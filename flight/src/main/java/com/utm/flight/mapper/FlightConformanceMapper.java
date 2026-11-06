@@ -14,10 +14,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        builder = @Builder(disableBuilder = true)
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true))
 public interface FlightConformanceMapper {
 
     @Mapping(target = "flightId", source = "flight.id")
@@ -72,4 +69,3 @@ public interface FlightConformanceMapper {
         return status != null ? status.getValue() : null;
     }
 }
-

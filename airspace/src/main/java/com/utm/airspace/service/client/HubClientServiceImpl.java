@@ -21,15 +21,7 @@ public class HubClientServiceImpl implements HubClientService {
             return false;
         }
 
-        String hubBase = serviceUrlConfig.hub();
-        if (hubBase == null || hubBase.isBlank()) {
-            hubBase = "http://hub:8084";
-        }
-
-        String cleanUrl = hubBase.replaceAll("/+$", "");
-        String basePath = cleanUrl.endsWith("/hub") ? "" : "/hub";
-        String targetUrl = cleanUrl + basePath + "/api/v1/hubs/{id}";
-
+        String targetUrl = serviceUrlConfig.getHubUrl() + "/api/v1/hubs/{id}";
         try {
             return Boolean.TRUE.equals(restClient.get()
                     .uri(targetUrl, hubId.trim())

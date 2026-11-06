@@ -28,16 +28,15 @@ public class HubClientServiceImpl implements HubClientService {
             return Optional.empty();
         }
 
-        String hubUrl = serviceUrlConfig.hub();
-        String basePath = hubUrl.endsWith("/hub") ? "" : "/hub";
+        String endpoint = serviceUrlConfig.getHubUrl() + "/api/v1/hubs/{id}";
         try {
             HubBriefVm hub = restClient.get()
-                    .uri(hubUrl + basePath + "/api/v1/hubs/{id}", hubId.trim())
+                    .uri(endpoint, hubId.trim())
                     .retrieve()
                     .body(HubBriefVm.class);
             return Optional.ofNullable(hub);
         } catch (Exception e) {
-            log.error("Failed to fetch hub ID {} at url {}: {}", hubId, hubUrl, e.getMessage());
+            log.error("Failed to fetch hub ID {} at url {}: {}", hubId, endpoint, e.getMessage());
             return Optional.empty();
         }
     }

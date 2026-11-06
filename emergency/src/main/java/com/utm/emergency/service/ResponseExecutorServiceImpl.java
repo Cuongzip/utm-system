@@ -52,7 +52,9 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
                 } else if (json != null && json.has("batteryLevel")) {
                     battery = json.get("batteryLevel").asDouble();
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.debug("Unable to parse battery level from detection data: {}", e.getMessage());
+            }
         }
 
         switch (action) {
@@ -147,7 +149,6 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
 
         recordEmergencyBlackbox(incident, actionToExecute);
 
-        incident.setStatus(IncidentStatus.executing);
         incident.setActionCompletedAt(ZonedDateTime.now());
         incident.setActionSuccess(dispatched);
         if (!dispatched) {
@@ -196,7 +197,7 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
 
     private void appendTimeline(EmergencyIncident incident, String event, Map<String, Object> data) {
         List<IncidentTimelineEventVm> timeline = new ArrayList<>(incidentMapper.stringToTimelineList(incident.getTimeline()));
-        timeline.add(new IncidentTimelineEventVm(ZonedDateTime.now().toString(), event, incidentMapper.OBJECT_MAPPER.valueToTree(data)));
+        timeline.add(new IncidentTimelineEventVm(ZonedDateTime.now().toString(), event, EmergencyIncidentMapper.OBJECT_MAPPER.valueToTree(data)));
         incident.setTimeline(incidentMapper.timelineListToString(timeline));
     }
 }

@@ -23,14 +23,7 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
             return Optional.empty();
         }
 
-        String baseUrl = serviceUrlConfig.telemetry();
-        if (baseUrl == null || baseUrl.isBlank()) {
-            log.warn("Telemetry service URL is not configured");
-            return Optional.empty();
-        }
-
-        String basePath = baseUrl.endsWith("/telemetry") ? "" : "/telemetry";
-        String endpoint = baseUrl + basePath + "/api/v1/telemetry/flight/" + flightId.trim() + "/latest";
+        String endpoint = serviceUrlConfig.getTelemetryUrl() + "/api/v1/telemetry/flight/" + flightId.trim() + "/latest";
 
         try {
             TelemetryBriefVm record = restClient.get()

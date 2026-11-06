@@ -24,8 +24,7 @@ public class HubClientServiceImpl implements HubClientService {
         if (hubId == null || hubId.isBlank())
             return Optional.empty();
         try {
-            var url = (serviceUrlConfig.hub() != null ? serviceUrlConfig.hub() : "http://hub:8084")
-                    + "/hub/api/v1/hubs/" + hubId;
+            var url = serviceUrlConfig.getHubUrl() + "/api/v1/hubs/" + hubId;
             HubLocationVm vm = restClient.get()
                     .uri(url)
                     .retrieve()
@@ -40,8 +39,7 @@ public class HubClientServiceImpl implements HubClientService {
     @Override
     public List<HubLocationVm> getActiveHubs() {
         try {
-            var url = (serviceUrlConfig.hub() != null ? serviceUrlConfig.hub() : "http://hub:8084")
-                    + "/hub/api/v1/hubs?status=active";
+            var url = serviceUrlConfig.getHubUrl() + "/api/v1/hubs?status=active";
             List<HubLocationVm> list = restClient.get()
                     .uri(url)
                     .retrieve()

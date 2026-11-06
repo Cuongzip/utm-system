@@ -11,11 +11,17 @@ import com.utm.drone.viewmodel.drone.DroneVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring", builder = @org.mapstruct.Builder(disableBuilder = true))
+@Mapper(
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        builder = @org.mapstruct.Builder(disableBuilder = true)
+)
 public interface DroneMapper {
 
     @Mapping(target = "id", source = "drone.id")

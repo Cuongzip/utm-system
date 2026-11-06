@@ -70,7 +70,7 @@ public class DroneServiceImpl implements DroneService {
         if (limit <= 0) {
             List<Drone> all = droneRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
             List<DroneVm> items = all.stream()
-                    .map(this::mapDroneWithConnectivity)
+                    .map(this::mapToVm)
                     .toList();
             return DroneListVm.of(items, items.size());
         }
@@ -81,7 +81,7 @@ public class DroneServiceImpl implements DroneService {
 
         Page<Drone> page = droneRepository.findAll(spec, pageable);
         List<DroneVm> items = page.getContent().stream()
-                .map(this::mapDroneWithConnectivity)
+                .map(this::mapToVm)
                 .toList();
 
         return DroneListVm.of(items, page.getTotalElements());
@@ -189,7 +189,7 @@ public class DroneServiceImpl implements DroneService {
         log.info("Deactivated/offline drone with ID: {}", id);
     }
 
-    private DroneVm mapDroneWithConnectivity(Drone drone) {
+    private DroneVm mapToVm(Drone drone) {
         return droneMapper.toVm(drone, null, null, null);
     }
 }

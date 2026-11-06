@@ -20,10 +20,7 @@ import org.mapstruct.Named;
 import java.util.Collections;
 import java.util.List;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        builder = @Builder(disableBuilder = true)
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true))
 public interface FeasibilityMapper {
 
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -69,7 +66,8 @@ public interface FeasibilityMapper {
     @Mapping(target = "explanation", source = "result.explanation")
     @Mapping(target = "explanationSource", source = "result.explanationSource")
     @Mapping(target = "evaluatedAt", expression = "java(java.time.ZonedDateTime.now())")
-    FeasibilityResultVm toResultVm(String flightId, String droneId, EnergyCalculationResultVm result, WindUsedVm windUsed);
+    FeasibilityResultVm toResultVm(String flightId, String droneId, EnergyCalculationResultVm result,
+            WindUsedVm windUsed);
 
     default FeasibilityResultVm toResultVm(Flight flight, EnergyCalculationResultVm result, WindUsedVm windUsed) {
         if (flight == null) {
@@ -95,8 +93,7 @@ public interface FeasibilityMapper {
                 result.hoverWh(),
                 result.climbWh(),
                 result.payloadFactor(),
-                result.windFactor()
-        );
+                result.windFactor());
     }
 
     @Named("entityToBreakdown")
@@ -109,8 +106,7 @@ public interface FeasibilityMapper {
                 entity.getHoverWh(),
                 entity.getClimbWh(),
                 entity.getPayloadFactor(),
-                entity.getWindFactor()
-        );
+                entity.getWindFactor());
     }
 
     @Named("solutionsToString")
@@ -131,7 +127,8 @@ public interface FeasibilityMapper {
             return Collections.emptyList();
         }
         try {
-            return OBJECT_MAPPER.readValue(solutionsJson, new TypeReference<List<FeasibilitySolutionVm>>() {});
+            return OBJECT_MAPPER.readValue(solutionsJson, new TypeReference<List<FeasibilitySolutionVm>>() {
+            });
         } catch (JsonProcessingException e) {
             return Collections.emptyList();
         }
@@ -145,4 +142,3 @@ public interface FeasibilityMapper {
         return stringToSolutions(solutionsJson);
     }
 }
-
