@@ -13,13 +13,18 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
     @Bean
-    public RestClient restClient() {
+    public RestClient restClient(com.utm.simulation.service.SystemTokenService systemTokenService) {
         return RestClient.builder()
                 .requestInterceptor((request, body, execution) -> {
                     if (request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION) == null) {
                         var authentication = SecurityContextHolder.getContext().getAuthentication();
                         if (authentication instanceof JwtAuthenticationToken jwtAuth) {
                             request.getHeaders().setBearerAuth(jwtAuth.getToken().getTokenValue());
+                        } else {
+                            String systemToken = systemTokenService.getSystemToken();
+                            if (systemToken != null && !systemToken.isBlank()) {
+                                request.getHeaders().setBearerAuth(systemToken);
+                            }
                         }
                     }
                     return execution.execute(request, body);

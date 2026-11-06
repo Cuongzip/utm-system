@@ -46,6 +46,25 @@ public abstract class ConflictMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     public abstract Conflict toEntity(com.utm.conflict.viewmodel.conflict.ConflictPostVm postVm, String createdBy);
 
+    @org.mapstruct.BeanMapping(nullValuePropertyMappingStrategy = org.mapstruct.NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "conflictType", ignore = true)
+    @Mapping(target = "severity", expression = "java(postVm.severity() != null ? mapSeverityFromPost(postVm.severity()) : target.getSeverity())")
+    @Mapping(target = "maxSeverity", ignore = true)
+    @Mapping(target = "minSeparationDistance", source = "separationDistance")
+    @Mapping(target = "detectedAt", ignore = true)
+    @Mapping(target = "detectionMethod", ignore = true)
+    @Mapping(target = "resolutionStrategy", ignore = true)
+    @Mapping(target = "resolutionActions", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
+    @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    public abstract void updateEntityFromPostVm(@org.mapstruct.MappingTarget Conflict target, com.utm.conflict.viewmodel.conflict.ConflictPostVm postVm);
+
     protected ConflictType mapConflictTypeFromPost(String type) {
         ConflictType parsed = ConflictType.fromValue(type);
         return parsed != null ? parsed : ConflictType.GEOFENCE_VIOLATION;

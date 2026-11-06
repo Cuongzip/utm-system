@@ -48,5 +48,13 @@ public interface WaypointMapper {
     WaypointVm toVm(Waypoint entity, String warning);
 
     List<WaypointVm> toVmList(List<Waypoint> entities);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "mission", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    Waypoint cloneEntity(Waypoint original);
 }
 

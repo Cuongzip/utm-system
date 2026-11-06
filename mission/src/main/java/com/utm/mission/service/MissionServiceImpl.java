@@ -126,24 +126,7 @@ public class MissionServiceImpl implements MissionService {
                     long wpCount = waypointRepository.countByMissionId(m.getId());
                     HubBriefVm depHub = hubMap.get(m.getDepartureHubId());
                     HubBriefVm arrHub = hubMap.get(m.getArrivalHubId());
-                    return new MissionVm(
-                            m.getId(),
-                            m.getName(),
-                            m.getDescription(),
-                            m.getDepartureHubId(),
-                            m.getArrivalHubId(),
-                            m.getScheduleType(),
-                            m.getScheduledAt(),
-                            m.getStatus(),
-                            (int) wpCount,
-                            null,
-                            null,
-                            depHub,
-                            arrHub,
-                            m.getCreatedOn(),
-                            m.getCreatedBy(),
-                            m.getLastModifiedOn(),
-                            m.getLastModifiedBy());
+                    return missionMapper.toVm(m, (int) wpCount, null, null, depHub, arrHub);
                 })
                 .toList();
 
@@ -227,29 +210,23 @@ public class MissionServiceImpl implements MissionService {
         Mission original = missionRepository.findByIdWithWaypoints(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, id));
 
-        Mission copy = Mission.builder()
-                .name(original.getName() + " (Bản sao)")
-                .description(original.getDescription())
-                .departureHubId(original.getDepartureHubId())
-                .arrivalHubId(original.getArrivalHubId())
-                .scheduleType(MissionScheduleType.IMMEDIATE)
-                .status(MissionStatus.DRAFT)
-                .build();
+        Mission copy = missionMapper.cloneEntity(original);
+        copy.setName(original.getName() + " (Bản sao)");
+        copy.setScheduleType(MissionScheduleType.IMMEDIATE);
+        copy.setStatus(MissionStatus.DRAFT);
 
         Mission savedCopy = missionRepository.save(copy);
 
         if (original.getWaypoints() != null && !original.getWaypoints().isEmpty()) {
             for (Waypoint origWp : original.getWaypoints()) {
-                Waypoint wpCopy = Waypoint.builder()
-                        .mission(savedCopy)
-                        .sequence(origWp.getSequence())
-                        .name(origWp.getName())
-                        .latitude(origWp.getLatitude())
-                        .longitude(origWp.getLongitude())
-                        .altitude(origWp.getAltitude())
-                        .actions(origWp.getActions() != null ? new HashMap<>(origWp.getActions()) : null)
-                        .conditions(origWp.getConditions() != null ? new HashMap<>(origWp.getConditions()) : null)
-                        .build();
+                Waypoint wpCopy = waypointMapper.cloneEntity(origWp);
+                wpCopy.setMission(savedCopy);
+                if (origWp.getActions() != null) {
+                    wpCopy.setActions(new HashMap<>(origWp.getActions()));
+                }
+                if (origWp.getConditions() != null) {
+                    wpCopy.setConditions(new HashMap<>(origWp.getConditions()));
+                }
                 savedCopy.addWaypoint(wpCopy);
             }
             missionRepository.save(savedCopy);
@@ -260,29 +237,11 @@ public class MissionServiceImpl implements MissionService {
 
     private MissionVm toEnrichedMissionVm(Mission mission, HubBriefVm depHub, HubBriefVm arrHub,
             Double estimatedDistance) {
-        MissionVm base = missionMapper.toVm(mission);
         int wpCount = mission.getWaypoints() != null ? mission.getWaypoints().size() : 0;
         List<WaypointVm> waypoints = mission.getWaypoints() != null ? waypointMapper.toVmList(mission.getWaypoints())
                 : List.of();
 
-        return new MissionVm(
-                base.id(),
-                base.name(),
-                base.description(),
-                base.departureHubId(),
-                base.arrivalHubId(),
-                base.scheduleType(),
-                base.scheduledAt(),
-                base.status(),
-                wpCount,
-                estimatedDistance,
-                waypoints,
-                depHub,
-                arrHub,
-                base.createdOn(),
-                base.createdBy(),
-                base.lastModifiedOn(),
-                base.lastModifiedBy());
+        return missionMapper.toVm(mission, wpCount, estimatedDistance, waypoints, depHub, arrHub);
     }
 
     private double calculateEstimatedDistance(List<Waypoint> waypoints) {

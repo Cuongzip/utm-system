@@ -23,6 +23,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -127,24 +128,27 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     @Override
     @Transactional(readOnly = true)
     public EmergencyStatsVm getStats(ZonedDateTime from, ZonedDateTime to) {
-        var statusCounts = incidentRepo.countByStatusGrouped(from, to).stream()
+        ZonedDateTime start = from != null ? from : ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        ZonedDateTime end = to != null ? to : ZonedDateTime.now();
+
+        var statusCounts = incidentRepo.countByStatusGrouped(start, end).stream()
                 .map(row -> new EmergencyStatsVm.StatusCountVm(String.valueOf(row[0]), (Long) row[1]))
                 .toList();
 
-        var typeCounts = incidentRepo.countByTypeGrouped(from, to).stream()
+        var typeCounts = incidentRepo.countByTypeGrouped(start, end).stream()
                 .map(row -> new EmergencyStatsVm.TypeCountVm(String.valueOf(row[0]), (Long) row[1]))
                 .toList();
 
-        var severityCounts = incidentRepo.countBySeverityGrouped(from, to).stream()
+        var severityCounts = incidentRepo.countBySeverityGrouped(start, end).stream()
                 .map(row -> new EmergencyStatsVm.SeverityCountVm(String.valueOf(row[0]), (Long) row[1]))
                 .toList();
 
-        var droneCounts = incidentRepo.countByDroneGrouped(from, to).stream()
+        var droneCounts = incidentRepo.countByDroneGrouped(start, end).stream()
                 .map(row -> new EmergencyStatsVm.DroneCountVm(String.valueOf(row[0]), (Long) row[1]))
                 .limit(10)
                 .toList();
 
-        var resolutionCounts = incidentRepo.countByResolutionGrouped(from, to).stream()
+        var resolutionCounts = incidentRepo.countByResolutionGrouped(start, end).stream()
                 .map(row -> new EmergencyStatsVm.ResolutionStatVm((Boolean) row[0], (Long) row[1]))
                 .toList();
 

@@ -503,14 +503,14 @@ public class SimulationServiceImpl implements SimulationService {
 
     private SimulationEvent recordEvent(String sessionId, String eventType, String scenario, String message,
             String severity, String configJson) {
-        SimulationEvent event = SimulationEvent.builder()
-                .sessionId(sessionId)
-                .eventType(eventType)
-                .scenario(scenario)
-                .message(message)
-                .severity(severity != null ? severity : "LOW")
-                .configJson(configJson)
-                .build();
+        SimulationEvent event = simulationMapper.toEventEntity(
+                sessionId,
+                eventType,
+                scenario,
+                message,
+                severity,
+                configJson
+        );
         return eventRepository.save(event);
     }
 

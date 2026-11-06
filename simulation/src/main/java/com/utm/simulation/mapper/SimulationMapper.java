@@ -47,6 +47,17 @@ public interface SimulationMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     SimulationSession toEntity(SimulationSessionCreateVm createVm);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "sessionId", source = "sessionId")
+    @Mapping(target = "eventType", source = "eventType")
+    @Mapping(target = "scenario", source = "scenario")
+    @Mapping(target = "message", source = "message")
+    @Mapping(target = "severity", expression = "java(severity != null ? severity : \"LOW\")")
+    @Mapping(target = "configJson", source = "configJson")
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    SimulationEvent toEventEntity(String sessionId, String eventType, String scenario, String message, String severity, String configJson);
+
 
 
     @Named("roundCoord")

@@ -16,10 +16,14 @@ import com.utm.conflict.viewmodel.conflict.ConflictResolvePostVm;
 import com.utm.conflict.viewmodel.conflict.ConflictVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,8 +37,7 @@ public class ConflictServiceImpl implements ConflictService {
             ConflictStatus.DETECTED,
             ConflictStatus.NOTIFIED,
             ConflictStatus.ACKNOWLEDGED,
-            ConflictStatus.RESOLVING
-    );
+            ConflictStatus.RESOLVING);
 
     private final ConflictRepository conflictRepository;
     private final ConflictMapper conflictMapper;
@@ -43,12 +46,34 @@ public class ConflictServiceImpl implements ConflictService {
     @Override
     @Transactional(readOnly = true)
     public List<ConflictVm> getAllConflicts(String status, String severity, String flightId) {
-        if (status == null && severity == null && flightId == null) {
+        ConflictStatus statusEnum = (status != null && !status.isBlank()) ? ConflictStatus.fromValue(status.trim())
+                : null;
+        ConflictSeverity severityEnum = (severity != null && !severity.isBlank())
+                ? ConflictSeverity.fromValue(severity.trim())
+                : null;
+        String cleanFlightId = (flightId != null && !flightId.isBlank()) ? flightId.trim() : null;
+
+        if (statusEnum == null && severityEnum == null && cleanFlightId == null) {
             return conflictMapper.toVmList(conflictRepository.findAllByOrderByDetectedAtDesc());
         }
-        ConflictStatus statusEnum = status != null ? ConflictStatus.fromValue(status) : null;
-        ConflictSeverity severityEnum = severity != null ? ConflictSeverity.fromValue(severity) : null;
-        return conflictMapper.toVmList(conflictRepository.searchConflicts(statusEnum, severityEnum, flightId));
+
+        Specification<Conflict> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (statusEnum != null) {
+                predicates.add(cb.equal(root.get("status"), statusEnum));
+            }
+            if (severityEnum != null) {
+                predicates.add(cb.equal(root.get("severity"), severityEnum));
+            }
+            if (cleanFlightId != null) {
+                predicates.add(cb.or(
+                        cb.equal(root.get("primaryFlightId"), cleanFlightId),
+                        cb.equal(root.get("secondaryFlightId"), cleanFlightId)));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+
+        return conflictMapper.toVmList(conflictRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "detectedAt")));
     }
 
     @Override
@@ -82,30 +107,21 @@ public class ConflictServiceImpl implements ConflictService {
 
         if (matched.isPresent()) {
             Conflict existing = matched.get();
-            if (postVm.locationLat() != null) existing.setLocationLat(postVm.locationLat());
-            if (postVm.locationLon() != null) existing.setLocationLon(postVm.locationLon());
-            if (postVm.altitude() != null) existing.setAltitude(postVm.altitude());
-            if (postVm.separationDistance() != null) existing.setSeparationDistance(postVm.separationDistance());
-            if (postVm.verticalSeparation() != null) existing.setVerticalSeparation(postVm.verticalSeparation());
-            if (postVm.timeToConflictSec() != null) existing.setTimeToConflictSec(postVm.timeToConflictSec());
-            if (postVm.severity() != null) {
-                ConflictSeverity sev = ConflictSeverity.fromValue(postVm.severity());
-                if (sev != null) existing.setSeverity(sev);
-            }
-            if (postVm.description() != null && !postVm.description().isBlank()) {
-                existing.setDescription(postVm.description());
-            }
-            if (postVm.hubId() != null && existing.getHubId() == null) {
-                existing.setHubId(postVm.hubId());
+            conflictMapper.updateEntityFromPostVm(existing, postVm);
+            if (postVm.hubId() != null && !postVm.hubId().isBlank() && existing.getHubId() == null) {
+                existing.setHubId(postVm.hubId().trim());
             }
             Conflict saved = conflictRepository.save(existing);
-            log.info("Updated existing active conflict {} ({}) for flight {}", saved.getId(), saved.getConflictType(), saved.getPrimaryFlightId());
+            log.info("Updated existing active conflict {} ({}) for flight {}", saved.getId(), saved.getConflictType(),
+                    saved.getPrimaryFlightId());
             return conflictMapper.toVm(saved);
         }
 
-        Conflict entity = conflictMapper.toEntity(postVm, createdBy != null && !createdBy.isBlank() ? createdBy : "system");
+        Conflict entity = conflictMapper.toEntity(postVm,
+                createdBy != null && !createdBy.isBlank() ? createdBy : "system");
         Conflict saved = conflictRepository.save(entity);
-        log.warn("Created new conflict {} [{}-{}] for flight {}", saved.getId(), saved.getConflictType(), saved.getSeverity(), saved.getPrimaryFlightId());
+        log.warn("Created new conflict {} [{}-{}] for flight {}", saved.getId(), saved.getConflictType(),
+                saved.getSeverity(), saved.getPrimaryFlightId());
         return conflictMapper.toVm(saved);
     }
 
@@ -142,8 +158,8 @@ public class ConflictServiceImpl implements ConflictService {
         conflict.setResolvedBy(resolvedBy != null && !resolvedBy.isBlank() ? resolvedBy : "operator");
 
         Conflict saved = conflictRepository.save(conflict);
-        log.info("Conflict {} successfully marked as resolved by {} with strategy {}", id, conflict.getResolvedBy(), conflict.getResolutionStrategy());
+        log.info("Conflict {} successfully marked as resolved by {} with strategy {}", id, conflict.getResolvedBy(),
+                conflict.getResolutionStrategy());
         return conflictMapper.toVm(saved);
     }
 }
-
