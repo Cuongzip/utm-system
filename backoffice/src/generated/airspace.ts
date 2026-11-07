@@ -20,7 +20,7 @@ export const getZoneByIdResponse = zod
         id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
         code: zod.string().optional().describe("Airspace zone business tracking code"),
         hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
-        name: zod.string().optional().describe("Name of the airspace zone"),
+        name: zod.string().min(1).optional().describe("Name of the airspace zone"),
         zoneType: zod
             .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
             .optional()
@@ -61,14 +61,13 @@ export const updateZoneParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the airspace zone"),
 });
 
-export const updateZoneBodyNameMin = 0;
 export const updateZoneBodyNameMax = 255;
 
 export const updateZoneBody = zod
     .object({
         name: zod
             .string()
-            .min(updateZoneBodyNameMin)
+            .min(1)
             .max(updateZoneBodyNameMax)
             .optional()
             .describe("Updated name of the airspace zone"),
@@ -111,7 +110,7 @@ export const updateZoneResponse = zod
         id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
         code: zod.string().optional().describe("Airspace zone business tracking code"),
         hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
-        name: zod.string().optional().describe("Name of the airspace zone"),
+        name: zod.string().min(1).optional().describe("Name of the airspace zone"),
         zoneType: zod
             .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
             .optional()
@@ -191,7 +190,7 @@ export const getAllZonesResponse = zod
                             .string()
                             .optional()
                             .describe("Associated Hub ID if tied to a vertiport station"),
-                        name: zod.string().optional().describe("Name of the airspace zone"),
+                        name: zod.string().min(1).optional().describe("Name of the airspace zone"),
                         zoneType: zod
                             .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
                             .optional()
@@ -257,10 +256,10 @@ export const getAllZonesResponse = zod
  * Establish a new 3D airspace restriction zone, buffer corridor, or temporary flight restriction. Requires admin or atc role.
  * @summary Create a new Airspace Zone / Geofence
  */
-export const createZoneBodyNameMin = 0;
 export const createZoneBodyNameMax = 255;
-export const createZoneBodyCodeMin = 0;
+export const createZoneBodyCodeMin = 3;
 export const createZoneBodyCodeMax = 50;
+export const createZoneBodyCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const createZoneBodyAltitudeCeilingDefault = 120.0;
 export const createZoneBodyStatusDefault = "active";
 
@@ -268,13 +267,14 @@ export const createZoneBody = zod
     .object({
         name: zod
             .string()
-            .min(createZoneBodyNameMin)
+            .min(1)
             .max(createZoneBodyNameMax)
             .describe("Unique name of the airspace zone"),
         code: zod
             .string()
             .min(createZoneBodyCodeMin)
             .max(createZoneBodyCodeMax)
+            .regex(createZoneBodyCodeRegExp)
             .optional()
             .describe(
                 "Airspace zone business tracking code (e.g. ASZ-A1B2). If omitted, system auto-generates."
@@ -359,6 +359,7 @@ export const checkPointResponse = zod
                             .describe("ID of the conflicted airspace zone"),
                         name: zod
                             .string()
+                            .min(1)
                             .optional()
                             .describe("Name of the conflicted airspace zone"),
                         zoneType: zod.string().optional().describe("Zone classification type"),
@@ -441,6 +442,7 @@ export const checkPathResponse = zod
                             .describe("ID of the conflicted airspace zone"),
                         name: zod
                             .string()
+                            .min(1)
                             .optional()
                             .describe("Name of the conflicted airspace zone"),
                         zoneType: zod

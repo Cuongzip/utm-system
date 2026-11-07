@@ -42,12 +42,6 @@ export function useMissionWaypoints({
 
     const [defaultAltitude, setDefaultAltitude] = useState(initialAltitude);
 
-    useEffect(() => {
-        if (initialWaypoints && initialWaypoints.length > 0 && waypoints.length === 0) {
-            setWaypoints(initialWaypoints);
-        }
-    }, [initialWaypoints, waypoints.length, setWaypoints]);
-
     const totalDistanceM = useMemo(
         () => calculateMissionDistance(waypoints, departureHub, arrivalHub),
         [waypoints, departureHub, arrivalHub]
@@ -70,7 +64,7 @@ export function useMissionWaypoints({
                 name: `Waypoint ${nextSeq}`,
                 latitude: lat,
                 longitude: lng,
-                altitude: altitude || defaultAltitude,
+                altitude: altitude ?? defaultAltitude,
             };
             setWaypoints((prev) => [...prev, newWp]);
             onClearWaypointErrors?.();
@@ -154,5 +148,3 @@ export function useMissionWaypoints({
         handleGenerateHubToHub,
     };
 }
-
-export default useMissionWaypoints;

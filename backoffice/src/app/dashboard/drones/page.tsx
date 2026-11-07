@@ -1,28 +1,29 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import {
-    ChamferButton,
-    PageHeader,
-    AlertBanner,
-    TableFilterBar,
-    type SelectOption,
-} from "@/components/ui";
+import { ChamferButton, PageHeader, TableFilterBar, type SelectOption } from "@/components/ui";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DronesTable, AddDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
-import type { Drone, DroneRegistrationPayload } from "@/types";
+import {
+    DRONE_STATUSES,
+    type Drone,
+    type CreateDronePayload,
+    type UpdateDronePayload,
+} from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = [
     { value: "all", label: "All Statuses" },
-    { value: "available", label: "Available" },
-    { value: "in_flight", label: "In Flight" },
-    { value: "charging", label: "Charging" },
-    { value: "maintenance", label: "Maintenance" },
-    { value: "offline", label: "Offline" },
+    ...DRONE_STATUSES.map((status) => ({
+        value: status,
+        label: status
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" "),
+    })),
 ];
 
 export default function DronesPage() {
@@ -32,8 +33,6 @@ export default function DronesPage() {
     const {
         items: drones,
         loading,
-        error,
-        setError,
         refresh,
         isModalOpen: isRegisterOpen,
         itemToEdit: selectedDrone,
@@ -49,12 +48,16 @@ export default function DronesPage() {
     });
 
     const saveDroneMutation = useMutation({
-        mutationFn: async ({ payload, id }: { payload: DroneRegistrationPayload; id?: string }) => {
-            if (id) {
-                return droneService.updateDrone(id, payload);
-            }
-            return droneService.createDrone(payload);
-        },
+        mutationFn: ({
+            payload,
+            id,
+        }: {
+            payload: CreateDronePayload | UpdateDronePayload;
+            id?: string;
+        }) =>
+            id
+                ? droneService.updateDrone(id, payload as UpdateDronePayload)
+                : droneService.createDrone(payload as CreateDronePayload),
         onSuccess: (_data, variables) => {
             toast.success(
                 variables.id ? "Drone updated successfully" : "Drone registered successfully"
@@ -94,8 +97,6 @@ export default function DronesPage() {
                 </ChamferButton>
             </PageHeader>
 
-            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
-
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -116,9 +117,7 @@ export default function DronesPage() {
                 isOpen={isRegisterOpen}
                 droneToEdit={selectedDrone}
                 onClose={closeModal}
-                onSubmit={async (payload, id) => {
-                    await saveDroneMutation.mutateAsync({ payload, id });
-                }}
+                onSubmit={(payload, id) => saveDroneMutation.mutateAsync({ payload, id })}
             />
         </div>
     );

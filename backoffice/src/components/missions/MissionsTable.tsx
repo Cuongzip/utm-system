@@ -20,17 +20,17 @@ import {
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
 import type { Mission } from "@/types";
-import { formatDate } from "@/utils";
+import { formatDate, formatNullable, formatHubName, formatMissionSchedule } from "@/utils";
 
 export interface MissionsTableProps {
     missions: Mission[];
     loading?: boolean;
     selectedMissionId?: string | null;
-    onSelectMission?: (mission: Mission) => void;
-    onExecuteMission?: (mission: Mission) => void;
-    onDuplicateMission?: (mission: Mission) => void;
-    onDeleteMission?: (mission: Mission) => void;
-    onNewMission?: () => void;
+    onSelectMission: (mission: Mission) => void;
+    onExecuteMission: (mission: Mission) => void;
+    onDuplicateMission: (mission: Mission) => void;
+    onDeleteMission: (mission: Mission) => void;
+    onNewMission: () => void;
     hubMap?: Map<string, string>;
 }
 
@@ -56,38 +56,32 @@ export function MissionsTable({
         const items: ActionMenuItem[] = [
             {
                 label: isDraft ? "Edit Mission" : "View Details",
-                icon: <Compass className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />,
-                onClick: () => onSelectMission?.(mission),
+                icon: <Compass className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onSelectMission(mission),
             },
         ];
 
         if (status === "draft" || status === "scheduled") {
-            if (onExecuteMission) {
-                items.push({
-                    label: "Execute Mission",
-                    icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
-                    onClick: () => onExecuteMission(mission),
-                });
-            }
-        }
-
-        if (onDuplicateMission) {
             items.push({
-                label: "Duplicate",
-                icon: <Copy className="w-3.5 h-3.5 text-cyan-600" />,
-                onClick: () => onDuplicateMission(mission),
+                label: "Execute Mission",
+                icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
+                onClick: () => onExecuteMission(mission),
             });
         }
 
+        items.push({
+            label: "Duplicate",
+            icon: <Copy className="w-3.5 h-3.5 text-cyan-600" />,
+            onClick: () => onDuplicateMission(mission),
+        });
+
         if (status !== "executing") {
-            if (onDeleteMission) {
-                items.push({
-                    label: "Delete",
-                    icon: <Trash2 className="w-3.5 h-3.5 text-red-500" />,
-                    danger: true,
-                    onClick: () => setMissionToDelete(mission),
-                });
-            }
+            items.push({
+                label: "Delete",
+                icon: <Trash2 className="w-3.5 h-3.5 text-red-500" />,
+                danger: true,
+                onClick: () => setMissionToDelete(mission),
+            });
         }
 
         return items;
@@ -99,9 +93,9 @@ export function MissionsTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
+                            <TableHead width="160px">Code</TableHead>
                             <TableHead width="220px">Mission</TableHead>
                             <TableHead width="130px">Status</TableHead>
-                            <TableHead width="170px">Operator</TableHead>
                             <TableHead width="220px">Route</TableHead>
                             <TableHead width="110px">Schedule</TableHead>
                             <TableHead width="100px">Waypoints</TableHead>
@@ -121,14 +115,10 @@ export function MissionsTable({
                                         icon={Compass}
                                         title="No missions found"
                                         description="Plan and automate flight routes across your vertiport network"
-                                        action={
-                                            onNewMission
-                                                ? {
-                                                      label: "Create First Mission",
-                                                      onClick: onNewMission,
-                                                  }
-                                                : undefined
-                                        }
+                                        action={{
+                                            label: "Create First Mission",
+                                            onClick: onNewMission,
+                                        }}
                                     />
                                 </TableCell>
                             </TableRow>
@@ -136,49 +126,40 @@ export function MissionsTable({
                             paginatedItems.map((mission) => {
                                 const isSelected = mission.id === selectedMissionId;
 
-                                const depName =
-                                    mission.departureHub?.name ||
-                                    (mission.departureHubId
-                                        ? hubMap.get(mission.departureHubId) ||
-                                          mission.departureHubId
-                                        : "—");
-                                const arrName =
-                                    mission.arrivalHub?.name ||
-                                    (mission.arrivalHubId
-                                        ? hubMap.get(mission.arrivalHubId) || mission.arrivalHubId
-                                        : "—");
-
-                                const operatorName = mission.createdBy || "System";
-
+                                const depName = formatHubName(
+                                    mission.departureHub,
+                                    mission.departureHubId,
+                                    hubMap
+                                );
+                                const arrName = formatHubName(
+                                    mission.arrivalHub,
+                                    mission.arrivalHubId,
+                                    hubMap
+                                );
                                 const waypointCount =
                                     mission.waypointCount ?? mission.waypoints?.length ?? 0;
-
-                                const scheduleLabel =
-                                    mission.scheduleType === "scheduled"
-                                        ? "Scheduled"
-                                        : "Immediate";
+                                const scheduleLabel = formatMissionSchedule(mission.scheduleType);
 
                                 return (
                                     <TableRow
                                         key={mission.id}
                                         selected={isSelected}
-                                        onClick={() => onSelectMission?.(mission)}
+                                        onClick={() => onSelectMission(mission)}
                                     >
+                                        <TableCell mono bold darkText>
+                                            <span className="font-mono text-xs font-semibold text-cyan-600 tracking-wider">
+                                                {formatNullable(mission.code)}
+                                            </span>
+                                        </TableCell>
+
                                         <TableCell
                                             truncate
                                             bold
                                             tooltip={mission.name || mission.id}
                                         >
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-slate-900">
-                                                    {mission.name || "Untitled Mission"}
-                                                </span>
-                                                {mission.code && (
-                                                    <span className="font-mono text-[10px] text-cyan-600 font-semibold tracking-wider">
-                                                        {mission.code}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <span className="font-semibold text-slate-900">
+                                                {mission.name || "Untitled Mission"}
+                                            </span>
                                         </TableCell>
 
                                         <TableCell>
@@ -186,12 +167,6 @@ export function MissionsTable({
                                                 status={mission.status || "draft"}
                                                 shape="chamfer"
                                             />
-                                        </TableCell>
-
-                                        <TableCell truncate tooltip={operatorName}>
-                                            <span className="font-mono text-xs text-slate-800">
-                                                {operatorName}
-                                            </span>
                                         </TableCell>
 
                                         <TableCell truncate tooltip={`${depName} → ${arrName}`}>
@@ -251,7 +226,7 @@ export function MissionsTable({
                 confirmText="Delete Mission"
                 variant="danger"
                 onConfirm={() => {
-                    if (missionToDelete && onDeleteMission) {
+                    if (missionToDelete) {
                         onDeleteMission(missionToDelete);
                     }
                     setMissionToDelete(null);
@@ -261,5 +236,3 @@ export function MissionsTable({
         </>
     );
 }
-
-export default MissionsTable;

@@ -48,7 +48,7 @@ export default function EditMissionPage() {
     if (missionLoading || hubsLoading || dronesLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin" />
+                <Loader2 className="w-8 h-8 text-slate-500 animate-spin" />
                 <p className="text-xs font-mono text-[var(--color-text-muted)]">
                     Loading mission details...
                 </p>

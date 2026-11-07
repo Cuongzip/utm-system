@@ -1,56 +1,65 @@
 "use client";
 
-import { CustomSelect, FormInput, type SelectOption } from "@/components/ui";
-import { cn } from "@/utils";
+import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
+import { cn } from "@/lib";
+import type { MissionFormPayload } from "@/types";
 
 export interface MissionDetailsTabProps {
-    name: string;
-    onNameChange: (val: string) => void;
-    description: string;
-    onDescriptionChange: (val: string) => void;
+    formData: MissionFormPayload;
+    onFormChange: <K extends keyof MissionFormPayload>(
+        field: K,
+        value: MissionFormPayload[K]
+    ) => void;
     droneId: string;
     onDroneIdChange: (val: string) => void;
-    departureHubId: string;
-    onDepartureHubIdChange: (val: string) => void;
-    arrivalHubId: string;
-    onArrivalHubIdChange: (val: string) => void;
     droneOptions: SelectOption[];
     hubOptions: SelectOption[];
     arrivalHubOptions: SelectOption[];
+    isEdit?: boolean;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
     onClearFieldError?: (field: string) => void;
 }
 
 export function MissionDetailsTab({
-    name,
-    onNameChange,
-    description,
-    onDescriptionChange,
+    formData,
+    onFormChange,
     droneId,
     onDroneIdChange,
-    departureHubId,
-    onDepartureHubIdChange,
-    arrivalHubId,
-    onArrivalHubIdChange,
     droneOptions,
     hubOptions,
     arrivalHubOptions,
+    isEdit = false,
     isReadOnly = false,
     fieldErrors = {},
     onClearFieldError,
 }: MissionDetailsTabProps) {
     return (
         <div className="space-y-4">
+            <AutoGenInput
+                id="missionCode"
+                label="Code"
+                showAutoGen={!isEdit}
+                disabled={isEdit || isReadOnly}
+                required
+                manualPlaceholder="e.g. MSN-HAN01"
+                value={formData.code ?? ""}
+                onChange={(e) => {
+                    onFormChange("code", e.target.value);
+                    onClearFieldError?.("code");
+                }}
+                error={fieldErrors.code}
+            />
+
             <FormInput
                 id="missionName"
                 label="Mission Name"
                 required
                 placeholder="Enter mission name"
-                value={name}
+                value={formData.name || ""}
                 disabled={isReadOnly}
                 onChange={(e) => {
-                    onNameChange(e.target.value);
+                    onFormChange("name", e.target.value);
                     onClearFieldError?.("name");
                 }}
                 error={fieldErrors.name}
@@ -64,9 +73,9 @@ export function MissionDetailsTab({
                     id="missionDesc"
                     rows={3}
                     placeholder="Optional description"
-                    value={description}
+                    value={formData.description || ""}
                     disabled={isReadOnly}
-                    onChange={(e) => onDescriptionChange(e.target.value)}
+                    onChange={(e) => onFormChange("description", e.target.value)}
                     className="form-input resize-none"
                 />
             </div>
@@ -87,10 +96,10 @@ export function MissionDetailsTab({
                     Departure Vertiport <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
-                    value={departureHubId}
+                    value={formData.departureHubId || ""}
                     disabled={isReadOnly}
                     onValueChange={(val) => {
-                        onDepartureHubIdChange(val);
+                        onFormChange("departureHubId", val);
                         onClearFieldError?.("departureHubId");
                     }}
                     options={hubOptions}
@@ -105,10 +114,10 @@ export function MissionDetailsTab({
             <div className="form-group">
                 <label className="form-label">Arrival Vertiport</label>
                 <CustomSelect
-                    value={arrivalHubId}
+                    value={formData.arrivalHubId || ""}
                     disabled={isReadOnly}
                     onValueChange={(val) => {
-                        onArrivalHubIdChange(val);
+                        onFormChange("arrivalHubId", val);
                         onClearFieldError?.("arrivalHubId");
                     }}
                     options={arrivalHubOptions}
@@ -122,5 +131,3 @@ export function MissionDetailsTab({
         </div>
     );
 }
-
-export default MissionDetailsTab;

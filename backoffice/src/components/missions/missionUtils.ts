@@ -16,10 +16,7 @@ export function sanitizeWaypointForApi(
         name: wp.name?.trim() || undefined,
         latitude: Number(wp.latitude),
         longitude: Number(wp.longitude),
-        altitude:
-            wp.altitude !== undefined && wp.altitude !== null && !isNaN(Number(wp.altitude))
-                ? Number(wp.altitude)
-                : defaultAltitude,
+        altitude: Number.isFinite(wp.altitude) ? Number(wp.altitude) : defaultAltitude,
         actions:
             wp.actions && typeof wp.actions === "object" && Object.keys(wp.actions).length > 0
                 ? wp.actions
@@ -179,7 +176,7 @@ export function determineActiveTabFromErrors(
     tab: "details" | "waypoints" | "schedule";
     firstInvalidWaypointId?: string;
 } {
-    if (errors.name || errors.departureHubId || errors.arrivalHubId) {
+    if (errors.code || errors.name || errors.departureHubId || errors.arrivalHubId) {
         return { tab: "details" };
     }
     const wpKey = Object.keys(errors).find((k) => k.startsWith("waypoints."));

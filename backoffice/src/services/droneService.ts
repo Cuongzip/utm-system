@@ -3,7 +3,8 @@ import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     Drone,
     DroneListResponse,
-    DroneRegistrationPayload,
+    CreateDronePayload,
+    UpdateDronePayload,
     DroneQueryParams,
     DroneCommand,
     DroneCommandListResponse,
@@ -24,14 +25,14 @@ export const droneService = {
         return res.items || [];
     },
 
-    createDrone: async (payload: DroneRegistrationPayload): Promise<Drone> => {
+    createDrone: async (payload: CreateDronePayload): Promise<Drone> => {
         return apiClient<Drone>(API_ENDPOINTS.DRONES.BASE, {
             method: "POST",
             body: JSON.stringify(payload),
         });
     },
 
-    updateDrone: async (id: string, payload: Partial<DroneRegistrationPayload>): Promise<Drone> => {
+    updateDrone: async (id: string, payload: UpdateDronePayload): Promise<Drone> => {
         return apiClient<Drone>(API_ENDPOINTS.DRONES.BY_ID(id), {
             method: "PUT",
             body: JSON.stringify(payload),

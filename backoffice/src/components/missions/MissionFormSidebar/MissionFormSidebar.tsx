@@ -2,26 +2,19 @@
 
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
-import type { Waypoint, Drone, Hub, MissionScheduleType } from "@/types";
+import type { Waypoint, Drone, Hub, MissionFormPayload } from "@/types";
 import { MissionDetailsTab } from "./MissionDetailsTab";
 import { MissionWaypointsTab } from "./MissionWaypointsTab";
 import { MissionScheduleTab } from "./MissionScheduleTab";
 
 export interface MissionFormSidebarProps {
-    name: string;
-    onNameChange: (val: string) => void;
-    description: string;
-    onDescriptionChange: (val: string) => void;
+    formData: MissionFormPayload;
+    onFormChange: <K extends keyof MissionFormPayload>(
+        field: K,
+        value: MissionFormPayload[K]
+    ) => void;
     droneId: string;
     onDroneIdChange: (val: string) => void;
-    departureHubId: string;
-    onDepartureHubIdChange: (val: string) => void;
-    arrivalHubId: string;
-    onArrivalHubIdChange: (val: string) => void;
-    scheduleType: MissionScheduleType;
-    onScheduleTypeChange: (val: MissionScheduleType) => void;
-    scheduledAt: string;
-    onScheduledAtChange: (val: string) => void;
     drones: Drone[];
     hubs: Hub[];
     waypoints: Waypoint[];
@@ -29,10 +22,10 @@ export interface MissionFormSidebarProps {
     onSelectWaypoint: (wp: Waypoint | null) => void;
     onUpdateWaypoint: (wp: Waypoint) => void;
     onDeleteWaypoint: (wpId: string) => void;
-    onMoveWaypointOrder?: (fromIndex: number, toIndex: number) => void;
+    onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     activeTab: "details" | "waypoints" | "schedule";
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
-    totalDistanceM: number;
+    isEdit?: boolean;
     isReadOnly?: boolean;
     className?: string;
     fieldErrors?: Record<string, string>;
@@ -40,20 +33,10 @@ export interface MissionFormSidebarProps {
 }
 
 export function MissionFormSidebar({
-    name,
-    onNameChange,
-    description,
-    onDescriptionChange,
+    formData,
+    onFormChange,
     droneId,
     onDroneIdChange,
-    departureHubId,
-    onDepartureHubIdChange,
-    arrivalHubId,
-    onArrivalHubIdChange,
-    scheduleType,
-    onScheduleTypeChange,
-    scheduledAt,
-    onScheduledAtChange,
     drones = [],
     hubs = [],
     waypoints = [],
@@ -64,7 +47,7 @@ export function MissionFormSidebar({
     onMoveWaypointOrder,
     activeTab,
     onTabChange,
-    totalDistanceM,
+    isEdit = false,
     isReadOnly = false,
     className = "",
     fieldErrors = {},
@@ -104,14 +87,16 @@ export function MissionFormSidebar({
                             activeTab === "details"
                                 ? "border-[var(--color-border-dark)] text-[var(--color-text-primary)] bg-[var(--color-surface-card)]/50"
                                 : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
-                            (fieldErrors.name ||
+                            (fieldErrors.code ||
+                                fieldErrors.name ||
                                 fieldErrors.departureHubId ||
                                 fieldErrors.arrivalHubId) &&
                                 "text-red-600"
                         )}
                     >
                         <span>Details</span>
-                        {(fieldErrors.name ||
+                        {(fieldErrors.code ||
+                            fieldErrors.name ||
                             fieldErrors.departureHubId ||
                             fieldErrors.arrivalHubId) && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -156,19 +141,14 @@ export function MissionFormSidebar({
                 <div className="flex-1 p-5 overflow-y-auto space-y-4">
                     {activeTab === "details" && (
                         <MissionDetailsTab
-                            name={name}
-                            onNameChange={onNameChange}
-                            description={description}
-                            onDescriptionChange={onDescriptionChange}
+                            formData={formData}
+                            onFormChange={onFormChange}
                             droneId={droneId}
                             onDroneIdChange={onDroneIdChange}
-                            departureHubId={departureHubId}
-                            onDepartureHubIdChange={onDepartureHubIdChange}
-                            arrivalHubId={arrivalHubId}
-                            onArrivalHubIdChange={onArrivalHubIdChange}
                             droneOptions={droneOptions}
                             hubOptions={hubOptions}
                             arrivalHubOptions={arrivalHubOptions}
+                            isEdit={isEdit}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}
@@ -191,10 +171,8 @@ export function MissionFormSidebar({
 
                     {activeTab === "schedule" && (
                         <MissionScheduleTab
-                            scheduleType={scheduleType}
-                            onScheduleTypeChange={onScheduleTypeChange}
-                            scheduledAt={scheduledAt}
-                            onScheduledAtChange={onScheduledAtChange}
+                            formData={formData}
+                            onFormChange={onFormChange}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}
@@ -205,5 +183,3 @@ export function MissionFormSidebar({
         </ChamferCard>
     );
 }
-
-export default MissionFormSidebar;

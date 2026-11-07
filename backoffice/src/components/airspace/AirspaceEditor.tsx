@@ -10,7 +10,7 @@ import {
     StatusBadge,
     ConfirmDialog,
 } from "@/components/ui";
-import { validateSchema, createFieldErrorCleaner } from "@/utils";
+import { validateSchema, createFieldErrorCleaner, parseApiError } from "@/utils";
 import { createZoneBody, updateZoneBody } from "@/generated/airspace";
 import type {
     AirspaceZone,
@@ -50,7 +50,7 @@ export function AirspaceEditor({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const [formData, setFormData] = useState<AirspaceZoneFormPayload>(() =>
-        getInitialAirspaceFormPayload(initialData, mode)
+        getInitialAirspaceFormPayload(initialData)
     );
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "geometry">("details");
@@ -73,8 +73,8 @@ export function AirspaceEditor({
     } = useAirspaceGeometry(initialData?.geometry);
 
     useEffect(() => {
-        setFormData(getInitialAirspaceFormPayload(initialData, mode));
-    }, [initialData, mode]);
+        setFormData(getInitialAirspaceFormPayload(initialData));
+    }, [initialData]);
 
     const handleFormChange = <K extends keyof AirspaceZoneFormPayload>(
         field: K,
@@ -86,11 +86,10 @@ export function AirspaceEditor({
     const handleSave = async () => {
         setFieldErrors({});
 
-        const trimmedCode = formData.code?.trim();
+        const codeValue = formData.code ? formData.code.trim().toUpperCase() : formData.code;
+
         const payload = {
-            ...(mode === "create"
-                ? { code: trimmedCode ? trimmedCode.toUpperCase() : undefined }
-                : {}),
+            ...(mode === "create" ? { code: codeValue } : {}),
             name: (formData.name ?? "").trim(),
             zoneType: formData.zoneType,
             status: formData.status,
@@ -101,7 +100,10 @@ export function AirspaceEditor({
         };
 
         const schema = mode === "create" ? createZoneBody : updateZoneBody;
-        const validation = validateSchema(schema, payload);
+        const validation = validateSchema<CreateAirspaceZonePayload | UpdateAirspaceZonePayload>(
+            schema,
+            payload
+        );
 
         if (!validation.success) {
             setFieldErrors(validation.errors);
@@ -116,6 +118,16 @@ export function AirspaceEditor({
         setSubmitting(true);
         try {
             await onSave(validation.data as CreateAirspaceZonePayload | UpdateAirspaceZonePayload);
+        } catch (err: unknown) {
+            const parsed = parseApiError(err, "Failed to save airspace zone");
+            if (Object.keys(parsed.fieldErrors).length > 0) {
+                setFieldErrors((prev) => ({ ...prev, ...parsed.fieldErrors }));
+                if (parsed.fieldErrors.geometry || parsed.fieldErrors["geometry.coordinates"]) {
+                    setActiveSidebarTab("geometry");
+                } else {
+                    setActiveSidebarTab("details");
+                }
+            }
         } finally {
             setSubmitting(false);
         }

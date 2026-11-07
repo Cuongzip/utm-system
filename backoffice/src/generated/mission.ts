@@ -16,7 +16,6 @@ export const updateWaypointParams = zod.object({
     waypointId: zod.string().describe("Unique UUID identifier of the waypoint"),
 });
 
-export const updateWaypointBodyNameMin = 0;
 export const updateWaypointBodyNameMax = 100;
 export const updateWaypointBodyLatitudeMin = -90;
 export const updateWaypointBodyLatitudeMax = 90;
@@ -28,7 +27,7 @@ export const updateWaypointBody = zod
     .object({
         name: zod
             .string()
-            .min(updateWaypointBodyNameMin)
+            .min(1)
             .max(updateWaypointBodyNameMax)
             .optional()
             .describe("Waypoint designation or semantic name"),
@@ -68,7 +67,7 @@ export const updateWaypointResponse = zod
             .number()
             .optional()
             .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
-        name: zod.string().optional().describe("Waypoint designation or name"),
+        name: zod.string().min(1).optional().describe("Waypoint designation or name"),
         latitude: zod.number().optional().describe("GPS latitude"),
         longitude: zod.number().optional().describe("GPS longitude"),
         altitude: zod.number().optional().describe("Altitude in meters"),
@@ -109,7 +108,7 @@ export const getMissionByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Mission UUID identifier"),
         code: zod.string().optional().describe("Mission business tracking code"),
-        name: zod.string().optional().describe("Mission name"),
+        name: zod.string().min(1).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
@@ -140,7 +139,11 @@ export const getMissionByIdResponse = zod
                             .number()
                             .optional()
                             .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
-                        name: zod.string().optional().describe("Waypoint designation or name"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
                         latitude: zod.number().optional().describe("GPS latitude"),
                         longitude: zod.number().optional().describe("GPS longitude"),
                         altitude: zod.number().optional().describe("Altitude in meters"),
@@ -175,7 +178,7 @@ export const getMissionByIdResponse = zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
                 code: zod.string().optional().describe("Hub operational code"),
-                name: zod.string().optional().describe("Hub name"),
+                name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
@@ -191,7 +194,7 @@ export const getMissionByIdResponse = zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
                 code: zod.string().optional().describe("Hub operational code"),
-                name: zod.string().optional().describe("Hub name"),
+                name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
@@ -218,17 +221,11 @@ export const updateMissionParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the mission"),
 });
 
-export const updateMissionBodyNameMin = 0;
 export const updateMissionBodyNameMax = 255;
 
 export const updateMissionBody = zod
     .object({
-        name: zod
-            .string()
-            .min(updateMissionBodyNameMin)
-            .max(updateMissionBodyNameMax)
-            .optional()
-            .describe("Mission name"),
+        name: zod.string().min(1).max(updateMissionBodyNameMax).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
@@ -247,7 +244,7 @@ export const updateMissionResponse = zod
     .object({
         id: zod.string().optional().describe("Mission UUID identifier"),
         code: zod.string().optional().describe("Mission business tracking code"),
-        name: zod.string().optional().describe("Mission name"),
+        name: zod.string().min(1).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
@@ -278,7 +275,11 @@ export const updateMissionResponse = zod
                             .number()
                             .optional()
                             .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
-                        name: zod.string().optional().describe("Waypoint designation or name"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
                         latitude: zod.number().optional().describe("GPS latitude"),
                         longitude: zod.number().optional().describe("GPS longitude"),
                         altitude: zod.number().optional().describe("Altitude in meters"),
@@ -313,7 +314,7 @@ export const updateMissionResponse = zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
                 code: zod.string().optional().describe("Hub operational code"),
-                name: zod.string().optional().describe("Hub name"),
+                name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
@@ -329,7 +330,7 @@ export const updateMissionResponse = zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
                 code: zod.string().optional().describe("Hub operational code"),
-                name: zod.string().optional().describe("Hub name"),
+                name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
@@ -391,7 +392,7 @@ export const getMissionsResponse = zod
                     .object({
                         id: zod.string().optional().describe("Mission UUID identifier"),
                         code: zod.string().optional().describe("Mission business tracking code"),
-                        name: zod.string().optional().describe("Mission name"),
+                        name: zod.string().min(1).optional().describe("Mission name"),
                         description: zod
                             .string()
                             .optional()
@@ -454,6 +455,7 @@ export const getMissionsResponse = zod
                                             ),
                                         name: zod
                                             .string()
+                                            .min(1)
                                             .optional()
                                             .describe("Waypoint designation or name"),
                                         latitude: zod.number().optional().describe("GPS latitude"),
@@ -504,7 +506,7 @@ export const getMissionsResponse = zod
                             .object({
                                 id: zod.string().optional().describe("Hub unique identifier"),
                                 code: zod.string().optional().describe("Hub operational code"),
-                                name: zod.string().optional().describe("Hub name"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
                                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                                 location: zod
@@ -520,7 +522,7 @@ export const getMissionsResponse = zod
                             .object({
                                 id: zod.string().optional().describe("Hub unique identifier"),
                                 code: zod.string().optional().describe("Hub operational code"),
-                                name: zod.string().optional().describe("Hub name"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
                                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                                 location: zod
@@ -561,9 +563,9 @@ export const getMissionsResponse = zod
  * Plan a new flight mission in draft status
  * @summary Create a new mission
  */
-export const createMissionBodyCodeMin = 0;
+export const createMissionBodyCodeMin = 3;
 export const createMissionBodyCodeMax = 50;
-export const createMissionBodyNameMin = 0;
+export const createMissionBodyCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const createMissionBodyNameMax = 255;
 
 export const createMissionBody = zod
@@ -572,15 +574,12 @@ export const createMissionBody = zod
             .string()
             .min(createMissionBodyCodeMin)
             .max(createMissionBodyCodeMax)
+            .regex(createMissionBodyCodeRegExp)
             .optional()
             .describe(
                 "Mission business tracking code (e.g. MSN-YYMMDD-XXXX). If omitted or blank, auto-generated."
             ),
-        name: zod
-            .string()
-            .min(createMissionBodyNameMin)
-            .max(createMissionBodyNameMax)
-            .describe("Mission name"),
+        name: zod.string().min(1).max(createMissionBodyNameMax).describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().min(1).describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().min(1).describe("Arrival Hub UUID identifier"),
@@ -613,7 +612,7 @@ export const getWaypointsResponseItem = zod
             .number()
             .optional()
             .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
-        name: zod.string().optional().describe("Waypoint designation or name"),
+        name: zod.string().min(1).optional().describe("Waypoint designation or name"),
         latitude: zod.number().optional().describe("GPS latitude"),
         longitude: zod.number().optional().describe("GPS longitude"),
         altitude: zod.number().optional().describe("Altitude in meters"),
@@ -642,7 +641,6 @@ export const addWaypointParams = zod.object({
     missionId: zod.string().describe("Unique UUID identifier of the mission"),
 });
 
-export const addWaypointBodyNameMin = 0;
 export const addWaypointBodyNameMax = 100;
 export const addWaypointBodyLatitudeMin = -90;
 export const addWaypointBodyLatitudeMax = 90;
@@ -654,7 +652,7 @@ export const addWaypointBody = zod
     .object({
         name: zod
             .string()
-            .min(addWaypointBodyNameMin)
+            .min(1)
             .max(addWaypointBodyNameMax)
             .optional()
             .describe("Waypoint designation or semantic name"),
@@ -718,7 +716,7 @@ export const reorderWaypointsResponseItem = zod
             .number()
             .optional()
             .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
-        name: zod.string().optional().describe("Waypoint designation or name"),
+        name: zod.string().min(1).optional().describe("Waypoint designation or name"),
         latitude: zod.number().optional().describe("GPS latitude"),
         longitude: zod.number().optional().describe("GPS longitude"),
         altitude: zod.number().optional().describe("Altitude in meters"),

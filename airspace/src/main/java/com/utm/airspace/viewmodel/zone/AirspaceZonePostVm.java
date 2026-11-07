@@ -14,7 +14,7 @@ import jakarta.validation.constraints.Size;
 public record AirspaceZonePostVm(
         @Schema(description = "Unique name of the airspace zone", example = "Khu vực Cấm bay Dinh Độc Lập")
         @NotBlank(message = "Name cannot be blank")
-        @Size(max = 255, message = "Name must not exceed 255 characters")
+        @Size(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
         String name,
 
         @Schema(description = "Airspace zone business tracking code (e.g. ASZ-A1B2). If omitted, system auto-generates.", example = "ASZ-X1Y2")

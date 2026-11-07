@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, X, MapPin, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { FormInput } from "@/components/ui";
 import { cn } from "@/lib";
@@ -12,7 +12,7 @@ export interface MissionWaypointsTabProps {
     onSelectWaypoint: (wp: Waypoint | null) => void;
     onUpdateWaypoint: (wp: Waypoint) => void;
     onDeleteWaypoint: (wpId: string) => void;
-    onMoveWaypointOrder?: (fromIndex: number, toIndex: number) => void;
+    onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
     onClearFieldError?: (field: string) => void;
@@ -32,6 +32,73 @@ export function MissionWaypointsTab({
     const [waypointSubTab, setWaypointSubTab] = useState<"position" | "actions" | "conditions">(
         "position"
     );
+
+    const [latStr, setLatStr] = useState(() => String(selectedWaypoint?.latitude ?? ""));
+    const [lngStr, setLngStr] = useState(() => String(selectedWaypoint?.longitude ?? ""));
+    const [altStr, setAltStr] = useState(() => String(selectedWaypoint?.altitude ?? "50"));
+
+    useEffect(() => {
+        setLatStr(String(selectedWaypoint?.latitude ?? ""));
+        setLngStr(String(selectedWaypoint?.longitude ?? ""));
+        setAltStr(String(selectedWaypoint?.altitude ?? "50"));
+    }, [
+        selectedWaypoint?.id,
+        selectedWaypoint?.tempId,
+        selectedWaypoint?.latitude,
+        selectedWaypoint?.longitude,
+        selectedWaypoint?.altitude,
+    ]);
+
+    const handleLatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLatStr(val);
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && isFinite(parsed) && selectedWaypoint) {
+            onUpdateWaypoint({ ...selectedWaypoint, latitude: parsed });
+        }
+        if (selectedIdx >= 0) onClearFieldError?.(`waypoints.${selectedIdx}.latitude`);
+    };
+
+    const handleLngChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLngStr(val);
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && isFinite(parsed) && selectedWaypoint) {
+            onUpdateWaypoint({ ...selectedWaypoint, longitude: parsed });
+        }
+        if (selectedIdx >= 0) onClearFieldError?.(`waypoints.${selectedIdx}.longitude`);
+    };
+
+    const handleAltChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setAltStr(val);
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && isFinite(parsed) && selectedWaypoint) {
+            onUpdateWaypoint({ ...selectedWaypoint, altitude: parsed });
+        }
+        if (selectedIdx >= 0) onClearFieldError?.(`waypoints.${selectedIdx}.altitude`);
+    };
+
+    const handleLatBlur = () => {
+        const parsed = parseFloat(latStr);
+        if (isNaN(parsed) || !isFinite(parsed) || latStr.trim() === "") {
+            setLatStr(String(selectedWaypoint?.latitude ?? ""));
+        }
+    };
+
+    const handleLngBlur = () => {
+        const parsed = parseFloat(lngStr);
+        if (isNaN(parsed) || !isFinite(parsed) || lngStr.trim() === "") {
+            setLngStr(String(selectedWaypoint?.longitude ?? ""));
+        }
+    };
+
+    const handleAltBlur = () => {
+        const parsed = parseFloat(altStr);
+        if (isNaN(parsed) || !isFinite(parsed) || altStr.trim() === "") {
+            setAltStr(String(selectedWaypoint?.altitude ?? "50"));
+        }
+    };
 
     const selectedIdx = selectedWaypoint
         ? waypoints.findIndex(
@@ -154,24 +221,10 @@ export function MissionWaypointsTab({
                                     required
                                     type="number"
                                     step="0.000001"
-                                    value={
-                                        selectedWaypoint.latitude === undefined ||
-                                        Number.isNaN(selectedWaypoint.latitude)
-                                            ? ""
-                                            : selectedWaypoint.latitude
-                                    }
+                                    value={latStr}
                                     disabled={isReadOnly}
-                                    onChange={(e) => {
-                                        const val =
-                                            e.target.value === ""
-                                                ? 0
-                                                : Number.parseFloat(e.target.value);
-                                        onUpdateWaypoint({ ...selectedWaypoint, latitude: val });
-                                        if (selectedIdx >= 0)
-                                            onClearFieldError?.(
-                                                `waypoints.${selectedIdx}.latitude`
-                                            );
-                                    }}
+                                    onChange={handleLatChange}
+                                    onBlur={handleLatBlur}
                                     error={latError}
                                 />
                                 <FormInput
@@ -180,24 +233,10 @@ export function MissionWaypointsTab({
                                     required
                                     type="number"
                                     step="0.000001"
-                                    value={
-                                        selectedWaypoint.longitude === undefined ||
-                                        Number.isNaN(selectedWaypoint.longitude)
-                                            ? ""
-                                            : selectedWaypoint.longitude
-                                    }
+                                    value={lngStr}
                                     disabled={isReadOnly}
-                                    onChange={(e) => {
-                                        const val =
-                                            e.target.value === ""
-                                                ? 0
-                                                : Number.parseFloat(e.target.value);
-                                        onUpdateWaypoint({ ...selectedWaypoint, longitude: val });
-                                        if (selectedIdx >= 0)
-                                            onClearFieldError?.(
-                                                `waypoints.${selectedIdx}.longitude`
-                                            );
-                                    }}
+                                    onChange={handleLngChange}
+                                    onBlur={handleLngBlur}
                                     error={lngError}
                                 />
                             </div>
@@ -208,22 +247,10 @@ export function MissionWaypointsTab({
                                 type="number"
                                 min="0"
                                 max="500"
-                                value={
-                                    selectedWaypoint.altitude === undefined ||
-                                    Number.isNaN(selectedWaypoint.altitude)
-                                        ? 50
-                                        : selectedWaypoint.altitude
-                                }
+                                value={altStr}
                                 disabled={isReadOnly}
-                                onChange={(e) => {
-                                    const val =
-                                        e.target.value === ""
-                                            ? 0
-                                            : Number.parseFloat(e.target.value);
-                                    onUpdateWaypoint({ ...selectedWaypoint, altitude: val });
-                                    if (selectedIdx >= 0)
-                                        onClearFieldError?.(`waypoints.${selectedIdx}.altitude`);
-                                }}
+                                onChange={handleAltChange}
+                                onBlur={handleAltBlur}
                                 error={altError}
                             />
 
@@ -445,7 +472,7 @@ export function MissionWaypointsTab({
                                                     )}
                                                 </div>
                                                 <span className="text-[var(--color-text-muted)] ml-2 text-[11px]">
-                                                    Alt: {wp.altitude || 50}m
+                                                    Alt: {wp.altitude ?? 50}m
                                                 </span>
                                             </div>
                                         </div>
@@ -457,7 +484,7 @@ export function MissionWaypointsTab({
                                                     disabled={idx === 0}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onMoveWaypointOrder?.(idx, idx - 1);
+                                                        onMoveWaypointOrder(idx, idx - 1);
                                                     }}
                                                     className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
                                                     title="Move point up"
@@ -469,7 +496,7 @@ export function MissionWaypointsTab({
                                                     disabled={idx === waypoints.length - 1}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onMoveWaypointOrder?.(idx, idx + 1);
+                                                        onMoveWaypointOrder(idx, idx + 1);
                                                     }}
                                                     className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
                                                     title="Move point down"
@@ -501,5 +528,3 @@ export function MissionWaypointsTab({
         </div>
     );
 }
-
-export default MissionWaypointsTab;

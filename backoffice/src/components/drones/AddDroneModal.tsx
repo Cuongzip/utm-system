@@ -3,20 +3,18 @@
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal, CustomSelect, FormInput } from "@/components/ui";
+import { Modal, CustomSelect, FormInput, AutoGenInput } from "@/components/ui";
 import { useHubsAll } from "@/hooks";
 import { parseApiError } from "@/utils";
-import { createDroneBody } from "@/generated";
-import type { Drone, DroneRegistrationPayload } from "@/types";
+import { createDroneBody, updateDroneBody } from "@/generated/drone";
+import type { Drone, CreateDronePayload, UpdateDronePayload, DroneFormPayload } from "@/types";
 
 export interface AddDroneModalProps {
     isOpen: boolean;
     droneToEdit?: Drone | null;
     onClose: () => void;
-    onSubmit: (payload: DroneRegistrationPayload, id?: string) => Promise<void>;
+    onSubmit: (payload: CreateDronePayload | UpdateDronePayload, id?: string) => Promise<unknown>;
 }
-
-export type RegisterDroneModalProps = AddDroneModalProps;
 
 export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDroneModalProps) {
     const { data: hubs = [] } = useHubsAll();
@@ -29,10 +27,10 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
         control,
         setError,
         formState: { errors },
-    } = useForm<DroneRegistrationPayload>({
-        resolver: zodResolver(createDroneBody) as any,
+    } = useForm<DroneFormPayload>({
+        resolver: zodResolver(droneToEdit ? updateDroneBody : createDroneBody) as any,
         defaultValues: {
-            registrationNumber: "",
+            registrationNumber: undefined,
             manufacturer: "",
             model: "",
             homeHubId: undefined,
@@ -42,39 +40,39 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
     });
 
     useEffect(() => {
-        if (isOpen) {
-            if (droneToEdit) {
-                reset({
-                    registrationNumber: droneToEdit.registrationNumber || droneToEdit.id || "",
-                    manufacturer: droneToEdit.manufacturer || "",
-                    model: droneToEdit.model || "",
-                    homeHubId: droneToEdit.homeHubId || droneToEdit.homeHub?.id || undefined,
-                    batteryCapacityWh: droneToEdit.batteryCapacityWh || 0,
-                    maxPayload: droneToEdit.maxPayload || 0,
-                });
-            } else {
-                reset({
-                    registrationNumber: "",
-                    manufacturer: "",
-                    model: "",
-                    homeHubId: undefined,
-                    batteryCapacityWh: 0,
-                    maxPayload: 0,
-                });
-            }
-        }
+        if (!isOpen) return;
+
+        reset({
+            registrationNumber: droneToEdit?.registrationNumber || droneToEdit?.id || undefined,
+            manufacturer: droneToEdit?.manufacturer || "",
+            model: droneToEdit?.model || "",
+            homeHubId: droneToEdit?.homeHubId || droneToEdit?.homeHub?.id || undefined,
+            batteryCapacityWh: droneToEdit?.batteryCapacityWh ?? 0,
+            maxPayload: droneToEdit?.maxPayload ?? 0,
+        });
     }, [isOpen, droneToEdit, reset]);
 
-    const onFormSubmit = async (data: DroneRegistrationPayload) => {
+    const onFormSubmit = async (data: DroneFormPayload) => {
         try {
             setLoading(true);
-            const payload: DroneRegistrationPayload = {
-                ...data,
-                homeHubId: data.homeHubId ? data.homeHubId : undefined,
-                batteryCapacityWh: Number(data.batteryCapacityWh),
-                maxPayload: Number(data.maxPayload),
+            const commonFields = {
+                homeHubId: data.homeHubId || undefined,
+                batteryCapacityWh: data.batteryCapacityWh,
+                maxPayload: data.maxPayload,
             };
-            await onSubmit(payload, droneToEdit?.id);
+
+            if (droneToEdit) {
+                await onSubmit(commonFields, droneToEdit.id);
+            } else {
+                const trimmedReg = data.registrationNumber?.trim();
+                const payload: CreateDronePayload = {
+                    ...commonFields,
+                    registrationNumber: trimmedReg ? trimmedReg.toUpperCase() : undefined,
+                    manufacturer: data.manufacturer.trim(),
+                    model: data.model.trim(),
+                };
+                await onSubmit(payload);
+            }
             onClose();
         } catch (err: unknown) {
             const parsed = parseApiError(err, "Failed to register drone");
@@ -98,11 +96,12 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             submitText={droneToEdit ? "Save Changes" : "Register Drone"}
             loadingText="Saving..."
         >
-            <FormInput
+            <AutoGenInput
                 id="registrationNumber"
                 label="Registration Number"
-                required
-                placeholder="e.g. DRN-001"
+                showAutoGen={!droneToEdit}
+                disabled={Boolean(droneToEdit)}
+                manualPlaceholder="e.g. DRN-001"
                 error={errors.registrationNumber?.message}
                 {...register("registrationNumber")}
             />
@@ -177,6 +176,3 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
         </Modal>
     );
 }
-
-export const RegisterDroneModal = AddDroneModal;
-export default AddDroneModal;

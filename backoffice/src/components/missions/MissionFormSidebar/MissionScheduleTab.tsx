@@ -3,33 +3,34 @@
 import { Clock, Play } from "lucide-react";
 import { DateTimePicker } from "@/components/ui";
 import { cn } from "@/lib";
-import type { MissionScheduleType } from "@/types";
+import type { MissionFormPayload } from "@/types";
 
 export interface MissionScheduleTabProps {
-    scheduleType: MissionScheduleType;
-    onScheduleTypeChange: (val: MissionScheduleType) => void;
-    scheduledAt: string;
-    onScheduledAtChange: (val: string) => void;
+    formData: MissionFormPayload;
+    onFormChange: <K extends keyof MissionFormPayload>(
+        field: K,
+        value: MissionFormPayload[K]
+    ) => void;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
     onClearFieldError?: (field: string) => void;
 }
 
 export function MissionScheduleTab({
-    scheduleType,
-    onScheduleTypeChange,
-    scheduledAt,
-    onScheduledAtChange,
+    formData,
+    onFormChange,
     isReadOnly = false,
     fieldErrors = {},
     onClearFieldError,
 }: MissionScheduleTabProps) {
+    const scheduleType = formData.scheduleType || "immediate";
+
     return (
         <div className="space-y-4">
             <label className="form-label block">Schedule Type</label>
 
             <div
-                onClick={() => !isReadOnly && onScheduleTypeChange("immediate")}
+                onClick={() => !isReadOnly && onFormChange("scheduleType", "immediate")}
                 className={cn(
                     "p-4 rounded-md border transition-all flex items-start gap-3.5",
                     isReadOnly ? "cursor-default opacity-80" : "cursor-pointer",
@@ -59,7 +60,7 @@ export function MissionScheduleTab({
             </div>
 
             <div
-                onClick={() => !isReadOnly && onScheduleTypeChange("scheduled")}
+                onClick={() => !isReadOnly && onFormChange("scheduleType", "scheduled")}
                 className={cn(
                     "p-4 rounded-md border transition-all flex flex-col gap-3",
                     isReadOnly ? "cursor-default opacity-80" : "cursor-pointer",
@@ -98,10 +99,10 @@ export function MissionScheduleTab({
                             DEPARTURE DATE & TIME
                         </label>
                         <DateTimePicker
-                            value={scheduledAt}
+                            value={formData.scheduledAt || ""}
                             disabled={isReadOnly}
                             onChange={(val) => {
-                                onScheduledAtChange(val);
+                                onFormChange("scheduledAt", val);
                                 onClearFieldError?.("scheduledAt");
                             }}
                             error={Boolean(fieldErrors.scheduledAt)}
@@ -116,5 +117,3 @@ export function MissionScheduleTab({
         </div>
     );
 }
-
-export default MissionScheduleTab;

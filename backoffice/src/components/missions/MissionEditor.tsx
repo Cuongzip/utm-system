@@ -12,17 +12,18 @@ import {
     sanitizeWaypointForApi,
     determineActiveTabFromErrors,
 } from "@/components/missions";
-import { createFieldErrorCleaner, validateSchema } from "@/utils";
+import { createFieldErrorCleaner, validateSchema, parseApiError } from "@/utils";
 import { createMissionBody, updateMissionBody } from "@/generated/mission";
 import type {
     Hub,
     Drone,
     Mission,
     Waypoint,
-    MissionScheduleType,
+    MissionFormPayload,
     CreateMissionPayload,
     UpdateMissionPayload,
 } from "@/types";
+import { getInitialMissionFormPayload } from "@/types";
 
 export interface MissionSaveData {
     payload: CreateMissionPayload | UpdateMissionPayload;
@@ -51,14 +52,11 @@ export function MissionEditor({
     const router = useRouter();
 
     const [submitting, setSubmitting] = useState(false);
-
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
     const [droneId, setDroneId] = useState("");
-    const [departureHubId, setDepartureHubId] = useState("");
-    const [arrivalHubId, setArrivalHubId] = useState("");
-    const [scheduleType, setScheduleType] = useState<MissionScheduleType>("immediate");
-    const [scheduledAt, setScheduledAt] = useState("");
+
+    const [formData, setFormData] = useState<MissionFormPayload>(() =>
+        getInitialMissionFormPayload(initialData)
+    );
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
         "details"
@@ -69,6 +67,27 @@ export function MissionEditor({
     const isReadOnly = Boolean(
         mode === "edit" && initialData?.status && initialData.status.toLowerCase() !== "draft"
     );
+
+    useEffect(() => {
+        setFormData(getInitialMissionFormPayload(initialData));
+    }, [initialData]);
+
+    useEffect(() => {
+        if (mode === "create" && hubs.length > 0) {
+            setFormData((prev) => ({
+                ...prev,
+                departureHubId: prev.departureHubId || hubs[0].id,
+                arrivalHubId: prev.arrivalHubId || (hubs.length > 1 ? hubs[1].id : hubs[0].id),
+            }));
+        }
+    }, [mode, hubs]);
+
+    const handleFormChange = <K extends keyof MissionFormPayload>(
+        field: K,
+        value: MissionFormPayload[K]
+    ) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    };
 
     const onClearWaypointErrors = useCallback(() => {
         setFieldErrors((prev) => {
@@ -83,13 +102,13 @@ export function MissionEditor({
     }, []);
 
     const selectedDepartureHub = useMemo(
-        () => hubs.find((h) => h.id === departureHubId) || null,
-        [hubs, departureHubId]
+        () => hubs.find((h) => h.id === formData.departureHubId) || null,
+        [hubs, formData.departureHubId]
     );
 
     const selectedArrivalHub = useMemo(
-        () => hubs.find((h) => h.id === (arrivalHubId || departureHubId)) || null,
-        [hubs, arrivalHubId, departureHubId]
+        () => hubs.find((h) => h.id === (formData.arrivalHubId || formData.departureHubId)) || null,
+        [hubs, formData.arrivalHubId, formData.departureHubId]
     );
 
     const {
@@ -112,7 +131,7 @@ export function MissionEditor({
         handleGenerateHubToHub,
     } = useMissionWaypoints({
         initialWaypoints: initialData?.waypoints,
-        initialAltitude: initialData?.waypoints?.[0]?.altitude || 50,
+        initialAltitude: initialData?.waypoints?.[0]?.altitude ?? 50,
         isReadOnly,
         departureHub: selectedDepartureHub,
         arrivalHub: selectedArrivalHub,
@@ -120,41 +139,15 @@ export function MissionEditor({
     });
 
     useEffect(() => {
-        if (mode === "create" && hubs.length > 0) {
-            setDepartureHubId((prev) => prev || hubs[0].id);
-            if (hubs.length > 1) {
-                setArrivalHubId((prev) => prev || hubs[1].id);
-            }
-        }
-    }, [mode, hubs]);
-
-    useEffect(() => {
         if (initialData) {
-            setName(initialData.name || "");
-            setDescription(initialData.description || "");
-            setDepartureHubId(initialData.departureHubId || "");
-            setArrivalHubId(initialData.arrivalHubId || "");
-            if (
-                initialData.scheduleType === "immediate" ||
-                initialData.scheduleType === "scheduled"
-            ) {
-                setScheduleType(initialData.scheduleType);
-            }
-            setScheduledAt(initialData.scheduledAt ? initialData.scheduledAt.slice(0, 16) : "");
-
             const loadedWaypoints: Waypoint[] = (initialData.waypoints || []).map((wp, idx) => ({
                 ...wp,
-                sequence: wp.sequence || idx + 1,
+                sequence: wp.sequence ?? idx + 1,
                 tempId: wp.id || `wp-init-${idx}`,
                 name: wp.name || "",
-                latitude:
-                    wp.latitude !== undefined && wp.latitude !== null ? Number(wp.latitude) : 0,
-                longitude:
-                    wp.longitude !== undefined && wp.longitude !== null ? Number(wp.longitude) : 0,
-                altitude:
-                    wp.altitude !== undefined && wp.altitude !== null
-                        ? Number(wp.altitude)
-                        : defaultAltitude,
+                latitude: wp.latitude ?? 0,
+                longitude: wp.longitude ?? 0,
+                altitude: wp.altitude ?? defaultAltitude,
                 actions:
                     wp.actions &&
                     typeof wp.actions === "object" &&
@@ -175,17 +168,20 @@ export function MissionEditor({
     const handleSave = async () => {
         if (isReadOnly) return;
 
+        const codeValue = formData.code ? formData.code.trim().toUpperCase() : formData.code;
+
         const scheduledIso =
-            scheduleType === "scheduled" && scheduledAt
-                ? new Date(scheduledAt).toISOString()
+            formData.scheduleType === "scheduled" && formData.scheduledAt
+                ? new Date(formData.scheduledAt).toISOString()
                 : undefined;
 
         const payload = {
-            name: name.trim(),
-            description: description.trim() || undefined,
-            departureHubId,
-            arrivalHubId: arrivalHubId || departureHubId,
-            scheduleType,
+            ...(mode === "create" ? { code: codeValue } : {}),
+            name: (formData.name || "").trim(),
+            description: formData.description?.trim() || undefined,
+            departureHubId: formData.departureHubId,
+            arrivalHubId: formData.arrivalHubId || formData.departureHubId,
+            scheduleType: formData.scheduleType,
             scheduledAt: scheduledIso,
         };
 
@@ -195,19 +191,29 @@ export function MissionEditor({
         const validation = validateSchema(schema, payload);
         const newFieldErrors: Record<string, string> = {};
 
+        if (formData.scheduleType === "scheduled") {
+            if (!formData.scheduledAt || !formData.scheduledAt.trim()) {
+                newFieldErrors.scheduledAt = "Scheduled departure time is required";
+            } else if (new Date(formData.scheduledAt).getTime() <= Date.now()) {
+                newFieldErrors.scheduledAt = "Scheduled departure time must be in the future";
+            }
+        }
+
         const waypointValidation = validateSchema(waypointsValidationSchema, {
             waypoints: waypoints.map((w) => sanitizeWaypointForApi(w, defaultAltitude)),
         });
 
-        if (!waypointValidation.success) {
-            Object.assign(newFieldErrors, waypointValidation.errors);
-        }
-
-        if (!validation.success) {
-            Object.assign(newFieldErrors, validation.errors);
-        }
-
-        if (!validation.success || Object.keys(newFieldErrors).length > 0) {
+        if (
+            !waypointValidation.success ||
+            !validation.success ||
+            Object.keys(newFieldErrors).length > 0
+        ) {
+            if (!waypointValidation.success) {
+                Object.assign(newFieldErrors, waypointValidation.errors);
+            }
+            if (!validation.success) {
+                Object.assign(newFieldErrors, validation.errors);
+            }
             setFieldErrors(newFieldErrors);
             const { tab, firstInvalidWaypointId } = determineActiveTabFromErrors(
                 newFieldErrors,
@@ -228,6 +234,19 @@ export function MissionEditor({
                 defaultAltitude,
                 droneId: droneId || undefined,
             });
+        } catch (err: unknown) {
+            const parsed = parseApiError(err, "Failed to save mission");
+            if (parsed.fieldErrors && Object.keys(parsed.fieldErrors).length > 0) {
+                setFieldErrors((prev) => ({ ...prev, ...parsed.fieldErrors }));
+                const { tab, firstInvalidWaypointId } = determineActiveTabFromErrors(
+                    parsed.fieldErrors,
+                    waypoints
+                );
+                setActiveSidebarTab(tab);
+                if (firstInvalidWaypointId) {
+                    setSelectedWaypointId(firstInvalidWaypointId);
+                }
+            }
         } finally {
             setSubmitting(false);
         }
@@ -255,7 +274,7 @@ export function MissionEditor({
                         onClick={() => router.push("/dashboard/missions")}
                         disabled={submitting}
                     >
-                        <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
+                        <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
                         <span>Cancel</span>
                     </OutlineButton>
 
@@ -296,20 +315,10 @@ export function MissionEditor({
             }
             sidebarContent={
                 <MissionFormSidebar
-                    name={name}
-                    onNameChange={setName}
-                    description={description}
-                    onDescriptionChange={setDescription}
+                    formData={formData}
+                    onFormChange={handleFormChange}
                     droneId={droneId}
                     onDroneIdChange={setDroneId}
-                    departureHubId={departureHubId}
-                    onDepartureHubIdChange={setDepartureHubId}
-                    arrivalHubId={arrivalHubId}
-                    onArrivalHubIdChange={setArrivalHubId}
-                    scheduleType={scheduleType}
-                    onScheduleTypeChange={setScheduleType}
-                    scheduledAt={scheduledAt}
-                    onScheduledAtChange={setScheduledAt}
                     drones={drones}
                     hubs={hubs}
                     waypoints={waypoints}
@@ -320,7 +329,7 @@ export function MissionEditor({
                     onMoveWaypointOrder={handleMoveWaypointOrder}
                     activeTab={activeSidebarTab}
                     onTabChange={setActiveSidebarTab}
-                    totalDistanceM={totalDistanceM}
+                    isEdit={mode === "edit"}
                     isReadOnly={isReadOnly}
                     fieldErrors={fieldErrors}
                     onClearFieldError={clearFieldError}
@@ -329,5 +338,3 @@ export function MissionEditor({
         />
     );
 }
-
-export default MissionEditor;

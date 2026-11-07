@@ -15,11 +15,24 @@ export const getDroneByIdParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the drone"),
 });
 
+export const getDroneByIdResponseRegistrationNumberMin = 3;
+export const getDroneByIdResponseRegistrationNumberMax = 50;
+export const getDroneByIdResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getDroneByIdResponseOwnerRegistrationNumberMin = 3;
+export const getDroneByIdResponseOwnerRegistrationNumberMax = 50;
+export const getDroneByIdResponseOwnerRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getDroneByIdResponseHomeHubCodeMin = 3;
+export const getDroneByIdResponseHomeHubCodeMax = 50;
+export const getDroneByIdResponseHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getDroneByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the drone"),
         registrationNumber: zod
             .string()
+            .min(getDroneByIdResponseRegistrationNumberMin)
+            .max(getDroneByIdResponseRegistrationNumberMax)
+            .regex(getDroneByIdResponseRegistrationNumberRegExp)
             .optional()
             .describe("Aircraft registration number / callsign"),
         manufacturer: zod.string().optional().describe("Manufacturer name"),
@@ -38,9 +51,12 @@ export const getDroneByIdResponse = zod
         owner: zod
             .object({
                 id: zod.string().optional().describe("Organization UUID identifier"),
-                name: zod.string().optional().describe("Organization name"),
+                name: zod.string().min(1).optional().describe("Organization name"),
                 registrationNumber: zod
                     .string()
+                    .min(getDroneByIdResponseOwnerRegistrationNumberMin)
+                    .max(getDroneByIdResponseOwnerRegistrationNumberMax)
+                    .regex(getDroneByIdResponseOwnerRegistrationNumberRegExp)
                     .optional()
                     .describe("Business registration number"),
                 type: zod.string().optional().describe("Organization classification type"),
@@ -50,8 +66,14 @@ export const getDroneByIdResponse = zod
         homeHub: zod
             .object({
                 id: zod.string().optional().describe("Hub UUID identifier"),
-                code: zod.string().optional().describe("Hub callsign / identification code"),
-                name: zod.string().optional().describe("Hub display name"),
+                code: zod
+                    .string()
+                    .min(getDroneByIdResponseHomeHubCodeMin)
+                    .max(getDroneByIdResponseHomeHubCodeMax)
+                    .regex(getDroneByIdResponseHomeHubCodeRegExp)
+                    .optional()
+                    .describe("Hub callsign / identification code"),
+                name: zod.string().min(1).optional().describe("Hub display name"),
             })
             .optional()
             .describe("Brief summary of base hub / vertiport station"),
@@ -111,11 +133,24 @@ export const updateDroneBody = zod
     })
     .describe("Request payload for updating an existing Drone / UAS");
 
+export const updateDroneResponseRegistrationNumberMin = 3;
+export const updateDroneResponseRegistrationNumberMax = 50;
+export const updateDroneResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateDroneResponseOwnerRegistrationNumberMin = 3;
+export const updateDroneResponseOwnerRegistrationNumberMax = 50;
+export const updateDroneResponseOwnerRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateDroneResponseHomeHubCodeMin = 3;
+export const updateDroneResponseHomeHubCodeMax = 50;
+export const updateDroneResponseHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const updateDroneResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the drone"),
         registrationNumber: zod
             .string()
+            .min(updateDroneResponseRegistrationNumberMin)
+            .max(updateDroneResponseRegistrationNumberMax)
+            .regex(updateDroneResponseRegistrationNumberRegExp)
             .optional()
             .describe("Aircraft registration number / callsign"),
         manufacturer: zod.string().optional().describe("Manufacturer name"),
@@ -134,9 +169,12 @@ export const updateDroneResponse = zod
         owner: zod
             .object({
                 id: zod.string().optional().describe("Organization UUID identifier"),
-                name: zod.string().optional().describe("Organization name"),
+                name: zod.string().min(1).optional().describe("Organization name"),
                 registrationNumber: zod
                     .string()
+                    .min(updateDroneResponseOwnerRegistrationNumberMin)
+                    .max(updateDroneResponseOwnerRegistrationNumberMax)
+                    .regex(updateDroneResponseOwnerRegistrationNumberRegExp)
                     .optional()
                     .describe("Business registration number"),
                 type: zod.string().optional().describe("Organization classification type"),
@@ -146,8 +184,14 @@ export const updateDroneResponse = zod
         homeHub: zod
             .object({
                 id: zod.string().optional().describe("Hub UUID identifier"),
-                code: zod.string().optional().describe("Hub callsign / identification code"),
-                name: zod.string().optional().describe("Hub display name"),
+                code: zod
+                    .string()
+                    .min(updateDroneResponseHomeHubCodeMin)
+                    .max(updateDroneResponseHomeHubCodeMax)
+                    .regex(updateDroneResponseHomeHubCodeRegExp)
+                    .optional()
+                    .describe("Hub callsign / identification code"),
+                name: zod.string().min(1).optional().describe("Hub display name"),
             })
             .optional()
             .describe("Brief summary of base hub / vertiport station"),
@@ -214,6 +258,18 @@ export const getDronesQueryParams = zod.object({
     offset: zod.number().optional().describe("Offset index (default: 0)"),
 });
 
+export const getDronesResponseItemsItemRegistrationNumberMin = 3;
+export const getDronesResponseItemsItemRegistrationNumberMax = 50;
+export const getDronesResponseItemsItemRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getDronesResponseItemsItemOwnerRegistrationNumberMin = 3;
+export const getDronesResponseItemsItemOwnerRegistrationNumberMax = 50;
+export const getDronesResponseItemsItemOwnerRegistrationNumberRegExp = new RegExp(
+    "^[A-Za-z0-9_-]+$"
+);
+export const getDronesResponseItemsItemHomeHubCodeMin = 3;
+export const getDronesResponseItemsItemHomeHubCodeMax = 50;
+export const getDronesResponseItemsItemHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getDronesResponse = zod
     .object({
         items: zod
@@ -223,6 +279,9 @@ export const getDronesResponse = zod
                         id: zod.string().optional().describe("Unique UUID identifier of the drone"),
                         registrationNumber: zod
                             .string()
+                            .min(getDronesResponseItemsItemRegistrationNumberMin)
+                            .max(getDronesResponseItemsItemRegistrationNumberMax)
+                            .regex(getDronesResponseItemsItemRegistrationNumberRegExp)
                             .optional()
                             .describe("Aircraft registration number / callsign"),
                         manufacturer: zod.string().optional().describe("Manufacturer name"),
@@ -253,9 +312,12 @@ export const getDronesResponse = zod
                                     .string()
                                     .optional()
                                     .describe("Organization UUID identifier"),
-                                name: zod.string().optional().describe("Organization name"),
+                                name: zod.string().min(1).optional().describe("Organization name"),
                                 registrationNumber: zod
                                     .string()
+                                    .min(getDronesResponseItemsItemOwnerRegistrationNumberMin)
+                                    .max(getDronesResponseItemsItemOwnerRegistrationNumberMax)
+                                    .regex(getDronesResponseItemsItemOwnerRegistrationNumberRegExp)
                                     .optional()
                                     .describe("Business registration number"),
                                 type: zod
@@ -270,9 +332,12 @@ export const getDronesResponse = zod
                                 id: zod.string().optional().describe("Hub UUID identifier"),
                                 code: zod
                                     .string()
+                                    .min(getDronesResponseItemsItemHomeHubCodeMin)
+                                    .max(getDronesResponseItemsItemHomeHubCodeMax)
+                                    .regex(getDronesResponseItemsItemHomeHubCodeRegExp)
                                     .optional()
                                     .describe("Hub callsign / identification code"),
-                                name: zod.string().optional().describe("Hub display name"),
+                                name: zod.string().min(1).optional().describe("Hub display name"),
                             })
                             .optional()
                             .describe("Brief summary of base hub / vertiport station"),
@@ -331,10 +396,17 @@ export const getDronesResponse = zod
  * Register a new Unmanned Aircraft System into the DROPS-UTM platform.
  * @summary Register new Drone
  */
+export const createDroneBodyRegistrationNumberMin = 3;
+export const createDroneBodyRegistrationNumberMax = 50;
+export const createDroneBodyRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const createDroneBody = zod
     .object({
         registrationNumber: zod
             .string()
+            .min(createDroneBodyRegistrationNumberMin)
+            .max(createDroneBodyRegistrationNumberMax)
+            .regex(createDroneBodyRegistrationNumberRegExp)
             .optional()
             .describe(
                 "Aircraft registration number / tail identifier. If omitted or blank, a unique number will be auto-generated (e.g. DRN-YYYY-XXXX)."

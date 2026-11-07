@@ -18,6 +18,7 @@ export * from "./Popover";
 export * from "./Calendar";
 export * from "./DateTimePicker";
 export * from "./FormInput";
+export * from "./AutoGenInput";
 export * from "./SplitMapLayout";
 export * from "./Pagination";
 export * from "./TableFilterBar";

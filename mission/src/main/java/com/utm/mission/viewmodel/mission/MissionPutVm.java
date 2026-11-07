@@ -8,7 +8,7 @@ import java.time.ZonedDateTime;
 
 @Schema(description = "Request payload for updating an existing mission in draft status")
 public record MissionPutVm(
-                @Schema(description = "Mission name", example = "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2 (Điều chỉnh)") @Size(max = 255, message = "Mission name must not exceed 255 characters") String name,
+                @Schema(description = "Mission name", example = "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2 (Điều chỉnh)") @Size(min = 1, max = 255, message = "Mission name must be between 1 and 255 characters") String name,
 
                 @Schema(description = "Mission detailed description", example = "Giao bưu kiện nhẹ 1.5kg") String description,
 

@@ -24,8 +24,7 @@ export const AIRSPACE_ZONE_STATUSES = updateZoneBody.shape.status.unwrap().optio
 export type AirspaceZoneFormPayload = Omit<CreateAirspaceZonePayload, "geometry">;
 
 export function getInitialAirspaceFormPayload(
-    initialData?: AirspaceZone | null,
-    mode: "create" | "edit" = "create"
+    initialData?: AirspaceZone | null
 ): AirspaceZoneFormPayload {
     return {
         code: initialData?.code || "",

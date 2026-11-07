@@ -13,12 +13,14 @@ import {
 import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
-import type { AirspaceZone } from "@/types";
+import { AIRSPACE_ZONE_STATUSES, type AirspaceZone } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = [
     { value: "all", label: "All Statuses" },
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
+    ...AIRSPACE_ZONE_STATUSES.map((status) => ({
+        value: status,
+        label: status.charAt(0).toUpperCase() + status.slice(1),
+    })),
 ];
 
 export default function AirspacePage() {

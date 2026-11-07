@@ -1,7 +1,6 @@
 import type zod from "zod";
-import { getMissionByIdResponse } from "@/generated/mission";
+import { getMissionByIdResponse, createMissionBody } from "@/generated/mission";
 import type {
-    createMissionBody,
     updateMissionBody,
     getMissionsResponse,
     getMissionsQueryParams,
@@ -14,11 +13,14 @@ import type {
 
 export type CreateMissionPayload = zod.infer<typeof createMissionBody>;
 export type UpdateMissionPayload = zod.infer<typeof updateMissionBody>;
-export type MissionScheduleType = NonNullable<CreateMissionPayload["scheduleType"]>;
+
+export const MISSION_SCHEDULE_TYPES = createMissionBody.shape.scheduleType.unwrap().options;
+export type MissionScheduleType = (typeof MISSION_SCHEDULE_TYPES)[number];
+
 export type MissionQueryParams = zod.infer<typeof getMissionsQueryParams>;
 
-export type MissionStatus = NonNullable<zod.infer<typeof getMissionByIdResponse>["status"]>;
 export const MISSION_STATUSES = getMissionByIdResponse.shape.status.unwrap().options;
+export type MissionStatus = (typeof MISSION_STATUSES)[number];
 
 export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
     draft: "Draft",
@@ -29,6 +31,20 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
     aborted: "Aborted",
     failed: "Failed",
 };
+
+export type MissionFormPayload = CreateMissionPayload;
+
+export function getInitialMissionFormPayload(initialData?: Mission | null): MissionFormPayload {
+    return {
+        code: initialData?.code || "",
+        name: initialData?.name || "",
+        description: initialData?.description || "",
+        departureHubId: initialData?.departureHubId || "",
+        arrivalHubId: initialData?.arrivalHubId || "",
+        scheduleType: initialData?.scheduleType || "immediate",
+        scheduledAt: initialData?.scheduledAt ? initialData.scheduledAt.slice(0, 16) : "",
+    };
+}
 
 export type Mission = NonNullable<zod.infer<typeof getMissionByIdResponse>> & {
     id: string;

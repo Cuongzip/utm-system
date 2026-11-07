@@ -1,15 +1,16 @@
 import type zod from "zod";
-import type {
-    createHubBody,
+import {
     updateHubBody,
-    getHubByIdResponse,
-    getHubsQueryParams,
+    type createHubBody,
+    type getHubByIdResponse,
+    type getHubsQueryParams,
 } from "@/generated/hub";
 
 export type CreateHubPayload = zod.infer<typeof createHubBody>;
 export type UpdateHubPayload = zod.infer<typeof updateHubBody>;
 export type HubQueryParams = zod.infer<typeof getHubsQueryParams>;
 export type HubStatus = NonNullable<zod.infer<typeof getHubByIdResponse>["status"]>;
+export const HUB_STATUSES = updateHubBody.shape.status.unwrap().options;
 export type HubFormPayload = CreateHubPayload & Pick<UpdateHubPayload, "status">;
 
 export type Hub = NonNullable<zod.infer<typeof getHubByIdResponse>> & {

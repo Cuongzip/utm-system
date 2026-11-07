@@ -17,7 +17,7 @@ public record MissionPostVm(
 
         @Schema(description = "Mission name", example = "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2")
         @NotBlank(message = "Mission name is required")
-        @Size(max = 255, message = "Mission name must not exceed 255 characters")
+        @Size(min = 1, max = 255, message = "Mission name must be between 1 and 255 characters")
         String name,
 
         @Schema(description = "Mission detailed description", example = "Giao bưu kiện nhẹ 1.2kg")

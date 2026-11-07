@@ -8,7 +8,6 @@ import {
     PageHeader,
     ChamferButton,
     OutlineButton,
-    AlertBanner,
     TableFilterBar,
     type SelectOption,
 } from "@/components/ui";
@@ -22,7 +21,7 @@ const STATUS_OPTIONS: SelectOption[] = [
     { value: "all", label: "All Statuses" },
     ...MISSION_STATUSES.map((status) => ({
         value: status,
-        label: MISSION_STATUS_LABELS[status],
+        label: MISSION_STATUS_LABELS[status] || status,
     })),
 ];
 
@@ -39,8 +38,6 @@ export default function MissionsPage() {
     const {
         items: missions,
         loading,
-        error,
-        setError,
         refresh: fetchData,
     } = useCrudList<Mission>({
         queryKey: QUERY_KEYS.missions,
@@ -54,15 +51,16 @@ export default function MissionsPage() {
     );
 
     const filteredMissions = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const status = statusFilter.toLowerCase();
         return missions.filter((m) => {
             const matchesSearch =
-                !searchQuery ||
-                (m.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                !query ||
+                (m.name || "").toLowerCase().includes(query) ||
+                (m.description && m.description.toLowerCase().includes(query)) ||
+                (m.code && m.code.toLowerCase().includes(query));
 
-            const matchesStatus =
-                statusFilter === "all" ||
-                (m.status || "").toLowerCase() === statusFilter.toLowerCase();
+            const matchesStatus = status === "all" || (m.status || "").toLowerCase() === status;
 
             return matchesSearch && matchesStatus;
         });
@@ -112,7 +110,7 @@ export default function MissionsPage() {
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="MISSION PLANNING">
                 <OutlineButton size="sm" onClick={fetchData}>
-                    <RotateCw className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
+                    <RotateCw className="w-3.5 h-3.5 text-slate-500" />
                     <span>Refresh</span>
                 </OutlineButton>
 
@@ -125,8 +123,6 @@ export default function MissionsPage() {
                     <span>New Mission</span>
                 </ChamferButton>
             </PageHeader>
-
-            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
             <TableFilterBar
                 searchQuery={searchQuery}

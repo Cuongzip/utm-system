@@ -1,5 +1,5 @@
 import type zod from "zod";
-import type {
+import {
     createDroneBody,
     updateDroneBody,
     getDroneByIdResponse,
@@ -11,6 +11,11 @@ export type DroneRegistrationPayload = zod.infer<typeof createDroneBody>;
 export type CreateDronePayload = DroneRegistrationPayload;
 export type UpdateDronePayload = zod.infer<typeof updateDroneBody>;
 export type DroneQueryParams = zod.infer<typeof getDronesQueryParams>;
+
+export const DRONE_STATUSES = updateDroneBody.shape.status.unwrap().options;
+export type DroneStatus = (typeof DRONE_STATUSES)[number];
+
+export type DroneFormPayload = CreateDronePayload & Partial<Pick<UpdateDronePayload, "status">>;
 
 export type Drone = NonNullable<zod.infer<typeof getDroneByIdResponse>> & {
     id: string;

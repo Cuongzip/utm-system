@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Request payload for updating an existing Airspace Zone / Geofence")
 public record AirspaceZonePutVm(
         @Schema(description = "Updated name of the airspace zone", example = "Khu vực Cấm bay Dinh Độc Lập (Mở rộng)")
-        @Size(max = 255, message = "Name must not exceed 255 characters")
+        @Size(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
         String name,
 
         @Schema(description = "Updated associated Hub ID", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")

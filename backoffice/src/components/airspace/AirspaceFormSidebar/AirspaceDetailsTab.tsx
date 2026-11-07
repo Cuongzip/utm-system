@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { CustomSelect, FormInput, Switch, type SelectOption } from "@/components/ui";
+import { useMemo } from "react";
+import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import {
     type AirspaceZoneType,
@@ -60,66 +60,15 @@ export function AirspaceDetailsTab({
         [hubs]
     );
 
-    const [autoGen, setAutoGen] = useState(!isEdit && !formData.code);
-
-    useEffect(() => {
-        if (isEdit) {
-            setAutoGen(false);
-        }
-    }, [isEdit]);
-
-    const [altStr, setAltStr] = useState(() =>
-        formData.altitudeCeiling !== undefined && formData.altitudeCeiling !== null
-            ? String(formData.altitudeCeiling)
-            : "120"
-    );
-
-    useEffect(() => {
-        if (formData.altitudeCeiling !== undefined && formData.altitudeCeiling !== null) {
-            setAltStr(String(formData.altitudeCeiling));
-        }
-    }, [formData.altitudeCeiling]);
-
-    const handleAltitudeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        setAltStr(val);
-        const parsed = Number(val);
-        if (!isNaN(parsed) && isFinite(parsed)) {
-            onFormChange("altitudeCeiling", parsed);
-        }
-        onClearFieldError?.("altitudeCeiling");
-    };
-
-    const handleAltitudeBlur = () => {
-        const parsed = Number(altStr);
-        if (isNaN(parsed) || !isFinite(parsed) || altStr.trim() === "") {
-            setAltStr(String(formData.altitudeCeiling ?? 120));
-        }
-    };
-
     return (
         <div className="space-y-4">
-            <FormInput
+            <AutoGenInput
                 id="airspaceCode"
                 label="Code"
-                labelRight={
-                    !isEdit && (
-                        <Switch
-                            label="AUTO-GEN"
-                            checked={autoGen}
-                            onCheckedChange={(checked) => {
-                                setAutoGen(checked);
-                                if (checked) {
-                                    onFormChange("code", "");
-                                    onClearFieldError?.("code");
-                                }
-                            }}
-                        />
-                    )
-                }
-                required={!isEdit && !autoGen}
-                disabled={isEdit || autoGen}
-                placeholder={autoGen ? "" : "e.g. ASZ-SGN01"}
+                showAutoGen={!isEdit}
+                disabled={isEdit}
+                required
+                manualPlaceholder="e.g. ASZ-SGN01"
                 value={formData.code ?? ""}
                 onChange={(e) => {
                     onFormChange("code", e.target.value);
@@ -192,9 +141,11 @@ export function AirspaceDetailsTab({
                         type="number"
                         min="10"
                         max="5000"
-                        value={altStr}
-                        onChange={handleAltitudeChange}
-                        onBlur={handleAltitudeBlur}
+                        value={formData.altitudeCeiling ?? 120}
+                        onChange={(e) => {
+                            onFormChange("altitudeCeiling", Number(e.target.value));
+                            onClearFieldError?.("altitudeCeiling");
+                        }}
                         className={cn(
                             "form-input font-mono pr-14",
                             fieldErrors.altitudeCeiling && "form-input-error"

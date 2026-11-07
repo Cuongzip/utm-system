@@ -19,55 +19,39 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
+import { formatNullable } from "@/utils";
 import type { Drone } from "@/types";
 
-interface DronesTableProps {
+export interface DronesTableProps {
     drones: Drone[];
     loading?: boolean;
-    onEditDrone?: (drone: Drone) => void;
-    onSelectDrone?: (drone: Drone) => void;
-    onDeleteDrone?: (id: string) => void;
+    onEditDrone: (drone: Drone) => void;
+    onDeleteDrone: (id: string) => void;
 }
 
 export function DronesTable({
     drones = [],
     loading = false,
     onEditDrone,
-    onSelectDrone,
     onDeleteDrone,
 }: DronesTableProps) {
     const [droneToDelete, setDroneToDelete] = useState<Drone | null>(null);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(drones);
 
-    const getActions = (drone: Drone): ActionMenuItem[] => {
-        const items: ActionMenuItem[] = [];
-
-        if (onEditDrone || onSelectDrone) {
-            items.push({
-                label: "Edit",
-                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-                onClick: () => {
-                    if (onEditDrone) {
-                        onEditDrone(drone);
-                    } else if (onSelectDrone) {
-                        onSelectDrone(drone);
-                    }
-                },
-            });
-        }
-
-        if (onDeleteDrone) {
-            items.push({
-                label: "Delete",
-                icon: <Trash2 className="w-3.5 h-3.5" />,
-                danger: true,
-                onClick: () => setDroneToDelete(drone),
-            });
-        }
-
-        return items;
-    };
+    const getActions = (drone: Drone): ActionMenuItem[] => [
+        {
+            label: "Edit",
+            icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+            onClick: () => onEditDrone(drone),
+        },
+        {
+            label: "Delete",
+            icon: <Trash2 className="w-3.5 h-3.5" />,
+            danger: true,
+            onClick: () => setDroneToDelete(drone),
+        },
+    ];
 
     return (
         <div className="flex flex-col gap-4 w-full">
@@ -104,15 +88,15 @@ export function DronesTable({
                                 const regText = drone.registrationNumber || drone.id;
                                 const mfgText = drone.manufacturer || "Unknown";
                                 const modelText = drone.model || "—";
-                                const hubText = drone.homeHub
-                                    ? drone.homeHub.name
-                                    : drone.homeHubId || "Unassigned";
-                                const maxPayloadText = drone.maxPayload
-                                    ? `${drone.maxPayload} kg`
-                                    : "—";
+                                const hubText =
+                                    drone.homeHub?.name || drone.homeHubId || "Unassigned";
+                                const maxPayloadText = formatNullable(
+                                    drone.maxPayload,
+                                    (val) => `${val} kg`
+                                );
 
                                 return (
-                                    <TableRow key={drone.id} onClick={() => onSelectDrone?.(drone)}>
+                                    <TableRow key={drone.id} onClick={() => onEditDrone(drone)}>
                                         <TableCell mono bold truncate tooltip={regText}>
                                             {regText}
                                         </TableCell>
@@ -126,7 +110,7 @@ export function DronesTable({
                                             {hubText}
                                         </TableCell>
                                         <TableCell>
-                                            <StatusBadge status={drone.status || "AVAILABLE"} />
+                                            <StatusBadge status={drone.status ?? "available"} />
                                         </TableCell>
                                         <TableCell mono darkText>
                                             {maxPayloadText}
@@ -155,7 +139,7 @@ export function DronesTable({
                 isOpen={!!droneToDelete}
                 onClose={() => setDroneToDelete(null)}
                 onConfirm={() => {
-                    if (droneToDelete && onDeleteDrone) {
+                    if (droneToDelete) {
                         onDeleteDrone(droneToDelete.id);
                         setDroneToDelete(null);
                     }
@@ -176,5 +160,3 @@ export function DronesTable({
         </div>
     );
 }
-
-export default DronesTable;
