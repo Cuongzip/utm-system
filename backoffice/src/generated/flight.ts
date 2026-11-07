@@ -467,8 +467,8 @@ export const createFlightBody = zod
         departureHubId: zod.string().min(1).describe("Departure Hub / Vertiport UUID identifier"),
         arrivalHubId: zod.string().min(1).describe("Arrival Hub / Vertiport UUID identifier"),
         pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso.datetime({}).describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).describe("Scheduled arrival timestamp"),
+        scheduledDeparture: zod.iso.datetime({}).min(1).describe("Scheduled departure timestamp"),
+        scheduledArrival: zod.iso.datetime({}).min(1).describe("Scheduled arrival timestamp"),
         cruisingAltitudeM: zod
             .number()
             .optional()

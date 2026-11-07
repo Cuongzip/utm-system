@@ -20,7 +20,9 @@ export const QUERY_KEYS = {
     flightsAll: ["flights", "all"] as const,
     airspace: ["airspace"] as const,
     missions: ["missions"] as const,
+    connectivity: ["connectivity"] as const,
     connectivityDevices: ["connectivity", "devices"] as const,
+    connectivityOnline: ["connectivity", "online"] as const,
     alertsActive: ["alerts", "active"] as const,
     simulation: ["simulation"] as const,
     simulationDetail: (id: string) => ["simulation", "detail", id] as const,
@@ -100,6 +102,17 @@ export function useConnectivityDevices() {
             return res.items || [];
         },
         refetchInterval: 3000,
+    });
+}
+
+export function useConnectivityOnlineDevices() {
+    return useQuery({
+        queryKey: QUERY_KEYS.connectivityOnline,
+        queryFn: async () => {
+            const res = await connectivityService.getOnlineDevices();
+            return res || [];
+        },
+        refetchInterval: 10000,
     });
 }
 

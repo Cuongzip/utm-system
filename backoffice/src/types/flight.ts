@@ -30,6 +30,14 @@ export const EDITABLE_FLIGHT_STATUSES: readonly FlightStatus[] = [
     "authorized",
 ] as const;
 
+export const ACTIVE_FLIGHT_STATUSES: readonly FlightStatus[] = [
+    "active",
+    "diverted",
+    "emergency_landing",
+] as const;
+
+export const DEFAULT_FLIGHT_STATUS: FlightStatus = "planned";
+
 export type FlightFormPayload = Omit<CreateFlightPayload, "plannedRoute"> & {
     cruisingAltitudeM?: number;
     feasibilityOverride?: string;

@@ -77,5 +77,3 @@ export function DashboardKpiStrip({
         </div>
     );
 }
-
-export default DashboardKpiStrip;

@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui";
-import { useQuery } from "@tanstack/react-query";
 import {
     DashboardKpiStrip,
     DashboardTacticalMap,
     DashboardFlightLog,
     DashboardDiagnostics,
+    API_HEALTH_STATUSES,
+    type ApiHealthStatus,
 } from "@/components/dashboard";
 import {
     useFlightsAll,
@@ -16,9 +17,9 @@ import {
     useActiveAlerts,
     useAirspaceAll,
     useLiveTelemetry,
-    QUERY_KEYS,
+    useConnectivityDevices,
 } from "@/hooks";
-import { connectivityService } from "@/services/connectivityService";
+import { ACTIVE_FLIGHT_STATUSES, ACTIVE_HUB_STATUS } from "@/types";
 import { formatDateTime } from "@/utils/format";
 
 export default function DashboardPage() {
@@ -35,14 +36,7 @@ export default function DashboardPage() {
     } = useDronesAll();
     const { data: alerts = [], isError: isErrorAlerts } = useActiveAlerts();
     const { data: zones = [], isError: isErrorZones } = useAirspaceAll();
-
-    const { data: devices = [] } = useQuery({
-        queryKey: QUERY_KEYS.connectivityDevices,
-        queryFn: async () => {
-            const res = await connectivityService.getDevices();
-            return res?.items || [];
-        },
-    });
+    const { data: devices = [] } = useConnectivityDevices();
 
     const [lastSyncedTime, setLastSyncedTime] = useState("");
 
@@ -51,31 +45,24 @@ export default function DashboardPage() {
     }, [allFlights, hubs, drones, alerts, zones, devices]);
 
     const activeFlights = useMemo(() => {
-        return (allFlights || []).filter((f) => {
-            const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
-            return (
-                s === "active" || s === "in_flight" || s === "diverted" || s === "emergency_landing"
-            );
-        });
+        return allFlights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status));
     }, [allFlights]);
 
     const { telemetryMap, telemetryHistoryMap, isSocketConnected, activeTelemetryCount } =
         useLiveTelemetry(activeFlights);
 
     const onlineHubsCount = useMemo(() => {
-        return (hubs || []).filter((h) => {
-            const s = (h.status || "active").toLowerCase();
-            return s === "active" || s === "online";
-        }).length;
+        return hubs.filter((h) => (h.status ?? ACTIVE_HUB_STATUS) === ACTIVE_HUB_STATUS).length;
     }, [hubs]);
 
-    const apiStatus = useMemo(() => {
-        if (isLoadingFlights || isLoadingHubs || isLoadingDrones) return "loading";
-        if (isErrorFlights && isErrorHubs) return "error";
+    const apiStatus: ApiHealthStatus = useMemo(() => {
+        if (isLoadingFlights || isLoadingHubs || isLoadingDrones)
+            return API_HEALTH_STATUSES.LOADING;
+        if (isErrorFlights && isErrorHubs) return API_HEALTH_STATUSES.ERROR;
         if (isErrorFlights || isErrorHubs || isErrorDrones || isErrorAlerts || isErrorZones) {
-            return "degraded";
+            return API_HEALTH_STATUSES.DEGRADED;
         }
-        return "connected";
+        return API_HEALTH_STATUSES.CONNECTED;
     }, [
         isLoadingFlights,
         isLoadingHubs,
@@ -105,7 +92,6 @@ export default function DashboardPage() {
                 flights={allFlights}
                 activeFlights={activeFlights}
                 hubs={hubs}
-                dronesCount={drones.length}
                 airspaceZones={zones}
                 telemetryMap={telemetryMap}
                 telemetryHistoryMap={telemetryHistoryMap}

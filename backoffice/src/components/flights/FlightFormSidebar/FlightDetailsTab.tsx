@@ -20,6 +20,7 @@ export interface FlightDetailsTabProps {
     isFeasibilityWarning?: boolean;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
+    onClearFieldError?: (field: string) => void;
 }
 
 export function FlightDetailsTab({
@@ -34,23 +35,26 @@ export function FlightDetailsTab({
     isFeasibilityWarning = false,
     isReadOnly = false,
     fieldErrors = {},
+    onClearFieldError,
 }: FlightDetailsTabProps) {
     const selectedDrone = drones.find((d) => d.id === formData.droneId) || null;
 
     return (
         <div className="space-y-4">
-            <div className="form-group">
-                <AutoGenInput
-                    id="flightNumber"
-                    label="Flight Number / Callsign"
-                    showAutoGen={mode === "create"}
-                    disabled={isReadOnly || mode === "edit"}
-                    manualPlaceholder="e.g. FL-2026-001"
-                    value={formData.flightNumber ?? ""}
-                    onChange={(e) => onFormChange("flightNumber", e.target.value)}
-                    error={fieldErrors.flightNumber}
-                />
-            </div>
+            <AutoGenInput
+                id="flightNumber"
+                label="Flight Number"
+                showAutoGen={mode !== "edit"}
+                disabled={mode === "edit" || isReadOnly}
+                required
+                manualPlaceholder="e.g. FL-2026-001"
+                value={formData.flightNumber ?? ""}
+                onChange={(e) => {
+                    onFormChange("flightNumber", e.target.value);
+                    onClearFieldError?.("flightNumber");
+                }}
+                error={fieldErrors.flightNumber}
+            />
 
             <div className="form-group">
                 <label className="form-label" htmlFor="droneId">

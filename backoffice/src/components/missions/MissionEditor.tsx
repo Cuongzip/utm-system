@@ -168,7 +168,7 @@ export function MissionEditor({
     const handleSave = async () => {
         if (isReadOnly) return;
 
-        const codeValue = formData.code ? formData.code.trim().toUpperCase() : formData.code;
+        const codeValue = formData.code?.trim() ? formData.code.trim().toUpperCase() : undefined;
 
         const scheduledIso =
             formData.scheduleType === "scheduled" && formData.scheduledAt

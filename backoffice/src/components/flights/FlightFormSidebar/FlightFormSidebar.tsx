@@ -30,6 +30,7 @@ export interface FlightFormSidebarProps {
     activeTab: "details" | "waypoints" | "schedule";
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
     fieldErrors?: Record<string, string>;
+    onClearFieldError?: (field: string) => void;
     isReadOnly?: boolean;
     className?: string;
 }
@@ -52,6 +53,7 @@ export function FlightFormSidebar({
     activeTab,
     onTabChange,
     fieldErrors = {},
+    onClearFieldError,
     isReadOnly = false,
     className = "",
 }: FlightFormSidebarProps) {
@@ -171,6 +173,7 @@ export function FlightFormSidebar({
                             isFeasibilityWarning={isFeasibilityWarning}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
+                            onClearFieldError={onClearFieldError}
                         />
                     )}
 

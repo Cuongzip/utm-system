@@ -104,10 +104,26 @@ export const getMissionByIdParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the mission"),
 });
 
+export const getMissionByIdResponseCodeMin = 3;
+export const getMissionByIdResponseCodeMax = 50;
+export const getMissionByIdResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getMissionByIdResponseDepartureHubCodeMin = 3;
+export const getMissionByIdResponseDepartureHubCodeMax = 50;
+export const getMissionByIdResponseDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getMissionByIdResponseArrivalHubCodeMin = 3;
+export const getMissionByIdResponseArrivalHubCodeMax = 50;
+export const getMissionByIdResponseArrivalHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getMissionByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Mission UUID identifier"),
-        code: zod.string().optional().describe("Mission business tracking code"),
+        code: zod
+            .string()
+            .min(getMissionByIdResponseCodeMin)
+            .max(getMissionByIdResponseCodeMax)
+            .regex(getMissionByIdResponseCodeRegExp)
+            .optional()
+            .describe("Mission business tracking code"),
         name: zod.string().min(1).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
@@ -177,7 +193,13 @@ export const getMissionByIdResponse = zod
         departureHub: zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
-                code: zod.string().optional().describe("Hub operational code"),
+                code: zod
+                    .string()
+                    .min(getMissionByIdResponseDepartureHubCodeMin)
+                    .max(getMissionByIdResponseDepartureHubCodeMax)
+                    .regex(getMissionByIdResponseDepartureHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
                 name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
@@ -193,7 +215,13 @@ export const getMissionByIdResponse = zod
         arrivalHub: zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
-                code: zod.string().optional().describe("Hub operational code"),
+                code: zod
+                    .string()
+                    .min(getMissionByIdResponseArrivalHubCodeMin)
+                    .max(getMissionByIdResponseArrivalHubCodeMax)
+                    .regex(getMissionByIdResponseArrivalHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
                 name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
@@ -240,10 +268,26 @@ export const updateMissionBody = zod
     })
     .describe("Request payload for updating an existing mission in draft status");
 
+export const updateMissionResponseCodeMin = 3;
+export const updateMissionResponseCodeMax = 50;
+export const updateMissionResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateMissionResponseDepartureHubCodeMin = 3;
+export const updateMissionResponseDepartureHubCodeMax = 50;
+export const updateMissionResponseDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateMissionResponseArrivalHubCodeMin = 3;
+export const updateMissionResponseArrivalHubCodeMax = 50;
+export const updateMissionResponseArrivalHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const updateMissionResponse = zod
     .object({
         id: zod.string().optional().describe("Mission UUID identifier"),
-        code: zod.string().optional().describe("Mission business tracking code"),
+        code: zod
+            .string()
+            .min(updateMissionResponseCodeMin)
+            .max(updateMissionResponseCodeMax)
+            .regex(updateMissionResponseCodeRegExp)
+            .optional()
+            .describe("Mission business tracking code"),
         name: zod.string().min(1).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
@@ -313,7 +357,13 @@ export const updateMissionResponse = zod
         departureHub: zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
-                code: zod.string().optional().describe("Hub operational code"),
+                code: zod
+                    .string()
+                    .min(updateMissionResponseDepartureHubCodeMin)
+                    .max(updateMissionResponseDepartureHubCodeMax)
+                    .regex(updateMissionResponseDepartureHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
                 name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
@@ -329,7 +379,13 @@ export const updateMissionResponse = zod
         arrivalHub: zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
-                code: zod.string().optional().describe("Hub operational code"),
+                code: zod
+                    .string()
+                    .min(updateMissionResponseArrivalHubCodeMin)
+                    .max(updateMissionResponseArrivalHubCodeMax)
+                    .regex(updateMissionResponseArrivalHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
                 name: zod.string().min(1).optional().describe("Hub name"),
                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
@@ -384,6 +440,16 @@ export const getMissionsQueryParams = zod.object({
         .describe("Page size (records per page)"),
 });
 
+export const getMissionsResponseItemsItemCodeMin = 3;
+export const getMissionsResponseItemsItemCodeMax = 50;
+export const getMissionsResponseItemsItemCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getMissionsResponseItemsItemDepartureHubCodeMin = 3;
+export const getMissionsResponseItemsItemDepartureHubCodeMax = 50;
+export const getMissionsResponseItemsItemDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getMissionsResponseItemsItemArrivalHubCodeMin = 3;
+export const getMissionsResponseItemsItemArrivalHubCodeMax = 50;
+export const getMissionsResponseItemsItemArrivalHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getMissionsResponse = zod
     .object({
         items: zod
@@ -391,7 +457,13 @@ export const getMissionsResponse = zod
                 zod
                     .object({
                         id: zod.string().optional().describe("Mission UUID identifier"),
-                        code: zod.string().optional().describe("Mission business tracking code"),
+                        code: zod
+                            .string()
+                            .min(getMissionsResponseItemsItemCodeMin)
+                            .max(getMissionsResponseItemsItemCodeMax)
+                            .regex(getMissionsResponseItemsItemCodeRegExp)
+                            .optional()
+                            .describe("Mission business tracking code"),
                         name: zod.string().min(1).optional().describe("Mission name"),
                         description: zod
                             .string()
@@ -505,7 +577,13 @@ export const getMissionsResponse = zod
                         departureHub: zod
                             .object({
                                 id: zod.string().optional().describe("Hub unique identifier"),
-                                code: zod.string().optional().describe("Hub operational code"),
+                                code: zod
+                                    .string()
+                                    .min(getMissionsResponseItemsItemDepartureHubCodeMin)
+                                    .max(getMissionsResponseItemsItemDepartureHubCodeMax)
+                                    .regex(getMissionsResponseItemsItemDepartureHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
                                 name: zod.string().min(1).optional().describe("Hub name"),
                                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                                 longitude: zod.number().optional().describe("Hub GPS longitude"),
@@ -521,7 +599,13 @@ export const getMissionsResponse = zod
                         arrivalHub: zod
                             .object({
                                 id: zod.string().optional().describe("Hub unique identifier"),
-                                code: zod.string().optional().describe("Hub operational code"),
+                                code: zod
+                                    .string()
+                                    .min(getMissionsResponseItemsItemArrivalHubCodeMin)
+                                    .max(getMissionsResponseItemsItemArrivalHubCodeMax)
+                                    .regex(getMissionsResponseItemsItemArrivalHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
                                 name: zod.string().min(1).optional().describe("Hub name"),
                                 latitude: zod.number().optional().describe("Hub GPS latitude"),
                                 longitude: zod.number().optional().describe("Hub GPS longitude"),

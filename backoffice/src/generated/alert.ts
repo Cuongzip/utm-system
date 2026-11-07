@@ -387,14 +387,13 @@ export const getAlertsResponse = zod
  * Publish a new operational alert from automated subsystems (conformance watchdog, conflict detector, battery monitor) or manual operator input.
  * @summary Trigger / create operational alert
  */
-export const createAlertBodyAlertTypeMin = 0;
 export const createAlertBodyAlertTypeMax = 50;
 
 export const createAlertBody = zod
     .object({
         alertType: zod
             .string()
-            .min(createAlertBodyAlertTypeMin)
+            .min(1)
             .max(createAlertBodyAlertTypeMax)
             .describe(
                 "Type of alert: LATERAL_CORRIDOR_BREACH, VERTICAL_ALTITUDE_BREACH, 3D_VOLUME_BREACH, C2_LINK_LOST, BATTERY_LOW, etc."

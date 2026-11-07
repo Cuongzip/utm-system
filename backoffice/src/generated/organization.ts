@@ -15,16 +15,23 @@ export const getOrganizationByIdParams = zod.object({
     id: zod.string().describe("Organization UUID"),
 });
 
+export const getOrganizationByIdResponseRegistrationNumberMin = 3;
+export const getOrganizationByIdResponseRegistrationNumberMax = 50;
+export const getOrganizationByIdResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getOrganizationByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the organization"),
-        name: zod.string().optional().describe("Legal / operational organization name"),
+        name: zod.string().min(1).optional().describe("Legal / operational organization name"),
         type: zod
             .enum(["operator", "authority", "enterprise"])
             .optional()
             .describe("Organization category / type"),
         registrationNumber: zod
             .string()
+            .min(getOrganizationByIdResponseRegistrationNumberMin)
+            .max(getOrganizationByIdResponseRegistrationNumberMax)
+            .regex(getOrganizationByIdResponseRegistrationNumberRegExp)
             .optional()
             .describe("Business registration number / license code"),
         contactInfo: zod
@@ -56,14 +63,13 @@ export const updateOrganizationParams = zod.object({
     id: zod.string().describe("Organization UUID"),
 });
 
-export const updateOrganizationBodyNameMin = 0;
 export const updateOrganizationBodyNameMax = 255;
 
 export const updateOrganizationBody = zod
     .object({
         name: zod
             .string()
-            .min(updateOrganizationBodyNameMin)
+            .min(1)
             .max(updateOrganizationBodyNameMax)
             .optional()
             .describe("Legal / operational organization name"),
@@ -82,16 +88,23 @@ export const updateOrganizationBody = zod
     })
     .describe("Request payload for updating an existing Organization");
 
+export const updateOrganizationResponseRegistrationNumberMin = 3;
+export const updateOrganizationResponseRegistrationNumberMax = 50;
+export const updateOrganizationResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const updateOrganizationResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the organization"),
-        name: zod.string().optional().describe("Legal / operational organization name"),
+        name: zod.string().min(1).optional().describe("Legal / operational organization name"),
         type: zod
             .enum(["operator", "authority", "enterprise"])
             .optional()
             .describe("Organization category / type"),
         registrationNumber: zod
             .string()
+            .min(updateOrganizationResponseRegistrationNumberMin)
+            .max(updateOrganizationResponseRegistrationNumberMax)
+            .regex(updateOrganizationResponseRegistrationNumberRegExp)
             .optional()
             .describe("Business registration number / license code"),
         contactInfo: zod
@@ -147,6 +160,12 @@ export const getOrganizationsQueryParams = zod.object({
     offset: zod.number().optional().describe("Offset index (default: 0)"),
 });
 
+export const getOrganizationsResponseItemsItemRegistrationNumberMin = 3;
+export const getOrganizationsResponseItemsItemRegistrationNumberMax = 50;
+export const getOrganizationsResponseItemsItemRegistrationNumberRegExp = new RegExp(
+    "^[A-Za-z0-9_-]+$"
+);
+
 export const getOrganizationsResponse = zod
     .object({
         items: zod
@@ -159,6 +178,7 @@ export const getOrganizationsResponse = zod
                             .describe("Unique UUID identifier of the organization"),
                         name: zod
                             .string()
+                            .min(1)
                             .optional()
                             .describe("Legal / operational organization name"),
                         type: zod
@@ -167,6 +187,9 @@ export const getOrganizationsResponse = zod
                             .describe("Organization category / type"),
                         registrationNumber: zod
                             .string()
+                            .min(getOrganizationsResponseItemsItemRegistrationNumberMin)
+                            .max(getOrganizationsResponseItemsItemRegistrationNumberMax)
+                            .regex(getOrganizationsResponseItemsItemRegistrationNumberRegExp)
                             .optional()
                             .describe("Business registration number / license code"),
                         contactInfo: zod
@@ -206,16 +229,16 @@ export const getOrganizationsResponse = zod
  * Register a new enterprise, operator, or authority organization in the system. Requires admin role.
  * @summary Register new Organization
  */
-export const createOrganizationBodyNameMin = 0;
 export const createOrganizationBodyNameMax = 255;
-export const createOrganizationBodyRegistrationNumberMin = 0;
+export const createOrganizationBodyRegistrationNumberMin = 3;
 export const createOrganizationBodyRegistrationNumberMax = 100;
+export const createOrganizationBodyRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 
 export const createOrganizationBody = zod
     .object({
         name: zod
             .string()
-            .min(createOrganizationBodyNameMin)
+            .min(1)
             .max(createOrganizationBodyNameMax)
             .describe("Legal / operational organization name"),
         type: zod
@@ -225,6 +248,7 @@ export const createOrganizationBody = zod
             .string()
             .min(createOrganizationBodyRegistrationNumberMin)
             .max(createOrganizationBodyRegistrationNumberMax)
+            .regex(createOrganizationBodyRegistrationNumberRegExp)
             .optional()
             .describe(
                 "Business registration number / license code. If omitted or blank, a unique code will be auto-generated (e.g. ORG-YYYY-XXXX)."

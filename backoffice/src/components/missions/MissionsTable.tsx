@@ -147,9 +147,7 @@ export function MissionsTable({
                                         onClick={() => onSelectMission(mission)}
                                     >
                                         <TableCell mono bold darkText>
-                                            <span className="font-mono text-xs font-semibold text-cyan-600 tracking-wider">
-                                                {formatNullable(mission.code)}
-                                            </span>
+                                            {formatNullable(mission.code)}
                                         </TableCell>
 
                                         <TableCell

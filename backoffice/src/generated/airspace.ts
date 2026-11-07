@@ -15,10 +15,20 @@ export const getZoneByIdParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the airspace zone"),
 });
 
+export const getZoneByIdResponseCodeMin = 3;
+export const getZoneByIdResponseCodeMax = 50;
+export const getZoneByIdResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getZoneByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
-        code: zod.string().optional().describe("Airspace zone business tracking code"),
+        code: zod
+            .string()
+            .min(getZoneByIdResponseCodeMin)
+            .max(getZoneByIdResponseCodeMax)
+            .regex(getZoneByIdResponseCodeRegExp)
+            .optional()
+            .describe("Airspace zone business tracking code"),
         hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
         name: zod.string().min(1).optional().describe("Name of the airspace zone"),
         zoneType: zod
@@ -105,10 +115,20 @@ export const updateZoneBody = zod
     })
     .describe("Request payload for updating an existing Airspace Zone / Geofence");
 
+export const updateZoneResponseCodeMin = 3;
+export const updateZoneResponseCodeMax = 50;
+export const updateZoneResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const updateZoneResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
-        code: zod.string().optional().describe("Airspace zone business tracking code"),
+        code: zod
+            .string()
+            .min(updateZoneResponseCodeMin)
+            .max(updateZoneResponseCodeMax)
+            .regex(updateZoneResponseCodeRegExp)
+            .optional()
+            .describe("Airspace zone business tracking code"),
         hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
         name: zod.string().min(1).optional().describe("Name of the airspace zone"),
         zoneType: zod
@@ -172,6 +192,10 @@ export const getAllZonesQueryParams = zod.object({
     offset: zod.number().optional().describe("Offset index (default: 0)"),
 });
 
+export const getAllZonesResponseItemsItemCodeMin = 3;
+export const getAllZonesResponseItemsItemCodeMax = 50;
+export const getAllZonesResponseItemsItemCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getAllZonesResponse = zod
     .object({
         items: zod
@@ -184,6 +208,9 @@ export const getAllZonesResponse = zod
                             .describe("Unique UUID identifier of the airspace zone"),
                         code: zod
                             .string()
+                            .min(getAllZonesResponseItemsItemCodeMin)
+                            .max(getAllZonesResponseItemsItemCodeMax)
+                            .regex(getAllZonesResponseItemsItemCodeRegExp)
                             .optional()
                             .describe("Airspace zone business tracking code"),
                         hubId: zod

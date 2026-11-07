@@ -3,7 +3,7 @@
 import { Radio, Wifi, Activity, CheckCircle2 } from "lucide-react";
 import { MetricCard } from "@/components/ui";
 
-interface ConnectivityMetricsProps {
+export interface ConnectivityMetricsProps {
     totalDevices?: number;
     activeDevices?: number;
     onlineDevices?: number;
@@ -34,7 +34,7 @@ export function ConnectivityMetrics({
                 title="ONLINE"
                 value={onlineDevices}
                 icon={Wifi}
-                iconClassName="text-[#10b981]"
+                iconClassName="text-emerald-600"
             >
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                     <div
@@ -58,10 +58,8 @@ export function ConnectivityMetrics({
                 subValue="WebSocket connections"
                 subValuePosition="bottom"
                 icon={CheckCircle2}
-                iconClassName="text-[#10b981]"
+                iconClassName="text-emerald-600"
             />
         </div>
     );
 }
-
-export default ConnectivityMetrics;

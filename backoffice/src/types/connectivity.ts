@@ -1,14 +1,19 @@
 import type zod from "zod";
-import type {
-    registerDeviceBody,
-    getDeviceByIdResponse,
-    getDevicesResponse,
+import {
     getDevicesQueryParams,
+    type registerDeviceBody,
+    type getDeviceByIdResponse,
+    type getDevicesResponse,
 } from "@/generated/connectivity";
 
 export type DeviceConnectionStatus = NonNullable<
     zod.infer<typeof getDevicesQueryParams>["connectionStatus"]
 >;
+
+export const DEVICE_CONNECTION_STATUSES =
+    getDevicesQueryParams.shape.connectionStatus.unwrap().options;
+export const ONLINE_DEVICE_STATUS: DeviceConnectionStatus = "online";
+export const OFFLINE_DEVICE_STATUS: DeviceConnectionStatus = "offline";
 
 export type DeviceRegistrationPayload = zod.infer<typeof registerDeviceBody>;
 

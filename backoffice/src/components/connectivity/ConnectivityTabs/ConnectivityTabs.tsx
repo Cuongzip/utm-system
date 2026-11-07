@@ -4,21 +4,21 @@ import { cn } from "@/lib";
 
 export type ConnectivitySubTab = "overview" | "devices" | "telemetry-modes";
 
-interface ConnectivityTabsProps {
+export interface ConnectivityTabsProps {
     activeTab: ConnectivitySubTab;
     onTabChange: (tab: ConnectivitySubTab) => void;
 }
 
-export function ConnectivityTabs({ activeTab, onTabChange }: ConnectivityTabsProps) {
-    const tabs: { id: ConnectivitySubTab; label: string }[] = [
-        { id: "overview", label: "Overview" },
-        { id: "devices", label: "Devices" },
-        { id: "telemetry-modes", label: "Telemetry Modes" },
-    ];
+const TABS: readonly { id: ConnectivitySubTab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "devices", label: "Devices" },
+    { id: "telemetry-modes", label: "Telemetry Modes" },
+] as const;
 
+export function ConnectivityTabs({ activeTab, onTabChange }: ConnectivityTabsProps) {
     return (
         <div className="bg-slate-200/70 p-1 rounded-lg flex items-center gap-0.5 w-fit">
-            {tabs.map((tab) => (
+            {TABS.map((tab) => (
                 <button
                     key={tab.id}
                     type="button"
@@ -36,5 +36,3 @@ export function ConnectivityTabs({ activeTab, onTabChange }: ConnectivityTabsPro
         </div>
     );
 }
-
-export default ConnectivityTabs;

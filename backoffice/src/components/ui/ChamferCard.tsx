@@ -4,7 +4,7 @@ import { cn } from "@/lib";
 
 export type ChamferSize = "sm" | "md" | "lg";
 
-interface ChamferCardProps {
+export interface ChamferCardProps {
     size?: ChamferSize;
     className?: string;
     innerClassName?: string;
@@ -32,14 +32,14 @@ export function ChamferCard({
             style={style}
             onClick={onClick}
             className={cn(
-                "bg-[var(--color-border-strong)] p-[1.5px] relative drop-shadow-sm",
+                "bg-[var(--color-border-strong)] p-[1.5px] relative drop-shadow-sm flex flex-col",
                 SIZE_CLASSES[size],
                 className
             )}
         >
             <div
                 className={cn(
-                    "bg-[var(--color-surface-panel)] h-full",
+                    "bg-[var(--color-surface-panel)] flex-1 w-full flex flex-col",
                     SIZE_CLASSES[size],
                     innerClassName
                 )}
@@ -49,5 +49,3 @@ export function ChamferCard({
         </div>
     );
 }
-
-export default ChamferCard;

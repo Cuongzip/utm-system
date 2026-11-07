@@ -15,6 +15,9 @@ export const getHubByIdParams = zod.object({
     id: zod.string().describe("Unique UUID of the Hub"),
 });
 
+export const getHubByIdResponseCodeMin = 3;
+export const getHubByIdResponseCodeMax = 50;
+export const getHubByIdResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const getHubByIdResponseLocationLatitudeMin = -90;
 export const getHubByIdResponseLocationLatitudeMax = 90;
 export const getHubByIdResponseLocationLongitudeMin = -180;
@@ -23,8 +26,14 @@ export const getHubByIdResponseLocationLongitudeMax = 180;
 export const getHubByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the Hub"),
-        code: zod.string().optional().describe("Unique identification code / callsign of the Hub"),
-        name: zod.string().optional().describe("Display name of the Hub / Vertiport"),
+        code: zod
+            .string()
+            .min(getHubByIdResponseCodeMin)
+            .max(getHubByIdResponseCodeMax)
+            .regex(getHubByIdResponseCodeRegExp)
+            .optional()
+            .describe("Unique identification code / callsign of the Hub"),
+        name: zod.string().min(1).optional().describe("Display name of the Hub / Vertiport"),
         location: zod
             .object({
                 latitude: zod
@@ -66,7 +75,7 @@ export const updateHubBodyLocationLongitudeMax = 180;
 
 export const updateHubBody = zod
     .object({
-        name: zod.string().optional().describe("Updated name of the Hub"),
+        name: zod.string().min(1).optional().describe("Updated name of the Hub"),
         location: zod
             .object({
                 latitude: zod
@@ -97,6 +106,9 @@ export const updateHubBody = zod
     })
     .describe("Request payload for updating an existing Hub / Vertiport");
 
+export const updateHubResponseCodeMin = 3;
+export const updateHubResponseCodeMax = 50;
+export const updateHubResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const updateHubResponseLocationLatitudeMin = -90;
 export const updateHubResponseLocationLatitudeMax = 90;
 export const updateHubResponseLocationLongitudeMin = -180;
@@ -105,8 +117,14 @@ export const updateHubResponseLocationLongitudeMax = 180;
 export const updateHubResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the Hub"),
-        code: zod.string().optional().describe("Unique identification code / callsign of the Hub"),
-        name: zod.string().optional().describe("Display name of the Hub / Vertiport"),
+        code: zod
+            .string()
+            .min(updateHubResponseCodeMin)
+            .max(updateHubResponseCodeMax)
+            .regex(updateHubResponseCodeRegExp)
+            .optional()
+            .describe("Unique identification code / callsign of the Hub"),
+        name: zod.string().min(1).optional().describe("Display name of the Hub / Vertiport"),
         location: zod
             .object({
                 latitude: zod
@@ -161,6 +179,9 @@ export const getHubsQueryParams = zod.object({
     offset: zod.number().optional().describe("Offset index (default: 0)"),
 });
 
+export const getHubsResponseItemsItemCodeMin = 3;
+export const getHubsResponseItemsItemCodeMax = 50;
+export const getHubsResponseItemsItemCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const getHubsResponseItemsItemLocationLatitudeMin = -90;
 export const getHubsResponseItemsItemLocationLatitudeMax = 90;
 export const getHubsResponseItemsItemLocationLongitudeMin = -180;
@@ -175,10 +196,14 @@ export const getHubsResponse = zod
                         id: zod.string().optional().describe("Unique UUID identifier of the Hub"),
                         code: zod
                             .string()
+                            .min(getHubsResponseItemsItemCodeMin)
+                            .max(getHubsResponseItemsItemCodeMax)
+                            .regex(getHubsResponseItemsItemCodeRegExp)
                             .optional()
                             .describe("Unique identification code / callsign of the Hub"),
                         name: zod
                             .string()
+                            .min(1)
                             .optional()
                             .describe("Display name of the Hub / Vertiport"),
                         location: zod

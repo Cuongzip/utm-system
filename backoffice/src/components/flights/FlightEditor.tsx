@@ -326,6 +326,7 @@ export function FlightEditor({
                     activeTab={activeSidebarTab}
                     onTabChange={setActiveSidebarTab}
                     fieldErrors={fieldErrors}
+                    onClearFieldError={clearFieldError}
                     isReadOnly={isReadOnly}
                 />
             }

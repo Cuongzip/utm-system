@@ -43,10 +43,10 @@ export const processHeartbeatResponse = zod
  * Associates a unique hardware device identifier with a drone in a 1-to-1 relationship. Requires admin or hub_operator role.
  * @summary Register drone hardware device
  */
-export const registerDeviceBodyDroneIdMin = 0;
 export const registerDeviceBodyDroneIdMax = 36;
-export const registerDeviceBodyDeviceIdentifierMin = 0;
-export const registerDeviceBodyDeviceIdentifierMax = 100;
+export const registerDeviceBodyDeviceIdentifierMin = 3;
+export const registerDeviceBodyDeviceIdentifierMax = 50;
+export const registerDeviceBodyDeviceIdentifierRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const registerDeviceBodyCertificateFingerprintMin = 0;
 export const registerDeviceBodyCertificateFingerprintMax = 128;
 
@@ -54,13 +54,14 @@ export const registerDeviceBody = zod
     .object({
         droneId: zod
             .string()
-            .min(registerDeviceBodyDroneIdMin)
+            .min(1)
             .max(registerDeviceBodyDroneIdMax)
             .describe("Unique UUID of the drone"),
         deviceIdentifier: zod
             .string()
             .min(registerDeviceBodyDeviceIdentifierMin)
             .max(registerDeviceBodyDeviceIdentifierMax)
+            .regex(registerDeviceBodyDeviceIdentifierRegExp)
             .optional()
             .describe(
                 "Unique hardware identifier (MAC address, IMEI, or serial number). If omitted or blank, a unique identifier will be auto-generated (e.g. DEV-XXXXXXXX)."

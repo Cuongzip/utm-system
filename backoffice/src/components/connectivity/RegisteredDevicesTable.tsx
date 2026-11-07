@@ -1,32 +1,52 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Activity, Trash2, Loader2, Plus } from "lucide-react";
+import { Activity, Trash2, Radio } from "lucide-react";
 import {
     ChamferCard,
-    ChamferButton,
     StatusBadge,
-    SearchInput,
+    TableFilterBar,
+    type CustomSelectOption,
     EmptyState,
     ConfirmDialog,
-    Tooltip,
+    ActionMenu,
+    type ActionMenuItem,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableLoading,
+    Pagination,
 } from "@/components/ui";
-import type { DeviceRegistration, DeviceConnectionStatus } from "@/types";
+import { usePagination } from "@/hooks";
+import {
+    OFFLINE_DEVICE_STATUS,
+    DEVICE_CONNECTION_STATUSES,
+    type DeviceRegistration,
+    type DeviceConnectionStatus,
+} from "@/types";
 import { formatDateTime, formatRelativeTime } from "@/utils";
 
-interface RegisteredDevicesTableProps {
+const DEVICE_STATUS_OPTIONS: CustomSelectOption[] = [
+    { value: "all", label: "All Statuses" },
+    ...DEVICE_CONNECTION_STATUSES.map((status) => ({
+        value: status,
+        label: status.charAt(0).toUpperCase() + status.slice(1),
+    })),
+];
+
+export interface RegisteredDevicesTableProps {
     devices: DeviceRegistration[];
     loading?: boolean;
-    onRefresh?: () => void;
-    onRegisterDevice?: () => void;
-    onHeartbeat?: (id: string) => void;
-    onRevoke?: (id: string) => void;
+    onHeartbeat: (id: string) => void;
+    onRevoke: (id: string) => void;
 }
 
 export function RegisteredDevicesTable({
-    devices,
+    devices = [],
     loading = false,
-    onRegisterDevice,
     onHeartbeat,
     onRevoke,
 }: RegisteredDevicesTableProps) {
@@ -35,212 +55,172 @@ export function RegisteredDevicesTable({
     const [deviceToRevoke, setDeviceToRevoke] = useState<DeviceRegistration | null>(null);
 
     const filteredDevices = useMemo(() => {
+        const q = search.trim().toLowerCase();
         return devices.filter((d) => {
             const matchSearch =
-                search === "" ||
-                Boolean(
-                    d.deviceIdentifier &&
-                    d.deviceIdentifier.toLowerCase().includes(search.toLowerCase())
-                ) ||
-                Boolean(d.droneId && d.droneId.toLowerCase().includes(search.toLowerCase())) ||
-                Boolean(
-                    d.droneRegistrationNumber &&
-                    d.droneRegistrationNumber.toLowerCase().includes(search.toLowerCase())
-                );
+                !q ||
+                d.deviceIdentifier?.toLowerCase().includes(q) ||
+                d.droneId?.toLowerCase().includes(q) ||
+                d.droneRegistrationNumber?.toLowerCase().includes(q) ||
+                d.droneModel?.toLowerCase().includes(q) ||
+                d.socketId?.toLowerCase().includes(q);
 
             const matchStatus = statusFilter === "all" || d.connectionStatus === statusFilter;
 
-            return matchSearch && matchStatus;
+            return Boolean(matchSearch && matchStatus);
         });
     }, [devices, search, statusFilter]);
 
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(filteredDevices);
+
+    const getActions = (device: DeviceRegistration): ActionMenuItem[] => [
+        {
+            label: "Ping Heartbeat",
+            icon: <Activity className="w-3.5 h-3.5 text-emerald-600" />,
+            onClick: () => onHeartbeat(device.id),
+        },
+        {
+            label: "Revoke Device",
+            icon: <Trash2 className="w-3.5 h-3.5 text-red-500" />,
+            danger: true,
+            onClick: () => setDeviceToRevoke(device),
+        },
+    ];
+
     return (
-        <ChamferCard size="lg" className="min-h-[420px]">
-            <div className="p-5 flex flex-col h-full w-full gap-4">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-1.5">
-                        <button
-                            type="button"
-                            onClick={() => setStatusFilter("all")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
-                                statusFilter === "all"
-                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
-                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                            }`}
-                        >
-                            All ({devices.length})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setStatusFilter("online")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
-                                statusFilter === "online"
-                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
-                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                            }`}
-                        >
-                            Online ({devices.filter((d) => d.connectionStatus === "online").length})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setStatusFilter("offline")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
-                                statusFilter === "offline"
-                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
-                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                            }`}
-                        >
-                            Offline (
-                            {devices.filter((d) => d.connectionStatus === "offline").length})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setStatusFilter("connecting")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
-                                statusFilter === "connecting"
-                                    ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] text-[var(--color-text-primary)]"
-                                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                            }`}
-                        >
-                            Connecting (
-                            {devices.filter((d) => d.connectionStatus === "connecting").length})
-                        </button>
-                    </div>
+        <div className="flex flex-col gap-4 w-full">
+            <TableFilterBar
+                searchQuery={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search device ID, drone, or socket..."
+                statusFilter={statusFilter}
+                onStatusFilterChange={(val) =>
+                    setStatusFilter(val as "all" | DeviceConnectionStatus)
+                }
+                statusOptions={DEVICE_STATUS_OPTIONS}
+            />
 
-                    <div className="flex items-center gap-3">
-                        <SearchInput
-                            value={search}
-                            onChange={setSearch}
-                            placeholder="Search device ID or drone..."
-                        />
+            <ChamferCard size="lg" className="w-full">
+                <Table fixed>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead width="180px">DEVICE IDENTIFIER</TableHead>
+                            <TableHead width="220px">DRONE / MODEL</TableHead>
+                            <TableHead width="130px">STATUS</TableHead>
+                            <TableHead width="180px">SOCKET ID</TableHead>
+                            <TableHead width="160px">LAST SEEN</TableHead>
+                            <TableHead width="80px" align="right">
+                                ACTIONS
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableLoading colSpan={6} message="Loading registered devices..." />
+                        ) : filteredDevices.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="py-10 text-center">
+                                    <EmptyState
+                                        icon={Radio}
+                                        title="No registered devices found"
+                                        description="Try adjusting your search query or status filter."
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedItems.map((device) => {
+                                const currentStatus =
+                                    device.connectionStatus ?? OFFLINE_DEVICE_STATUS;
+                                const droneTooltip =
+                                    [
+                                        device.droneRegistrationNumber,
+                                        device.droneModel,
+                                        device.droneId ? `ID: ${device.droneId}` : null,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(" • ") || undefined;
 
-                        <ChamferButton variant="dark" size="sm" onClick={onRegisterDevice}>
-                            <Plus className="w-3.5 h-3.5 text-white" />
-                            <span>Register</span>
-                        </ChamferButton>
-                    </div>
-                </div>
-
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 w-full">
-                        <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin mb-3" />
-                        <p className="text-[13px] text-[#64748b]">Loading device registry...</p>
-                    </div>
-                ) : filteredDevices.length === 0 ? (
-                    <EmptyState title="No devices found matching current filters" compact />
-                ) : (
-                    <div className="w-full overflow-x-auto">
-                        <table className="w-full border-collapse text-left">
-                            <thead>
-                                <tr>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
-                                        Device Identifier
-                                    </th>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
-                                        Drone ID / Model
-                                    </th>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
-                                        Status
-                                    </th>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
-                                        Socket ID
-                                    </th>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
-                                        Certificate Fingerprint
-                                    </th>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200">
-                                        Last Seen
-                                    </th>
-                                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider p-3 border-b border-slate-200 text-right">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredDevices.map((device) => {
-                                    return (
-                                        <tr
-                                            key={device.id}
-                                            className="hover:bg-slate-50/80 transition-colors"
+                                return (
+                                    <TableRow key={device.id}>
+                                        <TableCell
+                                            mono
+                                            bold
+                                            darkText
+                                            truncate
+                                            tooltip={device.deviceIdentifier}
                                         >
-                                            <td className="p-3 text-[13px] font-mono font-bold text-[#0f172a] border-b border-slate-100">
-                                                {device.deviceIdentifier}
-                                            </td>
-                                            <td className="p-3 text-[13px] text-slate-800 border-b border-slate-100">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-[#1e293b]">
-                                                        {device.droneRegistrationNumber ||
-                                                            device.droneId?.substring(0, 8) ||
-                                                            "—"}
+                                            {device.deviceIdentifier || "—"}
+                                        </TableCell>
+                                        <TableCell truncate tooltip={droneTooltip}>
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="font-semibold text-[var(--color-text-primary)] truncate">
+                                                    {device.droneRegistrationNumber ||
+                                                        device.droneId?.substring(0, 8) ||
+                                                        "—"}
+                                                </span>
+                                                {device.droneModel && (
+                                                    <span className="text-[11px] text-[var(--color-text-muted)] truncate">
+                                                        {device.droneModel}
                                                     </span>
-                                                    {device.droneModel && (
-                                                        <span className="text-[11px] text-[#94a3b8]">
-                                                            {device.droneModel}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="p-3 text-[13px] text-slate-800 border-b border-slate-100">
-                                                <StatusBadge
-                                                    status={device.connectionStatus || "offline"}
-                                                    label={(
-                                                        device.connectionStatus || "offline"
-                                                    ).toUpperCase()}
-                                                />
-                                            </td>
-                                            <td className="p-3 text-[13px] font-mono text-[11px] text-[#64748b] border-b border-slate-100">
-                                                {device.socketId || "—"}
-                                            </td>
-                                            <td className="p-3 text-[13px] font-mono text-[11px] text-[#64748b] border-b border-slate-100">
-                                                {device.certificateFingerprint
-                                                    ? `${device.certificateFingerprint.substring(0, 16)}...`
-                                                    : "None"}
-                                            </td>
-                                            <td className="p-3 text-[12px] text-[#64748b] border-b border-slate-100">
-                                                {device.lastSeenAt
-                                                    ? `${formatDateTime(device.lastSeenAt, "MMM dd, HH:mm")} (${formatRelativeTime(device.lastSeenAt)})`
-                                                    : "Never"}
-                                            </td>
-                                            <td className="p-3 text-[13px] text-slate-800 border-b border-slate-100 text-right">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    <Tooltip content="Ping Heartbeat">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onHeartbeat?.(device.id)}
-                                                            className="btn-icon"
-                                                            aria-label="Ping Heartbeat"
-                                                        >
-                                                            <Activity className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content="Revoke Device">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setDeviceToRevoke(device)
-                                                            }
-                                                            className="btn-icon-danger"
-                                                            aria-label="Revoke Device"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={currentStatus}
+                                                label={currentStatus.toUpperCase()}
+                                            />
+                                        </TableCell>
+                                        <TableCell
+                                            mono
+                                            subtle
+                                            truncate
+                                            tooltip={device.socketId || undefined}
+                                        >
+                                            {device.socketId || "—"}
+                                        </TableCell>
+                                        <TableCell
+                                            subtle
+                                            truncate
+                                            tooltip={
+                                                device.lastSeenAt
+                                                    ? formatDateTime(
+                                                          device.lastSeenAt,
+                                                          "MMM dd, yyyy HH:mm:ss"
+                                                      )
+                                                    : undefined
+                                            }
+                                        >
+                                            {device.lastSeenAt
+                                                ? `${formatDateTime(device.lastSeenAt, "MMM dd, HH:mm")} (${formatRelativeTime(device.lastSeenAt)})`
+                                                : "Never"}
+                                        </TableCell>
+                                        <TableCell
+                                            align="right"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <ActionMenu items={getActions(device)} />
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
+            </ChamferCard>
 
             <ConfirmDialog
-                isOpen={!!deviceToRevoke}
+                isOpen={Boolean(deviceToRevoke)}
                 onClose={() => setDeviceToRevoke(null)}
                 onConfirm={() => {
-                    if (deviceToRevoke && onRevoke) {
+                    if (deviceToRevoke) {
                         onRevoke(deviceToRevoke.id);
                         setDeviceToRevoke(null);
                     }
@@ -258,8 +238,6 @@ export function RegisteredDevicesTable({
                 confirmText="Revoke Device"
                 variant="danger"
             />
-        </ChamferCard>
+        </div>
     );
 }
-
-export default RegisteredDevicesTable;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef, useState, useEffect, useRef, useImperativeHandle } from "react";
+import React, { forwardRef, useState } from "react";
 import { FormInput, type FormInputProps } from "./FormInput";
 import { Switch } from "./Switch";
 
@@ -27,13 +27,11 @@ export const AutoGenInput = forwardRef<HTMLInputElement, AutoGenInputProps>(
             required,
             value,
             onChange,
+            error,
             ...props
         },
         ref
     ) => {
-        const inputRef = useRef<HTMLInputElement | null>(null);
-        useImperativeHandle(ref, () => inputRef.current!);
-
         const isControlled = value !== undefined;
 
         const [isAutoGen, setIsAutoGen] = useState(() => {
@@ -42,27 +40,30 @@ export const AutoGenInput = forwardRef<HTMLInputElement, AutoGenInputProps>(
             return defaultAutoGen;
         });
 
-        useEffect(() => {
-            if (!isControlled && isAutoGen && inputRef.current) {
-                inputRef.current.value = "";
-            }
-        }, [isControlled, isAutoGen]);
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            if (!onChange) return;
+            const val = e.target.value;
+            const nextValue = val.trim() === "" ? undefined : val;
+            onChange({
+                ...e,
+                target: {
+                    ...e.target,
+                    name: props.name || id,
+                    value: nextValue as unknown as string,
+                },
+            });
+        };
 
         const handleToggle = (checked: boolean) => {
             setIsAutoGen(checked);
 
-            if (!isControlled && inputRef.current) {
-                inputRef.current.value = "";
-            }
-
             if (onChange) {
-                const syntheticEvent = {
+                onChange({
                     target: {
                         name: props.name || id,
                         value: checked ? undefined : "",
                     },
-                } as unknown as React.ChangeEvent<HTMLInputElement>;
-                onChange(syntheticEvent);
+                } as unknown as React.ChangeEvent<HTMLInputElement>);
             }
         };
 
@@ -70,18 +71,23 @@ export const AutoGenInput = forwardRef<HTMLInputElement, AutoGenInputProps>(
             <Switch label={autoGenLabel} checked={isAutoGen} onCheckedChange={handleToggle} />
         ) : undefined;
 
-        const inputProps = isControlled ? { value: isAutoGen ? "" : value } : {};
+        const inputProps = isControlled
+            ? { value: isAutoGen ? "" : (value ?? "") }
+            : isAutoGen
+              ? { value: "" }
+              : {};
 
         return (
             <FormInput
-                ref={inputRef}
+                ref={ref}
                 id={id}
                 label={label}
                 labelRight={toggleSwitch}
                 required={showAutoGen ? !isAutoGen && required : required}
                 disabled={disabled || isAutoGen}
                 placeholder={isAutoGen ? autoGenPlaceholder : manualPlaceholder}
-                onChange={onChange}
+                onChange={handleChange}
+                error={isAutoGen ? undefined : error}
                 {...props}
                 {...inputProps}
             />

@@ -36,7 +36,7 @@ export type MissionFormPayload = CreateMissionPayload;
 
 export function getInitialMissionFormPayload(initialData?: Mission | null): MissionFormPayload {
     return {
-        code: initialData?.code || "",
+        code: initialData?.code || undefined,
         name: initialData?.name || "",
         description: initialData?.description || "",
         departureHubId: initialData?.departureHubId || "",

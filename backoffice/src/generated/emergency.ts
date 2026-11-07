@@ -16,7 +16,7 @@ export const getProtocolParams = zod.object({
 
 export const getProtocolResponse = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -70,7 +70,7 @@ export const updateProtocolParams = zod.object({
 });
 
 export const updateProtocolBody = zod.object({
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -115,7 +115,7 @@ export const updateProtocolBody = zod.object({
 
 export const updateProtocolResponse = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -170,7 +170,7 @@ export const getProtocol1Params = zod.object({
 
 export const getProtocol1Response = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -224,7 +224,7 @@ export const updateProtocol1Params = zod.object({
 });
 
 export const updateProtocol1Body = zod.object({
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -269,7 +269,7 @@ export const updateProtocol1Body = zod.object({
 
 export const updateProtocol1Response = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -546,7 +546,7 @@ export const getProtocolsQueryParams = zod.object({
 
 export const getProtocolsResponseItem = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -596,11 +596,10 @@ export const getProtocolsResponse = zod.array(getProtocolsResponseItem);
 /**
  * @summary Create custom emergency protocol
  */
-export const createProtocolBodyNameMin = 0;
 export const createProtocolBodyNameMax = 100;
 
 export const createProtocolBody = zod.object({
-    name: zod.string().min(createProtocolBodyNameMin).max(createProtocolBodyNameMax),
+    name: zod.string().min(1).max(createProtocolBodyNameMax),
     description: zod.string().optional(),
     emergencyType: zod.enum([
         "battery_low",
@@ -650,7 +649,7 @@ export const createProtocolBody = zod.object({
 
 export const createProtocolResponse = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -705,7 +704,7 @@ export const getProtocols1QueryParams = zod.object({
 
 export const getProtocols1ResponseItem = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -755,11 +754,10 @@ export const getProtocols1Response = zod.array(getProtocols1ResponseItem);
 /**
  * @summary Create custom emergency protocol
  */
-export const createProtocol1BodyNameMin = 0;
 export const createProtocol1BodyNameMax = 100;
 
 export const createProtocol1Body = zod.object({
-    name: zod.string().min(createProtocol1BodyNameMin).max(createProtocol1BodyNameMax),
+    name: zod.string().min(1).max(createProtocol1BodyNameMax),
     description: zod.string().optional(),
     emergencyType: zod.enum([
         "battery_low",
@@ -809,7 +807,7 @@ export const createProtocol1Body = zod.object({
 
 export const createProtocol1Response = zod.object({
     id: zod.string().optional(),
-    name: zod.string().optional(),
+    name: zod.string().min(1).optional(),
     description: zod.string().optional(),
     emergencyType: zod
         .enum([
@@ -1939,7 +1937,7 @@ export const getPendingConfirmationsResponseItem = zod.object({
     protocol: zod
         .object({
             id: zod.string().optional(),
-            name: zod.string().optional(),
+            name: zod.string().min(1).optional(),
             description: zod.string().optional(),
             emergencyType: zod
                 .enum([
@@ -2065,7 +2063,7 @@ export const getPendingConfirmations1ResponseItem = zod.object({
     protocol: zod
         .object({
             id: zod.string().optional(),
-            name: zod.string().optional(),
+            name: zod.string().min(1).optional(),
             description: zod.string().optional(),
             emergencyType: zod
                 .enum([

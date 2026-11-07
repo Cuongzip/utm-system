@@ -121,7 +121,7 @@ export const createSessionBodyStartBatteryDefault = 100.0;
 
 export const createSessionBody = zod
     .object({
-        flightId: zod.string().describe("Associated flight plan UUID identifier"),
+        flightId: zod.string().min(1).describe("Associated flight plan UUID identifier"),
         speed: zod
             .number()
             .default(createSessionBodySpeedDefault)
@@ -553,7 +553,7 @@ export const getActiveSessionsResponse = zod.array(getActiveSessionsResponseItem
 export const getScenarioCatalogResponseItem = zod
     .object({
         type: zod.string().optional().describe("Scenario identifier code"),
-        name: zod.string().optional().describe("Display name of the scenario"),
+        name: zod.string().min(1).optional().describe("Display name of the scenario"),
         description: zod
             .string()
             .optional()
