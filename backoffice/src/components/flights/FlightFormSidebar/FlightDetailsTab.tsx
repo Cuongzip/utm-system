@@ -1,90 +1,53 @@
 "use client";
 
-import { CustomSelect, FormInput, type SelectOption } from "@/components/ui";
-import { cn } from "@/utils";
+import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
+import { cn } from "@/lib";
 import { FlightFeasibilityCard } from "../FlightFeasibilityCard";
-import type { Drone, FeasibilityVerdict } from "@/types";
+import type { Drone, FeasibilityVerdict, FlightFormPayload } from "@/types";
 
 export interface FlightDetailsTabProps {
-    flightId?: string;
+    formData: FlightFormPayload;
+    onFormChange: <K extends keyof FlightFormPayload>(
+        field: K,
+        value: FlightFormPayload[K]
+    ) => void;
     mode: "create" | "edit";
-    flightNumber: string;
-    onFlightNumberChange: (val: string) => void;
-    droneId: string;
-    onDroneIdChange: (val: string) => void;
-    departureHubId: string;
-    onDepartureHubIdChange: (val: string) => void;
-    arrivalHubId: string;
-    onArrivalHubIdChange: (val: string) => void;
-    pilotId: string;
-    onPilotIdChange: (val: string) => void;
-    cruisingAltitudeM: number;
-    onCruisingAltitudeMChange: (val: number) => void;
-    notes: string;
-    onNotesChange: (val: string) => void;
-    executionId?: string;
-    onExecutionIdChange?: (val: string) => void;
     drones?: Drone[];
     droneOptions: SelectOption[];
     hubOptions: SelectOption[];
     totalDistanceM: number;
-    waypointsCount: number;
     feasibilityVerdict?: FeasibilityVerdict;
-    feasibilityOverride?: string;
-    onFeasibilityOverrideChange?: (val: string) => void;
     isFeasibilityWarning?: boolean;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
 }
 
 export function FlightDetailsTab({
-    flightId,
+    formData,
+    onFormChange,
     mode,
-    flightNumber,
-    onFlightNumberChange,
-    droneId,
-    onDroneIdChange,
-    departureHubId,
-    onDepartureHubIdChange,
-    arrivalHubId,
-    onArrivalHubIdChange,
-    pilotId,
-    onPilotIdChange,
-    cruisingAltitudeM,
-    onCruisingAltitudeMChange,
-    notes,
-    onNotesChange,
-    executionId = "",
-    onExecutionIdChange,
     drones = [],
     droneOptions,
     hubOptions,
     totalDistanceM,
-    waypointsCount: _waypointsCount,
     feasibilityVerdict,
-    feasibilityOverride = "",
-    onFeasibilityOverrideChange,
     isFeasibilityWarning = false,
     isReadOnly = false,
     fieldErrors = {},
-    onClearFieldError,
 }: FlightDetailsTabProps) {
-    const selectedDrone = drones.find((d) => d.id === droneId) || null;
+    const selectedDrone = drones.find((d) => d.id === formData.droneId) || null;
+
     return (
         <div className="space-y-4">
             <div className="form-group">
-                <FormInput
+                <AutoGenInput
                     id="flightNumber"
                     label="Flight Number / Callsign"
-                    required
-                    value={flightNumber}
+                    showAutoGen={mode === "create"}
                     disabled={isReadOnly || mode === "edit"}
-                    onChange={(e) => {
-                        onFlightNumberChange(e.target.value);
-                        onClearFieldError?.("flightNumber");
-                    }}
-                    placeholder="e.g. FL-2026-001"
+                    manualPlaceholder="e.g. FL-2026-001"
+                    value={formData.flightNumber ?? ""}
+                    onChange={(e) => onFormChange("flightNumber", e.target.value)}
                     error={fieldErrors.flightNumber}
                 />
             </div>
@@ -94,12 +57,9 @@ export function FlightDetailsTab({
                     Assigned Drone <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
-                    value={droneId}
+                    value={formData.droneId}
                     disabled={isReadOnly}
-                    onValueChange={(val) => {
-                        onDroneIdChange(val);
-                        onClearFieldError?.("droneId");
-                    }}
+                    onValueChange={(val) => onFormChange("droneId", val)}
                     options={droneOptions}
                     placeholder="Select assigned drone"
                     className={cn(fieldErrors.droneId && "form-input-error")}
@@ -116,12 +76,9 @@ export function FlightDetailsTab({
                     Departure Vertiport <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
-                    value={departureHubId}
+                    value={formData.departureHubId}
                     disabled={isReadOnly}
-                    onValueChange={(val) => {
-                        onDepartureHubIdChange(val);
-                        onClearFieldError?.("departureHubId");
-                    }}
+                    onValueChange={(val) => onFormChange("departureHubId", val)}
                     options={hubOptions}
                     placeholder="Select departure vertiport"
                     className={cn(fieldErrors.departureHubId && "form-input-error")}
@@ -138,12 +95,9 @@ export function FlightDetailsTab({
                     Arrival Vertiport <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
-                    value={arrivalHubId}
+                    value={formData.arrivalHubId}
                     disabled={isReadOnly}
-                    onValueChange={(val) => {
-                        onArrivalHubIdChange(val);
-                        onClearFieldError?.("arrivalHubId");
-                    }}
+                    onValueChange={(val) => onFormChange("arrivalHubId", val)}
                     options={hubOptions}
                     placeholder="Select arrival vertiport"
                     className={cn(fieldErrors.arrivalHubId && "form-input-error")}
@@ -160,12 +114,9 @@ export function FlightDetailsTab({
                     <FormInput
                         id="pilotId"
                         label="Remote Pilot ID"
-                        value={pilotId}
+                        value={formData.pilotId || ""}
                         disabled={isReadOnly}
-                        onChange={(e) => {
-                            onPilotIdChange(e.target.value);
-                            onClearFieldError?.("pilotId");
-                        }}
+                        onChange={(e) => onFormChange("pilotId", e.target.value)}
                         placeholder="e.g. PILOT-VN-007"
                         error={fieldErrors.pilotId}
                     />
@@ -178,33 +129,16 @@ export function FlightDetailsTab({
                         type="number"
                         min={10}
                         max={1000}
-                        value={cruisingAltitudeM || ""}
+                        value={formData.cruisingAltitudeM ?? 120}
                         disabled={isReadOnly}
-                        onChange={(e) => {
-                            onCruisingAltitudeMChange(Number(e.target.value) || 0);
-                            onClearFieldError?.("cruisingAltitudeM");
-                        }}
+                        onChange={(e) =>
+                            onFormChange("cruisingAltitudeM", Number(e.target.value) || 0)
+                        }
                         placeholder="120"
                         error={fieldErrors.cruisingAltitudeM}
                     />
                 </div>
             </div>
-
-            {onExecutionIdChange && (
-                <div className="form-group">
-                    <FormInput
-                        id="executionId"
-                        label="Associated Mission Execution ID"
-                        value={executionId}
-                        disabled={isReadOnly}
-                        onChange={(e) => {
-                            onExecutionIdChange(e.target.value);
-                            onClearFieldError?.("executionId");
-                        }}
-                        placeholder="Optional execution UUID"
-                    />
-                </div>
-            )}
 
             <div className="form-group">
                 <label className="form-label" htmlFor="flightNotes">
@@ -214,22 +148,15 @@ export function FlightDetailsTab({
                     id="flightNotes"
                     rows={3}
                     placeholder="Operational remarks, weather briefings, or cargo manifests..."
-                    value={notes}
+                    value={formData.notes || ""}
                     disabled={isReadOnly}
-                    onChange={(e) => {
-                        onNotesChange(e.target.value);
-                        onClearFieldError?.("notes");
-                    }}
+                    onChange={(e) => onFormChange("notes", e.target.value)}
                     className="w-full rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-2.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-hidden focus:border-[var(--color-border-dark)] font-sans resize-none"
                 />
             </div>
 
             <FlightFeasibilityCard
-                flightId={flightId}
-                mode={mode}
-                initialVerdict={feasibilityVerdict}
-                initialOverride={feasibilityOverride}
-                isReadOnly={isReadOnly}
+                initialOverride={formData.feasibilityOverride}
                 distanceM={totalDistanceM}
                 drone={selectedDrone}
             />
@@ -243,13 +170,10 @@ export function FlightDetailsTab({
                     <textarea
                         id="feasibilityOverride"
                         rows={2}
-                        value={feasibilityOverride}
+                        value={formData.feasibilityOverride || ""}
                         disabled={isReadOnly}
                         placeholder="Enter reason..."
-                        onChange={(e) => {
-                            onFeasibilityOverrideChange?.(e.target.value);
-                            onClearFieldError?.("feasibilityOverride");
-                        }}
+                        onChange={(e) => onFormChange("feasibilityOverride", e.target.value)}
                         className={cn(
                             "w-full rounded-md border bg-[var(--color-surface-panel)] p-2.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-hidden font-sans resize-none",
                             fieldErrors.feasibilityOverride
@@ -265,18 +189,16 @@ export function FlightDetailsTab({
                 </div>
             )}
 
-            {!isFeasibilityWarning && feasibilityOverride && (
+            {!isFeasibilityWarning && formData.feasibilityOverride && (
                 <div className="form-group pt-1">
                     <label className="form-label text-[var(--color-text-muted)]">
                         Feasibility Reason
                     </label>
                     <p className="text-xs text-[var(--color-text-primary)] font-mono">
-                        {feasibilityOverride}
+                        {formData.feasibilityOverride}
                     </p>
                 </div>
             )}
         </div>
     );
 }
-
-export default FlightDetailsTab;

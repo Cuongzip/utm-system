@@ -13,13 +13,16 @@ import {
 } from "@/components/flights";
 import { createFieldErrorCleaner, validateSchema } from "@/utils";
 import { createFlightBody, updateFlightBody } from "@/generated/flight";
-import type {
-    Hub,
-    Drone,
-    Flight,
-    FlightStatus,
-    CreateFlightPayload,
-    UpdateFlightPayload,
+import {
+    getInitialFlightFormPayload,
+    EDITABLE_FLIGHT_STATUSES,
+    type Hub,
+    type Drone,
+    type Flight,
+    type FlightStatus,
+    type CreateFlightPayload,
+    type UpdateFlightPayload,
+    type FlightFormPayload,
 } from "@/types";
 
 export interface FlightEditorProps {
@@ -42,23 +45,8 @@ export function FlightEditor({
     const router = useRouter();
 
     const [submitting, setSubmitting] = useState(false);
-
-    const [flightNumber, setFlightNumber] = useState(initialData?.flightNumber || "");
-    const [droneId, setDroneId] = useState(initialData?.droneId || "");
-    const [departureHubId, setDepartureHubId] = useState(initialData?.departureHubId || "");
-    const [arrivalHubId, setArrivalHubId] = useState(initialData?.arrivalHubId || "");
-    const [pilotId, setPilotId] = useState(initialData?.pilotId || "");
-    const [cruisingAltitudeM, setCruisingAltitudeM] = useState<number>(
-        initialData?.cruisingAltitudeM !== undefined ? initialData.cruisingAltitudeM : 120
-    );
-    const [notes, setNotes] = useState(initialData?.notes || "");
-    const [executionId, setExecutionId] = useState(initialData?.executionId || "");
-    const [scheduledDeparture, setScheduledDeparture] = useState(
-        initialData?.scheduledDeparture || ""
-    );
-    const [scheduledArrival, setScheduledArrival] = useState(initialData?.scheduledArrival || "");
-    const [feasibilityOverride, setFeasibilityOverride] = useState(
-        initialData?.feasibilityOverride || ""
+    const [formData, setFormData] = useState<FlightFormPayload>(() =>
+        getInitialFlightFormPayload(initialData)
     );
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
@@ -67,80 +55,61 @@ export function FlightEditor({
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const clearFieldError = createFieldErrorCleaner(setFieldErrors);
 
-    useEffect(() => {
-        if (mode === "create") {
-            const now = new Date();
-            const depTime = new Date(now.getTime() + 30 * 60 * 1000);
-            const arrTime = new Date(now.getTime() + 90 * 60 * 1000);
-
-            if (!flightNumber) {
-                setFlightNumber(`FL-${Math.floor(1000 + Math.random() * 9000)}`);
-            }
-            if (!droneId && drones.length > 0) {
-                setDroneId(drones[0].id);
-            }
-            if (!departureHubId && hubs.length > 0) {
-                setDepartureHubId(hubs[0].id);
-            }
-            if (!arrivalHubId && hubs.length > 1) {
-                setArrivalHubId(hubs[1].id);
-            }
-            if (!scheduledDeparture) {
-                setScheduledDeparture(depTime.toISOString());
-            }
-            if (!scheduledArrival) {
-                setScheduledArrival(arrTime.toISOString());
-            }
-        }
-    }, [
-        mode,
-        drones,
-        hubs,
-        flightNumber,
-        droneId,
-        departureHubId,
-        arrivalHubId,
-        scheduledDeparture,
-        scheduledArrival,
-    ]);
+    const handleFormChange = useCallback(
+        <K extends keyof FlightFormPayload>(field: K, value: FlightFormPayload[K]) => {
+            setFormData((prev) => ({ ...prev, [field]: value }));
+            clearFieldError(field);
+        },
+        [clearFieldError]
+    );
 
     useEffect(() => {
         if (initialData) {
-            setFlightNumber(initialData.flightNumber || "");
-            setDroneId(initialData.droneId || "");
-            setDepartureHubId(initialData.departureHubId || "");
-            setArrivalHubId(initialData.arrivalHubId || "");
-            setPilotId(initialData.pilotId || "");
-            setCruisingAltitudeM(
-                initialData.cruisingAltitudeM !== undefined ? initialData.cruisingAltitudeM : 120
-            );
-            setNotes(initialData.notes || "");
-            setExecutionId(initialData.executionId || "");
-            setScheduledDeparture(initialData.scheduledDeparture || "");
-            setScheduledArrival(initialData.scheduledArrival || "");
-            setFeasibilityOverride(initialData.feasibilityOverride || "");
+            setFormData(getInitialFlightFormPayload(initialData));
         }
     }, [initialData]);
+
+    useEffect(() => {
+        if (mode === "create") {
+            setFormData((prev) => {
+                let updated = false;
+                const next = { ...prev };
+                if (!next.droneId && drones.length > 0) {
+                    next.droneId = drones[0].id;
+                    updated = true;
+                }
+                if (!next.departureHubId && hubs.length > 0) {
+                    next.departureHubId = hubs[0].id;
+                    updated = true;
+                }
+                if (!next.arrivalHubId && hubs.length > 1) {
+                    next.arrivalHubId = hubs[1].id;
+                    updated = true;
+                }
+                return updated ? next : prev;
+            });
+        }
+    }, [mode, drones, hubs]);
 
     const isReadOnly = Boolean(
         mode === "edit" &&
         initialData &&
-        !["planned", "scheduled", "authorized"].includes(initialData.status || "")
+        !EDITABLE_FLIGHT_STATUSES.includes(initialData.status as FlightStatus)
     );
 
     const selectedDepHub = useMemo(
-        () => hubs.find((h) => h.id === departureHubId) || null,
-        [hubs, departureHubId]
+        () => hubs.find((h) => h.id === formData.departureHubId) || null,
+        [hubs, formData.departureHubId]
     );
 
     const selectedArrHub = useMemo(
-        () => hubs.find((h) => h.id === arrivalHubId) || null,
-        [hubs, arrivalHubId]
+        () => hubs.find((h) => h.id === formData.arrivalHubId) || null,
+        [hubs, formData.arrivalHubId]
     );
 
     const selectedDrone = useMemo(
-        () => drones.find((d) => d.id === droneId) || null,
-        [drones, droneId]
+        () => drones.find((d) => d.id === formData.droneId) || null,
+        [drones, formData.droneId]
     );
 
     const onClearRouteErrors = useCallback(() => {
@@ -171,7 +140,7 @@ export function FlightEditor({
         initialRoute: initialData?.plannedRoute as any,
         departureHub: selectedDepHub,
         arrivalHub: selectedArrHub,
-        cruisingAltitude: cruisingAltitudeM,
+        cruisingAltitude: formData.cruisingAltitudeM ?? 120,
         isReadOnly,
         onClearErrors: onClearRouteErrors,
     });
@@ -188,7 +157,12 @@ export function FlightEditor({
     const handleSave = async () => {
         setFieldErrors({});
 
-        if (departureHubId && arrivalHubId && departureHubId === arrivalHubId && hubs.length > 1) {
+        if (
+            formData.departureHubId &&
+            formData.arrivalHubId &&
+            formData.departureHubId === formData.arrivalHubId &&
+            hubs.length > 1
+        ) {
             setFieldErrors({
                 arrivalHubId: "Departure and arrival vertiports must be different",
             });
@@ -196,7 +170,7 @@ export function FlightEditor({
             return;
         }
 
-        if (isFeasibilityWarning && !feasibilityOverride.trim()) {
+        if (isFeasibilityWarning && !formData.feasibilityOverride?.trim()) {
             setFieldErrors({
                 feasibilityOverride: "Reason is required",
             });
@@ -204,7 +178,7 @@ export function FlightEditor({
             return;
         }
 
-        const alt = Number(cruisingAltitudeM) || 120;
+        const alt = Number(formData.cruisingAltitudeM) || 120;
 
         let plannedRoute = computedGeoJsonLineString;
         if (!plannedRoute && selectedDepHub?.location && selectedArrHub?.location) {
@@ -225,7 +199,7 @@ export function FlightEditor({
             };
         }
 
-        const formatIsoSafe = (val: string) => {
+        const formatIsoSafe = (val?: string) => {
             if (!val) return "";
             try {
                 const d = new Date(val);
@@ -235,75 +209,54 @@ export function FlightEditor({
             }
         };
 
-        if (mode === "create") {
-            const payload: Record<string, unknown> = {
-                flightNumber: flightNumber.trim(),
-                droneId: droneId.trim(),
-                departureHubId: departureHubId.trim(),
-                arrivalHubId: arrivalHubId.trim(),
-                pilotId: pilotId.trim() || undefined,
-                cruisingAltitudeM: alt,
-                notes: notes.trim() || undefined,
-                executionId: executionId.trim() || undefined,
-                scheduledDeparture: formatIsoSafe(scheduledDeparture),
-                scheduledArrival: formatIsoSafe(scheduledArrival),
-                plannedRoute: plannedRoute ?? undefined,
-                feasibilityOverride: feasibilityOverride.trim() || undefined,
-                feasibilityVerdict: routeFeasibility.verdict,
-            };
+        const basePayload: Record<string, unknown> = {
+            droneId: formData.droneId?.trim() || undefined,
+            departureHubId: formData.departureHubId?.trim() || undefined,
+            arrivalHubId: formData.arrivalHubId?.trim() || undefined,
+            pilotId: formData.pilotId?.trim() || undefined,
+            cruisingAltitudeM: alt,
+            notes: formData.notes?.trim() || undefined,
+            scheduledDeparture: formatIsoSafe(formData.scheduledDeparture) || undefined,
+            scheduledArrival: formatIsoSafe(formData.scheduledArrival) || undefined,
+            plannedRoute: plannedRoute ?? undefined,
+            feasibilityOverride: formData.feasibilityOverride?.trim() || undefined,
+            feasibilityVerdict: routeFeasibility.verdict,
+        };
 
-            const validation = validateSchema(createFlightBody, payload);
-            if (!validation.success) {
-                setFieldErrors(validation.errors);
-                setActiveSidebarTab(determineActiveTabFromFlightErrors(validation.errors));
-                return;
-            }
+        const isCreate = mode === "create";
+        const payload: Record<string, unknown> = isCreate
+            ? {
+                  ...basePayload,
+                  flightNumber: formData.flightNumber?.trim()
+                      ? formData.flightNumber.trim().toUpperCase()
+                      : undefined,
+                  executionId: formData.executionId?.trim() || undefined,
+              }
+            : basePayload;
 
-            setSubmitting(true);
-            try {
-                await onSave(validation.data as CreateFlightPayload);
-            } finally {
-                setSubmitting(false);
-            }
-        } else {
-            const payload: Record<string, unknown> = {
-                droneId: droneId.trim() || undefined,
-                departureHubId: departureHubId.trim() || undefined,
-                arrivalHubId: arrivalHubId.trim() || undefined,
-                pilotId: pilotId.trim() || undefined,
-                cruisingAltitudeM: alt,
-                notes: notes.trim() || undefined,
-                scheduledDeparture: formatIsoSafe(scheduledDeparture) || undefined,
-                scheduledArrival: formatIsoSafe(scheduledArrival) || undefined,
-                plannedRoute: plannedRoute ?? undefined,
-                feasibilityOverride: feasibilityOverride.trim() || undefined,
-                feasibilityVerdict: routeFeasibility.verdict,
-            };
+        const schema = isCreate ? createFlightBody : updateFlightBody;
+        const validation = validateSchema(schema, payload);
+        if (!validation.success) {
+            setFieldErrors(validation.errors);
+            setActiveSidebarTab(determineActiveTabFromFlightErrors(validation.errors));
+            return;
+        }
 
-            const validation = validateSchema(updateFlightBody, payload);
-            if (!validation.success) {
-                setFieldErrors(validation.errors);
-                setActiveSidebarTab(determineActiveTabFromFlightErrors(validation.errors));
-                return;
-            }
-
-            setSubmitting(true);
-            try {
-                await onSave(validation.data as UpdateFlightPayload);
-            } finally {
-                setSubmitting(false);
-            }
+        setSubmitting(true);
+        try {
+            await onSave(validation.data as CreateFlightPayload | UpdateFlightPayload);
+        } finally {
+            setSubmitting(false);
         }
     };
 
     const flightStatus: FlightStatus = initialData?.status || "planned";
-
     const pageTitle =
         mode === "create"
             ? "REGISTER NEW FLIGHT"
             : isReadOnly
-              ? `VIEW FLIGHT PLAN: ${flightNumber}`
-              : `EDIT FLIGHT PLAN: ${flightNumber}`;
+              ? `VIEW FLIGHT PLAN: ${formData.flightNumber || initialData?.flightNumber || ""}`
+              : `EDIT FLIGHT PLAN: ${formData.flightNumber || initialData?.flightNumber || ""}`;
 
     return (
         <SplitMapLayout
@@ -316,7 +269,7 @@ export function FlightEditor({
                         onClick={() => router.push("/dashboard/flights")}
                         disabled={submitting}
                     >
-                        <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
+                        <ArrowLeft className="w-3.5 h-3.5 text-current" />
                         <span>Cancel</span>
                     </OutlineButton>
 
@@ -342,8 +295,8 @@ export function FlightEditor({
                     departureHub={selectedDepHub}
                     arrivalHub={selectedArrHub}
                     waypoints={waypoints}
-                    cruisingAltitude={cruisingAltitudeM}
-                    onCruisingAltitudeChange={setCruisingAltitudeM}
+                    cruisingAltitude={formData.cruisingAltitudeM ?? 120}
+                    onCruisingAltitudeChange={(alt) => handleFormChange("cruisingAltitudeM", alt)}
                     selectedWaypointId={selectedWaypointId}
                     onAddWaypoint={addWaypoint}
                     onMoveWaypoint={moveWaypoint}
@@ -356,28 +309,9 @@ export function FlightEditor({
             }
             sidebarContent={
                 <FlightFormSidebar
-                    flightId={initialData?.id}
+                    formData={formData}
+                    onFormChange={handleFormChange}
                     mode={mode}
-                    flightNumber={flightNumber}
-                    onFlightNumberChange={setFlightNumber}
-                    droneId={droneId}
-                    onDroneIdChange={setDroneId}
-                    departureHubId={departureHubId}
-                    onDepartureHubIdChange={setDepartureHubId}
-                    arrivalHubId={arrivalHubId}
-                    onArrivalHubIdChange={setArrivalHubId}
-                    pilotId={pilotId}
-                    onPilotIdChange={setPilotId}
-                    cruisingAltitudeM={cruisingAltitudeM}
-                    onCruisingAltitudeMChange={setCruisingAltitudeM}
-                    notes={notes}
-                    onNotesChange={setNotes}
-                    executionId={executionId}
-                    onExecutionIdChange={setExecutionId}
-                    scheduledDeparture={scheduledDeparture}
-                    onScheduledDepartureChange={setScheduledDeparture}
-                    scheduledArrival={scheduledArrival}
-                    onScheduledArrivalChange={setScheduledArrival}
                     drones={drones}
                     hubs={hubs}
                     waypoints={waypoints}
@@ -388,18 +322,13 @@ export function FlightEditor({
                     onMoveWaypointOrder={moveWaypointOrder}
                     totalDistanceM={totalDistanceM}
                     feasibilityVerdict={routeFeasibility.verdict}
-                    feasibilityOverride={feasibilityOverride}
-                    onFeasibilityOverrideChange={setFeasibilityOverride}
                     isFeasibilityWarning={isFeasibilityWarning}
                     activeTab={activeSidebarTab}
                     onTabChange={setActiveSidebarTab}
                     fieldErrors={fieldErrors}
-                    onClearFieldError={clearFieldError}
                     isReadOnly={isReadOnly}
                 />
             }
         />
     );
 }
-
-export default FlightEditor;

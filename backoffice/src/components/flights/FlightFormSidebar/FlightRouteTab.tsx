@@ -1,24 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { X, MapPin, ChevronUp, ChevronDown, Trash2, AlertCircle } from "lucide-react";
 import { FormInput } from "@/components/ui";
 import { cn } from "@/utils";
-import type { Drone } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 
 export interface FlightRouteTabProps {
     waypoints: FlightWaypoint[];
     selectedWaypoint: FlightWaypoint | null;
     onSelectWaypoint: (wp: FlightWaypoint | null) => void;
-    onUpdateWaypoint?: (id: string, updates: Partial<FlightWaypoint>) => void;
-    onRemoveWaypoint?: (id: string) => void;
-    onMoveWaypointOrder?: (fromIndex: number, toIndex: number) => void;
-    mode?: "create" | "edit";
-    distanceM?: number;
-    drone?: Drone | null;
+    onUpdateWaypoint: (id: string, updates: Partial<FlightWaypoint>) => void;
+    onRemoveWaypoint: (id: string) => void;
+    onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
 }
 
 export function FlightRouteTab({
@@ -28,15 +24,23 @@ export function FlightRouteTab({
     onUpdateWaypoint,
     onRemoveWaypoint,
     onMoveWaypointOrder,
-    mode = "create",
-    distanceM = 0,
-    drone = null,
     isReadOnly = false,
     fieldErrors = {},
-    onClearFieldError,
 }: FlightRouteTabProps) {
     const routeError =
         fieldErrors.plannedRoute || fieldErrors["plannedRoute.coordinates"] || fieldErrors.route;
+
+    const [latStr, setLatStr] = useState(String(selectedWaypoint?.lat ?? ""));
+    const [lngStr, setLngStr] = useState(String(selectedWaypoint?.lng ?? ""));
+    const [altStr, setAltStr] = useState(String(selectedWaypoint?.altitude ?? "120"));
+
+    useEffect(() => {
+        if (selectedWaypoint) {
+            setLatStr(String(selectedWaypoint.lat));
+            setLngStr(String(selectedWaypoint.lng));
+            setAltStr(String(selectedWaypoint.altitude));
+        }
+    }, [selectedWaypoint?.id]);
 
     return (
         <div className="space-y-4">
@@ -69,10 +73,9 @@ export function FlightRouteTab({
                             label="Waypoint Name / Label"
                             value={selectedWaypoint.name || ""}
                             disabled={isReadOnly}
-                            onChange={(e) => {
-                                onUpdateWaypoint?.(selectedWaypoint.id, { name: e.target.value });
-                                onClearFieldError?.("plannedRoute");
-                            }}
+                            onChange={(e) =>
+                                onUpdateWaypoint(selectedWaypoint.id, { name: e.target.value })
+                            }
                             placeholder={`Waypoint ${selectedWaypoint.sequence}`}
                         />
 
@@ -82,13 +85,13 @@ export function FlightRouteTab({
                                 label="Latitude (°N)"
                                 type="number"
                                 step="any"
-                                value={selectedWaypoint.lat}
+                                value={latStr}
                                 disabled={isReadOnly}
                                 onChange={(e) => {
+                                    setLatStr(e.target.value);
                                     const val = parseFloat(e.target.value);
                                     if (!isNaN(val)) {
-                                        onUpdateWaypoint?.(selectedWaypoint.id, { lat: val });
-                                        onClearFieldError?.("plannedRoute");
+                                        onUpdateWaypoint(selectedWaypoint.id, { lat: val });
                                     }
                                 }}
                             />
@@ -97,13 +100,13 @@ export function FlightRouteTab({
                                 label="Longitude (°E)"
                                 type="number"
                                 step="any"
-                                value={selectedWaypoint.lng}
+                                value={lngStr}
                                 disabled={isReadOnly}
                                 onChange={(e) => {
+                                    setLngStr(e.target.value);
                                     const val = parseFloat(e.target.value);
                                     if (!isNaN(val)) {
-                                        onUpdateWaypoint?.(selectedWaypoint.id, { lng: val });
-                                        onClearFieldError?.("plannedRoute");
+                                        onUpdateWaypoint(selectedWaypoint.id, { lng: val });
                                     }
                                 }}
                             />
@@ -115,13 +118,13 @@ export function FlightRouteTab({
                             type="number"
                             min={10}
                             max={1000}
-                            value={selectedWaypoint.altitude}
+                            value={altStr}
                             disabled={isReadOnly}
                             onChange={(e) => {
+                                setAltStr(e.target.value);
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) {
-                                    onUpdateWaypoint?.(selectedWaypoint.id, { altitude: val });
-                                    onClearFieldError?.("plannedRoute");
+                                    onUpdateWaypoint(selectedWaypoint.id, { altitude: val });
                                 }
                             }}
                         />
@@ -205,7 +208,7 @@ export function FlightRouteTab({
                                                     type="button"
                                                     disabled={idx === 0}
                                                     onClick={() =>
-                                                        onMoveWaypointOrder?.(idx, idx - 1)
+                                                        onMoveWaypointOrder(idx, idx - 1)
                                                     }
                                                     className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
                                                     title="Move point up"
@@ -216,23 +219,21 @@ export function FlightRouteTab({
                                                     type="button"
                                                     disabled={idx === waypoints.length - 1}
                                                     onClick={() =>
-                                                        onMoveWaypointOrder?.(idx, idx + 1)
+                                                        onMoveWaypointOrder(idx, idx + 1)
                                                     }
                                                     className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors"
                                                     title="Move point down"
                                                 >
                                                     <ChevronDown className="w-3.5 h-3.5" />
                                                 </button>
-                                                {onRemoveWaypoint && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onRemoveWaypoint(wp.id)}
-                                                        className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-tech-red)] hover:bg-red-50 cursor-pointer transition-colors"
-                                                        title="Delete waypoint"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onRemoveWaypoint(wp.id)}
+                                                    className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-tech-red)] hover:bg-red-50 cursor-pointer transition-colors"
+                                                    title="Delete waypoint"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -245,5 +246,3 @@ export function FlightRouteTab({
         </div>
     );
 }
-
-export default FlightRouteTab;

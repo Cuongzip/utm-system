@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Calendar, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle } from "lucide-react";
 import { DateTimePicker } from "@/components/ui";
 
 export interface FlightScheduleTabProps {
@@ -11,7 +11,6 @@ export interface FlightScheduleTabProps {
     durationMinutes: number | null;
     isReadOnly?: boolean;
     fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
 }
 
 export function FlightScheduleTab({
@@ -22,7 +21,6 @@ export function FlightScheduleTab({
     durationMinutes,
     isReadOnly = false,
     fieldErrors = {},
-    onClearFieldError,
 }: FlightScheduleTabProps) {
     return (
         <div className="space-y-4">
@@ -30,7 +28,7 @@ export function FlightScheduleTab({
 
             <div className="p-4 rounded-md border border-[var(--color-border-dark)] bg-[var(--color-surface-card)] shadow-xs flex flex-col gap-3.5">
                 <div className="flex items-start gap-3.5">
-                    <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 border bg-[var(--color-border-dark)] text-white border-[var(--color-border-dark)]">
+                    <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 border bg-slate-900 text-white border-slate-700">
                         <Clock className="w-4 h-4" />
                     </div>
                     <div className="flex-1">
@@ -50,10 +48,7 @@ export function FlightScheduleTab({
                         </label>
                         <DateTimePicker
                             value={scheduledDeparture}
-                            onChange={(val) => {
-                                onScheduledDepartureChange(val);
-                                onClearFieldError?.("scheduledDeparture");
-                            }}
+                            onChange={onScheduledDepartureChange}
                             disabled={isReadOnly}
                             error={Boolean(fieldErrors.scheduledDeparture)}
                             placeholder="Select departure date & time"
@@ -71,10 +66,7 @@ export function FlightScheduleTab({
                         </label>
                         <DateTimePicker
                             value={scheduledArrival}
-                            onChange={(val) => {
-                                onScheduledArrivalChange(val);
-                                onClearFieldError?.("scheduledArrival");
-                            }}
+                            onChange={onScheduledArrivalChange}
                             disabled={isReadOnly}
                             error={Boolean(fieldErrors.scheduledArrival)}
                             placeholder="Select arrival date & time"
@@ -111,5 +103,3 @@ export function FlightScheduleTab({
         </div>
     );
 }
-
-export default FlightScheduleTab;

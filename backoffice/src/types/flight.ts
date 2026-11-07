@@ -1,5 +1,5 @@
 import type zod from "zod";
-import type {
+import {
     createFlightBody,
     updateFlightBody,
     getFlightByIdResponse,
@@ -16,6 +16,48 @@ export type CreateFlightPayload = zod.infer<typeof createFlightBody>;
 export type UpdateFlightPayload = zod.infer<typeof updateFlightBody>;
 export type FlightQueryParams = zod.infer<typeof getFlightsQueryParams>;
 export type FlightStatus = NonNullable<zod.infer<typeof getFlightByIdResponse>["status"]>;
+export type FlightAuthorizationStatus = NonNullable<
+    zod.infer<typeof getFlightByIdResponse>["authorizationStatus"]
+>;
+
+export const FLIGHT_STATUSES = getFlightByIdResponse.shape.status.unwrap().options;
+export const FLIGHT_AUTHORIZATION_STATUSES =
+    getFlightByIdResponse.shape.authorizationStatus.unwrap().options;
+
+export const EDITABLE_FLIGHT_STATUSES: readonly FlightStatus[] = [
+    "planned",
+    "scheduled",
+    "authorized",
+] as const;
+
+export type FlightFormPayload = Omit<CreateFlightPayload, "plannedRoute"> & {
+    cruisingAltitudeM?: number;
+    feasibilityOverride?: string;
+};
+
+export function getInitialFlightFormPayload(initialData?: Flight | null): FlightFormPayload {
+    const now = new Date();
+    const depTime = new Date(now.getTime() + 30 * 60 * 1000);
+    const arrTime = new Date(now.getTime() + 90 * 60 * 1000);
+
+    return {
+        flightNumber: initialData?.flightNumber || undefined,
+        droneId: initialData?.droneId || "",
+        departureHubId: initialData?.departureHubId || "",
+        arrivalHubId: initialData?.arrivalHubId || "",
+        pilotId: initialData?.pilotId || "",
+        scheduledDeparture: initialData?.scheduledDeparture
+            ? initialData.scheduledDeparture.slice(0, 16)
+            : depTime.toISOString().slice(0, 16),
+        scheduledArrival: initialData?.scheduledArrival
+            ? initialData.scheduledArrival.slice(0, 16)
+            : arrTime.toISOString().slice(0, 16),
+        cruisingAltitudeM: initialData?.cruisingAltitudeM ?? 120,
+        notes: initialData?.notes || "",
+        executionId: initialData?.executionId || "",
+        feasibilityOverride: (initialData as any)?.feasibilityOverride || "",
+    };
+}
 
 export type Flight = NonNullable<zod.infer<typeof getFlightByIdResponse>> & {
     id: string;

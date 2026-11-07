@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { flightService } from "@/services/flightService";
 import { FlightEditor } from "@/components/flights";
-import type { CreateFlightPayload } from "@/types";
+import type { CreateFlightPayload, UpdateFlightPayload } from "@/types";
 
 export default function NewFlightPage() {
     const router = useRouter();
@@ -25,7 +25,7 @@ export default function NewFlightPage() {
         meta: { defaultErrorMessage: "Failed to create flight plan" },
     });
 
-    const handleSave = async (payload: unknown) => {
+    const handleSave = async (payload: CreateFlightPayload | UpdateFlightPayload) => {
         await createMutation.mutateAsync(payload as CreateFlightPayload);
     };
 

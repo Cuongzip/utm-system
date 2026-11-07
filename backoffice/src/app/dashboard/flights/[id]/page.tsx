@@ -8,7 +8,7 @@ import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { flightService } from "@/services/flightService";
 import { FlightEditor } from "@/components/flights";
 import { EmptyState } from "@/components/ui";
-import type { UpdateFlightPayload } from "@/types";
+import type { CreateFlightPayload, UpdateFlightPayload } from "@/types";
 
 export default function EditFlightPage() {
     const router = useRouter();
@@ -23,7 +23,6 @@ export default function EditFlightPage() {
         data: flight,
         isLoading: flightLoading,
         error: flightError,
-        refetch,
     } = useQuery({
         queryKey: [...QUERY_KEYS.flights, "detail", flightId],
         queryFn: () => flightService.getById(flightId),
@@ -44,14 +43,14 @@ export default function EditFlightPage() {
         meta: { defaultErrorMessage: "Failed to update flight plan" },
     });
 
-    const handleSave = async (payload: unknown) => {
+    const handleSave = async (payload: CreateFlightPayload | UpdateFlightPayload) => {
         await updateMutation.mutateAsync(payload as UpdateFlightPayload);
     };
 
     if (flightLoading || hubsLoading || dronesLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin" />
+                <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
                 <p className="text-xs font-mono text-[var(--color-text-muted)]">
                     Loading flight operation details...
                 </p>

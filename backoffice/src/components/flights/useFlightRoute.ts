@@ -84,7 +84,7 @@ function parseInitialRouteWaypoints(
                 name: `Waypoint ${seq}`,
                 lng: pt[0],
                 lat: pt[1],
-                altitude: pt[2] !== undefined ? pt[2] : cruisingAltitude,
+                altitude: pt[2] ?? cruisingAltitude,
             });
         }
     }
@@ -150,7 +150,7 @@ export function useFlightRoute({
                 name: `Waypoint ${seq}`,
                 lat,
                 lng,
-                altitude: altitude !== undefined ? altitude : cruisingAltitude,
+                altitude: altitude ?? cruisingAltitude,
             };
             setWaypoints((prev) => [...prev, newWp]);
             setSelectedWaypointId(idStr);
@@ -212,5 +212,3 @@ export function useFlightRoute({
         computedGeoJsonLineString,
     };
 }
-
-export default useFlightRoute;

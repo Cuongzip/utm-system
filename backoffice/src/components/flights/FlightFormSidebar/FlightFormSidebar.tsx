@@ -3,100 +3,55 @@
 import { useMemo } from "react";
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
-import type { Drone, Hub, FeasibilityVerdict } from "@/types";
+import type { Drone, Hub, FeasibilityVerdict, FlightFormPayload } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 import { FlightDetailsTab } from "./FlightDetailsTab";
 import { FlightRouteTab } from "./FlightRouteTab";
 import { FlightScheduleTab } from "./FlightScheduleTab";
 
 export interface FlightFormSidebarProps {
-    flightId?: string;
+    formData: FlightFormPayload;
+    onFormChange: <K extends keyof FlightFormPayload>(
+        field: K,
+        value: FlightFormPayload[K]
+    ) => void;
     mode: "create" | "edit";
-    flightNumber: string;
-    onFlightNumberChange: (val: string) => void;
-    droneId: string;
-    onDroneIdChange: (val: string) => void;
-    departureHubId: string;
-    onDepartureHubIdChange: (val: string) => void;
-    arrivalHubId: string;
-    onArrivalHubIdChange: (val: string) => void;
-    pilotId: string;
-    onPilotIdChange: (val: string) => void;
-    cruisingAltitudeM: number;
-    onCruisingAltitudeMChange: (val: number) => void;
-    notes: string;
-    onNotesChange: (val: string) => void;
-    executionId?: string;
-    onExecutionIdChange?: (val: string) => void;
-    scheduledDeparture: string;
-    onScheduledDepartureChange: (val: string) => void;
-    scheduledArrival: string;
-    onScheduledArrivalChange: (val: string) => void;
-
     drones?: Drone[];
     hubs?: Hub[];
     waypoints?: FlightWaypoint[];
-    selectedWaypoint?: FlightWaypoint | null;
-    onSelectWaypoint?: (wp: FlightWaypoint | null) => void;
-    onUpdateWaypoint?: (id: string, updates: Partial<FlightWaypoint>) => void;
-    onRemoveWaypoint?: (id: string) => void;
-    onMoveWaypointOrder?: (fromIndex: number, toIndex: number) => void;
+    selectedWaypoint: FlightWaypoint | null;
+    onSelectWaypoint: (wp: FlightWaypoint | null) => void;
+    onUpdateWaypoint: (id: string, updates: Partial<FlightWaypoint>) => void;
+    onRemoveWaypoint: (id: string) => void;
+    onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     totalDistanceM?: number;
     feasibilityVerdict?: FeasibilityVerdict;
-    feasibilityOverride?: string;
-    onFeasibilityOverrideChange?: (val: string) => void;
     isFeasibilityWarning?: boolean;
-
     activeTab: "details" | "waypoints" | "schedule";
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
     fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
     isReadOnly?: boolean;
     className?: string;
 }
 
 export function FlightFormSidebar({
-    flightId,
+    formData,
+    onFormChange,
     mode,
-    flightNumber,
-    onFlightNumberChange,
-    droneId,
-    onDroneIdChange,
-    departureHubId,
-    onDepartureHubIdChange,
-    arrivalHubId,
-    onArrivalHubIdChange,
-    pilotId,
-    onPilotIdChange,
-    cruisingAltitudeM,
-    onCruisingAltitudeMChange,
-    notes,
-    onNotesChange,
-    executionId = "",
-    onExecutionIdChange,
-    scheduledDeparture,
-    onScheduledDepartureChange,
-    scheduledArrival,
-    onScheduledArrivalChange,
-
     drones = [],
     hubs = [],
     waypoints = [],
     selectedWaypoint = null,
-    onSelectWaypoint = () => {},
+    onSelectWaypoint,
     onUpdateWaypoint,
     onRemoveWaypoint,
     onMoveWaypointOrder,
     totalDistanceM = 0,
     feasibilityVerdict,
-    feasibilityOverride,
-    onFeasibilityOverrideChange,
     isFeasibilityWarning = false,
-
     activeTab,
     onTabChange,
     fieldErrors = {},
-    onClearFieldError,
     isReadOnly = false,
     className = "",
 }: FlightFormSidebarProps) {
@@ -121,12 +76,12 @@ export function FlightFormSidebar({
     }, [hubs]);
 
     const durationMinutes = useMemo(() => {
-        if (!scheduledDeparture || !scheduledArrival) return null;
-        const dep = new Date(scheduledDeparture).getTime();
-        const arr = new Date(scheduledArrival).getTime();
+        if (!formData.scheduledDeparture || !formData.scheduledArrival) return null;
+        const dep = new Date(formData.scheduledDeparture).getTime();
+        const arr = new Date(formData.scheduledArrival).getTime();
         if (isNaN(dep) || isNaN(arr) || arr <= dep) return null;
         return Math.round((arr - dep) / (1000 * 60));
-    }, [scheduledDeparture, scheduledArrival]);
+    }, [formData.scheduledDeparture, formData.scheduledArrival]);
 
     const hasDetailsErrors = Boolean(
         fieldErrors.flightNumber ||
@@ -147,8 +102,6 @@ export function FlightFormSidebar({
     const hasScheduleErrors = Boolean(
         fieldErrors.scheduledDeparture || fieldErrors.scheduledArrival
     );
-
-    const selectedDrone = drones.find((d) => d.id === droneId) || null;
 
     return (
         <ChamferCard size="lg" className={cn("w-full h-full", className)}>
@@ -207,36 +160,17 @@ export function FlightFormSidebar({
                 <div className="flex-1 overflow-y-auto p-4 select-text">
                     {activeTab === "details" && (
                         <FlightDetailsTab
-                            flightId={flightId}
+                            formData={formData}
+                            onFormChange={onFormChange}
                             mode={mode}
-                            flightNumber={flightNumber}
-                            onFlightNumberChange={onFlightNumberChange}
-                            droneId={droneId}
-                            onDroneIdChange={onDroneIdChange}
-                            departureHubId={departureHubId}
-                            onDepartureHubIdChange={onDepartureHubIdChange}
-                            arrivalHubId={arrivalHubId}
-                            onArrivalHubIdChange={onArrivalHubIdChange}
-                            pilotId={pilotId}
-                            onPilotIdChange={onPilotIdChange}
-                            cruisingAltitudeM={cruisingAltitudeM}
-                            onCruisingAltitudeMChange={onCruisingAltitudeMChange}
-                            notes={notes}
-                            onNotesChange={onNotesChange}
-                            executionId={executionId}
-                            onExecutionIdChange={onExecutionIdChange}
                             drones={drones}
                             droneOptions={droneOptions}
                             hubOptions={hubOptions}
                             totalDistanceM={totalDistanceM}
-                            waypointsCount={waypoints.length}
                             feasibilityVerdict={feasibilityVerdict}
-                            feasibilityOverride={feasibilityOverride}
-                            onFeasibilityOverrideChange={onFeasibilityOverrideChange}
                             isFeasibilityWarning={isFeasibilityWarning}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
-                            onClearFieldError={onClearFieldError}
                         />
                     )}
 
@@ -248,25 +182,24 @@ export function FlightFormSidebar({
                             onUpdateWaypoint={onUpdateWaypoint}
                             onRemoveWaypoint={onRemoveWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
-                            mode={mode}
-                            distanceM={totalDistanceM}
-                            drone={selectedDrone}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
-                            onClearFieldError={onClearFieldError}
                         />
                     )}
 
                     {activeTab === "schedule" && (
                         <FlightScheduleTab
-                            scheduledDeparture={scheduledDeparture}
-                            onScheduledDepartureChange={onScheduledDepartureChange}
-                            scheduledArrival={scheduledArrival}
-                            onScheduledArrivalChange={onScheduledArrivalChange}
+                            scheduledDeparture={formData.scheduledDeparture || ""}
+                            onScheduledDepartureChange={(val) =>
+                                onFormChange("scheduledDeparture", val)
+                            }
+                            scheduledArrival={formData.scheduledArrival || ""}
+                            onScheduledArrivalChange={(val) =>
+                                onFormChange("scheduledArrival", val)
+                            }
                             durationMinutes={durationMinutes}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
-                            onClearFieldError={onClearFieldError}
                         />
                     )}
                 </div>
@@ -274,5 +207,3 @@ export function FlightFormSidebar({
         </ChamferCard>
     );
 }
-
-export default FlightFormSidebar;

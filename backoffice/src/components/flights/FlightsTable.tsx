@@ -27,19 +27,24 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import type { Flight } from "@/types";
+import {
+    EDITABLE_FLIGHT_STATUSES,
+    type Flight,
+    type FlightStatus,
+    type FlightAuthorizationStatus,
+} from "@/types";
 import { formatDateTime } from "@/utils";
 
 export interface FlightsTableProps {
     flights: Flight[];
     loading?: boolean;
     selectedFlightId?: string | null;
-    onSelectFlight?: (flight: Flight) => void;
-    onAuthorizeFlight?: (flight: Flight) => void;
-    onStartFlight?: (flight: Flight) => void;
-    onCompleteFlight?: (flight: Flight) => void;
-    onAbortFlight?: (flight: Flight) => void;
-    onNewFlight?: () => void;
+    onSelectFlight: (flight: Flight) => void;
+    onAuthorizeFlight: (flight: Flight) => void;
+    onStartFlight: (flight: Flight) => void;
+    onCompleteFlight: (flight: Flight) => void;
+    onAbortFlight: (flight: Flight) => void;
+    onNewFlight: () => void;
     hubMap?: Map<string, string>;
     droneMap?: Map<string, string>;
 }
@@ -62,10 +67,9 @@ export function FlightsTable({
         usePagination(flights);
 
     const getActions = (flight: Flight): ActionMenuItem[] => {
-        const status = (flight.status || "planned").toLowerCase();
-        const authStatus = (flight.authorizationStatus || "pending").toLowerCase();
-        const isEditable =
-            status === "planned" || status === "scheduled" || status === "authorized";
+        const status: FlightStatus = flight.status ?? "planned";
+        const authStatus: FlightAuthorizationStatus = flight.authorizationStatus ?? "pending";
+        const isEditable = EDITABLE_FLIGHT_STATUSES.includes(status);
 
         const items: ActionMenuItem[] = [
             {
@@ -75,53 +79,38 @@ export function FlightsTable({
                 ) : (
                     <Eye className="w-3.5 h-3.5 text-slate-500" />
                 ),
-                onClick: () => onSelectFlight?.(flight),
+                onClick: () => onSelectFlight(flight),
             },
         ];
 
-        // 1. Authorize: Only planned or scheduled flights with pending authorization
         if ((status === "planned" || status === "scheduled") && authStatus === "pending") {
-            if (onAuthorizeFlight) {
-                items.push({
-                    label: "Authorize Flight",
-                    icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />,
-                    onClick: () => onAuthorizeFlight(flight),
-                });
-            }
+            items.push({
+                label: "Authorize Flight",
+                icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />,
+                onClick: () => onAuthorizeFlight(flight),
+            });
         }
 
-        // 2. Start Flight: Only authorized flights (approved by ATC)
         if (status === "authorized") {
-            if (onStartFlight) {
-                items.push({
-                    label: "Start Flight",
-                    icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
-                    onClick: () => onStartFlight(flight),
-                });
-            }
+            items.push({
+                label: "Start Flight",
+                icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
+                onClick: () => onStartFlight(flight),
+            });
         }
 
-        // 3. Complete Flight: Only active flights
-        if (status === "active" || status === "in_flight") {
-            if (onCompleteFlight) {
-                items.push({
-                    label: "Complete Flight",
-                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600" />,
-                    onClick: () => onCompleteFlight(flight),
-                });
-            }
-        }
-
-        // 4. Abort Flight: Only active airborne flights can be aborted for emergency landing
-        if (status === "active" || status === "in_flight") {
-            if (onAbortFlight) {
-                items.push({
-                    label: "Abort Flight",
-                    icon: <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
-                    danger: true,
-                    onClick: () => setFlightToAbort(flight),
-                });
-            }
+        if (status === "active") {
+            items.push({
+                label: "Complete Flight",
+                icon: <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600" />,
+                onClick: () => onCompleteFlight(flight),
+            });
+            items.push({
+                label: "Abort Flight",
+                icon: <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
+                danger: true,
+                onClick: () => setFlightToAbort(flight),
+            });
         }
 
         return items;
@@ -172,35 +161,27 @@ export function FlightsTable({
                                     flight.flightNumber ||
                                     `DRP-${flight.id.slice(0, 6).toUpperCase()}`;
 
-                                const droneName =
-                                    (flight as any).drone?.registrationNumber ||
-                                    (flight as any).drone?.model ||
-                                    (flight.droneId
-                                        ? droneMap.get(flight.droneId) || flight.droneId.slice(0, 8)
-                                        : "—");
+                                const droneName = flight.droneId
+                                    ? droneMap.get(flight.droneId) || flight.droneId.slice(0, 8)
+                                    : "—";
 
-                                const depName =
-                                    (flight as any).departureHub?.name ||
-                                    (flight.departureHubId
-                                        ? hubMap.get(flight.departureHubId) || flight.departureHubId
-                                        : "—");
+                                const depName = flight.departureHubId
+                                    ? hubMap.get(flight.departureHubId) || flight.departureHubId
+                                    : "—";
 
-                                const arrName =
-                                    (flight as any).arrivalHub?.name ||
-                                    (flight.arrivalHubId
-                                        ? hubMap.get(flight.arrivalHubId) || flight.arrivalHubId
-                                        : "—");
+                                const arrName = flight.arrivalHubId
+                                    ? hubMap.get(flight.arrivalHubId) || flight.arrivalHubId
+                                    : "—";
 
-                                const departureTime = formatDateTime(
-                                    (flight as any).plannedDeparture || flight.scheduledDeparture,
-                                    "MMM dd, HH:mm"
-                                );
+                                const departureTime = flight.scheduledDeparture
+                                    ? formatDateTime(flight.scheduledDeparture, "MMM dd, HH:mm")
+                                    : "—";
 
                                 return (
                                     <TableRow
                                         key={flight.id}
                                         selected={isSelected}
-                                        onClick={() => onSelectFlight?.(flight)}
+                                        onClick={() => onSelectFlight(flight)}
                                     >
                                         <TableCell mono bold truncate tooltip={flightNum}>
                                             {flightNum}
@@ -216,7 +197,7 @@ export function FlightsTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={flight.status || "planned"}
+                                                status={flight.status ?? "planned"}
                                                 showDot={true}
                                             />
                                         </TableCell>
@@ -244,10 +225,10 @@ export function FlightsTable({
             </ChamferCard>
 
             <ConfirmDialog
-                isOpen={!!flightToAbort}
+                isOpen={Boolean(flightToAbort)}
                 onClose={() => setFlightToAbort(null)}
                 onConfirm={() => {
-                    if (flightToAbort && onAbortFlight) {
+                    if (flightToAbort) {
                         onAbortFlight(flightToAbort);
                         setFlightToAbort(null);
                     }
@@ -269,5 +250,3 @@ export function FlightsTable({
         </div>
     );
 }
-
-export default FlightsTable;

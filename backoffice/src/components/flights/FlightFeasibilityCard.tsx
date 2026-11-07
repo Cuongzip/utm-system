@@ -3,15 +3,11 @@
 import { useMemo } from "react";
 import { Zap, Info } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
-import type { Drone, FeasibilityVerdict } from "@/types";
+import type { Drone } from "@/types";
 import { estimateRouteFeasibility } from "./flightUtils";
 
 export interface FlightFeasibilityCardProps {
-    flightId?: string;
-    mode?: "create" | "edit";
-    initialVerdict?: FeasibilityVerdict;
     initialOverride?: string;
-    isReadOnly?: boolean;
     distanceM?: number;
     drone?: Drone | null;
     className?: string;
@@ -129,5 +125,3 @@ export function FlightFeasibilityCard({
         </div>
     );
 }
-
-export default FlightFeasibilityCard;
