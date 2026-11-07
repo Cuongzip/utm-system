@@ -16,11 +16,13 @@ import type {
     AirspaceZone,
     CreateAirspaceZonePayload,
     UpdateAirspaceZonePayload,
+    AirspaceZoneFormPayload,
     Hub,
 } from "@/types";
+import { getInitialAirspaceFormPayload } from "@/types";
 import { useAirspaceGeometry } from "./useAirspaceGeometry";
 import { AirspaceMapEditor } from "./AirspaceMapEditor";
-import { AirspaceFormSidebar, type AirspaceFormData } from "./AirspaceFormSidebar";
+import { AirspaceFormSidebar } from "./AirspaceFormSidebar";
 
 export interface AirspaceEditorProps {
     mode: "create" | "edit";
@@ -47,17 +49,9 @@ export function AirspaceEditor({
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const [formData, setFormData] = useState<AirspaceFormData>({
-        code: initialData?.code || "",
-        autoGen: mode === "create",
-        name: initialData?.name || "",
-        zoneType: initialData?.zoneType || "no_fly_zone",
-        status: initialData?.status || "active",
-        altitudeCeiling:
-            initialData?.altitudeCeiling !== undefined ? initialData.altitudeCeiling : 120,
-        hubId: initialData?.hubId || "",
-        description: initialData?.description || "",
-    });
+    const [formData, setFormData] = useState<AirspaceZoneFormPayload>(() =>
+        getInitialAirspaceFormPayload(initialData, mode)
+    );
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "geometry">("details");
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -79,30 +73,12 @@ export function AirspaceEditor({
     } = useAirspaceGeometry(initialData?.geometry);
 
     useEffect(() => {
-        if (initialData) {
-            setFormData({
-                code: initialData.code || "",
-                autoGen: false,
-                name: initialData.name || "",
-                zoneType: initialData.zoneType || "no_fly_zone",
-                status: initialData.status || "active",
-                altitudeCeiling:
-                    initialData.altitudeCeiling !== undefined ? initialData.altitudeCeiling : 120,
-                hubId: initialData.hubId || "",
-                description: initialData.description || "",
-            });
-        } else {
-            setFormData((prev) => ({
-                ...prev,
-                code: "",
-                autoGen: mode === "create",
-            }));
-        }
+        setFormData(getInitialAirspaceFormPayload(initialData, mode));
     }, [initialData, mode]);
 
-    const handleFormChange = <K extends keyof AirspaceFormData>(
+    const handleFormChange = <K extends keyof AirspaceZoneFormPayload>(
         field: K,
-        value: AirspaceFormData[K]
+        value: AirspaceZoneFormPayload[K]
     ) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
@@ -111,22 +87,16 @@ export function AirspaceEditor({
         setFieldErrors({});
 
         const trimmedCode = formData.code?.trim();
-        if (mode === "create" && !formData.autoGen && !trimmedCode) {
-            setFieldErrors({ code: "Code is required when AUTO-GEN is disabled" });
-            setActiveSidebarTab("details");
-            return;
-        }
-
         const payload = {
             ...(mode === "create"
-                ? { code: formData.autoGen || !trimmedCode ? undefined : trimmedCode.toUpperCase() }
+                ? { code: trimmedCode ? trimmedCode.toUpperCase() : undefined }
                 : {}),
-            name: formData.name.trim(),
+            name: (formData.name ?? "").trim(),
             zoneType: formData.zoneType,
             status: formData.status,
             altitudeCeiling: Number(formData.altitudeCeiling),
             hubId: formData.hubId || undefined,
-            description: formData.description.trim() || undefined,
+            description: formData.description?.trim() || undefined,
             geometry: computedGeoJson ?? undefined,
         };
 
@@ -173,7 +143,7 @@ export function AirspaceEditor({
                     mode === "edit" ? (
                         <StatusBadge
                             status={formData.status === "active" ? "active" : "inactive"}
-                            label={formData.status.toUpperCase()}
+                            label={(formData.status ?? "active").toUpperCase()}
                         />
                     ) : null
                 }
@@ -282,5 +252,3 @@ export function AirspaceEditor({
         </>
     );
 }
-
-export default AirspaceEditor;

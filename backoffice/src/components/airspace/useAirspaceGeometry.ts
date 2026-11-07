@@ -1,9 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { GeoPoint } from "@/utils/geo";
 
 export type GeometryMode = "radius" | "polygon";
 
 export type { GeoPoint };
+
+export const DEFAULT_AIRSPACE_CENTER: GeoPoint = { lat: 10.7769, lng: 106.7009 };
+export const DEFAULT_AIRSPACE_RADIUS = 1000;
 
 export interface GeoJsonPolygon {
     type: "Polygon";
@@ -34,25 +37,14 @@ export function generateCircleCoordinates(
     return coordinates;
 }
 
-export function generateCirclePolygon(
-    centerLat: number,
-    centerLng: number,
-    radiusMeters: number
-): GeoJsonPolygon {
-    return {
-        type: "Polygon",
-        coordinates: [generateCircleCoordinates(centerLat, centerLng, radiusMeters)],
-    };
-}
-
 export function parseExistingGeometry(geometry?: any): {
     mode: GeometryMode;
     center: GeoPoint;
     radiusMeters: number;
     polygonPoints: GeoPoint[];
 } {
-    const defaultCenter: GeoPoint = { lat: 10.7769, lng: 106.7009 };
-    const defaultRadius = 1000;
+    const defaultCenter = DEFAULT_AIRSPACE_CENTER;
+    const defaultRadius = DEFAULT_AIRSPACE_RADIUS;
 
     let parsed = geometry;
     if (typeof parsed === "string") {
@@ -128,6 +120,13 @@ export function useAirspaceGeometry(initialGeometry?: {
     const [radiusMeters, setRadiusMetersState] = useState<number>(parsed.radiusMeters);
     const [polygonPoints, setPolygonPoints] = useState<GeoPoint[]>(parsed.polygonPoints);
 
+    useEffect(() => {
+        setGeometryMode(parsed.mode);
+        setCenterState(parsed.center);
+        setRadiusMetersState(parsed.radiusMeters);
+        setPolygonPoints(parsed.polygonPoints);
+    }, [parsed]);
+
     const setCenter = (lat: number, lng: number) =>
         setCenterState({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) });
 
@@ -149,8 +148,12 @@ export function useAirspaceGeometry(initialGeometry?: {
 
     const computedGeoJson = useMemo<GeoJsonPolygon | null>(() => {
         if (geometryMode === "radius") {
-            if (radiusMeters <= 0 || !center.lat || !center.lng) return null;
-            return generateCirclePolygon(center.lat, center.lng, radiusMeters);
+            const isInvalidCoord = !Number.isFinite(center.lat) || !Number.isFinite(center.lng);
+            if (radiusMeters <= 0 || isInvalidCoord) return null;
+            return {
+                type: "Polygon",
+                coordinates: [generateCircleCoordinates(center.lat, center.lng, radiusMeters)],
+            };
         }
 
         if (polygonPoints.length < 3) return null;

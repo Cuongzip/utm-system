@@ -19,14 +19,15 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
+import { formatNullable } from "@/utils";
 import type { AirspaceZone } from "@/types";
 
 interface AirspaceTableProps {
     zones: AirspaceZone[];
     loading?: boolean;
     selectedZoneId?: string | null;
-    onSelectZone?: (zone: AirspaceZone) => void;
-    onDeleteZone?: (id: string) => void;
+    onSelectZone: (zone: AirspaceZone) => void;
+    onDeleteZone: (id: string) => void;
     hubMap?: Map<string, string>;
 }
 
@@ -42,26 +43,19 @@ export function AirspaceTable({
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(zones);
 
-    const getActions = (zone: AirspaceZone): ActionMenuItem[] => {
-        const items: ActionMenuItem[] = [
-            {
-                label: "View Details",
-                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-                onClick: () => onSelectZone?.(zone),
-            },
-        ];
-
-        if (onDeleteZone) {
-            items.push({
-                label: "Delete",
-                icon: <Trash2 className="w-3.5 h-3.5" />,
-                danger: true,
-                onClick: () => setZoneToDelete(zone),
-            });
-        }
-
-        return items;
-    };
+    const getActions = (zone: AirspaceZone): ActionMenuItem[] => [
+        {
+            label: "View Details",
+            icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+            onClick: () => onSelectZone(zone),
+        },
+        {
+            label: "Delete",
+            icon: <Trash2 className="w-3.5 h-3.5" />,
+            danger: true,
+            onClick: () => setZoneToDelete(zone),
+        },
+    ];
 
     return (
         <div className="flex flex-col gap-4 w-full">
@@ -95,31 +89,29 @@ export function AirspaceTable({
                         ) : (
                             paginatedItems.map((zone) => {
                                 const isSelected = selectedZoneId === zone.id;
-                                const hubName = zone.hubId
-                                    ? hubMap.get(zone.hubId) || zone.hubId
-                                    : "—";
+                                const hubName = formatNullable(
+                                    zone.hubId,
+                                    (id) => hubMap.get(id) ?? id
+                                );
+                                const zoneName = zone.name || "Unnamed Sector";
 
                                 return (
                                     <TableRow
                                         key={zone.id}
                                         selected={isSelected}
-                                        onClick={() => onSelectZone?.(zone)}
+                                        onClick={() => onSelectZone(zone)}
                                     >
                                         <TableCell mono bold darkText>
-                                            {zone.code || "—"}
+                                            {formatNullable(zone.code)}
                                         </TableCell>
-                                        <TableCell
-                                            truncate
-                                            bold
-                                            tooltip={zone.name || "Unnamed Sector"}
-                                        >
+                                        <TableCell truncate bold tooltip={zoneName}>
                                             <span className="font-semibold text-slate-900">
-                                                {zone.name || "Unnamed Sector"}
+                                                {zoneName}
                                             </span>
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={zone.zoneType || "warning"}
+                                                status={zone.zoneType ?? "warning"}
                                                 showDot={true}
                                             />
                                         </TableCell>
@@ -128,7 +120,7 @@ export function AirspaceTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={zone.status || "active"}
+                                                status={zone.status ?? "active"}
                                                 showDot={true}
                                             />
                                         </TableCell>
@@ -156,7 +148,7 @@ export function AirspaceTable({
                 isOpen={!!zoneToDelete}
                 onClose={() => setZoneToDelete(null)}
                 onConfirm={() => {
-                    if (zoneToDelete && onDeleteZone) {
+                    if (zoneToDelete) {
                         onDeleteZone(zoneToDelete.id);
                         setZoneToDelete(null);
                     }

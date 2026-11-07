@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Modal, OutlineButton, ChamferButton, StatusBadge } from "@/components/ui";
+import { formatCoordinates, formatAltitude, formatNullable } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
-import type { CheckPathResult } from "@/types";
+import type { CheckPathPayload, CheckPathResult } from "@/types";
 
 interface AirspaceBriefingModalProps {
     isOpen: boolean;
@@ -44,6 +46,35 @@ function WaypointInputs({
     point: Waypoint;
     onChange: (field: keyof Waypoint, val: number) => void;
 }) {
+    const [latStr, setLatStr] = useState(() => String(point.lat ?? ""));
+    const [lonStr, setLonStr] = useState(() => String(point.lon ?? ""));
+    const [altStr, setAltStr] = useState(() => String(point.alt ?? ""));
+
+    useEffect(() => {
+        setLatStr(String(point.lat ?? ""));
+        setLonStr(String(point.lon ?? ""));
+        setAltStr(String(point.alt ?? ""));
+    }, [point.lat, point.lon, point.alt]);
+
+    const handleFieldChange =
+        (field: keyof Waypoint, setStr: (s: string) => void) =>
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const val = e.target.value;
+            setStr(val);
+            const parsed = parseFloat(val);
+            if (!isNaN(parsed) && isFinite(parsed)) {
+                onChange(field, parsed);
+            }
+        };
+
+    const handleFieldBlur =
+        (field: keyof Waypoint, currentStr: string, setStr: (s: string) => void) => () => {
+            const parsed = parseFloat(currentStr);
+            if (isNaN(parsed) || !isFinite(parsed) || currentStr.trim() === "") {
+                setStr(String(point[field] ?? ""));
+            }
+        };
+
     return (
         <div className="p-3 bg-slate-50 rounded-[6px] border border-slate-200 flex flex-col gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -53,30 +84,36 @@ function WaypointInputs({
                 <div className="form-group">
                     <label className="text-[11px] font-semibold text-slate-500">Latitude</label>
                     <input
-                        type="number"
-                        step="any"
-                        value={point.lat}
-                        onChange={(e) => onChange("lat", parseFloat(e.target.value) || 0)}
+                        type="text"
+                        inputMode="decimal"
+                        value={latStr}
+                        onChange={handleFieldChange("lat", setLatStr)}
+                        onBlur={handleFieldBlur("lat", latStr, setLatStr)}
+                        placeholder="10.8185"
                         className="form-input font-mono text-xs"
                     />
                 </div>
                 <div className="form-group">
                     <label className="text-[11px] font-semibold text-slate-500">Longitude</label>
                     <input
-                        type="number"
-                        step="any"
-                        value={point.lon}
-                        onChange={(e) => onChange("lon", parseFloat(e.target.value) || 0)}
+                        type="text"
+                        inputMode="decimal"
+                        value={lonStr}
+                        onChange={handleFieldChange("lon", setLonStr)}
+                        onBlur={handleFieldBlur("lon", lonStr, setLonStr)}
+                        placeholder="106.6588"
                         className="form-input font-mono text-xs"
                     />
                 </div>
                 <div className="form-group">
                     <label className="text-[11px] font-semibold text-slate-500">Altitude (m)</label>
                     <input
-                        type="number"
-                        step="any"
-                        value={point.alt}
-                        onChange={(e) => onChange("alt", parseFloat(e.target.value) || 0)}
+                        type="text"
+                        inputMode="decimal"
+                        value={altStr}
+                        onChange={handleFieldChange("alt", setAltStr)}
+                        onBlur={handleFieldBlur("alt", altStr, setAltStr)}
+                        placeholder="100"
                         className="form-input font-mono text-xs"
                     />
                 </div>
@@ -89,8 +126,14 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
     const [start, setStart] = useState<Waypoint>({ lat: 10.8185, lon: 106.6588, alt: 100 });
     const [end, setEnd] = useState<Waypoint>({ lat: 10.7715, lon: 106.7214, alt: 120 });
     const [spacingM, setSpacingM] = useState<number>(200);
-    const [loading, setLoading] = useState(false);
+    const [spacingStr, setSpacingStr] = useState<string>("200");
     const [checkResult, setCheckResult] = useState<CheckPathResult | null>(null);
+
+    const checkMutation = useMutation({
+        mutationFn: (payload: CheckPathPayload) => airspaceService.checkPath(payload),
+        onSuccess: (data) => setCheckResult(data),
+        meta: { defaultErrorMessage: "Failed to perform airspace pre-flight check" },
+    });
 
     const updateWaypoint =
         (setter: React.Dispatch<React.SetStateAction<Waypoint>>) =>
@@ -104,17 +147,16 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
         setCheckResult(null);
     };
 
-    const handleRunCheck = async () => {
-        setLoading(true);
-        try {
-            const res = await airspaceService.checkPath({
-                points: [start, end],
-                spacingM: spacingM || 200,
-            });
-            setCheckResult(res);
-        } finally {
-            setLoading(false);
-        }
+    const handleRunCheck = () => {
+        checkMutation.mutate({
+            points: [start, end],
+            spacingM: spacingM ?? 200,
+        });
+    };
+
+    const handleClose = () => {
+        setCheckResult(null);
+        onClose();
     };
 
     const violations = checkResult?.violations || [];
@@ -123,11 +165,11 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
     return (
         <Modal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title="Pre-Flight Airspace Check"
             maxWidth="620px"
             footer={
-                <OutlineButton type="button" onClick={onClose}>
+                <OutlineButton type="button" onClick={handleClose}>
                     Close
                 </OutlineButton>
             }
@@ -168,8 +210,21 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             type="number"
                             min="10"
                             max="5000"
-                            value={spacingM}
-                            onChange={(e) => setSpacingM(parseInt(e.target.value) || 200)}
+                            value={spacingStr}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSpacingStr(val);
+                                const parsed = parseInt(val, 10);
+                                if (!isNaN(parsed) && parsed > 0) {
+                                    setSpacingM(parsed);
+                                }
+                            }}
+                            onBlur={() => {
+                                const parsed = parseInt(spacingStr, 10);
+                                if (isNaN(parsed) || parsed <= 0) {
+                                    setSpacingStr(String(spacingM ?? 200));
+                                }
+                            }}
                             className="w-20 form-input font-mono text-xs py-1 px-2"
                         />
                         <span className="text-xs text-slate-500">meters</span>
@@ -179,14 +234,16 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                         type="button"
                         variant="dark"
                         onClick={handleRunCheck}
-                        disabled={loading}
+                        disabled={checkMutation.isPending}
                     >
-                        {loading ? (
+                        {checkMutation.isPending ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                         ) : (
                             <Play className="w-3.5 h-3.5 text-white" />
                         )}
-                        <span>{loading ? "Checking Path..." : "Run Airspace Check"}</span>
+                        <span>
+                            {checkMutation.isPending ? "Checking Path..." : "Run Airspace Check"}
+                        </span>
                     </ChamferButton>
                 </div>
 
@@ -231,9 +288,16 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {violations.map((v, i) => (
-                                                <tr key={i} className="hover:bg-slate-50">
+                                                <tr
+                                                    key={`${v.zoneId || "violation"}-${i}`}
+                                                    className="hover:bg-slate-50"
+                                                >
                                                     <td className="p-2 font-medium text-slate-800">
-                                                        {v.name || v.zoneId || "Unnamed Zone"}
+                                                        {formatNullable(
+                                                            v.name ?? v.zoneId,
+                                                            undefined,
+                                                            "Unnamed Zone"
+                                                        )}
                                                     </td>
                                                     <td className="p-2">
                                                         <StatusBadge
@@ -241,9 +305,11 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                                                         />
                                                     </td>
                                                     <td className="p-2 font-mono text-[11px] text-slate-600">
-                                                        {v.conflictPoint
-                                                            ? `${v.conflictPoint.lat.toFixed(4)}, ${v.conflictPoint.lon.toFixed(4)} (${v.conflictPoint.alt ?? 0}m)`
-                                                            : "—"}
+                                                        {formatNullable(
+                                                            v.conflictPoint,
+                                                            (pt) =>
+                                                                `${formatCoordinates({ latitude: pt.lat, longitude: pt.lon }, 4)} (${formatAltitude(pt.alt)})`
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))}
