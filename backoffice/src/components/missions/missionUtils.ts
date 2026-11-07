@@ -45,17 +45,19 @@ export function buildMissionRoutePoints(
     const pts: MissionRoutePoint[] = [];
 
     const hasDep =
-        departureHub?.location?.lat !== undefined && departureHub?.location?.lng !== undefined;
+        departureHub?.location?.latitude !== undefined &&
+        departureHub?.location?.longitude !== undefined;
     const hasArr =
-        arrivalHub?.location?.lat !== undefined && arrivalHub?.location?.lng !== undefined;
+        arrivalHub?.location?.latitude !== undefined &&
+        arrivalHub?.location?.longitude !== undefined;
 
     if (hasDep) {
         pts.push({
             id: "hub-dep",
             label: departureHub.code || departureHub.name || "DEP",
             altitude: departureHub.altitudeMsl ?? 0,
-            latitude: departureHub.location!.lat,
-            longitude: departureHub.location!.lng,
+            latitude: departureHub.location!.latitude,
+            longitude: departureHub.location!.longitude,
             isDeparture: true,
         });
     }
@@ -81,8 +83,8 @@ export function buildMissionRoutePoints(
     });
 
     if (hasArr) {
-        const arrLat = arrivalHub.location!.lat;
-        const arrLng = arrivalHub.location!.lng;
+        const arrLat = arrivalHub.location!.latitude;
+        const arrLng = arrivalHub.location!.longitude;
         const last = pts[pts.length - 1];
         const isDup = last && isDuplicateCoord(last, { latitude: arrLat, longitude: arrLng });
 
@@ -115,10 +117,10 @@ export function generateHubToHubWaypoints(
     arrivalHub: Hub,
     defaultAltitude = 50
 ): Waypoint[] {
-    const depLat = departureHub.location?.lat;
-    const depLng = departureHub.location?.lng;
-    const arrLat = arrivalHub.location?.lat;
-    const arrLng = arrivalHub.location?.lng;
+    const depLat = departureHub.location?.latitude;
+    const depLng = departureHub.location?.longitude;
+    const arrLat = arrivalHub.location?.latitude;
+    const arrLng = arrivalHub.location?.longitude;
 
     if (
         depLat === undefined ||

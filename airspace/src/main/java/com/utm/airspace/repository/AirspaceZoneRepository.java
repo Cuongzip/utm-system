@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AirspaceZoneRepository extends JpaRepository<AirspaceZone, String>, JpaSpecificationExecutor<AirspaceZone> {
@@ -16,6 +17,10 @@ public interface AirspaceZoneRepository extends JpaRepository<AirspaceZone, Stri
     boolean existsByName(String name);
 
     boolean existsByNameAndIdNot(String name, String id);
+
+    boolean existsByCode(String code);
+
+    Optional<AirspaceZone> findByCode(String code);
 
     List<AirspaceZone> findByStatus(AirspaceZoneStatus status);
 

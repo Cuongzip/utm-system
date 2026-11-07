@@ -152,7 +152,7 @@ Tạo mới một hồ sơ kế hoạch chuyến bay.
 - **Input (Request Body)** - Model: `FlightPostVm`:
   ```json
   {
-    "flightNumber": "FL-2026-001",
+    "flightNumber": "FLT-20261107-9X2M",
     "droneId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "departureHubId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "arrivalHubId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -172,8 +172,9 @@ Tạo mới một hồ sơ kế hoạch chuyến bay.
     }
   }
   ```
+  - `flightNumber`: `string` (optional, nếu để trống/null thì hệ thống tự sinh số hiệu chuẩn `FLT-YYYYMMDD-XXXX`, vd: `FLT-20261107-9X2M`).
 - **Logic xử lý cốt lõi**:
-  1. Kiểm tra tính duy nhất của `flightNumber` $\rightarrow$ nếu trùng ném `409 Conflict` (`FLIGHT_NUMBER_ALREADY_EXISTED`).
+  1. **Số hiệu chuyến bay**: Nếu `flightNumber` được truyền lên: trim, uppercase và kiểm tra trùng lặp $\rightarrow$ nếu trùng ném `409 Conflict` (`FLIGHT_NUMBER_ALREADY_EXISTED`). Nếu để trống/null: tự động sinh số hiệu duy nhất qua `BusinessCodeGenerator` (chuẩn Base32 theo ngày).
   2. Kiểm tra Drone tồn tại qua `DroneClientService` $\rightarrow$ nếu không tìm thấy ném `404 Not Found`.
   3. Kiểm tra Hub đi và đến qua `HubClientService` $\rightarrow$ nếu không tìm thấy ném `404 Not Found`.
   4. Nếu không cung cấp `plannedRoute`, tự động tạo tuyến đường thẳng mặc định giữa 2 Hub.

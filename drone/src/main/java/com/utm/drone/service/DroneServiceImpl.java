@@ -7,6 +7,8 @@ import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.drone.mapper.DroneMapper;
 import com.utm.drone.model.Drone;
 import com.utm.drone.model.enumeration.DroneStatus;
@@ -109,12 +111,18 @@ public class DroneServiceImpl implements DroneService {
     @Override
     @Transactional
     public DroneVm createDrone(DronePostVm dronePostVm) {
-        String trimmedRegNumber = dronePostVm.registrationNumber() != null ? dronePostVm.registrationNumber().trim()
-                : "";
-        if (droneRepository.existsByRegistrationNumber(trimmedRegNumber)) {
-            throw new DuplicatedException(
-                    MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
-                    dronePostVm.registrationNumber());
+        String registrationNumber;
+        if (dronePostVm.registrationNumber() == null || dronePostVm.registrationNumber().trim().isBlank()) {
+            registrationNumber = BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.DRONE_REGISTRATION,
+                    droneRepository::existsByRegistrationNumber);
+        } else {
+            registrationNumber = dronePostVm.registrationNumber().trim().toUpperCase();
+            if (droneRepository.existsByRegistrationNumber(registrationNumber)) {
+                throw new DuplicatedException(
+                        MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
+                        registrationNumber);
+            }
         }
 
         if (dronePostVm.ownerId() != null && !dronePostVm.ownerId().trim().isBlank()) {
@@ -132,6 +140,7 @@ public class DroneServiceImpl implements DroneService {
         }
 
         Drone drone = droneMapper.toEntity(dronePostVm);
+        drone.setRegistrationNumber(registrationNumber);
         Drone savedDrone = droneRepository.saveAndFlush(drone);
         log.info("Created new drone with ID: {} and registration number: {}", savedDrone.getId(),
                 savedDrone.getRegistrationNumber());

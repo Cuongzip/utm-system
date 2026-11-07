@@ -34,7 +34,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
@@ -95,6 +97,7 @@ class HubServiceImplTest {
 
         testPutVm = new HubPutVm(
                 "Central Vertiport Hub D1 (Expansion)",
+                testLocationVm,
                 15.0,
                 2000.0,
                 HubStatus.MAINTENANCE
@@ -141,6 +144,30 @@ class HubServiceImplTest {
 
             verify(hubRepository).existsByCode("HUB-SGN-01");
             verify(hubRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should auto-generate hub code when code is null or blank in input payload")
+        void createHub_nullOrBlankCode_autoGeneratesHubCode() {
+            HubPostVm postVmWithoutCode = new HubPostVm(
+                    null,
+                    "Central Vertiport Hub D1",
+                    testLocationVm,
+                    12.5,
+                    1500.0
+            );
+
+            when(hubRepository.existsByCode(anyString())).thenReturn(false);
+            when(hubMapper.toEntity(postVmWithoutCode)).thenReturn(testHub);
+            when(hubRepository.saveAndFlush(any(Hub.class))).thenReturn(testHub);
+            when(hubMapper.toVm(testHub)).thenReturn(testHubVm);
+
+            HubVm result = hubService.createHub(postVmWithoutCode);
+
+            assertThat(result).isNotNull();
+            ArgumentCaptor<Hub> hubCaptor = ArgumentCaptor.forClass(Hub.class);
+            verify(hubRepository).saveAndFlush(hubCaptor.capture());
+            assertThat(hubCaptor.getValue().getCode()).startsWith("HUB-").hasSize(8);
         }
     }
 

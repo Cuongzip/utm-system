@@ -121,6 +121,7 @@ class DecisionEngineServiceTest {
             EmergencySeverity severity, IncidentStatus status) {
         return new EmergencyIncidentVm(
                 id,
+                "INC-20261107-TEST",
                 droneId,
                 flightId,
                 type,

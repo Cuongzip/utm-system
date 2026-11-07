@@ -27,7 +27,6 @@ export interface AirspaceMapEditorProps {
     onClearPolygonPoints: () => void;
     zoneType: AirspaceZoneType;
     altitudeCeiling: number;
-    onAltitudeCeilingChange?: (val: number) => void;
     existingZones?: AirspaceZone[];
     currentZoneId?: string;
     className?: string;
@@ -373,26 +372,11 @@ export function AirspaceMapEditor({
     onClearPolygonPoints,
     zoneType,
     altitudeCeiling,
-    onAltitudeCeilingChange,
     existingZones = [],
     currentZoneId,
     className = "",
 }: AirspaceMapEditorProps) {
     const [showContextZones, setShowContextZones] = useState(false);
-    const [altInput, setAltInput] = useState(String(altitudeCeiling ?? 120));
-
-    useEffect(() => {
-        setAltInput(String(altitudeCeiling ?? 120));
-    }, [altitudeCeiling]);
-
-    const handleAltChange = (val: string) => {
-        setAltInput(val);
-        const parsed = parseFloat(val);
-        if (!isNaN(parsed) && parsed > 0) {
-            onAltitudeCeilingChange?.(parsed);
-        }
-    };
-
     const backgroundZones = existingZones.filter((z) => z.id !== currentZoneId);
 
     return (
@@ -441,21 +425,6 @@ export function AirspaceMapEditor({
                                 disabled={polygonPoints.length === 0}
                             />
                         )}
-
-                        <div className="flex items-center h-[34px] gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-card)] px-2.5 py-1 rounded border border-[var(--color-border-default)]">
-                            <span className="text-[11px] font-mono uppercase text-[var(--color-text-muted)]">
-                                Alt:
-                            </span>
-                            <input
-                                type="number"
-                                min="1"
-                                max="5000"
-                                value={altInput}
-                                onChange={(e) => handleAltChange(e.target.value)}
-                                className="w-12 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
-                            />
-                            <span className="font-mono text-slate-400 text-[11px]">m</span>
-                        </div>
 
                         <MapZoneAction
                             active={showContextZones}

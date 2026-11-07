@@ -20,6 +20,8 @@ import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -180,6 +182,7 @@ public class AirspaceServiceImpl implements AirspaceService {
     @Transactional(readOnly = true)
     public AirspaceZoneVm getZoneById(String id) {
         AirspaceZone zone = airspaceZoneRepository.findById(id)
+                .or(() -> airspaceZoneRepository.findByCode(id.trim().toUpperCase()))
                 .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, id));
         return airspaceZoneMapper.toVm(zone);
     }
@@ -189,6 +192,16 @@ public class AirspaceServiceImpl implements AirspaceService {
         String trimmedName = postVm.name().trim();
         if (airspaceZoneRepository.existsByName(trimmedName)) {
             throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_NAME_ALREADY_EXISTED, trimmedName);
+        }
+
+        String code;
+        if (postVm.code() != null && !postVm.code().isBlank()) {
+            code = postVm.code().trim().toUpperCase();
+            if (airspaceZoneRepository.existsByCode(code)) {
+                throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_CODE_ALREADY_EXISTED, code);
+            }
+        } else {
+            code = BusinessCodeGenerator.generateUnique(CodePatternRule.AIRSPACE_ZONE, airspaceZoneRepository::existsByCode);
         }
 
         if (postVm.hubId() != null && !postVm.hubId().isBlank()) {
@@ -201,8 +214,9 @@ public class AirspaceServiceImpl implements AirspaceService {
 
         AirspaceZone zone = airspaceZoneMapper.toEntity(postVm);
         zone.setName(trimmedName);
+        zone.setCode(code);
         AirspaceZone saved = airspaceZoneRepository.saveAndFlush(zone);
-        log.info("Created new AirspaceZone with ID: {} and name: {}", saved.getId(), saved.getName());
+        log.info("Created new AirspaceZone with ID: {}, code: {} and name: {}", saved.getId(), saved.getCode(), saved.getName());
         return airspaceZoneMapper.toVm(saved);
     }
 

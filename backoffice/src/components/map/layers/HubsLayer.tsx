@@ -37,12 +37,12 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
             const newEntityIds: string[] = [];
 
             hubs.forEach((hub) => {
-                const lat = hub.location?.lat;
-                const lng = hub.location?.lng;
+                const lat = hub.location?.latitude;
+                const lng = hub.location?.longitude;
                 if (lat === undefined || lng === undefined) return;
 
                 const isSelected = selectedHubId === hub.id;
-                const radius = hub.airspaceRadius || 5000;
+                const radius = hub.airspaceRadius ?? 1500;
                 const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
                 const stackIndex = coordCounter[coordKey] || 0;
                 coordCounter[coordKey] = stackIndex + 1;
@@ -69,7 +69,7 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                         semiMajorAxis: radius,
                         material: isSelected
                             ? Cesium.Color.fromAlpha(
-                                  Cesium.Color.fromCssColorString("#334155"),
+                                  Cesium.Color.fromCssColorString("#06b6d4"),
                                   0.22
                               )
                             : Cesium.Color.fromAlpha(
@@ -78,12 +78,12 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                               ),
                         outline: true,
                         outlineColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#0f172a")
+                            ? Cesium.Color.fromCssColorString("#00e5ff")
                             : Cesium.Color.fromAlpha(
                                   Cesium.Color.fromCssColorString("#64748b"),
                                   0.5
                               ),
-                        outlineWidth: isSelected ? 2 : 1,
+                        outlineWidth: isSelected ? 2.5 : 1,
                     },
                 });
 
@@ -94,11 +94,11 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
 
             if (selectedHubId) {
                 const target = hubs.find((h) => h.id === selectedHubId);
-                const lat = target?.location?.lat;
-                const lng = target?.location?.lng;
+                const lat = target?.location?.latitude;
+                const lng = target?.location?.longitude;
                 if (lat !== undefined && lng !== undefined) {
                     const zoomHeight = Math.min(
-                        Math.max((target?.airspaceRadius || 500) * 2.0, 1500),
+                        Math.max((target?.airspaceRadius ?? 500) * 2.0, 1500),
                         8000
                     );
                     viewer.camera.flyTo({
@@ -110,8 +110,8 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                 hasAutoFittedRef.current = true;
                 const valid = hubs
                     .map((h) => ({
-                        lat: h.location?.lat,
-                        lng: h.location?.lng,
+                        lat: h.location?.latitude,
+                        lng: h.location?.longitude,
                     }))
                     .filter(
                         (c): c is { lat: number; lng: number } =>
@@ -148,5 +148,3 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
 
     return null;
 }
-
-export default HubsLayer;

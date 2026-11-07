@@ -4,6 +4,8 @@ import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.hub.mapper.HubMapper;
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.enumeration.HubStatus;
@@ -78,14 +80,23 @@ public class HubServiceImpl implements HubService {
     @Override
     @Transactional
     public HubVm createHub(HubPostVm hubPostVm) {
-        String trimmedCode = hubPostVm.code() != null ? hubPostVm.code().trim() : "";
-        if (hubRepository.existsByCode(trimmedCode)) {
-            throw new DuplicatedException(
-                    MessageCode.HUB_CODE_ALREADY_EXISTED,
-                    hubPostVm.code());
+        String hubCode;
+        if (hubPostVm.code() != null && !hubPostVm.code().isBlank()) {
+            hubCode = hubPostVm.code().trim().toUpperCase();
+            if (hubRepository.existsByCode(hubCode)) {
+                throw new DuplicatedException(
+                        MessageCode.HUB_CODE_ALREADY_EXISTED,
+                        hubPostVm.code());
+            }
+        } else {
+            hubCode = BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.HUB_CODE,
+                    hubRepository::existsByCode
+            );
         }
 
         Hub hub = hubMapper.toEntity(hubPostVm);
+        hub.setCode(hubCode);
         Hub savedHub = hubRepository.saveAndFlush(hub);
         log.info("Created new Hub with ID: {} and code: {}", savedHub.getId(), savedHub.getCode());
         return hubMapper.toVm(savedHub);

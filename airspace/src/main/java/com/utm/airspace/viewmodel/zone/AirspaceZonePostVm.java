@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
@@ -15,6 +16,11 @@ public record AirspaceZonePostVm(
         @NotBlank(message = "Name cannot be blank")
         @Size(max = 255, message = "Name must not exceed 255 characters")
         String name,
+
+        @Schema(description = "Airspace zone business tracking code (e.g. ASZ-A1B2). If omitted, system auto-generates.", example = "ASZ-X1Y2")
+        @Size(min = 3, max = 50, message = "Code must be between 3 and 50 characters")
+        @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Code must contain only alphanumeric characters, dashes, and underscores")
+        String code,
 
         @Schema(description = "Associated Hub ID if tied to a vertiport station (null for general zones)", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
         String hubId,

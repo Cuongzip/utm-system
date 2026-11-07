@@ -4,7 +4,10 @@ import com.utm.mission.service.client.HubClientService;
 
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
+import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.mission.mapper.MissionMapper;
 import com.utm.mission.mapper.WaypointMapper;
 import com.utm.mission.model.Mission;
@@ -66,7 +69,20 @@ public class MissionServiceImpl implements MissionService {
             }
         }
 
+        String code;
+        if (postVm.code() == null || postVm.code().trim().isBlank()) {
+            code = BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.MISSION_CODE,
+                    missionRepository::existsByCode);
+        } else {
+            code = postVm.code().trim().toUpperCase();
+            if (missionRepository.existsByCode(code)) {
+                throw new DuplicatedException(MessageCode.MISSION_CODE_ALREADY_EXISTED, code);
+            }
+        }
+
         Mission mission = missionMapper.toEntity(postVm);
+        mission.setCode(code);
         mission.setStatus(MissionStatus.DRAFT);
         Mission saved = missionRepository.save(mission);
 
@@ -211,6 +227,9 @@ public class MissionServiceImpl implements MissionService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, id));
 
         Mission copy = missionMapper.cloneEntity(original);
+        copy.setCode(BusinessCodeGenerator.generateUnique(
+                CodePatternRule.MISSION_CODE,
+                missionRepository::existsByCode));
         copy.setName(original.getName() + " (Bản sao)");
         copy.setScheduleType(MissionScheduleType.IMMEDIATE);
         copy.setStatus(MissionStatus.DRAFT);

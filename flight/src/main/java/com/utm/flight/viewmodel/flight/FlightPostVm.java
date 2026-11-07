@@ -4,14 +4,17 @@ import com.utm.flight.model.enumeration.Verdict;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.ZonedDateTime;
 
 @Schema(
         description = "Request payload for registering a new Flight Plan"
 )
 public record FlightPostVm(
-        @Schema(description = "Unique flight number / callsign", example = "FL-2026-001")
-        @NotBlank(message = "Flight number cannot be blank")
+        @Schema(description = "Unique flight number / callsign (auto-generated if omitted)", example = "FL-2026-001")
+        @Size(min = 3, max = 50, message = "Flight number must be between 3 and 50 characters")
+        @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Flight number must contain only alphanumeric characters, dashes, and underscores")
         String flightNumber,
 
         @Schema(description = "Assigned Drone UUID identifier", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")

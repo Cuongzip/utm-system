@@ -14,15 +14,13 @@ import { validateSchema, createFieldErrorCleaner } from "@/utils";
 import { createZoneBody, updateZoneBody } from "@/generated/airspace";
 import type {
     AirspaceZone,
-    AirspaceZoneType,
-    AirspaceZoneStatus,
     CreateAirspaceZonePayload,
     UpdateAirspaceZonePayload,
     Hub,
 } from "@/types";
 import { useAirspaceGeometry } from "./useAirspaceGeometry";
 import { AirspaceMapEditor } from "./AirspaceMapEditor";
-import { AirspaceFormSidebar } from "./AirspaceFormSidebar";
+import { AirspaceFormSidebar, type AirspaceFormData } from "./AirspaceFormSidebar";
 
 export interface AirspaceEditorProps {
     mode: "create" | "edit";
@@ -49,16 +47,17 @@ export function AirspaceEditor({
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const [name, setName] = useState(initialData?.name || "");
-    const [zoneType, setZoneType] = useState<AirspaceZoneType>(
-        initialData?.zoneType || "no_fly_zone"
-    );
-    const [status, setStatus] = useState<AirspaceZoneStatus>(initialData?.status || "active");
-    const [altitudeCeiling, setAltitudeCeiling] = useState<number>(
-        initialData?.altitudeCeiling !== undefined ? initialData.altitudeCeiling : 120
-    );
-    const [hubId, setHubId] = useState<string>(initialData?.hubId || "");
-    const [description, setDescription] = useState<string>(initialData?.description || "");
+    const [formData, setFormData] = useState<AirspaceFormData>({
+        code: initialData?.code || "",
+        autoGen: mode === "create",
+        name: initialData?.name || "",
+        zoneType: initialData?.zoneType || "no_fly_zone",
+        status: initialData?.status || "active",
+        altitudeCeiling:
+            initialData?.altitudeCeiling !== undefined ? initialData.altitudeCeiling : 120,
+        hubId: initialData?.hubId || "",
+        description: initialData?.description || "",
+    });
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "geometry">("details");
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -81,27 +80,53 @@ export function AirspaceEditor({
 
     useEffect(() => {
         if (initialData) {
-            setName(initialData.name || "");
-            setZoneType(initialData.zoneType || "no_fly_zone");
-            setStatus(initialData.status || "active");
-            setAltitudeCeiling(
-                initialData.altitudeCeiling !== undefined ? initialData.altitudeCeiling : 120
-            );
-            setHubId(initialData.hubId || "");
-            setDescription(initialData.description || "");
+            setFormData({
+                code: initialData.code || "",
+                autoGen: false,
+                name: initialData.name || "",
+                zoneType: initialData.zoneType || "no_fly_zone",
+                status: initialData.status || "active",
+                altitudeCeiling:
+                    initialData.altitudeCeiling !== undefined ? initialData.altitudeCeiling : 120,
+                hubId: initialData.hubId || "",
+                description: initialData.description || "",
+            });
+        } else {
+            setFormData((prev) => ({
+                ...prev,
+                code: "",
+                autoGen: mode === "create",
+            }));
         }
-    }, [initialData]);
+    }, [initialData, mode]);
+
+    const handleFormChange = <K extends keyof AirspaceFormData>(
+        field: K,
+        value: AirspaceFormData[K]
+    ) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    };
 
     const handleSave = async () => {
         setFieldErrors({});
 
+        const trimmedCode = formData.code?.trim();
+        if (mode === "create" && !formData.autoGen && !trimmedCode) {
+            setFieldErrors({ code: "Code is required when AUTO-GEN is disabled" });
+            setActiveSidebarTab("details");
+            return;
+        }
+
         const payload = {
-            name: name.trim(),
-            zoneType,
-            status,
-            altitudeCeiling: Number(altitudeCeiling),
-            hubId: hubId || undefined,
-            description: description.trim() || undefined,
+            ...(mode === "create"
+                ? { code: formData.autoGen || !trimmedCode ? undefined : trimmedCode.toUpperCase() }
+                : {}),
+            name: formData.name.trim(),
+            zoneType: formData.zoneType,
+            status: formData.status,
+            altitudeCeiling: Number(formData.altitudeCeiling),
+            hubId: formData.hubId || undefined,
+            description: formData.description.trim() || undefined,
             geometry: computedGeoJson ?? undefined,
         };
 
@@ -147,8 +172,8 @@ export function AirspaceEditor({
                 badges={
                     mode === "edit" ? (
                         <StatusBadge
-                            status={status === "active" ? "active" : "inactive"}
-                            label={status.toUpperCase()}
+                            status={formData.status === "active" ? "active" : "inactive"}
+                            label={formData.status.toUpperCase()}
                         />
                     ) : null
                 }
@@ -207,12 +232,8 @@ export function AirspaceEditor({
                         }}
                         onUndoPolygonPoint={undoPolygonPoint}
                         onClearPolygonPoints={clearPolygonPoints}
-                        zoneType={zoneType}
-                        altitudeCeiling={altitudeCeiling}
-                        onAltitudeCeilingChange={(val) => {
-                            setAltitudeCeiling(val);
-                            clearFieldError("altitudeCeiling");
-                        }}
+                        zoneType={formData.zoneType}
+                        altitudeCeiling={formData.altitudeCeiling}
                         existingZones={existingZones}
                         currentZoneId={initialData?.id}
                         className="h-full"
@@ -220,18 +241,9 @@ export function AirspaceEditor({
                 }
                 sidebarContent={
                     <AirspaceFormSidebar
-                        name={name}
-                        onNameChange={setName}
-                        zoneType={zoneType}
-                        onZoneTypeChange={setZoneType}
-                        status={status}
-                        onStatusChange={setStatus}
-                        altitudeCeiling={altitudeCeiling}
-                        onAltitudeCeilingChange={setAltitudeCeiling}
-                        hubId={hubId}
-                        onHubIdChange={setHubId}
-                        description={description}
-                        onDescriptionChange={setDescription}
+                        formData={formData}
+                        onFormChange={handleFormChange}
+                        isEdit={mode === "edit"}
                         hubs={hubs}
                         geometryMode={geometryMode}
                         onGeometryModeChange={setGeometryMode}
@@ -248,7 +260,6 @@ export function AirspaceEditor({
                         polygonPoints={polygonPoints}
                         onRemovePolygonPoint={removePolygonPoint}
                         onClearPolygonPoints={clearPolygonPoints}
-                        computedGeoJson={computedGeoJson}
                         activeTab={activeSidebarTab}
                         onTabChange={setActiveSidebarTab}
                         fieldErrors={fieldErrors}
@@ -261,7 +272,7 @@ export function AirspaceEditor({
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 title="Delete Airspace Zone"
-                description={`Are you sure you want to delete zone "${name}"? This action will deactivate and remove this airspace sector.`}
+                description={`Are you sure you want to delete zone "${formData.name}"? This action will deactivate and remove this airspace sector.`}
                 confirmText="Delete Zone"
                 variant="danger"
                 loading={isDeleting}

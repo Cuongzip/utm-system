@@ -15,6 +15,7 @@ Bộ não an toàn thời gian thực & Hệ thống tự động cứu nạn (F
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `varchar(36)` | `string` | **PK**, UUID | Khóa chính sự cố |
+| `incident_number` | `varchar(50)` | `string` | **UNIQUE**, NOT NULL | Mã định danh sự cố theo chuẩn ATC (`INC-YYYYMMDD-XXXX`) |
 | `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NOT NULL | Phương tiện gặp sự cố |
 | `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NULLABLE | Chuyến bay liên đới |
 | `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL | Loại sự cố an toàn |
@@ -225,6 +226,7 @@ Khai báo sự cố an toàn bay khẩn cấp từ các hệ thống giám sát 
 - **Input (Request Body)** - Model: `EmergencyIncidentPostVm`:
   ```json
   {
+    "incidentNumber": "INC-20261107-A1B2",
     "droneId": "d1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "flightId": "f1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "emergencyType": "battery_critical",
@@ -236,13 +238,15 @@ Khai báo sự cố an toàn bay khẩn cấp từ các hệ thống giám sát 
     "altitude": 115.5
   }
   ```
+  *(Lưu ý: `incidentNumber` là tùy chọn; nếu để trống hoặc null, hệ thống sẽ tự động sinh mã duy nhất theo mẫu `INC-YYYYMMDD-XXXX` qua `BusinessCodeGenerator`).*
 - **Logic xử lý cốt lõi**:
-  1. Map dữ liệu sang `EmergencyIncident entity`.
-  2. Gán trạng thái ban đầu dựa vào chế độ vận hành: Nếu `OperationMode == supervised` thì gán `pending_confirmation`, ngược lại gán `active`.
-  3. Gán `createdBy` từ JWT Subject hoặc mặc định `"system"`.
-  4. Lưu bản ghi vào bảng `emergency_incidents`.
-  5. Chuyển giao sang `DecisionEngineService.processEmergency(saved)` để tra cứu kịch bản và quyết định hành động cứu nạn.
-  6. Phát sóng WebSocket tới `/topic/emergency/incidents`, `/topic/emergency/drone/{droneId}`, `/topic/emergency/flight/{flightId}`.
+  1. Kiểm tra mã định danh sự cố: Nếu truyền vào thì chuẩn hóa và kiểm tra trùng lặp (`INCIDENT_NUMBER_ALREADY_EXISTED`); nếu không truyền, tự động sinh mã ngẫu nhiên duy nhất định dạng `INC-YYYYMMDD-XXXX`.
+  2. Map dữ liệu sang `EmergencyIncident entity`.
+  3. Gán trạng thái ban đầu dựa vào chế độ vận hành: Nếu `OperationMode == supervised` thì gán `pending_confirmation`, ngược lại gán `active`.
+  4. Gán `createdBy` từ JWT Subject hoặc mặc định `"system"`.
+  5. Lưu bản ghi vào bảng `emergency_incidents`.
+  6. Chuyển giao sang `DecisionEngineService.processEmergency(saved)` để tra cứu kịch bản và quyết định hành động cứu nạn.
+  7. Phát sóng WebSocket tới `/topic/emergency/incidents`, `/topic/emergency/drone/{droneId}`, `/topic/emergency/flight/{flightId}`.
 - **Phản hồi thành công**: `201 Created` - Model: `EmergencyIncidentVm`.
 
 ---
@@ -281,11 +285,11 @@ Lấy danh sách các sự cố hiện đang nằm trong hàng đợi đếm ng�
 ---
 
 ### 12.4.5 `GET /api/v1/emergency/incidents/{id}`
-Lấy chi tiết sự cố khẩn cấp cùng dòng thời gian diễn tiến sự kiện (`timeline`).
+Lấy chi tiết sự cố khẩn cấp cùng dòng thời gian diễn tiến sự kiện (`timeline`). Tham số `{id}` hỗ trợ cả UUID bản ghi (`id`) hoặc mã định danh nghiệp vụ sự cố (`incidentNumber`, vd: `INC-20261107-A1B2`).
 
 - **Chỉ định role**: Authenticated
 - **Phản hồi thành công**: `200 OK` - Model: `EmergencyIncidentVm`.
-- **Lỗi nghiệp vụ**: `404 Not Found` nếu ID không tồn tại.
+- **Lỗi nghiệp vụ**: `404 Not Found` nếu không tìm thấy sự cố.
 
 ---
 

@@ -1,5 +1,6 @@
 package com.utm.emergency.service;
 
+import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.model.EmergencyIncident;
@@ -85,6 +86,7 @@ class EmergencyIncidentServiceImplTest {
             IncidentStatus status) {
         EmergencyIncident incident = new EmergencyIncident();
         incident.setId(id);
+        incident.setIncidentNumber("INC-20261107-" + id);
         incident.setDroneId("drone-001");
         incident.setFlightId("flight-001");
         incident.setEmergencyType(type);
@@ -104,6 +106,7 @@ class EmergencyIncidentServiceImplTest {
             IncidentStatus status) {
         return new EmergencyIncidentVm(
                 id,
+                "INC-20261107-" + id,
                 "drone-001",
                 "flight-001",
                 type,
@@ -144,6 +147,7 @@ class EmergencyIncidentServiceImplTest {
         @DisplayName("createIncident in supervised mode sets status to pending_confirmation and broadcasts to topics")
         void createIncident_whenSupervisedMode_setsStatusPendingConfirmation() {
             EmergencyIncidentPostVm postVm = new EmergencyIncidentPostVm(
+                    null,
                     "drone-001",
                     "flight-001",
                     EmergencyType.battery_critical,
@@ -184,9 +188,68 @@ class EmergencyIncidentServiceImplTest {
         }
 
         @Test
+        @DisplayName("createIncident with manual incident number uses manual number")
+        void createIncident_whenManualIncidentNumber_usesManualNumber() {
+            EmergencyIncidentPostVm postVm = new EmergencyIncidentPostVm(
+                    "INC-20261107-MANU",
+                    "drone-001",
+                    "flight-001",
+                    EmergencyType.battery_critical,
+                    EmergencySeverity.critical,
+                    "Battery level critical: 9.5%",
+                    null,
+                    10.762622,
+                    106.660172,
+                    120.0);
+
+            EmergencyIncident entity = createSampleIncident("inc-001", EmergencyType.battery_critical,
+                    EmergencySeverity.critical, IncidentStatus.active);
+            EmergencyIncident savedEntity = createSampleIncident("inc-001", EmergencyType.battery_critical,
+                    EmergencySeverity.critical, IncidentStatus.active);
+            savedEntity.setIncidentNumber("INC-20261107-MANU");
+            EmergencyIncidentVm expectedVm = createSampleIncidentVm("inc-001", EmergencyType.battery_critical,
+                    EmergencySeverity.critical, IncidentStatus.active);
+
+            when(incidentRepo.existsByIncidentNumber("INC-20261107-MANU")).thenReturn(false);
+            when(incidentMapper.toEntity(postVm)).thenReturn(entity);
+            when(decisionEngine.getMode()).thenReturn(OperationMode.auto);
+            when(incidentRepo.save(entity)).thenReturn(savedEntity);
+            when(incidentMapper.toVm(savedEntity)).thenReturn(expectedVm);
+
+            EmergencyIncidentVm result = incidentService.createIncident(postVm, "pilot-dave");
+
+            assertThat(result).isNotNull();
+            assertThat(entity.getIncidentNumber()).isEqualTo("INC-20261107-MANU");
+        }
+
+        @Test
+        @DisplayName("createIncident with duplicate manual incident number throws DuplicatedException")
+        void createIncident_whenDuplicateIncidentNumber_throwsDuplicatedException() {
+            EmergencyIncidentPostVm postVm = new EmergencyIncidentPostVm(
+                    "INC-20261107-DUPL",
+                    "drone-001",
+                    "flight-001",
+                    EmergencyType.battery_critical,
+                    EmergencySeverity.critical,
+                    "Battery level critical: 9.5%",
+                    null,
+                    10.762622,
+                    106.660172,
+                    120.0);
+
+            when(incidentRepo.existsByIncidentNumber("INC-20261107-DUPL")).thenReturn(true);
+
+            assertThatThrownBy(() -> incidentService.createIncident(postVm, "pilot-dave"))
+                    .isInstanceOf(DuplicatedException.class);
+
+            verify(incidentRepo, never()).save(any());
+        }
+
+        @Test
         @DisplayName("createIncident in auto mode sets status to active and handles null reporter by defaulting to system")
         void createIncident_whenAutoMode_setsStatusActiveAndDefaultsReporterToSystem() {
             EmergencyIncidentPostVm postVm = new EmergencyIncidentPostVm(
+                    null,
                     "drone-002",
                     null,
                     EmergencyType.collision_aircraft,
@@ -360,6 +423,25 @@ class EmergencyIncidentServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.id()).isEqualTo("inc-030");
             assertThat(result.emergencyType()).isEqualTo(EmergencyType.battery_low);
+        }
+
+        @Test
+        @DisplayName("getIncidentById returns mapped VM when looked up by incidentNumber")
+        void getIncidentById_whenFoundByIncidentNumber_returnsMappedVm() {
+            EmergencyIncident incident = createSampleIncident("inc-030", EmergencyType.battery_low,
+                    EmergencySeverity.warning, IncidentStatus.active);
+            incident.setIncidentNumber("INC-20261107-1234");
+            EmergencyIncidentVm vm = createSampleIncidentVm("inc-030", EmergencyType.battery_low,
+                    EmergencySeverity.warning, IncidentStatus.active);
+
+            when(incidentRepo.findById("INC-20261107-1234")).thenReturn(Optional.empty());
+            when(incidentRepo.findByIncidentNumber("INC-20261107-1234")).thenReturn(Optional.of(incident));
+            when(incidentMapper.toVm(incident)).thenReturn(vm);
+
+            EmergencyIncidentVm result = incidentService.getIncidentById("INC-20261107-1234");
+
+            assertThat(result).isNotNull();
+            assertThat(result.id()).isEqualTo("inc-030");
         }
 
         @Test

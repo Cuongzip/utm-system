@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/01-create-mission-tables.yaml
   - include:
       file: db/changelog/changes/02-create-mission-execution-table.yaml
+  - include:
+      file: db/changelog/changes/03-add-code-to-mission.yaml

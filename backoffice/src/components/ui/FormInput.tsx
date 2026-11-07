@@ -6,6 +6,7 @@ import { cn } from "@/lib";
 export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     id: string;
     label?: string;
+    labelRight?: React.ReactNode;
     error?: string;
     required?: boolean;
     containerClassName?: string;
@@ -14,6 +15,7 @@ export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputEleme
 export function FormInput({
     id,
     label,
+    labelRight,
     error,
     required = false,
     className,
@@ -23,10 +25,13 @@ export function FormInput({
     return (
         <div className={cn("form-group", containerClassName)}>
             {label && (
-                <label className="form-label" htmlFor={id}>
-                    {label}
-                    {required && <span className="text-red-500 ml-1">*</span>}
-                </label>
+                <div className="flex items-center justify-between">
+                    <label className="form-label" htmlFor={id}>
+                        {label}
+                        {required && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    {labelRight}
+                </div>
             )}
             <input
                 id={id}

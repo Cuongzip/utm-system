@@ -11,6 +11,9 @@ public record AirspaceZoneVm(
         @Schema(description = "Unique UUID identifier of the airspace zone", example = "zone-sgn-palace-01")
         String id,
 
+        @Schema(description = "Airspace zone business tracking code", example = "ASZ-X1Y2")
+        String code,
+
         @Schema(description = "Associated Hub ID if tied to a vertiport station", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
         String hubId,
 

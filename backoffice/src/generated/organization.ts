@@ -225,7 +225,10 @@ export const createOrganizationBody = zod
             .string()
             .min(createOrganizationBodyRegistrationNumberMin)
             .max(createOrganizationBodyRegistrationNumberMax)
-            .describe("Business registration number / license code"),
+            .optional()
+            .describe(
+                "Business registration number / license code. If omitted or blank, a unique code will be auto-generated (e.g. ORG-YYYY-XXXX)."
+            ),
         contactInfo: zod
             .string()
             .optional()

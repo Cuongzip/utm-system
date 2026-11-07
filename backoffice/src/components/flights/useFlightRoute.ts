@@ -56,14 +56,18 @@ function parseInitialRouteWaypoints(
 
     const isStartDep =
         departureHub?.location &&
-        Math.abs(coords[0][0] - departureHub.location.lng) < 0.0001 &&
-        Math.abs(coords[0][1] - departureHub.location.lat) < 0.0001;
+        departureHub.location.longitude !== undefined &&
+        departureHub.location.latitude !== undefined &&
+        Math.abs(coords[0][0] - departureHub.location.longitude) < 0.0001 &&
+        Math.abs(coords[0][1] - departureHub.location.latitude) < 0.0001;
 
     const isEndArr =
         arrivalHub?.location &&
+        arrivalHub.location.longitude !== undefined &&
+        arrivalHub.location.latitude !== undefined &&
         coords.length > 1 &&
-        Math.abs(coords[coords.length - 1][0] - arrivalHub.location.lng) < 0.0001 &&
-        Math.abs(coords[coords.length - 1][1] - arrivalHub.location.lat) < 0.0001;
+        Math.abs(coords[coords.length - 1][0] - arrivalHub.location.longitude) < 0.0001 &&
+        Math.abs(coords[coords.length - 1][1] - arrivalHub.location.latitude) < 0.0001;
 
     const startIndex = isStartDep ? 1 : 0;
     const endIndex = isEndArr ? coords.length - 1 : coords.length;

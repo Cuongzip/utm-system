@@ -172,7 +172,9 @@ export const updateFlightBody = zod
         feasibilityVerdict: zod
             .enum(["go", "marginal", "no_go", "unknown"])
             .optional()
-            .describe("Updated pre-flight feasibility evaluation verdict"),
+            .describe(
+                "Updated pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"
+            ),
     })
     .describe("Request payload for updating an existing Flight Plan before departure");
 
@@ -457,7 +459,10 @@ export const getFlightsResponse = zod
  */
 export const createFlightBody = zod
     .object({
-        flightNumber: zod.string().min(1).describe("Unique flight number / callsign"),
+        flightNumber: zod
+            .string()
+            .optional()
+            .describe("Unique flight number / callsign (auto-generated if omitted)"),
         droneId: zod.string().min(1).describe("Assigned Drone UUID identifier"),
         departureHubId: zod.string().min(1).describe("Departure Hub / Vertiport UUID identifier"),
         arrivalHubId: zod.string().min(1).describe("Arrival Hub / Vertiport UUID identifier"),
@@ -495,7 +500,7 @@ export const createFlightBody = zod
         feasibilityVerdict: zod
             .enum(["go", "marginal", "no_go", "unknown"])
             .optional()
-            .describe("Pre-flight feasibility evaluation verdict"),
+            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
     })
     .describe("Request payload for registering a new Flight Plan");
 

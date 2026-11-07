@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 06-add-incident-number-to-emergency-incident
+      author: cuong
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: emergency_incidents
+                columnName: incident_number
+      changes:
+        - addColumn:
+            tableName: emergency_incidents
+            columns:
+              - column:
+                  name: incident_number
+                  type: varchar(50)
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uq_emergency_incident_number

@@ -169,9 +169,16 @@ export function MissionsTable({
                                             bold
                                             tooltip={mission.name || mission.id}
                                         >
-                                            <span className="font-semibold text-slate-900">
-                                                {mission.name || "Untitled Mission"}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-slate-900">
+                                                    {mission.name || "Untitled Mission"}
+                                                </span>
+                                                {mission.code && (
+                                                    <span className="font-mono text-[10px] text-cyan-600 font-semibold tracking-wider">
+                                                        {mission.code}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
 
                                         <TableCell>

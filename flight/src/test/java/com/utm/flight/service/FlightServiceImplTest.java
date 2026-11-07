@@ -40,9 +40,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
@@ -602,6 +604,32 @@ class FlightServiceImplTest {
             assertThat(testFlight.getStatus()).isEqualTo(FlightStatus.SCHEDULED);
             assertThat(testFlight.getAuthorizationStatus()).isEqualTo(FlightAuthorizationStatus.PENDING);
             verify(flightRepository).saveAndFlush(testFlight);
+        }
+
+        @Test
+        @DisplayName("Should auto-generate flight number when flightNumber is null or blank")
+        void createFlight_nullOrBlankFlightNumber_autoGeneratesFlightNumber() {
+            FlightPostVm postVm = new FlightPostVm(
+                    null,
+                    "drone-123", "hub-dep", "hub-arr", "PILOT-1",
+                    ZonedDateTime.now().plusHours(1), ZonedDateTime.now().plusHours(2),
+                    100.0, "Notes", null, null, null, null);
+
+            when(flightRepository.existsByFlightNumber(anyString())).thenReturn(false);
+            when(droneClientService.checkDroneExists("drone-123")).thenReturn(true);
+            when(hubClientService.getHubById("hub-dep")).thenReturn(Optional.of(depHub));
+            when(hubClientService.getHubById("hub-arr")).thenReturn(Optional.of(arrHub));
+            when(flightMapper.toEntity(postVm)).thenReturn(testFlight);
+            when(flightRepository.saveAndFlush(testFlight)).thenReturn(testFlight);
+            FlightVm vm = createTestFlightVm(testFlight);
+            when(flightMapper.toVm(testFlight)).thenReturn(vm);
+
+            FlightVm result = flightService.createFlight(postVm);
+
+            assertThat(result).isNotNull();
+            ArgumentCaptor<Flight> flightCaptor = ArgumentCaptor.forClass(Flight.class);
+            verify(flightRepository).saveAndFlush(flightCaptor.capture());
+            assertThat(flightCaptor.getValue().getFlightNumber()).startsWith("FLT-");
         }
     }
 

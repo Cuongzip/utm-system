@@ -15,6 +15,7 @@ Quản lý không phận, vùng cấm bay tuyệt đối (No-Fly Zone - NFZ), v�
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `name` | `varchar(255)` | `string` | NOT NULL, **UNIQUE** | Tên định danh vùng không phận |
+| `code` | `varchar(50)` | `string` | **UNIQUE**, NOT NULL | Mã định danh nghiệp vụ vùng không phận (`ASZ-XXXX`) |
 | `hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id`, NULLABLE | Thuộc Hub nào (NULL nếu là vùng cấm cấp quốc gia) |
 | `zone_type` | `varchar(50)` | `AirspaceZoneType` | NOT NULL | Phân loại vùng không phận |
 | `geometry` | `text` | `GeoJsonPolygonVm` | NOT NULL | Tọa độ đa giác bao quanh vùng trời (GeoJSON Polygon Object) |
@@ -127,6 +128,7 @@ Lấy danh sách các vùng không phận có phân trang và bộ lọc.
     "items": [
       {
         "id": "z1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "code": "ASZ-A1B2",
         "hubId": null,
         "name": "Khu vực Cấm bay Dinh Độc Lập",
         "zoneType": "no_fly_zone",
@@ -158,14 +160,15 @@ Lấy danh sách các vùng không phận có phân trang và bộ lọc.
 ---
 
 ### 4.4.4 `GET /api/v1/airspace/zones/{id}`
-Lấy chi tiết cấu hình và đa giác không gian của một vùng không phận theo UUID.
+Lấy chi tiết cấu hình và đa giác không gian của một vùng không phận theo UUID hoặc mã định danh nghiệp vụ (`code`, vd: `ASZ-A1B2`).
 
 - **Chỉ định role**: Authenticated
-- **Input (Path Params)**: `id` (UUID)
+- **Input (Path Params)**: `id` (UUID hoặc `code`)
 - **Phản hồi thành công**: `200 OK` - Model: `AirspaceZoneVm`:
   ```json
   {
     "id": "z1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "code": "ASZ-A1B2",
     "hubId": null,
     "name": "Khu vực Cấm bay Dinh Độc Lập",
     "zoneType": "no_fly_zone",
@@ -202,6 +205,7 @@ Tạo mới vùng không phận (Vùng cấm, vùng hạn chế, hành lang bay)
   ```json
   {
     "name": "Khu vực Cấm bay Dinh Độc Lập",
+    "code": "ASZ-A1B2",
     "hubId": null,
     "zoneType": "no_fly_zone",
     "altitudeCeiling": 120.0,
@@ -221,11 +225,13 @@ Tạo mới vùng không phận (Vùng cấm, vùng hạn chế, hành lang bay)
     "description": "Vùng bảo vệ an ninh trọng yếu"
   }
   ```
+  *(Lưu ý: `code` là tùy chọn; nếu để trống hoặc null, hệ thống sẽ tự động sinh mã ngẫu nhiên duy nhất theo mẫu `ASZ-XXXX` qua `BusinessCodeGenerator`).*
 - **Logic xử lý cốt lõi**:
   1. Validate tính hợp lệ của GeoJSON Polygon (kiểu `Polygon`, vòng khép kín tối thiểu 4 điểm, tọa độ đầu trùng tọa độ cuối).
   2. Kiểm tra tính duy nhất của tên vùng không phận `name`. Nếu trùng $\rightarrow$ Trả về `409 Conflict`.
-  3. Nếu có truyền `hubId`: Kiểm tra sự tồn tại của Hub qua `hub-service`. Nếu không tìm thấy $\rightarrow$ Trả về `404 Not Found`.
-  4. Khởi tạo bản ghi với `status = 'active'`.
+  3. Xử lý mã vùng không phận: Nếu truyền vào thì chuẩn hóa và kiểm tra trùng lặp (`AIRSPACE_ZONE_CODE_ALREADY_EXISTED`); nếu không truyền, tự động sinh mã ngẫu nhiên duy nhất định dạng `ASZ-XXXX`.
+  4. Nếu có truyền `hubId`: Kiểm tra sự tồn tại của Hub qua `hub-service`. Nếu không tìm thấy $\rightarrow$ Trả về `404 Not Found`.
+  5. Khởi tạo bản ghi với `status = 'active'`.
 - **Phản hồi thành công**: `201 Created` - Model: `AirspaceZoneVm`.
 - **Phản hồi lỗi**: `400 Bad Request`, `404 Not Found`, `409 Conflict`.
 

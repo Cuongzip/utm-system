@@ -3,13 +3,16 @@ package com.utm.drone.viewmodel.drone;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 @Schema(description = "Request payload for registering a new Drone / UAS")
 public record DronePostVm(
-        @Schema(description = "Unique aircraft registration number / identifier", example = "VN-UAV-001")
-        @NotBlank(message = "Registration number is required")
+        @Schema(description = "Aircraft registration number / tail identifier. If omitted or blank, a unique number will be auto-generated (e.g. DRN-YYYY-XXXX).", example = "VN-UAV-001")
+        @Size(min = 3, max = 50, message = "Registration number must be between 3 and 50 characters")
+        @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Registration number must contain only alphanumeric characters, dashes, and underscores")
         String registrationNumber,
 
         @Schema(description = "Manufacturer name", example = "DJI")

@@ -11,10 +11,15 @@ import org.springframework.stereotype.Repository;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EmergencyIncidentRepository
               extends JpaRepository<EmergencyIncident, String>, JpaSpecificationExecutor<EmergencyIncident> {
+
+       boolean existsByIncidentNumber(String incidentNumber);
+
+       Optional<EmergencyIncident> findByIncidentNumber(String incidentNumber);
 
        List<EmergencyIncident> findByStatusInOrderByDetectedAtDesc(Collection<IncidentStatus> statuses);
 

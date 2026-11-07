@@ -39,10 +39,13 @@ export function convertWaypointsToLineString(
 ): { type: "LineString"; coordinates: number[][] } | null {
     const coords: number[][] = [];
 
-    if (departureHub?.location?.lng !== undefined && departureHub?.location?.lat !== undefined) {
+    if (
+        departureHub?.location?.longitude !== undefined &&
+        departureHub?.location?.latitude !== undefined
+    ) {
         coords.push([
-            departureHub.location.lng,
-            departureHub.location.lat,
+            departureHub.location.longitude,
+            departureHub.location.latitude,
             departureHub.altitudeMsl ?? 0,
         ]);
     }
@@ -52,20 +55,23 @@ export function convertWaypointsToLineString(
         coords.push([wp.lng, wp.lat, wp.altitude ?? cruisingAltitude]);
     });
 
-    if (arrivalHub?.location?.lng !== undefined && arrivalHub?.location?.lat !== undefined) {
+    if (
+        arrivalHub?.location?.longitude !== undefined &&
+        arrivalHub?.location?.latitude !== undefined
+    ) {
         const last = coords[coords.length - 1];
         const isSame =
             last &&
             isDuplicateCoord(
                 { lng: last[0], lat: last[1] },
-                { lng: arrivalHub.location.lng, lat: arrivalHub.location.lat },
+                { lng: arrivalHub.location.longitude, lat: arrivalHub.location.latitude },
                 0.00001
             );
 
         if (!isSame || coords.length === 1) {
             coords.push([
-                arrivalHub.location.lng,
-                arrivalHub.location.lat,
+                arrivalHub.location.longitude,
+                arrivalHub.location.latitude,
                 arrivalHub.altitudeMsl ?? 0,
             ]);
         }

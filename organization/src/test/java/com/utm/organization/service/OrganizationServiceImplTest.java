@@ -136,6 +136,47 @@ class OrganizationServiceImplTest {
             verify(organizationRepository).existsByRegistrationNumber("GP-2026-DK01");
             verify(organizationRepository, never()).saveAndFlush(any());
         }
+
+        @Test
+        @DisplayName("Should auto-generate registration number when omitted or blank")
+        void createOrganization_nullOrBlankRegistrationNumber_autoGeneratesRegistrationNumber() {
+            OrganizationPostVm postVmWithoutRegNumber = new OrganizationPostVm(
+                    "Startup Drone Co",
+                    OrganizationType.OPERATOR,
+                    null,
+                    "info@startupdrone.vn"
+            );
+            Organization orgWithoutRegNumber = Organization.builder()
+                    .id("a2b2c3d4-e5f6-7890-abcd-ef1234567890")
+                    .name("Startup Drone Co")
+                    .type(OrganizationType.OPERATOR)
+                    .registrationNumber(null)
+                    .status(OrganizationStatus.ACTIVE)
+                    .build();
+
+            when(organizationMapper.toEntity(postVmWithoutRegNumber)).thenReturn(orgWithoutRegNumber);
+            when(organizationRepository.existsByRegistrationNumber(anyString())).thenReturn(false);
+            when(organizationRepository.saveAndFlush(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(organizationMapper.toVm(orgWithoutRegNumber)).thenAnswer(inv -> new OrganizationVm(
+                    orgWithoutRegNumber.getId(),
+                    orgWithoutRegNumber.getName(),
+                    orgWithoutRegNumber.getType(),
+                    orgWithoutRegNumber.getRegistrationNumber(),
+                    orgWithoutRegNumber.getContactInfo(),
+                    orgWithoutRegNumber.getStatus(),
+                    null,
+                    "admin",
+                    null,
+                    null
+            ));
+
+            OrganizationVm result = organizationService.createOrganization(postVmWithoutRegNumber);
+
+            assertThat(result).isNotNull();
+            assertThat(result.registrationNumber()).startsWith("ORG-");
+            assertThat(orgWithoutRegNumber.getRegistrationNumber()).startsWith("ORG-");
+            verify(organizationRepository).saveAndFlush(orgWithoutRegNumber);
+        }
     }
 
     @Nested

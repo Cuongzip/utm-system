@@ -14,6 +14,8 @@ import java.util.List;
 public record MissionVm(
                 @Schema(description = "Mission UUID identifier", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") String id,
 
+                @Schema(description = "Mission business tracking code", example = "MSN-261107-A4B2") String code,
+
                 @Schema(description = "Mission name", example = "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2") String name,
 
                 @Schema(description = "Mission detailed description", example = "Giao bưu kiện nhẹ 1.2kg") String description,

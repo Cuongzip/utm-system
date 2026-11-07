@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-add-code-to-airspace-zone
+      author: cuong
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: airspace_zone
+                columnName: code
+      changes:
+        - addColumn:
+            tableName: airspace_zone
+            columns:
+              - column:
+                  name: code
+                  type: varchar(50)
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uq_airspace_zone_code

@@ -7,6 +7,8 @@ import com.utm.mission.service.client.FlightClientService;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.mission.mapper.MissionExecutionMapper;
 import com.utm.mission.model.Mission;
 import com.utm.mission.model.MissionExecution;
@@ -86,7 +88,7 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                                 .max()
                                 .orElse(50.0);
 
-                String flightNumber = "FL-" + System.currentTimeMillis();
+                String flightNumber = BusinessCodeGenerator.generate(CodePatternRule.FLIGHT_NUMBER);
 
                 FlightCreateRequestVm flightReq = new FlightCreateRequestVm(
                                 flightNumber,

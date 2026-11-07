@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
-import { calculateDistance, type GeoPoint } from "@/utils/geo";
+import { useState, useMemo } from "react";
+import type { GeoPoint } from "@/utils/geo";
 
 export type GeometryMode = "radius" | "polygon";
 
@@ -82,40 +82,6 @@ export function parseExistingGeometry(geometry?: any): {
         };
     }
 
-    let sumLng = 0;
-    let sumLat = 0;
-    const pointsCount = outerRing.length;
-
-    for (let i = 0; i < pointsCount - 1; i++) {
-        sumLng += outerRing[i][0];
-        sumLat += outerRing[i][1];
-    }
-    const centroidLng = sumLng / (pointsCount - 1);
-    const centroidLat = sumLat / (pointsCount - 1);
-
-    if (pointsCount >= 30 && pointsCount <= 36) {
-        const d0 = calculateDistance(centroidLat, centroidLng, outerRing[0][1], outerRing[0][0]);
-        const dHalf = calculateDistance(
-            centroidLat,
-            centroidLng,
-            outerRing[Math.floor(pointsCount / 2)][1],
-            outerRing[Math.floor(pointsCount / 2)][0]
-        );
-
-        if (Math.abs(d0 - dHalf) / Math.max(d0, 1) < 0.1) {
-            return {
-                mode: "radius",
-                center: {
-                    lat: Number(centroidLat.toFixed(6)),
-                    lng: Number(centroidLng.toFixed(6)),
-                },
-                radiusMeters: Math.round(d0),
-                polygonPoints: [],
-            };
-        }
-    }
-
-    const polygonPoints: GeoPoint[] = [];
     const numVertices =
         outerRing.length > 1 &&
         outerRing[0][0] === outerRing[outerRing.length - 1][0] &&
@@ -123,19 +89,29 @@ export function parseExistingGeometry(geometry?: any): {
             ? outerRing.length - 1
             : outerRing.length;
 
+    const polygonPoints: GeoPoint[] = [];
+    let sumLng = 0;
+    let sumLat = 0;
+
     for (let i = 0; i < numVertices; i++) {
-        polygonPoints.push({
-            lat: outerRing[i][1],
-            lng: outerRing[i][0],
-        });
+        const lng = outerRing[i][0];
+        const lat = outerRing[i][1];
+        polygonPoints.push({ lat, lng });
+        sumLng += lng;
+        sumLat += lat;
     }
+
+    const center =
+        numVertices > 0
+            ? {
+                  lat: Number((sumLat / numVertices).toFixed(6)),
+                  lng: Number((sumLng / numVertices).toFixed(6)),
+              }
+            : defaultCenter;
 
     return {
         mode: "polygon",
-        center: {
-            lat: Number(centroidLat.toFixed(6)),
-            lng: Number(centroidLng.toFixed(6)),
-        },
+        center,
         radiusMeters: defaultRadius,
         polygonPoints,
     };
@@ -148,39 +124,28 @@ export function useAirspaceGeometry(initialGeometry?: {
     const parsed = useMemo(() => parseExistingGeometry(initialGeometry), [initialGeometry]);
 
     const [geometryMode, setGeometryMode] = useState<GeometryMode>(parsed.mode);
-    const [center, setCenter] = useState<GeoPoint>(parsed.center);
-    const [radiusMeters, setRadiusMeters] = useState<number>(parsed.radiusMeters);
+    const [center, setCenterState] = useState<GeoPoint>(parsed.center);
+    const [radiusMeters, setRadiusMetersState] = useState<number>(parsed.radiusMeters);
     const [polygonPoints, setPolygonPoints] = useState<GeoPoint[]>(parsed.polygonPoints);
 
-    const updateCenter = useCallback((lat: number, lng: number) => {
-        setCenter({
-            lat: Number(lat.toFixed(6)),
-            lng: Number(lng.toFixed(6)),
-        });
-    }, []);
+    const setCenter = (lat: number, lng: number) =>
+        setCenterState({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) });
 
-    const updateRadius = useCallback((meters: number) => {
-        setRadiusMeters(Math.max(10, Math.round(meters)));
-    }, []);
+    const setRadiusMeters = (meters: number) =>
+        setRadiusMetersState(Math.max(10, Math.round(meters)));
 
-    const addPolygonPoint = useCallback((lat: number, lng: number) => {
+    const addPolygonPoint = (lat: number, lng: number) =>
         setPolygonPoints((prev) => [
             ...prev,
             { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) },
         ]);
-    }, []);
 
-    const removePolygonPoint = useCallback((index: number) => {
+    const removePolygonPoint = (index: number) =>
         setPolygonPoints((prev) => prev.filter((_, i) => i !== index));
-    }, []);
 
-    const undoPolygonPoint = useCallback(() => {
-        setPolygonPoints((prev) => prev.slice(0, -1));
-    }, []);
+    const undoPolygonPoint = () => setPolygonPoints((prev) => prev.slice(0, -1));
 
-    const clearPolygonPoints = useCallback(() => {
-        setPolygonPoints([]);
-    }, []);
+    const clearPolygonPoints = () => setPolygonPoints([]);
 
     const computedGeoJson = useMemo<GeoJsonPolygon | null>(() => {
         if (geometryMode === "radius") {
@@ -207,9 +172,9 @@ export function useAirspaceGeometry(initialGeometry?: {
         geometryMode,
         setGeometryMode,
         center,
-        setCenter: updateCenter,
+        setCenter,
         radiusMeters,
-        setRadiusMeters: updateRadius,
+        setRadiusMeters,
         polygonPoints,
         addPolygonPoint,
         removePolygonPoint,

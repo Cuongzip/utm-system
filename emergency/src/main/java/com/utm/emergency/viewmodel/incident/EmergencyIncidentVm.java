@@ -12,6 +12,7 @@ import java.util.List;
 
 public record EmergencyIncidentVm(
         String id,
+        String incidentNumber,
         String droneId,
         String flightId,
         EmergencyType emergencyType,

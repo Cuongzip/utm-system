@@ -212,13 +212,13 @@ export function FlightEditor({
                 type: "LineString",
                 coordinates: [
                     [
-                        selectedDepHub.location.lng,
-                        selectedDepHub.location.lat,
+                        selectedDepHub.location.longitude,
+                        selectedDepHub.location.latitude,
                         selectedDepHub.altitudeMsl ?? 0,
                     ],
                     [
-                        selectedArrHub.location.lng,
-                        selectedArrHub.location.lat,
+                        selectedArrHub.location.longitude,
+                        selectedArrHub.location.latitude,
                         selectedArrHub.altitudeMsl ?? 0,
                     ],
                 ],

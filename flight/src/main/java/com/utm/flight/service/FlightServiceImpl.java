@@ -9,6 +9,8 @@ import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.flight.mapper.FlightMapper;
 import com.utm.flight.model.Flight;
 import com.utm.flight.model.enumeration.ConformanceStatus;
@@ -53,7 +55,8 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     @Transactional(readOnly = true)
-    public FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId, int limit, int offset) {
+    public FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId, int limit,
+            int offset) {
         Specification<Flight> spec = buildSpecification(status, authorizationStatus, pilotId, droneId);
 
         if (limit <= 0) {
@@ -74,7 +77,8 @@ public class FlightServiceImpl implements FlightService {
         return flightMapper.toVmList(flightRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn")));
     }
 
-    private Specification<Flight> buildSpecification(String status, String authorizationStatus, String pilotId, String droneId) {
+    private Specification<Flight> buildSpecification(String status, String authorizationStatus, String pilotId,
+            String droneId) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (status != null && !status.isBlank()) {
@@ -87,7 +91,8 @@ public class FlightServiceImpl implements FlightService {
             }
             if (authorizationStatus != null && !authorizationStatus.isBlank()) {
                 try {
-                    FlightAuthorizationStatus authStatus = FlightAuthorizationStatus.fromValue(authorizationStatus.trim());
+                    FlightAuthorizationStatus authStatus = FlightAuthorizationStatus
+                            .fromValue(authorizationStatus.trim());
                     predicates.add(cb.equal(root.get("authorizationStatus"), authStatus));
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid authorization status query parameter: {}", authorizationStatus);
@@ -114,11 +119,18 @@ public class FlightServiceImpl implements FlightService {
     @Override
     @Transactional
     public FlightVm createFlight(FlightPostVm flightPostVm) {
-        String trimmedFlightNumber = flightPostVm.flightNumber() != null ? flightPostVm.flightNumber().trim() : "";
-        if (flightRepository.existsByFlightNumber(trimmedFlightNumber)) {
-            throw new DuplicatedException(
-                    MessageCode.FLIGHT_NUMBER_ALREADY_EXISTED,
-                    flightPostVm.flightNumber());
+        String flightNumber;
+        if (flightPostVm.flightNumber() != null && !flightPostVm.flightNumber().isBlank()) {
+            flightNumber = flightPostVm.flightNumber().trim().toUpperCase();
+            if (flightRepository.existsByFlightNumber(flightNumber)) {
+                throw new DuplicatedException(
+                        MessageCode.FLIGHT_NUMBER_ALREADY_EXISTED,
+                        flightPostVm.flightNumber());
+            }
+        } else {
+            flightNumber = BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.FLIGHT_NUMBER,
+                    flightRepository::existsByFlightNumber);
         }
 
         String droneId = flightPostVm.droneId().trim();
@@ -137,6 +149,7 @@ public class FlightServiceImpl implements FlightService {
         String plannedRouteJson = buildPlannedRouteJson(flightPostVm, depHub, arrHub);
 
         Flight flight = flightMapper.toEntity(flightPostVm);
+        flight.setFlightNumber(flightNumber);
         flight.setPlannedRoute(plannedRouteJson);
         flight.setActualRoute("{\"type\":\"LineString\",\"coordinates\":[]}");
         flight.setStatus(FlightStatus.SCHEDULED);
@@ -240,7 +253,8 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
 
-        if ((flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED && flight.getStatus() != FlightStatus.AUTHORIZED)
+        if ((flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED
+                && flight.getStatus() != FlightStatus.AUTHORIZED)
                 || flight.getAuthorizationStatus() == FlightAuthorizationStatus.REJECTED) {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
                     "Cannot reject a flight that is active, completed, cancelled, or already rejected");
@@ -327,16 +341,21 @@ public class FlightServiceImpl implements FlightService {
     }
 
     private String buildPlannedRouteJson(FlightPostVm postVm, HubBriefVm depHub, HubBriefVm arrHub) {
-        if (postVm.plannedRoute() != null && postVm.plannedRoute().coordinates() != null && !postVm.plannedRoute().coordinates().isEmpty()) {
+        if (postVm.plannedRoute() != null && postVm.plannedRoute().coordinates() != null
+                && !postVm.plannedRoute().coordinates().isEmpty()) {
             return serializeGeoJson(postVm.plannedRoute());
         }
 
         List<List<Double>> fallbackCoords = new ArrayList<>();
-        if (depHub != null && depHub.location() != null && depHub.location().lng() != null && depHub.location().lat() != null) {
-            fallbackCoords.add(List.of(depHub.location().lng(), depHub.location().lat(), Objects.requireNonNullElse(depHub.altitudeMsl(), 0.0)));
+        if (depHub != null && depHub.location() != null && depHub.location().lng() != null
+                && depHub.location().lat() != null) {
+            fallbackCoords.add(List.of(depHub.location().lng(), depHub.location().lat(),
+                    Objects.requireNonNullElse(depHub.altitudeMsl(), 0.0)));
         }
-        if (arrHub != null && arrHub.location() != null && arrHub.location().lng() != null && arrHub.location().lat() != null) {
-            fallbackCoords.add(List.of(arrHub.location().lng(), arrHub.location().lat(), Objects.requireNonNullElse(arrHub.altitudeMsl(), 0.0)));
+        if (arrHub != null && arrHub.location() != null && arrHub.location().lng() != null
+                && arrHub.location().lat() != null) {
+            fallbackCoords.add(List.of(arrHub.location().lng(), arrHub.location().lat(),
+                    Objects.requireNonNullElse(arrHub.altitudeMsl(), 0.0)));
         }
 
         return serializeGeoJson(GeoJsonLineStringVm.of(fallbackCoords));
@@ -353,5 +372,3 @@ public class FlightServiceImpl implements FlightService {
         }
     }
 }
-
-

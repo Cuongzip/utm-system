@@ -2,6 +2,7 @@ package com.utm.hub.viewmodel.hub;
 
 import com.utm.hub.model.enumeration.HubStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -9,6 +10,10 @@ import jakarta.validation.constraints.PositiveOrZero;
 public record HubPutVm(
         @Schema(description = "Updated name of the Hub", example = "Central Vertiport Hub D1 - Expansion")
         String name,
+
+        @Schema(description = "Updated GPS Location object containing latitude and longitude")
+        @Valid
+        LocationVm location,
 
         @Schema(description = "Updated altitude in meters above mean sea level", example = "15.0")
         @PositiveOrZero(message = "Altitude MSL must be >= 0")

@@ -51,7 +51,7 @@ class EmergencyIncidentControllerTest {
     @Test
     void testConfirmIncident() {
         EmergencyIncidentVm vm = new EmergencyIncidentVm(
-                "inc-1", "drone-1", "fl-1", EmergencyType.battery_low, EmergencySeverity.warning,
+                "inc-1", "INC-20261107-001", "drone-1", "fl-1", EmergencyType.battery_low, EmergencySeverity.warning,
                 IncidentStatus.resolved, "Battery warning", null, 0.0, 0.0, 0.0,
                 ResponseAction.RTH, false, true, "pilot", ZonedDateTime.now(), null,
                 null, null, true, null, ZonedDateTime.now(), "pilot", "RTH confirmed",

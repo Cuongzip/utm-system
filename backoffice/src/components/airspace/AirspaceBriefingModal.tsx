@@ -4,13 +4,17 @@ import { useState } from "react";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Modal, OutlineButton, ChamferButton, StatusBadge } from "@/components/ui";
 import { airspaceService } from "@/services/airspaceService";
-import { checkPathBody } from "@/generated/airspace";
-import { validateSchema } from "@/utils";
 import type { CheckPathResult } from "@/types";
 
 interface AirspaceBriefingModalProps {
     isOpen: boolean;
     onClose: () => void;
+}
+
+interface Waypoint {
+    lat: number;
+    lon: number;
+    alt: number;
 }
 
 const PRESET_ROUTES = [
@@ -31,81 +35,83 @@ const PRESET_ROUTES = [
     },
 ];
 
-interface RouteFormState {
-    startLat: string;
-    startLon: string;
-    startAlt: string;
-    endLat: string;
-    endLon: string;
-    endAlt: string;
-    spacingM: string;
+function WaypointInputs({
+    title,
+    point,
+    onChange,
+}: {
+    title: string;
+    point: Waypoint;
+    onChange: (field: keyof Waypoint, val: number) => void;
+}) {
+    return (
+        <div className="p-3 bg-slate-50 rounded-[6px] border border-slate-200 flex flex-col gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                {title}
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+                <div className="form-group">
+                    <label className="text-[11px] font-semibold text-slate-500">Latitude</label>
+                    <input
+                        type="number"
+                        step="any"
+                        value={point.lat}
+                        onChange={(e) => onChange("lat", parseFloat(e.target.value) || 0)}
+                        className="form-input font-mono text-xs"
+                    />
+                </div>
+                <div className="form-group">
+                    <label className="text-[11px] font-semibold text-slate-500">Longitude</label>
+                    <input
+                        type="number"
+                        step="any"
+                        value={point.lon}
+                        onChange={(e) => onChange("lon", parseFloat(e.target.value) || 0)}
+                        className="form-input font-mono text-xs"
+                    />
+                </div>
+                <div className="form-group">
+                    <label className="text-[11px] font-semibold text-slate-500">Altitude (m)</label>
+                    <input
+                        type="number"
+                        step="any"
+                        value={point.alt}
+                        onChange={(e) => onChange("alt", parseFloat(e.target.value) || 0)}
+                        className="form-input font-mono text-xs"
+                    />
+                </div>
+            </div>
+        </div>
+    );
 }
 
-const INITIAL_FORM: RouteFormState = {
-    startLat: "10.8185",
-    startLon: "106.6588",
-    startAlt: "100",
-    endLat: "10.7715",
-    endLon: "106.7214",
-    endAlt: "120",
-    spacingM: "200",
-};
-
 export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModalProps) {
-    const [form, setForm] = useState<RouteFormState>(INITIAL_FORM);
+    const [start, setStart] = useState<Waypoint>({ lat: 10.8185, lon: 106.6588, alt: 100 });
+    const [end, setEnd] = useState<Waypoint>({ lat: 10.7715, lon: 106.7214, alt: 120 });
+    const [spacingM, setSpacingM] = useState<number>(200);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [checkResult, setCheckResult] = useState<CheckPathResult | null>(null);
 
-    const updateField = (field: keyof RouteFormState, value: string) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
+    const updateWaypoint =
+        (setter: React.Dispatch<React.SetStateAction<Waypoint>>) =>
+        (field: keyof Waypoint, val: number) => {
+            setter((prev) => ({ ...prev, [field]: val }));
+        };
 
     const loadPreset = (preset: (typeof PRESET_ROUTES)[0]) => {
-        setForm((prev) => ({
-            ...prev,
-            startLat: String(preset.start.lat),
-            startLon: String(preset.start.lon),
-            startAlt: String(preset.start.alt),
-            endLat: String(preset.end.lat),
-            endLon: String(preset.end.lon),
-            endAlt: String(preset.end.alt),
-        }));
+        setStart({ ...preset.start });
+        setEnd({ ...preset.end });
         setCheckResult(null);
-        setError(null);
     };
 
     const handleRunCheck = async () => {
-        const payload = {
-            points: [
-                {
-                    lat: Number(form.startLat),
-                    lon: Number(form.startLon),
-                    alt: Number(form.startAlt) || 100,
-                },
-                {
-                    lat: Number(form.endLat),
-                    lon: Number(form.endLon),
-                    alt: Number(form.endAlt) || 100,
-                },
-            ],
-            spacingM: Number(form.spacingM) || 200,
-        };
-
-        const validation = validateSchema(checkPathBody, payload);
-        if (!validation.success) {
-            setError("Please enter valid decimal coordinates for both waypoints.");
-            return;
-        }
-
         setLoading(true);
-        setError(null);
-
         try {
-            const res = await airspaceService.checkPath(payload);
+            const res = await airspaceService.checkPath({
+                points: [start, end],
+                spacingM: spacingM || 200,
+            });
             setCheckResult(res);
-        } catch {
-            setError("Airspace path check request failed. Verify backend service status.");
         } finally {
             setLoading(false);
         }
@@ -134,106 +140,24 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             key={p.name}
                             type="button"
                             onClick={() => loadPreset(p)}
-                            className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[4px] border border-slate-300 transition-colors"
+                            className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[4px] border border-slate-300 transition-colors cursor-pointer"
                         >
                             {p.name}
                         </button>
                     ))}
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-[6px] border border-slate-200 flex flex-col gap-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Start Waypoint
-                    </span>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="form-group">
-                            <label className="text-[11px] font-semibold text-slate-500">
-                                Latitude
-                            </label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={form.startLat}
-                                onChange={(e) => updateField("startLat", e.target.value)}
-                                className="form-input font-mono text-xs"
-                                placeholder="10.8185"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="text-[11px] font-semibold text-slate-500">
-                                Longitude
-                            </label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={form.startLon}
-                                onChange={(e) => updateField("startLon", e.target.value)}
-                                className="form-input font-mono text-xs"
-                                placeholder="106.6588"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="text-[11px] font-semibold text-slate-500">
-                                Altitude (m)
-                            </label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={form.startAlt}
-                                onChange={(e) => updateField("startAlt", e.target.value)}
-                                className="form-input font-mono text-xs"
-                                placeholder="100"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <WaypointInputs
+                    title="Start Waypoint"
+                    point={start}
+                    onChange={updateWaypoint(setStart)}
+                />
 
-                <div className="p-3 bg-slate-50 rounded-[6px] border border-slate-200 flex flex-col gap-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Destination Waypoint
-                    </span>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="form-group">
-                            <label className="text-[11px] font-semibold text-slate-500">
-                                Latitude
-                            </label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={form.endLat}
-                                onChange={(e) => updateField("endLat", e.target.value)}
-                                className="form-input font-mono text-xs"
-                                placeholder="10.7715"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="text-[11px] font-semibold text-slate-500">
-                                Longitude
-                            </label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={form.endLon}
-                                onChange={(e) => updateField("endLon", e.target.value)}
-                                className="form-input font-mono text-xs"
-                                placeholder="106.7214"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="text-[11px] font-semibold text-slate-500">
-                                Altitude (m)
-                            </label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={form.endAlt}
-                                onChange={(e) => updateField("endAlt", e.target.value)}
-                                className="form-input font-mono text-xs"
-                                placeholder="120"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <WaypointInputs
+                    title="Destination Waypoint"
+                    point={end}
+                    onChange={updateWaypoint(setEnd)}
+                />
 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -242,8 +166,10 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                         </span>
                         <input
                             type="number"
-                            value={form.spacingM}
-                            onChange={(e) => updateField("spacingM", e.target.value)}
+                            min="10"
+                            max="5000"
+                            value={spacingM}
+                            onChange={(e) => setSpacingM(parseInt(e.target.value) || 200)}
                             className="w-20 form-input font-mono text-xs py-1 px-2"
                         />
                         <span className="text-xs text-slate-500">meters</span>
@@ -263,12 +189,6 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                         <span>{loading ? "Checking Path..." : "Run Airspace Check"}</span>
                     </ChamferButton>
                 </div>
-
-                {error && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-xs font-medium">
-                        {error}
-                    </div>
-                )}
 
                 {checkResult && (
                     <div className="mt-2 pt-3 border-t border-slate-200">

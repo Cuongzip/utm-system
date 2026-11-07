@@ -13,6 +13,7 @@ Quản lý kế hoạch nhiệm vụ bay nghiệp vụ (Mission Intent), chuỗi
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
+| `code` | `varchar(50)` | `string` | UNIQUE, NULLABLE (Auto-gen) | Mã định danh nhiệm vụ (`MSN-YYMMDD-XXXX`) |
 | `name` | `varchar(255)` | `string` | NOT NULL | Tên nhiệm vụ |
 | `description` | `text` | `string` | NULLABLE | Mô tả chi tiết mục tiêu nhiệm vụ |
 | `departure_hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id`, NOT NULL | Bãi đáp khởi hành |
@@ -98,6 +99,7 @@ Soạn thảo kế hoạch nhiệm vụ mới ở trạng thái `DRAFT`. Waypoin
 - **Input (Request Body)** - Model: `MissionPostVm`:
   ```json
   {
+    "code": "MSN-261107-A4B2",
     "name": "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2",
     "description": "Vận chuyển túi máu đông lạnh từ Hub D1 sang Bệnh viện",
     "departureHubId": "550e8400-e29b-41d4-a716-446655440000",
@@ -107,9 +109,12 @@ Soạn thảo kế hoạch nhiệm vụ mới ở trạng thái `DRAFT`. Waypoin
   }
   ```
 - **Logic xử lý cốt lõi**:
-  1. Kiểm tra tồn tại `departureHubId` và `arrivalHubId` qua `HubClientService`. Nếu không tồn tại $\rightarrow$ `404 Not Found` (`DEPARTURE_HUB_NOT_FOUND` / `ARRIVAL_HUB_NOT_FOUND`).
-  2. Nếu `scheduleType == SCHEDULED`, yêu cầu `scheduledAt` không được null và phải ở thời điểm tương lai $\rightarrow$ nếu không $\rightarrow$ `400 Bad Request` (`SCHEDULED_TIME_MUST_BE_FUTURE`).
-  3. Khởi tạo `status = DRAFT`. Lưu DB và làm giàu thông tin bãi đáp từ Hub Service.
+  1. **Mission Code Generation & Unique Check**:
+     - Nếu `code` bỏ trống hoặc null: Tự động sinh mã duy nhất theo rule `MISSION_CODE` (`MSN-YYMMDD-XXXX`, ví dụ `MSN-261107-4K8P`).
+     - Nếu người dùng nhập tay: Chuẩn hóa trim/uppercase và kiểm tra trùng lặp trong DB. Nếu đã tồn tại $\rightarrow$ `409 Conflict` (`MISSION_CODE_ALREADY_EXISTED`).
+  2. Kiểm tra tồn tại `departureHubId` và `arrivalHubId` qua `HubClientService`. Nếu không tồn tại $\rightarrow$ `404 Not Found` (`DEPARTURE_HUB_NOT_FOUND` / `ARRIVAL_HUB_NOT_FOUND`).
+  3. Nếu `scheduleType == SCHEDULED`, yêu cầu `scheduledAt` không được null và phải ở thời điểm tương lai $\rightarrow$ nếu không $\rightarrow$ `400 Bad Request` (`SCHEDULED_TIME_MUST_BE_FUTURE`).
+  4. Khởi tạo `status = DRAFT`. Lưu DB và làm giàu thông tin bãi đáp từ Hub Service.
 - **Phản hồi thành công**: `201 Created` - Model: `MissionVm`.
 
 ---

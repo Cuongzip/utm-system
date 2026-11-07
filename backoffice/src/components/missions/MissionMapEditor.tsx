@@ -357,10 +357,10 @@ export function MissionMapEditor({
     const allMissionPoints = useMemo(() => {
         const pts: { lat: number; lng: number }[] = [];
         if (
-            departureHub?.location?.lat !== undefined &&
-            departureHub?.location?.lng !== undefined
+            departureHub?.location?.latitude !== undefined &&
+            departureHub?.location?.longitude !== undefined
         ) {
-            pts.push({ lat: departureHub.location.lat, lng: departureHub.location.lng });
+            pts.push({ lat: departureHub.location.latitude, lng: departureHub.location.longitude });
         }
         waypoints.forEach((wp) => {
             if (typeof wp.latitude === "number" && typeof wp.longitude === "number") {
@@ -368,11 +368,11 @@ export function MissionMapEditor({
             }
         });
         if (
-            arrivalHub?.location?.lat !== undefined &&
-            arrivalHub?.location?.lng !== undefined &&
+            arrivalHub?.location?.latitude !== undefined &&
+            arrivalHub?.location?.longitude !== undefined &&
             arrivalHub.id !== departureHub?.id
         ) {
-            pts.push({ lat: arrivalHub.location.lat, lng: arrivalHub.location.lng });
+            pts.push({ lat: arrivalHub.location.latitude, lng: arrivalHub.location.longitude });
         }
         return pts;
     }, [departureHub, arrivalHub, waypoints]);

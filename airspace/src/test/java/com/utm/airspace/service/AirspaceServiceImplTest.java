@@ -81,6 +81,7 @@ class AirspaceServiceImplTest {
 
         testZone = AirspaceZone.builder()
                 .id("z1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                .code("ASZ-X1Y2")
                 .hubId("h1b2c3d4-e5f6-7890-abcd-ef1234567890")
                 .name("Independence Palace No-Fly Zone")
                 .zoneType(AirspaceZoneType.NO_FLY_ZONE)
@@ -93,6 +94,7 @@ class AirspaceServiceImplTest {
 
         testZoneVm = new AirspaceZoneVm(
                 "z1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "ASZ-X1Y2",
                 "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "Independence Palace No-Fly Zone",
                 AirspaceZoneType.NO_FLY_ZONE,
@@ -107,6 +109,7 @@ class AirspaceServiceImplTest {
 
         testPostVm = new AirspaceZonePostVm(
                 "Independence Palace No-Fly Zone",
+                "ASZ-X1Y2",
                 "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 AirspaceZoneType.NO_FLY_ZONE,
                 testPolygon,
@@ -348,6 +351,24 @@ class AirspaceServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should return AirspaceZoneVm when zone business code exists")
+        void getZoneById_existingCode_returnsZoneVm() {
+            when(airspaceZoneRepository.findById("asz-x1y2")).thenReturn(Optional.empty());
+            when(airspaceZoneRepository.findByCode("ASZ-X1Y2")).thenReturn(Optional.of(testZone));
+            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+
+            AirspaceZoneVm result = airspaceService.getZoneById("asz-x1y2");
+
+            assertThat(result).isNotNull();
+            assertThat(result.id()).isEqualTo("z1b2c3d4-e5f6-7890-abcd-ef1234567890");
+            assertThat(result.code()).isEqualTo("ASZ-X1Y2");
+
+            verify(airspaceZoneRepository).findById("asz-x1y2");
+            verify(airspaceZoneRepository).findByCode("ASZ-X1Y2");
+            verify(airspaceZoneMapper).toVm(testZone);
+        }
+
+        @Test
         @DisplayName("Should throw NotFoundException (404) when zone ID does not exist")
         void getZoneById_nonExistentId_throwsNotFoundException() {
             when(airspaceZoneRepository.findById("non-existent-id")).thenReturn(Optional.empty());
@@ -369,6 +390,7 @@ class AirspaceServiceImplTest {
         @DisplayName("Should successfully create zone and return 201 Created ViewModel when input is valid")
         void createZone_validInput_savesAndReturnsCreatedVm() {
             when(airspaceZoneRepository.existsByName("Independence Palace No-Fly Zone")).thenReturn(false);
+            when(airspaceZoneRepository.existsByCode("ASZ-X1Y2")).thenReturn(false);
             when(hubClientService.existsById("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
             doNothing().when(spatialCalculationService).validatePolygon(testPolygon);
             when(airspaceZoneMapper.toEntity(testPostVm)).thenReturn(testZone);
@@ -386,9 +408,52 @@ class AirspaceServiceImplTest {
             assertThat(result.status()).isEqualTo(AirspaceZoneStatus.ACTIVE);
 
             verify(airspaceZoneRepository).existsByName("Independence Palace No-Fly Zone");
+            verify(airspaceZoneRepository).existsByCode("ASZ-X1Y2");
             verify(hubClientService).existsById("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
             verify(spatialCalculationService).validatePolygon(testPolygon);
             verify(airspaceZoneRepository).saveAndFlush(testZone);
+        }
+
+        @Test
+        @DisplayName("Should auto-generate unique zone code starting with ASZ- when code is omitted")
+        void createZone_nullCode_autoGeneratesUniqueCode() {
+            AirspaceZonePostVm postVmWithoutCode = new AirspaceZonePostVm(
+                    "Independence Palace No-Fly Zone",
+                    null,
+                    "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    AirspaceZoneType.NO_FLY_ZONE,
+                    testPolygon,
+                    120.0,
+                    AirspaceZoneStatus.ACTIVE,
+                    "Critical national security protection zone");
+
+            when(airspaceZoneRepository.existsByName("Independence Palace No-Fly Zone")).thenReturn(false);
+            when(airspaceZoneRepository.existsByCode(anyString())).thenReturn(false);
+            when(hubClientService.existsById("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
+            doNothing().when(spatialCalculationService).validatePolygon(testPolygon);
+            when(airspaceZoneMapper.toEntity(postVmWithoutCode)).thenReturn(testZone);
+            when(airspaceZoneRepository.saveAndFlush(any(AirspaceZone.class))).thenReturn(testZone);
+            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+
+            AirspaceZoneVm result = airspaceService.createZone(postVmWithoutCode);
+
+            assertThat(result).isNotNull();
+            verify(airspaceZoneRepository).existsByCode(anyString());
+            verify(airspaceZoneRepository).saveAndFlush(testZone);
+        }
+
+        @Test
+        @DisplayName("Should throw DuplicatedException (409 Conflict) when zone code already exists")
+        void createZone_duplicateCode_throwsDuplicatedException() {
+            when(airspaceZoneRepository.existsByName("Independence Palace No-Fly Zone")).thenReturn(false);
+            when(airspaceZoneRepository.existsByCode("ASZ-X1Y2")).thenReturn(true);
+
+            assertThatThrownBy(() -> airspaceService.createZone(testPostVm))
+                    .isInstanceOf(DuplicatedException.class)
+                    .hasMessageContaining("ASZ-X1Y2");
+
+            verify(airspaceZoneRepository).existsByCode("ASZ-X1Y2");
+            verify(airspaceZoneRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -428,6 +493,7 @@ class AirspaceServiceImplTest {
         void updateZone_existingIdAndValidInput_updatesAndReturnsVm() {
             AirspaceZone updatedZone = AirspaceZone.builder()
                     .id("z1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                    .code("ASZ-X1Y2")
                     .hubId("h1b2c3d4-e5f6-7890-abcd-ef1234567890")
                     .name("Independence Palace No-Fly Zone (Expansion)")
                     .zoneType(AirspaceZoneType.NO_FLY_ZONE)
@@ -440,6 +506,7 @@ class AirspaceServiceImplTest {
 
             AirspaceZoneVm updatedVm = new AirspaceZoneVm(
                     "z1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "ASZ-X1Y2",
                     "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     "Independence Palace No-Fly Zone (Expansion)",
                     AirspaceZoneType.NO_FLY_ZONE,

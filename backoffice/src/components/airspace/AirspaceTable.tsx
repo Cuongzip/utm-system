@@ -26,7 +26,6 @@ interface AirspaceTableProps {
     loading?: boolean;
     selectedZoneId?: string | null;
     onSelectZone?: (zone: AirspaceZone) => void;
-    onEditZone?: (zone: AirspaceZone) => void;
     onDeleteZone?: (id: string) => void;
     hubMap?: Map<string, string>;
 }
@@ -36,7 +35,6 @@ export function AirspaceTable({
     loading = false,
     selectedZoneId,
     onSelectZone,
-    onEditZone,
     onDeleteZone,
     hubMap = new Map(),
 }: AirspaceTableProps) {
@@ -49,7 +47,7 @@ export function AirspaceTable({
             {
                 label: "View Details",
                 icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-                onClick: () => (onEditZone ? onEditZone(zone) : onSelectZone?.(zone)),
+                onClick: () => onSelectZone?.(zone),
             },
         ];
 
@@ -71,12 +69,12 @@ export function AirspaceTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="240px">ZONE NAME</TableHead>
-                            <TableHead width="150px">TYPE</TableHead>
+                            <TableHead width="140px">CODE</TableHead>
+                            <TableHead width="230px">ZONE NAME</TableHead>
+                            <TableHead width="140px">TYPE</TableHead>
                             <TableHead width="180px">ASSOCIATED HUB</TableHead>
-                            <TableHead width="130px">CEILING ALT</TableHead>
                             <TableHead width="130px">STATUS</TableHead>
-                            <TableHead width="100px" align="right">
+                            <TableHead width="90px" align="right">
                                 ACTIONS
                             </TableHead>
                         </TableRow>
@@ -100,10 +98,6 @@ export function AirspaceTable({
                                 const hubName = zone.hubId
                                     ? hubMap.get(zone.hubId) || zone.hubId
                                     : "—";
-                                const altitudeText =
-                                    zone.altitudeCeiling !== undefined
-                                        ? `${zone.altitudeCeiling} m`
-                                        : "120 m";
 
                                 return (
                                     <TableRow
@@ -111,12 +105,17 @@ export function AirspaceTable({
                                         selected={isSelected}
                                         onClick={() => onSelectZone?.(zone)}
                                     >
+                                        <TableCell mono bold darkText>
+                                            {zone.code || "—"}
+                                        </TableCell>
                                         <TableCell
                                             truncate
                                             bold
                                             tooltip={zone.name || "Unnamed Sector"}
                                         >
-                                            {zone.name || "Unnamed Sector"}
+                                            <span className="font-semibold text-slate-900">
+                                                {zone.name || "Unnamed Sector"}
+                                            </span>
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
@@ -126,9 +125,6 @@ export function AirspaceTable({
                                         </TableCell>
                                         <TableCell truncate muted tooltip={hubName}>
                                             {hubName}
-                                        </TableCell>
-                                        <TableCell mono darkText>
-                                            {altitudeText}
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge

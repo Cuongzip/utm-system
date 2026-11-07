@@ -32,6 +32,7 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
 
 export type Mission = NonNullable<zod.infer<typeof getMissionByIdResponse>> & {
     id: string;
+    code?: string;
 };
 
 export type MissionListResponse = Omit<

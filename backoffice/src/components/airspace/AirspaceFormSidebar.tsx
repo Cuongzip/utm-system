@@ -1,34 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import {
-    Circle,
-    Pentagon,
-    Trash2,
-    MapPin,
-    Code,
-    ChevronDown,
-    ChevronUp,
-    AlertCircle,
-} from "lucide-react";
-import { ChamferCard, CustomSelect, FormInput, type SelectOption } from "@/components/ui";
+import { Circle, Pentagon, Trash2, MapPin, AlertCircle } from "lucide-react";
+import { ChamferCard, CustomSelect, FormInput, Switch, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import type { AirspaceZoneType, AirspaceZoneStatus, Hub } from "@/types";
-import { GeometryMode, GeoPoint, GeoJsonPolygon } from "./useAirspaceGeometry";
+import type { GeometryMode, GeoPoint } from "./useAirspaceGeometry";
+
+export interface AirspaceFormData {
+    code: string;
+    autoGen: boolean;
+    name: string;
+    zoneType: AirspaceZoneType;
+    status: AirspaceZoneStatus;
+    altitudeCeiling: number;
+    hubId: string;
+    description: string;
+}
 
 export interface AirspaceFormSidebarProps {
-    name: string;
-    onNameChange: (val: string) => void;
-    zoneType: AirspaceZoneType;
-    onZoneTypeChange: (val: AirspaceZoneType) => void;
-    status: AirspaceZoneStatus;
-    onStatusChange: (val: AirspaceZoneStatus) => void;
-    altitudeCeiling: number;
-    onAltitudeCeilingChange: (val: number) => void;
-    hubId: string;
-    onHubIdChange: (val: string) => void;
-    description: string;
-    onDescriptionChange: (val: string) => void;
+    formData: AirspaceFormData;
+    onFormChange: <K extends keyof AirspaceFormData>(field: K, value: AirspaceFormData[K]) => void;
+    isEdit?: boolean;
     hubs?: Hub[];
 
     // Geometry
@@ -41,7 +33,6 @@ export interface AirspaceFormSidebarProps {
     polygonPoints: GeoPoint[];
     onRemovePolygonPoint: (index: number) => void;
     onClearPolygonPoints: () => void;
-    computedGeoJson: GeoJsonPolygon | null;
 
     activeTab: "details" | "geometry";
     onTabChange: (tab: "details" | "geometry") => void;
@@ -63,18 +54,9 @@ const ZONE_STATUS_OPTIONS: SelectOption[] = [
 ];
 
 export function AirspaceFormSidebar({
-    name,
-    onNameChange,
-    zoneType,
-    onZoneTypeChange,
-    status,
-    onStatusChange,
-    altitudeCeiling,
-    onAltitudeCeilingChange,
-    hubId,
-    onHubIdChange,
-    description,
-    onDescriptionChange,
+    formData,
+    onFormChange,
+    isEdit = false,
     hubs = [],
     geometryMode,
     onGeometryModeChange,
@@ -85,15 +67,12 @@ export function AirspaceFormSidebar({
     polygonPoints,
     onRemovePolygonPoint,
     onClearPolygonPoints,
-    computedGeoJson,
     activeTab,
     onTabChange,
     fieldErrors = {},
     onClearFieldError,
     className = "",
 }: AirspaceFormSidebarProps) {
-    const [showJsonPreview, setShowJsonPreview] = useState(false);
-
     const hubOptions: SelectOption[] = [
         { value: "", label: "None (General Airspace)" },
         ...hubs.map((h) => ({
@@ -109,6 +88,7 @@ export function AirspaceFormSidebar({
     );
 
     const hasDetailErrors = Boolean(
+        fieldErrors.code ||
         fieldErrors.name ||
         fieldErrors.zoneType ||
         fieldErrors.altitudeCeiling ||
@@ -162,13 +142,40 @@ export function AirspaceFormSidebar({
                     {activeTab === "details" ? (
                         <div className="space-y-4">
                             <FormInput
+                                id="airspaceCode"
+                                label="Code"
+                                labelRight={
+                                    !isEdit && (
+                                        <Switch
+                                            label="AUTO-GEN"
+                                            checked={formData.autoGen}
+                                            onCheckedChange={(checked) => {
+                                                onFormChange("autoGen", checked);
+                                                onFormChange("code", "");
+                                                if (checked) onClearFieldError?.("code");
+                                            }}
+                                        />
+                                    )
+                                }
+                                required={!isEdit && !formData.autoGen}
+                                disabled={isEdit || formData.autoGen}
+                                placeholder={formData.autoGen ? "" : "e.g. ASZ-SGN01"}
+                                value={formData.code}
+                                onChange={(e) => {
+                                    onFormChange("code", e.target.value);
+                                    onClearFieldError?.("code");
+                                }}
+                                error={fieldErrors.code}
+                            />
+
+                            <FormInput
                                 id="airspaceName"
                                 label="Zone Name"
                                 required
                                 placeholder="e.g. SGN Airport Restricted Sector"
-                                value={name}
+                                value={formData.name}
                                 onChange={(e) => {
-                                    onNameChange(e.target.value);
+                                    onFormChange("name", e.target.value);
                                     onClearFieldError?.("name");
                                 }}
                                 error={fieldErrors.name}
@@ -179,9 +186,9 @@ export function AirspaceFormSidebar({
                                     Classification Type <span className="text-red-500">*</span>
                                 </label>
                                 <CustomSelect
-                                    value={zoneType}
+                                    value={formData.zoneType}
                                     onValueChange={(val: string) => {
-                                        onZoneTypeChange(val as AirspaceZoneType);
+                                        onFormChange("zoneType", val as AirspaceZoneType);
                                         onClearFieldError?.("zoneType");
                                     }}
                                     options={ZONE_TYPE_OPTIONS}
@@ -191,9 +198,9 @@ export function AirspaceFormSidebar({
                             <div className="form-group">
                                 <label className="form-label">Operational Status</label>
                                 <CustomSelect
-                                    value={status}
+                                    value={formData.status}
                                     onValueChange={(val: string) => {
-                                        onStatusChange(val as AirspaceZoneStatus);
+                                        onFormChange("status", val as AirspaceZoneStatus);
                                         onClearFieldError?.("status");
                                     }}
                                     options={ZONE_STATUS_OPTIONS}
@@ -203,9 +210,9 @@ export function AirspaceFormSidebar({
                             <div className="form-group">
                                 <label className="form-label">Associated Vertiport Hub</label>
                                 <CustomSelect
-                                    value={hubId}
+                                    value={formData.hubId}
                                     onValueChange={(val: string) => {
-                                        onHubIdChange(val);
+                                        onFormChange("hubId", val);
                                         onClearFieldError?.("hubId");
                                     }}
                                     options={hubOptions}
@@ -226,9 +233,12 @@ export function AirspaceFormSidebar({
                                         type="number"
                                         min="10"
                                         max="5000"
-                                        value={altitudeCeiling}
+                                        value={formData.altitudeCeiling}
                                         onChange={(e) => {
-                                            onAltitudeCeilingChange(Number(e.target.value) || 0);
+                                            onFormChange(
+                                                "altitudeCeiling",
+                                                Number(e.target.value) || 0
+                                            );
                                             onClearFieldError?.("altitudeCeiling");
                                         }}
                                         className={cn(
@@ -254,9 +264,9 @@ export function AirspaceFormSidebar({
                                 <textarea
                                     id="zoneDesc"
                                     rows={3}
-                                    value={description}
+                                    value={formData.description}
                                     onChange={(e) => {
-                                        onDescriptionChange(e.target.value);
+                                        onFormChange("description", e.target.value);
                                         onClearFieldError?.("description");
                                     }}
                                     placeholder="Enter legal basis, operational constraints, or activation schedule..."
@@ -371,25 +381,6 @@ export function AirspaceFormSidebar({
                                             onChange={(e) => onRadiusChange(Number(e.target.value))}
                                             className="w-full accent-[var(--color-border-dark)] cursor-pointer"
                                         />
-                                        <div className="grid grid-cols-4 gap-1.5 pt-1">
-                                            {[500, 1000, 2000, 5000].map((preset) => (
-                                                <button
-                                                    key={preset}
-                                                    type="button"
-                                                    onClick={() => onRadiusChange(preset)}
-                                                    className={cn(
-                                                        "py-1 text-xs font-mono border rounded transition-colors cursor-pointer",
-                                                        radiusMeters === preset
-                                                            ? "border-[var(--color-border-dark)] bg-[var(--color-border-dark)] text-white font-semibold"
-                                                            : "border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
-                                                    )}
-                                                >
-                                                    {preset >= 1000
-                                                        ? `${preset / 1000}km`
-                                                        : `${preset}m`}
-                                                </button>
-                                            ))}
-                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -454,31 +445,6 @@ export function AirspaceFormSidebar({
                                     </div>
                                 </div>
                             )}
-
-                            <div className="border border-[var(--color-border-default)] rounded overflow-hidden">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowJsonPreview((prev) => !prev)}
-                                    className="w-full px-3 py-2 bg-[var(--color-surface-card)] flex items-center justify-between text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-                                >
-                                    <div className="flex items-center gap-1.5">
-                                        <Code className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
-                                        <span>GeoJSON Coordinates Preview</span>
-                                    </div>
-                                    {showJsonPreview ? (
-                                        <ChevronUp className="w-3.5 h-3.5" />
-                                    ) : (
-                                        <ChevronDown className="w-3.5 h-3.5" />
-                                    )}
-                                </button>
-                                {showJsonPreview && (
-                                    <pre className="p-3 text-[11px] font-mono bg-slate-900 text-slate-200 max-h-[140px] overflow-auto">
-                                        {computedGeoJson
-                                            ? JSON.stringify(computedGeoJson, null, 2)
-                                            : "Incomplete geometry (minimum 3 points required for polygon)"}
-                                    </pre>
-                                )}
-                            </div>
                         </div>
                     )}
                 </div>

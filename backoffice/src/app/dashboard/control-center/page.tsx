@@ -27,8 +27,10 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
         if (!viewer || !isLoaded || hasInitialFitRef.current) return;
 
         const hubPoints = hubs
-            .filter((h) => h.location?.lat !== undefined && h.location?.lng !== undefined)
-            .map((h) => ({ lat: h.location!.lat, lng: h.location!.lng }))
+            .filter(
+                (h) => h.location?.latitude !== undefined && h.location?.longitude !== undefined
+            )
+            .map((h) => ({ lat: h.location!.latitude, lng: h.location!.longitude }))
             .filter((pt) => pt.lat >= 8 && pt.lat <= 24 && pt.lng >= 100 && pt.lng <= 112);
 
         const flightPoints = flights

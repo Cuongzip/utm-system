@@ -113,11 +113,14 @@ VALUES
 -- ------------------------------------------------------------------------------
 \c utm_airspace;
 
+ALTER TABLE airspace_zone ADD COLUMN IF NOT EXISTS code VARCHAR(50) UNIQUE;
+
 TRUNCATE TABLE airspace_zone CASCADE;
 
-INSERT INTO airspace_zone (id, hub_id, name, zone_type, geometry, altitude_ceiling, status, description, created_on, created_by)
+INSERT INTO airspace_zone (id, code, hub_id, name, zone_type, geometry, altitude_ceiling, status, description, created_on, created_by)
 VALUES
   ('b6241fe9-beb1-48d3-94ff-ae7ce4be0563', 
+   'ASZ-VNP1',
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
    'Independence Palace Prohibited Airspace (VNP-01)', 
    'NO_FLY_ZONE', 
@@ -129,6 +132,7 @@ VALUES
    'system'),
 
   ('c7352fe9-beb1-48d3-94ff-ae7ce4be0564', 
+   'ASZ-SGRC',
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
    'Saigon River Low-Altitude Flight Corridor', 
    'HUB_CORRIDOR', 
@@ -140,6 +144,7 @@ VALUES
    'system'),
 
   ('d8463fe9-beb1-48d3-94ff-ae7ce4be0565', 
+   'ASZ-TSNA',
    'b153d821-2c9b-4d33-94f2-e758b930a202', 
    'Tan Son Nhat Airport Approach Protection Zone', 
    'RESTRICTED', 
@@ -151,6 +156,7 @@ VALUES
    'system'),
 
   ('e9574fe9-beb1-48d3-94ff-ae7ce4be0566', 
+   'ASZ-LM81',
    '606a30fb-465a-4016-85f7-85b00467f2f7', 
    'Landmark 81 High-Rise Hazard Geofence', 
    'WARNING', 
@@ -348,11 +354,14 @@ VALUES
 -- ------------------------------------------------------------------------------
 \c utm_mission;
 
+ALTER TABLE mission ADD COLUMN IF NOT EXISTS code VARCHAR(50) UNIQUE;
+
 TRUNCATE TABLE waypoint, mission_execution, mission CASCADE;
 
-INSERT INTO mission (id, name, description, departure_hub_id, arrival_hub_id, schedule_type, scheduled_at, status, created_on, created_by)
+INSERT INTO mission (id, code, name, description, departure_hub_id, arrival_hub_id, schedule_type, scheduled_at, status, created_on, created_by)
 VALUES
   ('m1111111-1111-1111-1111-111111111111', 
+   'MSN-261107-MED1',
    'Urgent Medical Blood Pack Transfer', 
    'Emergency transport of emergency O-negative blood units from Saigon Central Vertiport to Thu Thiem Medical Center.', 
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
@@ -364,6 +373,7 @@ VALUES
    'operator'),
 
   ('m2222222-2222-2222-2222-222222222222', 
+   'MSN-261107-EXP2',
    'Autonomous Express Parcel Delivery Flight', 
    'Scheduled commercial express parcel dispatch crossing from Thu Thiem Vertiport to Thu Duc Innovation Park Hub.', 
    '606a30fb-465a-4016-85f7-85b00467f2f7', 
@@ -375,6 +385,7 @@ VALUES
    'operator'),
 
   ('m3333333-3333-3333-3333-333333333333', 
+   'MSN-261107-VAC3',
    'Emergency Pediatric Vaccine Transport', 
    'Critical temperature-controlled cold-chain pediatric vaccine transport to Phu My Hung South Clinic.', 
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
@@ -386,6 +397,7 @@ VALUES
    'operator'),
 
   ('m4444444-4444-4444-4444-444444444444', 
+   'MSN-261107-AVN4',
    'High-Tech Avionics Component Dispatch', 
    'Routine afternoon logistics transit of replacement sensor payloads from Thu Duc Park to Saigon Central.', 
    'c854d502-2c9b-4e4a-93c2-b8759521e962', 
@@ -397,6 +409,7 @@ VALUES
    'operator'),
 
   ('m5555555-5555-5555-5555-555555555555', 
+   'MSN-261107-ENV5',
    'Saigon River Environmental Survey', 
    'Autonomous aerial water quality sensor sampling and LiDAR bathymetry inspection along the river fairway.', 
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
@@ -943,9 +956,11 @@ VALUES
 -- ------------------------------------------------------------------------------
 \c utm_emergency;
 
-TRUNCATE TABLE emergency_protocols CASCADE;
-TRUNCATE TABLE emergency_incidents CASCADE;
+ALTER TABLE emergency_incidents ADD COLUMN IF NOT EXISTS incident_number VARCHAR(50) UNIQUE;
+
 TRUNCATE TABLE blackbox_entries CASCADE;
+TRUNCATE TABLE emergency_incidents CASCADE;
+TRUNCATE TABLE emergency_protocols CASCADE;
 TRUNCATE TABLE emergency_config CASCADE;
 
 INSERT INTO emergency_config (id, config_key, config_value, description, created_on, last_modified_on, created_by)
@@ -1123,6 +1138,148 @@ VALUES
    true, 60, false, 75, 
    true, true, true, false, false, 
    false, false, false, NOW(), NOW(), 'system');
+
+INSERT INTO emergency_incidents (
+  id, incident_number, drone_id, flight_id, emergency_type, severity, status, 
+  message, detection_data, latitude, longitude, altitude, response_action, 
+  was_auto_executed, confirmation_required, confirmed_by, confirmed_at, 
+  confirmation_timeout_at, action_started_at, action_completed_at, action_success, 
+  action_error, resolved_at, resolved_by, resolution_notes, root_cause, 
+  root_cause_notes, lessons_learned, timeline, detected_at, created_on, created_by
+)
+VALUES
+  -- Incident 1: Active Critical Battery Emergency on Flight 3 (Voly M20)
+  ('11111111-1111-1111-1111-111111111111', 
+   'INC-20261107-BATT', 
+   'd4e5f601-1122-3344-5566-778899aabbcc', 
+   '4dbde32d-f7d3-45c2-b99d-8a8a9695d788', 
+   'battery_critical', 
+   'critical', 
+   'active', 
+   'Critical battery level reached: 14.2% remaining (threshold: 15.0%). Autonomous safety action triggered.', 
+   '{"batteryPct":14.2,"cellVoltageV":3.42,"dischargeRateC":2.8}', 
+   10.7540000, 
+   106.7135000, 
+   135.0, 
+   'LAND', 
+   false, 
+   true, 
+   NULL, 
+   NULL, 
+   NOW() + interval '20 seconds', 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   '["10:35:10 - Detected battery level 14.2%","10:35:12 - Protocol matched: Battery Critical - Land Immediately","10:35:15 - Awaiting operator confirmation (10s countdown)"]', 
+   NOW() - interval '3 minutes', 
+   NOW() - interval '3 minutes', 
+   'system'),
+
+  -- Incident 2: Pending Confirmation Geofence Proximity Warning on Flight 2 (Matrice 350)
+  ('22222222-2222-2222-2222-222222222222', 
+   'INC-20261107-GEOF', 
+   '30d1435a-77bf-49a1-8fd5-6920a6ed064c', 
+   '3cacf21c-e6c2-43b1-a88c-7f7f8584c677', 
+   'geofence_warning', 
+   'warning', 
+   'pending_confirmation', 
+   'Trajectory proximity notice: Aircraft vector approaching Landmark 81 hazard buffer zone (distance: 35.2m).', 
+   '{"proximityMeters":35.2,"bufferZone":"ASZ-LM81","headingDeg":42.0}', 
+   10.7950000, 
+   106.7400000, 
+   100.0, 
+   'DIVERT', 
+   false, 
+   true, 
+   NULL, 
+   NULL, 
+   NOW() + interval '35 seconds', 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   NULL, 
+   '["10:37:00 - Proximity warning triggered at 35.2m standoff","10:37:02 - Proposed diversion vector generated (+15 deg East)"]', 
+   NOW() - interval '1 minute', 
+   NOW() - interval '1 minute', 
+   'system'),
+
+  -- Incident 3: Resolved Motor Anomaly on Flight 1 (WingtraOne)
+  ('33333333-3333-3333-3333-333333333333', 
+   'INC-20261107-MOTR', 
+   'ece5662e-b5c6-477f-b710-918e2e11a1c5', 
+   '2babe10b-d5b1-42a0-9c7b-f65f7473b566', 
+   'motor_anomaly', 
+   'critical', 
+   'resolved', 
+   'Motor #2 high-frequency vibration spike detected during transit. Failsafe hover executed, telemetry stabilized.', 
+   '{"motorIndex":2,"vibrationG":0.82,"tempC":68.5}', 
+   10.7780000, 
+   106.7150000, 
+   120.0, 
+   'HOVER', 
+   true, 
+   false, 
+   'atc_lead', 
+   NOW() - interval '38 minutes', 
+   NULL, 
+   NOW() - interval '40 minutes', 
+   NOW() - interval '37 minutes', 
+   true, 
+   NULL, 
+   NOW() - interval '25 minutes', 
+   'atc_lead', 
+   'Motor oscillation dampened after holding pattern. Visual check clear, mission resumed under reduced speed.', 
+   'equipment', 
+   'Aerodynamic harmonic resonance at high forward transition speed in river corridor.', 
+   'Recommend software firmware update to smooth transition PID profile in high crosswind.', 
+   '["10:00:15 - Motor #2 vibration warning 0.82G","10:00:18 - Auto-HOVER engaged","10:02:40 - Telemetry normalized (0.28G)","10:15:00 - Closed by ATC supervisor"]', 
+   NOW() - interval '45 minutes', 
+   NOW() - interval '45 minutes', 
+   'system');
+
+INSERT INTO blackbox_entries (
+  id, flight_id, drone_id, incident_id, timestamp, latitude, longitude, 
+  altitude_msl, altitude_agl, roll, pitch, yaw, ground_speed, vertical_speed, 
+  heading, battery_level, battery_voltage, battery_current, signal_strength, 
+  gps_satellites, gps_hdop, is_emergency_recording, created_on, created_by
+)
+VALUES
+  ('bb111111-0001-0000-0000-000000000001', 
+   '4dbde32d-f7d3-45c2-b99d-8a8a9695d788', 
+   'd4e5f601-1122-3344-5566-778899aabbcc', 
+   '11111111-1111-1111-1111-111111111111', 
+   NOW() - interval '3 minutes', 
+   10.7540000, 106.7135000, 135.0, 130.0, 1.2, 0.8, 185.0, 16.2, -0.5, 185.0, 
+   14.2, 21.4, 22.5, 92.0, 18, 0.8, true, NOW(), 'system'),
+
+  ('bb111111-0002-0000-0000-000000000002', 
+   '4dbde32d-f7d3-45c2-b99d-8a8a9695d788', 
+   'd4e5f601-1122-3344-5566-778899aabbcc', 
+   '11111111-1111-1111-1111-111111111111', 
+   NOW() - interval '2 minutes', 
+   10.7538000, 106.7136000, 110.0, 105.0, 0.8, 0.4, 185.0, 10.5, -2.5, 185.0, 
+   13.8, 21.1, 18.2, 91.0, 18, 0.8, true, NOW(), 'system'),
+
+  ('bb111111-0003-0000-0000-000000000003', 
+   '4dbde32d-f7d3-45c2-b99d-8a8a9695d788', 
+   'd4e5f601-1122-3344-5566-778899aabbcc', 
+   '11111111-1111-1111-1111-111111111111', 
+   NOW() - interval '1 minute', 
+   10.7535000, 106.7137000, 60.0, 55.0, 0.3, 0.1, 185.0, 4.2, -2.0, 185.0, 
+   13.4, 20.9, 15.0, 93.0, 19, 0.7, true, NOW(), 'system');
 
 -- ==============================================================================
 -- End of Seed Data Script

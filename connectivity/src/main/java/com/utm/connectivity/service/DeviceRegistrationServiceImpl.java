@@ -4,6 +4,8 @@ import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.connectivity.mapper.DeviceRegistrationMapper;
 import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
@@ -45,7 +47,6 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Transactional
     public DeviceRegistrationVm registerDevice(DeviceRegistrationPostVm postVm) {
         String trimmedDroneId = postVm.droneId().trim();
-        String trimmedIdentifier = postVm.deviceIdentifier().trim();
 
         DroneBriefVm drone = droneClientService.getDroneById(trimmedDroneId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, trimmedDroneId));
@@ -54,8 +55,16 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
             throw new DuplicatedException(MessageCode.DRONE_ALREADY_HAS_DEVICE_REGISTRATION, trimmedDroneId);
         }
 
-        if (deviceRegistrationRepository.findByDeviceIdentifier(trimmedIdentifier).isPresent()) {
-            throw new DuplicatedException(MessageCode.DEVICE_IDENTIFIER_ALREADY_EXISTED, trimmedIdentifier);
+        String trimmedIdentifier;
+        if (postVm.deviceIdentifier() == null || postVm.deviceIdentifier().trim().isBlank()) {
+            trimmedIdentifier = BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.DEVICE_IDENTIFIER,
+                    id -> deviceRegistrationRepository.findByDeviceIdentifier(id).isPresent());
+        } else {
+            trimmedIdentifier = postVm.deviceIdentifier().trim().toUpperCase();
+            if (deviceRegistrationRepository.findByDeviceIdentifier(trimmedIdentifier).isPresent()) {
+                throw new DuplicatedException(MessageCode.DEVICE_IDENTIFIER_ALREADY_EXISTED, trimmedIdentifier);
+            }
         }
 
         DeviceRegistration registration = mapper.toEntity(postVm);

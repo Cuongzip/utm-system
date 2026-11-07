@@ -54,7 +54,9 @@ export type DeviceConnectionStatus = "offline" | "online" | "connecting";
 - **Logic xử lý cốt lõi**:
   1. Kiểm tra tồn tại của Drone qua `DroneClientService`. Nếu không có $\rightarrow$ Trả về `404 Not Found`.
   2. Kiểm tra quan hệ 1-1: Drone này đã được đăng ký phần cứng chưa. Nếu có $\rightarrow$ Trả về `409 Conflict`.
-  3. Kiểm tra tính duy nhất của `deviceIdentifier`. Nếu đã được dùng cho drone khác $\rightarrow$ Trả về `409 Conflict`.
+  3. **Device Identifier Generation & Unique Check**:
+     - Nếu `deviceIdentifier` bỏ trống hoặc null: Tự động sinh định danh duy nhất theo rule `DEVICE_IDENTIFIER` (`DEV-XXXXXXXX`, ví dụ `DEV-XGXYDEC5`).
+     - Nếu người dùng nhập tay: Chuẩn hóa trim/uppercase và kiểm tra trùng lặp trong DB. Nếu đã được dùng cho drone khác $\rightarrow$ Trả về `409 Conflict`.
   4. Lưu bản ghi với `connection_status = 'offline'`, trả về DTO kèm thông tin làm giàu từ Drone (`droneRegistrationNumber`, `droneModel`).
 - **Phản hồi thành công**: `201 Created` - Model: `DeviceRegistrationVm`:
   ```json

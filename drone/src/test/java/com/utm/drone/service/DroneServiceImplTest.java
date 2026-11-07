@@ -34,6 +34,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -273,6 +276,69 @@ class DroneServiceImplTest {
                 assertThat(result.registrationNumber()).isEqualTo("VN-UAV-001");
                 assertThat(result.status()).isEqualTo(DroneStatus.AVAILABLE);
                 verify(droneRepository).saveAndFlush(sampleDrone);
+        }
+
+        @Test
+        @DisplayName("createDrone auto-generates registration number when omitted or blank")
+        void createDrone_nullOrBlankRegistrationNumber_autoGeneratesRegistrationNumber() {
+                DronePostVm postVmWithoutRegNumber = new DronePostVm(
+                                null,
+                                "DJI",
+                                "Matrice 350 RTK",
+                                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                588.0,
+                                2.7);
+
+                when(droneRepository.existsByRegistrationNumber(anyString())).thenReturn(false);
+                when(organizationClientService.checkOrganizationExists("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(true);
+                when(hubClientService.checkHubExists("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
+
+                Drone droneToSave = Drone.builder()
+                                .id("d1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                .manufacturer("DJI")
+                                .model("Matrice 350 RTK")
+                                .ownerId("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                .homeHubId("h1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                .batteryCapacityWh(588.0)
+                                .maxPayload(2.7)
+                                .status(DroneStatus.AVAILABLE)
+                                .build();
+                when(droneMapper.toEntity(postVmWithoutRegNumber)).thenReturn(droneToSave);
+                when(droneRepository.saveAndFlush(any(Drone.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+                when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(droneToSave));
+                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleOwner));
+                when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleHub));
+                when(droneMapper.toVm(eq(droneToSave), eq(sampleOwner), eq(sampleHub), isNull()))
+                                .thenAnswer(inv -> new DroneVm(
+                                                droneToSave.getId(),
+                                                droneToSave.getRegistrationNumber(),
+                                                droneToSave.getManufacturer(),
+                                                droneToSave.getModel(),
+                                                droneToSave.getOwnerId(),
+                                                droneToSave.getHomeHubId(),
+                                                droneToSave.getBatteryCapacityWh(),
+                                                droneToSave.getMaxPayload(),
+                                                droneToSave.getStatus(),
+                                                sampleOwner,
+                                                sampleHub,
+                                                null,
+                                                null,
+                                                "system",
+                                                null,
+                                                null));
+
+                DroneVm result = droneService.createDrone(postVmWithoutRegNumber);
+
+                assertThat(result).isNotNull();
+                assertThat(result.registrationNumber()).startsWith("DRN-");
+                assertThat(droneToSave.getRegistrationNumber()).startsWith("DRN-");
+                verify(droneRepository).saveAndFlush(droneToSave);
         }
 
         @Test

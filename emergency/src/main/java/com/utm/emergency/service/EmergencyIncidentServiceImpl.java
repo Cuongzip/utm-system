@@ -1,7 +1,10 @@
 package com.utm.emergency.service;
 
 import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.emergency.mapper.EmergencyIncidentMapper;
 import com.utm.emergency.model.EmergencyIncident;
 import com.utm.emergency.model.enumeration.EmergencySeverity;
@@ -49,15 +52,28 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     @Override
     @Transactional
     public EmergencyIncidentVm createIncident(EmergencyIncidentPostVm postVm, String reportedBy) {
+        String incidentNumber;
+        if (postVm.incidentNumber() == null || postVm.incidentNumber().trim().isBlank()) {
+            incidentNumber = BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.EMERGENCY_INCIDENT,
+                    incidentRepo::existsByIncidentNumber);
+        } else {
+            incidentNumber = postVm.incidentNumber().trim().toUpperCase();
+            if (incidentRepo.existsByIncidentNumber(incidentNumber)) {
+                throw new DuplicatedException(MessageCode.INCIDENT_NUMBER_ALREADY_EXISTED, incidentNumber);
+            }
+        }
+
         EmergencyIncident entity = incidentMapper.toEntity(postVm);
+        entity.setIncidentNumber(incidentNumber);
         entity.setStatus(decisionEngine.getMode() == OperationMode.supervised
                 ? IncidentStatus.pending_confirmation
                 : IncidentStatus.active);
         entity.setCreatedBy(reportedBy != null && !reportedBy.isBlank() ? reportedBy : "system");
 
         EmergencyIncident saved = incidentRepo.save(entity);
-        log.warn("Emergency incident reported: id={}, type={}, severity={}, drone={}, flight={}",
-                saved.getId(), saved.getEmergencyType(), saved.getSeverity(), saved.getDroneId(), saved.getFlightId());
+        log.warn("Emergency incident reported: id={}, incidentNumber={}, type={}, severity={}, drone={}, flight={}",
+                saved.getId(), saved.getIncidentNumber(), saved.getEmergencyType(), saved.getSeverity(), saved.getDroneId(), saved.getFlightId());
 
         decisionEngine.processEmergency(saved);
 
@@ -134,6 +150,7 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     @Transactional(readOnly = true)
     public EmergencyIncidentVm getIncidentById(String id) {
         EmergencyIncident incident = incidentRepo.findById(id)
+                .or(() -> incidentRepo.findByIncidentNumber(id))
                 .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, id));
         return incidentMapper.toVm(incident);
     }

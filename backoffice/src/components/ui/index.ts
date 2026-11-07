@@ -18,7 +18,7 @@ export * from "./Popover";
 export * from "./Calendar";
 export * from "./DateTimePicker";
 export * from "./FormInput";
-export * from "./CoordinatesInput";
 export * from "./SplitMapLayout";
 export * from "./Pagination";
 export * from "./TableFilterBar";
+export * from "./Switch";

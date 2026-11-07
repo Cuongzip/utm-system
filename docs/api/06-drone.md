@@ -173,7 +173,9 @@ Lấy chi tiết cấu hình kỹ thuật của Drone kèm thông tin làm giàu
   }
   ```
 - **Logic xử lý cốt lõi**:
-  1. **Check Unique**: `registrationNumber` chưa tồn tại. Nếu đã có $\rightarrow$ `409 Conflict`.
+  1. **Registration Number Generation & Unique Check**:
+     - Nếu `registrationNumber` bỏ trống hoặc null: Tự động sinh mã duy nhất theo rule `DRONE_REGISTRATION` (`DRN-YYYY-XXXX`, ví dụ `DRN-2026-V27T`).
+     - Nếu người dùng nhập tay: Chuẩn hóa trim/uppercase và kiểm tra trùng lặp trong DB. Nếu đã tồn tại $\rightarrow$ `409 Conflict`.
   2. **Inter-service Verification**:
      - Kiểm tra `ownerId` tồn tại qua `OrganizationClientService` (ném `404` nếu không tìm thấy).
      - Kiểm tra `homeHubId` tồn tại qua `HubClientService` (ném `404` nếu không tìm thấy).

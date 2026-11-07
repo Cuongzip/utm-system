@@ -137,18 +137,18 @@ function FlightRouteRenderer({
 
             let depPos: import("cesium").Cartesian3 | null = null;
             if (
-                departureHub?.location?.lat !== undefined &&
-                departureHub?.location?.lng !== undefined
+                departureHub?.location?.latitude !== undefined &&
+                departureHub?.location?.longitude !== undefined
             ) {
                 depPos = Cesium.Cartesian3.fromDegrees(
-                    departureHub.location.lng,
-                    departureHub.location.lat,
+                    departureHub.location.longitude,
+                    departureHub.location.latitude,
                     departureHub.altitudeMsl ?? 10
                 );
                 routePositions.push(depPos);
                 boundPoints.push({
-                    lat: departureHub.location.lat,
-                    lng: departureHub.location.lng,
+                    lat: departureHub.location.latitude,
+                    lng: departureHub.location.longitude,
                 });
             }
 
@@ -161,19 +161,19 @@ function FlightRouteRenderer({
 
             let arrPos: import("cesium").Cartesian3 | null = null;
             if (
-                arrivalHub?.location?.lat !== undefined &&
-                arrivalHub?.location?.lng !== undefined &&
+                arrivalHub?.location?.latitude !== undefined &&
+                arrivalHub?.location?.longitude !== undefined &&
                 arrivalHub.id !== departureHub?.id
             ) {
                 arrPos = Cesium.Cartesian3.fromDegrees(
-                    arrivalHub.location.lng,
-                    arrivalHub.location.lat,
+                    arrivalHub.location.longitude,
+                    arrivalHub.location.latitude,
                     arrivalHub.altitudeMsl ?? 10
                 );
                 routePositions.push(arrPos);
                 boundPoints.push({
-                    lat: arrivalHub.location.lat,
-                    lng: arrivalHub.location.lng,
+                    lat: arrivalHub.location.latitude,
+                    lng: arrivalHub.location.longitude,
                 });
             }
 
@@ -549,20 +549,20 @@ export function FlightMapEditor({
     const allRoutePoints = useMemo(() => {
         const pts: { lat: number; lng: number }[] = [];
         if (
-            departureHub?.location?.lat !== undefined &&
-            departureHub?.location?.lng !== undefined
+            departureHub?.location?.latitude !== undefined &&
+            departureHub?.location?.longitude !== undefined
         ) {
-            pts.push({ lat: departureHub.location.lat, lng: departureHub.location.lng });
+            pts.push({ lat: departureHub.location.latitude, lng: departureHub.location.longitude });
         }
         waypoints.forEach((wp) => {
             pts.push({ lat: wp.lat, lng: wp.lng });
         });
         if (
-            arrivalHub?.location?.lat !== undefined &&
-            arrivalHub?.location?.lng !== undefined &&
+            arrivalHub?.location?.latitude !== undefined &&
+            arrivalHub?.location?.longitude !== undefined &&
             arrivalHub.id !== departureHub?.id
         ) {
-            pts.push({ lat: arrivalHub.location.lat, lng: arrivalHub.location.lng });
+            pts.push({ lat: arrivalHub.location.latitude, lng: arrivalHub.location.longitude });
         }
         return pts;
     }, [departureHub, arrivalHub, waypoints]);

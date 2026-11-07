@@ -20,6 +20,7 @@ export type AirspaceZoneStatus = NonNullable<zod.infer<typeof getZoneByIdRespons
 
 export type AirspaceZone = NonNullable<zod.infer<typeof getZoneByIdResponse>> & {
     id: string;
+    code?: string;
 };
 
 export type AirspaceZoneListResponse = Omit<

@@ -133,6 +133,50 @@ class DeviceRegistrationServiceImplTest {
                 }
 
                 @Test
+                @DisplayName("Should auto-generate deviceIdentifier when omitted or blank")
+                void registerDevice_nullOrBlankDeviceIdentifier_autoGeneratesIdentifier() {
+                        DeviceRegistrationPostVm postVmWithoutId = new DeviceRegistrationPostVm(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                        null,
+                                        "SHA256:7b91d24c88f910a3");
+
+                        DeviceRegistration entity = DeviceRegistration.builder()
+                                        .id("c2b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                        .droneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                        .connectionStatus(DeviceConnectionStatus.OFFLINE)
+                                        .certificateFingerprint("SHA256:7b91d24c88f910a3")
+                                        .build();
+
+                        when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                        .thenReturn(Optional.of(testDrone));
+                        when(deviceRegistrationRepository.findByDroneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDeviceIdentifier(anyString()))
+                                        .thenReturn(Optional.empty());
+                        when(mapper.toEntity(postVmWithoutId)).thenReturn(entity);
+                        when(deviceRegistrationRepository.save(any(DeviceRegistration.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(mapper.toVm(eq(entity), eq(testDrone))).thenAnswer(inv -> new DeviceRegistrationVm(
+                                        entity.getId(),
+                                        entity.getDroneId(),
+                                        testDrone.registrationNumber(),
+                                        testDrone.model(),
+                                        entity.getDeviceIdentifier(),
+                                        entity.getConnectionStatus(),
+                                        null,
+                                        entity.getCertificateFingerprint(),
+                                        null,
+                                        null,
+                                        null));
+
+                        DeviceRegistrationVm result = deviceRegistrationService.registerDevice(postVmWithoutId);
+
+                        assertThat(result).isNotNull();
+                        assertThat(result.deviceIdentifier()).startsWith("DEV-");
+                        assertThat(entity.getDeviceIdentifier()).startsWith("DEV-");
+                        verify(deviceRegistrationRepository).save(entity);
+                }
+
+                @Test
                 @DisplayName("Should throw NotFoundException (404) when target drone does not exist")
                 void registerDevice_droneNotFound_throwsNotFoundException() {
                         when(droneClientService.getDroneById("non-existent-drone")).thenReturn(Optional.empty());

@@ -108,6 +108,7 @@ export const getMissionByIdParams = zod.object({
 export const getMissionByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Mission UUID identifier"),
+        code: zod.string().optional().describe("Mission business tracking code"),
         name: zod.string().optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
@@ -245,6 +246,7 @@ export const updateMissionBody = zod
 export const updateMissionResponse = zod
     .object({
         id: zod.string().optional().describe("Mission UUID identifier"),
+        code: zod.string().optional().describe("Mission business tracking code"),
         name: zod.string().optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
@@ -388,6 +390,7 @@ export const getMissionsResponse = zod
                 zod
                     .object({
                         id: zod.string().optional().describe("Mission UUID identifier"),
+                        code: zod.string().optional().describe("Mission business tracking code"),
                         name: zod.string().optional().describe("Mission name"),
                         description: zod
                             .string()
@@ -558,11 +561,26 @@ export const getMissionsResponse = zod
  * Plan a new flight mission in draft status
  * @summary Create a new mission
  */
+export const createMissionBodyCodeMin = 0;
+export const createMissionBodyCodeMax = 50;
+export const createMissionBodyNameMin = 0;
 export const createMissionBodyNameMax = 255;
 
 export const createMissionBody = zod
     .object({
-        name: zod.string().min(1).max(createMissionBodyNameMax).describe("Mission name"),
+        code: zod
+            .string()
+            .min(createMissionBodyCodeMin)
+            .max(createMissionBodyCodeMax)
+            .optional()
+            .describe(
+                "Mission business tracking code (e.g. MSN-YYMMDD-XXXX). If omitted or blank, auto-generated."
+            ),
+        name: zod
+            .string()
+            .min(createMissionBodyNameMin)
+            .max(createMissionBodyNameMax)
+            .describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
         departureHubId: zod.string().min(1).describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().min(1).describe("Arrival Hub UUID identifier"),

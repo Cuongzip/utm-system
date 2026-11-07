@@ -8,17 +8,22 @@
 import zod from "zod";
 
 /**
- * Heartbeat signal sent periodically by IoT hardware/gateway to maintain online presence
+ * Heartbeat signal sent periodically by IoT hardware/gateway to maintain online presence. Supports lookup by id, deviceIdentifier, or droneId.
  * @summary Send device heartbeat ping
  */
 export const processHeartbeatParams = zod.object({
-    id: zod.string(),
+    id: zod.string().describe("Unique registration UUID, device identifier, or drone UUID"),
 });
+
+export const processHeartbeatBodySocketIdMin = 0;
+export const processHeartbeatBodySocketIdMax = 100;
 
 export const processHeartbeatBody = zod
     .object({
         socketId: zod
             .string()
+            .min(processHeartbeatBodySocketIdMin)
+            .max(processHeartbeatBodySocketIdMax)
             .optional()
             .describe("WebSocket session ID currently bound to the device"),
     })
@@ -35,25 +40,42 @@ export const processHeartbeatResponse = zod
     .describe("Response payload for device heartbeat ping");
 
 /**
- * Associates a unique hardware device identifier with a drone in a 1-to-1 relationship
+ * Associates a unique hardware device identifier with a drone in a 1-to-1 relationship. Requires admin or hub_operator role.
  * @summary Register drone hardware device
  */
+export const registerDeviceBodyDroneIdMin = 0;
+export const registerDeviceBodyDroneIdMax = 36;
+export const registerDeviceBodyDeviceIdentifierMin = 0;
+export const registerDeviceBodyDeviceIdentifierMax = 100;
+export const registerDeviceBodyCertificateFingerprintMin = 0;
+export const registerDeviceBodyCertificateFingerprintMax = 128;
+
 export const registerDeviceBody = zod
     .object({
-        droneId: zod.string().min(1).describe("Unique UUID of the drone"),
+        droneId: zod
+            .string()
+            .min(registerDeviceBodyDroneIdMin)
+            .max(registerDeviceBodyDroneIdMax)
+            .describe("Unique UUID of the drone"),
         deviceIdentifier: zod
             .string()
-            .min(1)
-            .describe("Unique hardware identifier (MAC address, IMEI, or serial number)"),
+            .min(registerDeviceBodyDeviceIdentifierMin)
+            .max(registerDeviceBodyDeviceIdentifierMax)
+            .optional()
+            .describe(
+                "Unique hardware identifier (MAC address, IMEI, or serial number). If omitted or blank, a unique identifier will be auto-generated (e.g. DEV-XXXXXXXX)."
+            ),
         certificateFingerprint: zod
             .string()
+            .min(registerDeviceBodyCertificateFingerprintMin)
+            .max(registerDeviceBodyCertificateFingerprintMax)
             .optional()
             .describe("Optional SSL/TLS certificate fingerprint or public key thumbprint"),
     })
     .describe("Payload to register drone hardware connectivity device");
 
 /**
- * Retrieve a paginated and filtered list of registered devices in the DROPS-UTM system.
+ * Retrieve a paginated and filtered list of registered devices in the UTM system. Requires admin or hub_operator role.
  * @summary List registered devices
  */
 export const getDevicesQueryLimitDefault = 20;
@@ -132,11 +154,11 @@ export const getDevicesResponse = zod
     .describe("Paginated list response of registered hardware devices");
 
 /**
- * Returns detailed profile of a device registration including drone specifications
+ * Returns detailed profile of a device registration. Supports lookup by registration UUID, deviceIdentifier, or droneId.
  * @summary Get device details by ID
  */
 export const getDeviceByIdParams = zod.object({
-    id: zod.string(),
+    id: zod.string().describe("Unique registration UUID, device identifier, or drone UUID"),
 });
 
 export const getDeviceByIdResponse = zod
@@ -165,11 +187,11 @@ export const getDeviceByIdResponse = zod
     .describe("Detailed profile of hardware device registration");
 
 /**
- * Removes hardware device registration. Rejected if the drone is actively in flight
+ * Removes hardware device registration. Rejected if the drone is actively in flight or in mission. Requires admin role.
  * @summary Revoke device registration
  */
 export const revokeDeviceRegistrationParams = zod.object({
-    id: zod.string(),
+    id: zod.string().describe("Unique registration UUID, device identifier, or drone UUID"),
 });
 
 export const revokeDeviceRegistrationResponse = zod
@@ -179,7 +201,7 @@ export const revokeDeviceRegistrationResponse = zod
     .describe("Response message after revoking device registration");
 
 /**
- * Returns list of active online devices, applying automatic deadman-switch timeout pruning (30s threshold)
+ * Returns list of active online devices, applying automatic deadman-switch timeout pruning (30s threshold).
  * @summary List currently online devices
  */
 export const getOnlineDevicesResponseItem = zod

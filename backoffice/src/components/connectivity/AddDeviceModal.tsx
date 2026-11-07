@@ -49,7 +49,7 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
             setLoading(true);
             const payload: DeviceRegistrationPayload = {
                 droneId: data.droneId.trim(),
-                deviceIdentifier: data.deviceIdentifier.trim(),
+                deviceIdentifier: data.deviceIdentifier?.trim() || undefined,
                 certificateFingerprint: data.certificateFingerprint?.trim() || undefined,
             };
             await onSubmit(payload);

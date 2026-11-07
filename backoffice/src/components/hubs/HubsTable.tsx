@@ -18,7 +18,7 @@ import {
     EmptyState,
     Pagination,
 } from "@/components/ui";
-import { formatDistance } from "@/utils";
+import { formatDistance, formatAltitude, formatCoordinates } from "@/utils";
 import { usePagination } from "@/hooks";
 import type { Hub } from "@/types";
 
@@ -26,9 +26,9 @@ interface HubsTableProps {
     hubs: Hub[];
     loading?: boolean;
     selectedHubId?: string | null;
-    onSelectHub?: (hub: Hub) => void;
-    onEditHub?: (hub: Hub) => void;
-    onDeleteHub?: (id: string) => void;
+    onSelectHub: (hub: Hub) => void;
+    onEditHub: (hub: Hub) => void;
+    onDeleteHub: (id: string) => void;
 }
 
 export function HubsTable({
@@ -43,34 +43,24 @@ export function HubsTable({
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(hubs);
 
-    const getActions = (hub: Hub): ActionMenuItem[] => {
-        const items: ActionMenuItem[] = [
-            {
-                label: "View on Map",
-                icon: <MapPin className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />,
-                onClick: () => onSelectHub?.(hub),
-            },
-        ];
-
-        if (onEditHub) {
-            items.push({
-                label: "Edit",
-                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-                onClick: () => onEditHub(hub),
-            });
-        }
-
-        if (onDeleteHub) {
-            items.push({
-                label: "Delete",
-                icon: <Trash2 className="w-3.5 h-3.5" />,
-                danger: true,
-                onClick: () => setHubToDelete(hub),
-            });
-        }
-
-        return items;
-    };
+    const getActions = (hub: Hub): ActionMenuItem[] => [
+        {
+            label: "View on Map",
+            icon: <MapPin className="w-3.5 h-3.5 text-slate-500" />,
+            onClick: () => onSelectHub(hub),
+        },
+        {
+            label: "Edit",
+            icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+            onClick: () => onEditHub(hub),
+        },
+        {
+            label: "Delete",
+            icon: <Trash2 className="w-3.5 h-3.5" />,
+            danger: true,
+            onClick: () => setHubToDelete(hub),
+        },
+    ];
 
     return (
         <div className="flex flex-col gap-4 w-full">
@@ -78,22 +68,23 @@ export function HubsTable({
                 <Table fixed>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="140px">CODE</TableHead>
-                            <TableHead width="240px">NAME</TableHead>
-                            <TableHead width="130px">STATUS</TableHead>
-                            <TableHead width="170px">AVAILABLE DRONES</TableHead>
-                            <TableHead width="150px">AIRSPACE RADIUS</TableHead>
-                            <TableHead width="100px" align="right">
+                            <TableHead width="120px">CODE</TableHead>
+                            <TableHead width="220px">NAME</TableHead>
+                            <TableHead width="110px">STATUS</TableHead>
+                            <TableHead width="160px">COORDINATES</TableHead>
+                            <TableHead width="100px">ALTITUDE</TableHead>
+                            <TableHead width="140px">AIRSPACE RADIUS</TableHead>
+                            <TableHead width="80px" align="right">
                                 ACTIONS
                             </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={6} message="Loading vertiport hubs..." />
+                            <TableLoading colSpan={7} message="Loading vertiport hubs..." />
                         ) : hubs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="py-10 text-center">
+                                <TableCell colSpan={7} className="py-10 text-center">
                                     <EmptyState
                                         icon={Building2}
                                         title="No vertiport hubs found"
@@ -104,19 +95,18 @@ export function HubsTable({
                         ) : (
                             paginatedItems.map((hub) => {
                                 const isSelected = selectedHubId === hub.id;
-                                const availableDrones = hub.availableDronesCount ?? "—";
-                                const radius = hub.airspaceRadius
-                                    ? formatDistance(hub.airspaceRadius)
-                                    : "5.0 km";
+                                const radius = formatDistance(hub.airspaceRadius);
+                                const altitude = formatAltitude(hub.altitudeMsl);
+                                const coords = formatCoordinates(hub.location);
 
                                 return (
                                     <TableRow
                                         key={hub.id}
                                         selected={isSelected}
-                                        onClick={() => onSelectHub?.(hub)}
+                                        onClick={() => onSelectHub(hub)}
                                     >
                                         <TableCell mono bold>
-                                            {hub.code}
+                                            {hub.code || "—"}
                                         </TableCell>
                                         <TableCell truncate bold tooltip={hub.name}>
                                             {hub.name}
@@ -125,7 +115,10 @@ export function HubsTable({
                                             <StatusBadge status={hub.status || "ACTIVE"} />
                                         </TableCell>
                                         <TableCell mono darkText>
-                                            {availableDrones}
+                                            {coords}
+                                        </TableCell>
+                                        <TableCell mono darkText>
+                                            {altitude}
                                         </TableCell>
                                         <TableCell mono darkText>
                                             {radius}
@@ -154,7 +147,7 @@ export function HubsTable({
                 isOpen={!!hubToDelete}
                 onClose={() => setHubToDelete(null)}
                 onConfirm={() => {
-                    if (hubToDelete && onDeleteHub) {
+                    if (hubToDelete) {
                         onDeleteHub(hubToDelete.id);
                         setHubToDelete(null);
                     }

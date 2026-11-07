@@ -330,6 +330,7 @@ export const updateRootCauseBody = zod.object({
 
 export const updateRootCauseResponse = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -409,6 +410,7 @@ export const updateRootCause1Body = zod.object({
 
 export const updateRootCause1Response = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -646,6 +648,54 @@ export const createProtocolBody = zod.object({
     isActive: zod.boolean().optional(),
 });
 
+export const createProtocolResponse = zod.object({
+    id: zod.string().optional(),
+    name: zod.string().optional(),
+    description: zod.string().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    responseAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    fallbackAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    requiresConfirmation: zod.boolean().optional(),
+    confirmationTimeoutSeconds: zod.number().optional(),
+    autoExecuteOnTimeout: zod.boolean().optional(),
+    priority: zod.number().optional(),
+    thresholds: zod.any().optional(),
+    conditions: zod.any().optional(),
+    notifyPilot: zod.boolean().optional(),
+    notifySupervisor: zod.boolean().optional(),
+    notifyOpsCenter: zod.boolean().optional(),
+    sendSms: zod.boolean().optional(),
+    sendEmail: zod.boolean().optional(),
+    playAudioAlarm: zod.boolean().optional(),
+    isActive: zod.boolean().optional(),
+    isSystemDefault: zod.boolean().optional(),
+    createdOn: zod.iso.datetime({}).optional(),
+    lastModifiedOn: zod.iso.datetime({}).optional(),
+});
+
 /**
  * @summary List standard emergency response protocols
  */
@@ -757,6 +807,54 @@ export const createProtocol1Body = zod.object({
     isActive: zod.boolean().optional(),
 });
 
+export const createProtocol1Response = zod.object({
+    id: zod.string().optional(),
+    name: zod.string().optional(),
+    description: zod.string().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    responseAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    fallbackAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    requiresConfirmation: zod.boolean().optional(),
+    confirmationTimeoutSeconds: zod.number().optional(),
+    autoExecuteOnTimeout: zod.boolean().optional(),
+    priority: zod.number().optional(),
+    thresholds: zod.any().optional(),
+    conditions: zod.any().optional(),
+    notifyPilot: zod.boolean().optional(),
+    notifySupervisor: zod.boolean().optional(),
+    notifyOpsCenter: zod.boolean().optional(),
+    sendSms: zod.boolean().optional(),
+    sendEmail: zod.boolean().optional(),
+    playAudioAlarm: zod.boolean().optional(),
+    isActive: zod.boolean().optional(),
+    isSystemDefault: zod.boolean().optional(),
+    createdOn: zod.iso.datetime({}).optional(),
+    lastModifiedOn: zod.iso.datetime({}).optional(),
+});
+
 /**
  * @summary Operator confirm or reject emergency failsafe action
  */
@@ -770,6 +868,7 @@ export const confirmIncidentBody = zod.object({
 
 export const confirmIncidentResponse = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -847,6 +946,465 @@ export const confirmIncident1Body = zod.object({
 
 export const confirmIncident1Response = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
+    droneId: zod.string().optional(),
+    flightId: zod.string().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    status: zod
+        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .optional(),
+    message: zod.string().optional(),
+    detectionData: zod.any().optional(),
+    latitude: zod.number().optional(),
+    longitude: zod.number().optional(),
+    altitude: zod.number().optional(),
+    responseAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    wasAutoExecuted: zod.boolean().optional(),
+    confirmationRequired: zod.boolean().optional(),
+    confirmedBy: zod.string().optional(),
+    confirmedAt: zod.iso.datetime({}).optional(),
+    confirmationTimeoutAt: zod.iso.datetime({}).optional(),
+    actionStartedAt: zod.iso.datetime({}).optional(),
+    actionCompletedAt: zod.iso.datetime({}).optional(),
+    actionSuccess: zod.boolean().optional(),
+    actionError: zod.string().optional(),
+    resolvedAt: zod.iso.datetime({}).optional(),
+    resolvedBy: zod.string().optional(),
+    resolutionNotes: zod.string().optional(),
+    rootCause: zod
+        .enum(["equipment", "weather", "pilot_error", "software", "external", "unknown"])
+        .optional(),
+    rootCauseNotes: zod.string().optional(),
+    lessonsLearned: zod.string().optional(),
+    timeline: zod
+        .array(
+            zod.object({
+                timestamp: zod.string().optional(),
+                event: zod.string().optional(),
+                data: zod.any().optional(),
+            })
+        )
+        .optional(),
+    detectedAt: zod.iso.datetime({}).optional(),
+    createdOn: zod.iso.datetime({}).optional(),
+    lastModifiedOn: zod.iso.datetime({}).optional(),
+});
+
+/**
+ * @summary Search and filter emergency incidents with pagination
+ */
+export const getIncidentsQueryLimitDefault = 50;
+export const getIncidentsQueryOffsetDefault = 0;
+
+export const getIncidentsQueryParams = zod.object({
+    status: zod.string().optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    type: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    droneId: zod.string().optional(),
+    from: zod.iso.datetime({}).optional(),
+    to: zod.iso.datetime({}).optional(),
+    limit: zod.number().default(getIncidentsQueryLimitDefault),
+    offset: zod.number().optional(),
+});
+
+export const getIncidentsResponse = zod.object({
+    data: zod
+        .array(
+            zod.object({
+                id: zod.string().optional(),
+                incidentNumber: zod.string().optional(),
+                droneId: zod.string().optional(),
+                flightId: zod.string().optional(),
+                emergencyType: zod
+                    .enum([
+                        "battery_low",
+                        "battery_critical",
+                        "battery_rapid_discharge",
+                        "signal_weak",
+                        "signal_lost",
+                        "geofence_warning",
+                        "geofence_breach",
+                        "collision_aircraft",
+                        "collision_obstacle",
+                        "weather_wind",
+                        "weather_visibility",
+                        "motor_anomaly",
+                        "motor_failure",
+                        "gps_degraded",
+                        "gps_lost",
+                    ])
+                    .optional(),
+                severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+                status: zod
+                    .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+                    .optional(),
+                message: zod.string().optional(),
+                detectionData: zod.any().optional(),
+                latitude: zod.number().optional(),
+                longitude: zod.number().optional(),
+                altitude: zod.number().optional(),
+                responseAction: zod
+                    .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+                    .optional(),
+                wasAutoExecuted: zod.boolean().optional(),
+                confirmationRequired: zod.boolean().optional(),
+                confirmedBy: zod.string().optional(),
+                confirmedAt: zod.iso.datetime({}).optional(),
+                confirmationTimeoutAt: zod.iso.datetime({}).optional(),
+                actionStartedAt: zod.iso.datetime({}).optional(),
+                actionCompletedAt: zod.iso.datetime({}).optional(),
+                actionSuccess: zod.boolean().optional(),
+                actionError: zod.string().optional(),
+                resolvedAt: zod.iso.datetime({}).optional(),
+                resolvedBy: zod.string().optional(),
+                resolutionNotes: zod.string().optional(),
+                rootCause: zod
+                    .enum([
+                        "equipment",
+                        "weather",
+                        "pilot_error",
+                        "software",
+                        "external",
+                        "unknown",
+                    ])
+                    .optional(),
+                rootCauseNotes: zod.string().optional(),
+                lessonsLearned: zod.string().optional(),
+                timeline: zod
+                    .array(
+                        zod.object({
+                            timestamp: zod.string().optional(),
+                            event: zod.string().optional(),
+                            data: zod.any().optional(),
+                        })
+                    )
+                    .optional(),
+                detectedAt: zod.iso.datetime({}).optional(),
+                createdOn: zod.iso.datetime({}).optional(),
+                lastModifiedOn: zod.iso.datetime({}).optional(),
+            })
+        )
+        .optional(),
+    total: zod.number().optional(),
+    limit: zod.number().optional(),
+    offset: zod.number().optional(),
+});
+
+/**
+ * @summary Report and ingest a new emergency incident from flight watchdog or telemetry
+ */
+export const createIncidentBody = zod
+    .object({
+        incidentNumber: zod
+            .string()
+            .optional()
+            .describe(
+                "Incident investigation tracking number (e.g. INC-YYYYMMDD-XXXX). If omitted or blank, auto-generated."
+            ),
+        droneId: zod.string().min(1).describe("UUID of reporting drone"),
+        flightId: zod.string().optional().describe("UUID of associated flight operation"),
+        emergencyType: zod
+            .enum([
+                "battery_low",
+                "battery_critical",
+                "battery_rapid_discharge",
+                "signal_weak",
+                "signal_lost",
+                "geofence_warning",
+                "geofence_breach",
+                "collision_aircraft",
+                "collision_obstacle",
+                "weather_wind",
+                "weather_visibility",
+                "motor_anomaly",
+                "motor_failure",
+                "gps_degraded",
+                "gps_lost",
+            ])
+            .describe("Type of emergency event"),
+        severity: zod.enum(["warning", "critical", "emergency"]).describe("Severity level"),
+        message: zod.string().min(1).describe("Human-readable summary message"),
+        detectionData: zod
+            .any()
+            .optional()
+            .describe("Raw detection telemetry snapshot (JSON or Map)"),
+        latitude: zod.number().optional().describe("Current latitude coordinate"),
+        longitude: zod.number().optional().describe("Current longitude coordinate"),
+        altitude: zod.number().optional().describe("Current altitude in meters"),
+    })
+    .describe("Payload to report and ingest a new emergency incident");
+
+export const createIncidentResponse = zod.object({
+    id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
+    droneId: zod.string().optional(),
+    flightId: zod.string().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    status: zod
+        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .optional(),
+    message: zod.string().optional(),
+    detectionData: zod.any().optional(),
+    latitude: zod.number().optional(),
+    longitude: zod.number().optional(),
+    altitude: zod.number().optional(),
+    responseAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    wasAutoExecuted: zod.boolean().optional(),
+    confirmationRequired: zod.boolean().optional(),
+    confirmedBy: zod.string().optional(),
+    confirmedAt: zod.iso.datetime({}).optional(),
+    confirmationTimeoutAt: zod.iso.datetime({}).optional(),
+    actionStartedAt: zod.iso.datetime({}).optional(),
+    actionCompletedAt: zod.iso.datetime({}).optional(),
+    actionSuccess: zod.boolean().optional(),
+    actionError: zod.string().optional(),
+    resolvedAt: zod.iso.datetime({}).optional(),
+    resolvedBy: zod.string().optional(),
+    resolutionNotes: zod.string().optional(),
+    rootCause: zod
+        .enum(["equipment", "weather", "pilot_error", "software", "external", "unknown"])
+        .optional(),
+    rootCauseNotes: zod.string().optional(),
+    lessonsLearned: zod.string().optional(),
+    timeline: zod
+        .array(
+            zod.object({
+                timestamp: zod.string().optional(),
+                event: zod.string().optional(),
+                data: zod.any().optional(),
+            })
+        )
+        .optional(),
+    detectedAt: zod.iso.datetime({}).optional(),
+    createdOn: zod.iso.datetime({}).optional(),
+    lastModifiedOn: zod.iso.datetime({}).optional(),
+});
+
+/**
+ * @summary Search and filter emergency incidents with pagination
+ */
+export const getIncidents1QueryLimitDefault = 50;
+export const getIncidents1QueryOffsetDefault = 0;
+
+export const getIncidents1QueryParams = zod.object({
+    status: zod.string().optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    type: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    droneId: zod.string().optional(),
+    from: zod.iso.datetime({}).optional(),
+    to: zod.iso.datetime({}).optional(),
+    limit: zod.number().default(getIncidents1QueryLimitDefault),
+    offset: zod.number().optional(),
+});
+
+export const getIncidents1Response = zod.object({
+    data: zod
+        .array(
+            zod.object({
+                id: zod.string().optional(),
+                incidentNumber: zod.string().optional(),
+                droneId: zod.string().optional(),
+                flightId: zod.string().optional(),
+                emergencyType: zod
+                    .enum([
+                        "battery_low",
+                        "battery_critical",
+                        "battery_rapid_discharge",
+                        "signal_weak",
+                        "signal_lost",
+                        "geofence_warning",
+                        "geofence_breach",
+                        "collision_aircraft",
+                        "collision_obstacle",
+                        "weather_wind",
+                        "weather_visibility",
+                        "motor_anomaly",
+                        "motor_failure",
+                        "gps_degraded",
+                        "gps_lost",
+                    ])
+                    .optional(),
+                severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+                status: zod
+                    .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+                    .optional(),
+                message: zod.string().optional(),
+                detectionData: zod.any().optional(),
+                latitude: zod.number().optional(),
+                longitude: zod.number().optional(),
+                altitude: zod.number().optional(),
+                responseAction: zod
+                    .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+                    .optional(),
+                wasAutoExecuted: zod.boolean().optional(),
+                confirmationRequired: zod.boolean().optional(),
+                confirmedBy: zod.string().optional(),
+                confirmedAt: zod.iso.datetime({}).optional(),
+                confirmationTimeoutAt: zod.iso.datetime({}).optional(),
+                actionStartedAt: zod.iso.datetime({}).optional(),
+                actionCompletedAt: zod.iso.datetime({}).optional(),
+                actionSuccess: zod.boolean().optional(),
+                actionError: zod.string().optional(),
+                resolvedAt: zod.iso.datetime({}).optional(),
+                resolvedBy: zod.string().optional(),
+                resolutionNotes: zod.string().optional(),
+                rootCause: zod
+                    .enum([
+                        "equipment",
+                        "weather",
+                        "pilot_error",
+                        "software",
+                        "external",
+                        "unknown",
+                    ])
+                    .optional(),
+                rootCauseNotes: zod.string().optional(),
+                lessonsLearned: zod.string().optional(),
+                timeline: zod
+                    .array(
+                        zod.object({
+                            timestamp: zod.string().optional(),
+                            event: zod.string().optional(),
+                            data: zod.any().optional(),
+                        })
+                    )
+                    .optional(),
+                detectedAt: zod.iso.datetime({}).optional(),
+                createdOn: zod.iso.datetime({}).optional(),
+                lastModifiedOn: zod.iso.datetime({}).optional(),
+            })
+        )
+        .optional(),
+    total: zod.number().optional(),
+    limit: zod.number().optional(),
+    offset: zod.number().optional(),
+});
+
+/**
+ * @summary Report and ingest a new emergency incident from flight watchdog or telemetry
+ */
+export const createIncident1Body = zod
+    .object({
+        incidentNumber: zod
+            .string()
+            .optional()
+            .describe(
+                "Incident investigation tracking number (e.g. INC-YYYYMMDD-XXXX). If omitted or blank, auto-generated."
+            ),
+        droneId: zod.string().min(1).describe("UUID of reporting drone"),
+        flightId: zod.string().optional().describe("UUID of associated flight operation"),
+        emergencyType: zod
+            .enum([
+                "battery_low",
+                "battery_critical",
+                "battery_rapid_discharge",
+                "signal_weak",
+                "signal_lost",
+                "geofence_warning",
+                "geofence_breach",
+                "collision_aircraft",
+                "collision_obstacle",
+                "weather_wind",
+                "weather_visibility",
+                "motor_anomaly",
+                "motor_failure",
+                "gps_degraded",
+                "gps_lost",
+            ])
+            .describe("Type of emergency event"),
+        severity: zod.enum(["warning", "critical", "emergency"]).describe("Severity level"),
+        message: zod.string().min(1).describe("Human-readable summary message"),
+        detectionData: zod
+            .any()
+            .optional()
+            .describe("Raw detection telemetry snapshot (JSON or Map)"),
+        latitude: zod.number().optional().describe("Current latitude coordinate"),
+        longitude: zod.number().optional().describe("Current longitude coordinate"),
+        altitude: zod.number().optional().describe("Current altitude in meters"),
+    })
+    .describe("Payload to report and ingest a new emergency incident");
+
+export const createIncident1Response = zod.object({
+    id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -1166,6 +1724,7 @@ export const getIncidentParams = zod.object({
 
 export const getIncidentResponse = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -1239,6 +1798,7 @@ export const getIncident1Params = zod.object({
 
 export const getIncident1Response = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -1311,6 +1871,7 @@ export const getPendingConfirmationsResponseItem = zod.object({
     incident: zod
         .object({
             id: zod.string().optional(),
+            incidentNumber: zod.string().optional(),
             droneId: zod.string().optional(),
             flightId: zod.string().optional(),
             emergencyType: zod
@@ -1436,6 +1997,7 @@ export const getPendingConfirmations1ResponseItem = zod.object({
     incident: zod
         .object({
             id: zod.string().optional(),
+            incidentNumber: zod.string().optional(),
             droneId: zod.string().optional(),
             flightId: zod.string().optional(),
             emergencyType: zod
@@ -1558,6 +2120,7 @@ export const getPendingConfirmations1Response = zod.array(getPendingConfirmation
  */
 export const getActiveIncidentsResponseItem = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -1628,6 +2191,7 @@ export const getActiveIncidentsResponse = zod.array(getActiveIncidentsResponseIt
  */
 export const getActiveIncidents1ResponseItem = zod.object({
     id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
     emergencyType: zod
@@ -1692,240 +2256,6 @@ export const getActiveIncidents1ResponseItem = zod.object({
     lastModifiedOn: zod.iso.datetime({}).optional(),
 });
 export const getActiveIncidents1Response = zod.array(getActiveIncidents1ResponseItem);
-
-/**
- * @summary Search and filter emergency incidents with pagination
- */
-export const getIncidentsQueryLimitDefault = 50;
-export const getIncidentsQueryOffsetDefault = 0;
-
-export const getIncidentsQueryParams = zod.object({
-    status: zod.string().optional(),
-    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
-    type: zod
-        .enum([
-            "battery_low",
-            "battery_critical",
-            "battery_rapid_discharge",
-            "signal_weak",
-            "signal_lost",
-            "geofence_warning",
-            "geofence_breach",
-            "collision_aircraft",
-            "collision_obstacle",
-            "weather_wind",
-            "weather_visibility",
-            "motor_anomaly",
-            "motor_failure",
-            "gps_degraded",
-            "gps_lost",
-        ])
-        .optional(),
-    droneId: zod.string().optional(),
-    from: zod.iso.datetime({}).optional(),
-    to: zod.iso.datetime({}).optional(),
-    limit: zod.number().default(getIncidentsQueryLimitDefault),
-    offset: zod.number().optional(),
-});
-
-export const getIncidentsResponse = zod.object({
-    data: zod
-        .array(
-            zod.object({
-                id: zod.string().optional(),
-                droneId: zod.string().optional(),
-                flightId: zod.string().optional(),
-                emergencyType: zod
-                    .enum([
-                        "battery_low",
-                        "battery_critical",
-                        "battery_rapid_discharge",
-                        "signal_weak",
-                        "signal_lost",
-                        "geofence_warning",
-                        "geofence_breach",
-                        "collision_aircraft",
-                        "collision_obstacle",
-                        "weather_wind",
-                        "weather_visibility",
-                        "motor_anomaly",
-                        "motor_failure",
-                        "gps_degraded",
-                        "gps_lost",
-                    ])
-                    .optional(),
-                severity: zod.enum(["warning", "critical", "emergency"]).optional(),
-                status: zod
-                    .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
-                    .optional(),
-                message: zod.string().optional(),
-                detectionData: zod.any().optional(),
-                latitude: zod.number().optional(),
-                longitude: zod.number().optional(),
-                altitude: zod.number().optional(),
-                responseAction: zod
-                    .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
-                    .optional(),
-                wasAutoExecuted: zod.boolean().optional(),
-                confirmationRequired: zod.boolean().optional(),
-                confirmedBy: zod.string().optional(),
-                confirmedAt: zod.iso.datetime({}).optional(),
-                confirmationTimeoutAt: zod.iso.datetime({}).optional(),
-                actionStartedAt: zod.iso.datetime({}).optional(),
-                actionCompletedAt: zod.iso.datetime({}).optional(),
-                actionSuccess: zod.boolean().optional(),
-                actionError: zod.string().optional(),
-                resolvedAt: zod.iso.datetime({}).optional(),
-                resolvedBy: zod.string().optional(),
-                resolutionNotes: zod.string().optional(),
-                rootCause: zod
-                    .enum([
-                        "equipment",
-                        "weather",
-                        "pilot_error",
-                        "software",
-                        "external",
-                        "unknown",
-                    ])
-                    .optional(),
-                rootCauseNotes: zod.string().optional(),
-                lessonsLearned: zod.string().optional(),
-                timeline: zod
-                    .array(
-                        zod.object({
-                            timestamp: zod.string().optional(),
-                            event: zod.string().optional(),
-                            data: zod.any().optional(),
-                        })
-                    )
-                    .optional(),
-                detectedAt: zod.iso.datetime({}).optional(),
-                createdOn: zod.iso.datetime({}).optional(),
-                lastModifiedOn: zod.iso.datetime({}).optional(),
-            })
-        )
-        .optional(),
-    total: zod.number().optional(),
-    limit: zod.number().optional(),
-    offset: zod.number().optional(),
-});
-
-/**
- * @summary Search and filter emergency incidents with pagination
- */
-export const getIncidents1QueryLimitDefault = 50;
-export const getIncidents1QueryOffsetDefault = 0;
-
-export const getIncidents1QueryParams = zod.object({
-    status: zod.string().optional(),
-    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
-    type: zod
-        .enum([
-            "battery_low",
-            "battery_critical",
-            "battery_rapid_discharge",
-            "signal_weak",
-            "signal_lost",
-            "geofence_warning",
-            "geofence_breach",
-            "collision_aircraft",
-            "collision_obstacle",
-            "weather_wind",
-            "weather_visibility",
-            "motor_anomaly",
-            "motor_failure",
-            "gps_degraded",
-            "gps_lost",
-        ])
-        .optional(),
-    droneId: zod.string().optional(),
-    from: zod.iso.datetime({}).optional(),
-    to: zod.iso.datetime({}).optional(),
-    limit: zod.number().default(getIncidents1QueryLimitDefault),
-    offset: zod.number().optional(),
-});
-
-export const getIncidents1Response = zod.object({
-    data: zod
-        .array(
-            zod.object({
-                id: zod.string().optional(),
-                droneId: zod.string().optional(),
-                flightId: zod.string().optional(),
-                emergencyType: zod
-                    .enum([
-                        "battery_low",
-                        "battery_critical",
-                        "battery_rapid_discharge",
-                        "signal_weak",
-                        "signal_lost",
-                        "geofence_warning",
-                        "geofence_breach",
-                        "collision_aircraft",
-                        "collision_obstacle",
-                        "weather_wind",
-                        "weather_visibility",
-                        "motor_anomaly",
-                        "motor_failure",
-                        "gps_degraded",
-                        "gps_lost",
-                    ])
-                    .optional(),
-                severity: zod.enum(["warning", "critical", "emergency"]).optional(),
-                status: zod
-                    .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
-                    .optional(),
-                message: zod.string().optional(),
-                detectionData: zod.any().optional(),
-                latitude: zod.number().optional(),
-                longitude: zod.number().optional(),
-                altitude: zod.number().optional(),
-                responseAction: zod
-                    .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
-                    .optional(),
-                wasAutoExecuted: zod.boolean().optional(),
-                confirmationRequired: zod.boolean().optional(),
-                confirmedBy: zod.string().optional(),
-                confirmedAt: zod.iso.datetime({}).optional(),
-                confirmationTimeoutAt: zod.iso.datetime({}).optional(),
-                actionStartedAt: zod.iso.datetime({}).optional(),
-                actionCompletedAt: zod.iso.datetime({}).optional(),
-                actionSuccess: zod.boolean().optional(),
-                actionError: zod.string().optional(),
-                resolvedAt: zod.iso.datetime({}).optional(),
-                resolvedBy: zod.string().optional(),
-                resolutionNotes: zod.string().optional(),
-                rootCause: zod
-                    .enum([
-                        "equipment",
-                        "weather",
-                        "pilot_error",
-                        "software",
-                        "external",
-                        "unknown",
-                    ])
-                    .optional(),
-                rootCauseNotes: zod.string().optional(),
-                lessonsLearned: zod.string().optional(),
-                timeline: zod
-                    .array(
-                        zod.object({
-                            timestamp: zod.string().optional(),
-                            event: zod.string().optional(),
-                            data: zod.any().optional(),
-                        })
-                    )
-                    .optional(),
-                detectedAt: zod.iso.datetime({}).optional(),
-                createdOn: zod.iso.datetime({}).optional(),
-                lastModifiedOn: zod.iso.datetime({}).optional(),
-            })
-        )
-        .optional(),
-    total: zod.number().optional(),
-    limit: zod.number().optional(),
-    offset: zod.number().optional(),
-});
 
 /**
  * @summary Get emergency system operation mode and configs

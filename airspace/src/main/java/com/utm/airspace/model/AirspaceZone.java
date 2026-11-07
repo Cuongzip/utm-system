@@ -31,6 +31,9 @@ public class AirspaceZone extends AbstractAuditEntity {
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
 
+    @Column(name = "code", length = 50, unique = true)
+    private String code;
+
     @Column(name = "hub_id", length = 36)
     private String hubId;
 

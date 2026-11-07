@@ -13,7 +13,7 @@ import {
 import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hub, CreateHubPayload, UpdateHubPayload } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -24,6 +24,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 ];
 
 export default function HubsPage() {
+    const queryClient = useQueryClient();
     const fetchHubs = useCallback(() => hubService.getHubs({ limit: 0 }), []);
     const deleteHub = useCallback((id: string) => hubService.deleteHub(id), []);
 
@@ -32,7 +33,6 @@ export default function HubsPage() {
         loading,
         error,
         setError,
-        refresh,
         isModalOpen,
         itemToEdit: selectedHub,
         openCreateModal,
@@ -67,7 +67,7 @@ export default function HubsPage() {
                     ? "Vertiport hub updated successfully"
                     : "Vertiport hub created successfully"
             );
-            refresh();
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubs });
         },
         meta: { defaultErrorMessage: "Failed to save hub" },
     });
@@ -122,7 +122,7 @@ export default function HubsPage() {
 
                 <div className="w-full h-[560px]">
                     <HubsMap
-                        hubs={hubs}
+                        hubs={filteredHubs}
                         selectedHubId={highlightedHubId}
                         onSelectHub={handleSelectHub}
                     />
@@ -133,9 +133,7 @@ export default function HubsPage() {
                 isOpen={isModalOpen}
                 hubToEdit={selectedHub}
                 onClose={closeModal}
-                onSubmit={async (payload, id) => {
-                    await saveHubMutation.mutateAsync({ payload, id });
-                }}
+                onSubmit={(payload, id) => saveHubMutation.mutateAsync({ payload, id })}
             />
         </div>
     );

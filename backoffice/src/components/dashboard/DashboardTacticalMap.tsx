@@ -35,7 +35,9 @@ function PerspectiveResetHandler({ hubs, trigger }: { hubs: Hub[]; trigger: numb
         if (trigger === 0 && hasInitialFitRef.current) return;
 
         const points = hubs.flatMap((h) =>
-            h.location ? [{ lat: h.location.lat, lng: h.location.lng }] : []
+            h.location && h.location.latitude !== undefined && h.location.longitude !== undefined
+                ? [{ lat: h.location.latitude, lng: h.location.longitude }]
+                : []
         );
         if (points.length > 0 || trigger > 0) {
             hasInitialFitRef.current = true;

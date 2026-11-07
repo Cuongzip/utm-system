@@ -18,6 +18,7 @@ export const getZoneByIdParams = zod.object({
 export const getZoneByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
+        code: zod.string().optional().describe("Airspace zone business tracking code"),
         hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
         name: zod.string().optional().describe("Name of the airspace zone"),
         zoneType: zod
@@ -60,9 +61,17 @@ export const updateZoneParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the airspace zone"),
 });
 
+export const updateZoneBodyNameMin = 0;
+export const updateZoneBodyNameMax = 255;
+
 export const updateZoneBody = zod
     .object({
-        name: zod.string().optional().describe("Updated name of the airspace zone"),
+        name: zod
+            .string()
+            .min(updateZoneBodyNameMin)
+            .max(updateZoneBodyNameMax)
+            .optional()
+            .describe("Updated name of the airspace zone"),
         hubId: zod.string().optional().describe("Updated associated Hub ID"),
         zoneType: zod
             .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
@@ -100,6 +109,7 @@ export const updateZoneBody = zod
 export const updateZoneResponse = zod
     .object({
         id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
+        code: zod.string().optional().describe("Airspace zone business tracking code"),
         hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
         name: zod.string().optional().describe("Name of the airspace zone"),
         zoneType: zod
@@ -173,6 +183,10 @@ export const getAllZonesResponse = zod
                             .string()
                             .optional()
                             .describe("Unique UUID identifier of the airspace zone"),
+                        code: zod
+                            .string()
+                            .optional()
+                            .describe("Airspace zone business tracking code"),
                         hubId: zod
                             .string()
                             .optional()
@@ -243,12 +257,28 @@ export const getAllZonesResponse = zod
  * Establish a new 3D airspace restriction zone, buffer corridor, or temporary flight restriction. Requires admin or atc role.
  * @summary Create a new Airspace Zone / Geofence
  */
+export const createZoneBodyNameMin = 0;
+export const createZoneBodyNameMax = 255;
+export const createZoneBodyCodeMin = 0;
+export const createZoneBodyCodeMax = 50;
 export const createZoneBodyAltitudeCeilingDefault = 120.0;
 export const createZoneBodyStatusDefault = "active";
 
 export const createZoneBody = zod
     .object({
-        name: zod.string().min(1).describe("Unique name of the airspace zone"),
+        name: zod
+            .string()
+            .min(createZoneBodyNameMin)
+            .max(createZoneBodyNameMax)
+            .describe("Unique name of the airspace zone"),
+        code: zod
+            .string()
+            .min(createZoneBodyCodeMin)
+            .max(createZoneBodyCodeMax)
+            .optional()
+            .describe(
+                "Airspace zone business tracking code (e.g. ASZ-A1B2). If omitted, system auto-generates."
+            ),
         hubId: zod
             .string()
             .optional()
@@ -286,12 +316,24 @@ export const createZoneBody = zod
  * Verify if a 3D coordinate point (lat, lon, alt) violates any active restricted or prohibited airspace zones.
  * @summary Check 3D point airspace compliance
  */
+export const checkPointBodyLatMin = -90;
+export const checkPointBodyLatMax = 90;
+export const checkPointBodyLonMin = -180;
+export const checkPointBodyLonMax = 180;
 export const checkPointBodyAltDefault = 0.0;
 
 export const checkPointBody = zod
     .object({
-        lat: zod.number().describe("Latitude coordinate (WGS84)"),
-        lon: zod.number().describe("Longitude coordinate (WGS84)"),
+        lat: zod
+            .number()
+            .min(checkPointBodyLatMin)
+            .max(checkPointBodyLatMax)
+            .describe("Latitude coordinate (WGS84)"),
+        lon: zod
+            .number()
+            .min(checkPointBodyLonMin)
+            .max(checkPointBodyLonMax)
+            .describe("Longitude coordinate (WGS84)"),
         alt: zod
             .number()
             .default(checkPointBodyAltDefault)
@@ -333,7 +375,13 @@ export const checkPointResponse = zod
  * Validate a multi-waypoint flight path by sampling points along the trajectory at specified intervals to detect intersecting no-fly zones.
  * @summary Check flight route polyline for airspace conflicts
  */
+export const checkPathBodyPointsItemLatMin = -90;
+export const checkPathBodyPointsItemLatMax = 90;
+export const checkPathBodyPointsItemLonMin = -180;
+export const checkPathBodyPointsItemLonMax = 180;
 export const checkPathBodyPointsItemAltDefault = 0.0;
+export const checkPathBodyPointsMin = 2;
+export const checkPathBodyPointsMax = 2147483647;
 export const checkPathBodySpacingMDefault = 200.0;
 
 export const checkPathBody = zod
@@ -342,8 +390,16 @@ export const checkPathBody = zod
             .array(
                 zod
                     .object({
-                        lat: zod.number().describe("Latitude coordinate (WGS84)"),
-                        lon: zod.number().describe("Longitude coordinate (WGS84)"),
+                        lat: zod
+                            .number()
+                            .min(checkPathBodyPointsItemLatMin)
+                            .max(checkPathBodyPointsItemLatMax)
+                            .describe("Latitude coordinate (WGS84)"),
+                        lon: zod
+                            .number()
+                            .min(checkPathBodyPointsItemLonMin)
+                            .max(checkPathBodyPointsItemLonMax)
+                            .describe("Longitude coordinate (WGS84)"),
                         alt: zod
                             .number()
                             .default(checkPathBodyPointsItemAltDefault)
@@ -351,7 +407,8 @@ export const checkPathBody = zod
                     })
                     .describe("3D coordinate waypoint point for path checking")
             )
-            .min(1)
+            .min(checkPathBodyPointsMin)
+            .max(checkPathBodyPointsMax)
             .describe("Ordered list of 3D waypoint coordinates representing the flight route"),
         spacingM: zod
             .number()
@@ -360,6 +417,10 @@ export const checkPathBody = zod
     })
     .describe("Payload for multi-waypoint flight path airspace conflict check");
 
+export const checkPathResponseViolationsItemConflictPointLatMin = -90;
+export const checkPathResponseViolationsItemConflictPointLatMax = 90;
+export const checkPathResponseViolationsItemConflictPointLonMin = -180;
+export const checkPathResponseViolationsItemConflictPointLonMax = 180;
 export const checkPathResponseViolationsItemConflictPointAltDefault = 0.0;
 
 export const checkPathResponse = zod
@@ -394,8 +455,16 @@ export const checkPathResponse = zod
                             .describe("Altitude ceiling limit in meters (m)"),
                         conflictPoint: zod
                             .object({
-                                lat: zod.number().describe("Latitude coordinate (WGS84)"),
-                                lon: zod.number().describe("Longitude coordinate (WGS84)"),
+                                lat: zod
+                                    .number()
+                                    .min(checkPathResponseViolationsItemConflictPointLatMin)
+                                    .max(checkPathResponseViolationsItemConflictPointLatMax)
+                                    .describe("Latitude coordinate (WGS84)"),
+                                lon: zod
+                                    .number()
+                                    .min(checkPathResponseViolationsItemConflictPointLonMin)
+                                    .max(checkPathResponseViolationsItemConflictPointLonMax)
+                                    .describe("Longitude coordinate (WGS84)"),
                                 alt: zod
                                     .number()
                                     .default(checkPathResponseViolationsItemConflictPointAltDefault)

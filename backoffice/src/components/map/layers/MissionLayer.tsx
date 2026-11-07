@@ -47,12 +47,12 @@ export function MissionLayer({
             const allPoints: { lng: number; lat: number }[] = [];
 
             if (
-                departureHub?.location?.lat !== undefined &&
-                departureHub.location?.lng !== undefined
+                departureHub?.location?.latitude !== undefined &&
+                departureHub.location?.longitude !== undefined
             ) {
                 const depId = "hub-dep-marker";
-                const lng = departureHub.location.lng;
-                const lat = departureHub.location.lat;
+                const lng = departureHub.location.longitude;
+                const lat = departureHub.location.latitude;
                 allPoints.push({ lng, lat });
 
                 const isSameHub = arrivalHub?.id === departureHub.id;
@@ -81,13 +81,13 @@ export function MissionLayer({
             }
 
             if (
-                arrivalHub?.location?.lat !== undefined &&
-                arrivalHub.location?.lng !== undefined &&
+                arrivalHub?.location?.latitude !== undefined &&
+                arrivalHub.location?.longitude !== undefined &&
                 arrivalHub.id !== departureHub?.id
             ) {
                 const arrId = "hub-arr-marker";
-                const lng = arrivalHub.location.lng;
-                const lat = arrivalHub.location.lat;
+                const lng = arrivalHub.location.longitude;
+                const lat = arrivalHub.location.latitude;
                 allPoints.push({ lng, lat });
 
                 const entity = viewer.entities.add({

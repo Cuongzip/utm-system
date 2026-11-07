@@ -335,8 +335,10 @@ export const createDroneBody = zod
     .object({
         registrationNumber: zod
             .string()
-            .min(1)
-            .describe("Unique aircraft registration number / identifier"),
+            .optional()
+            .describe(
+                "Aircraft registration number / tail identifier. If omitted or blank, a unique number will be auto-generated (e.g. DRN-YYYY-XXXX)."
+            ),
         manufacturer: zod.string().min(1).describe("Manufacturer name"),
         model: zod.string().min(1).describe("Model / airframe designation"),
         ownerId: zod.string().optional().describe("Identifier of the owner organization"),

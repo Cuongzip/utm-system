@@ -1,12 +1,14 @@
 "use client";
 
 import { TacticalMapContainer, HubsLayer, MapInspector } from "@/components/map";
+import { StatusBadge } from "@/components/ui";
+import { formatDistance, formatAltitude, formatCoordinate } from "@/utils";
 import type { Hub } from "@/types";
 
 interface HubsMapProps {
     hubs: Hub[];
     selectedHubId?: string | null;
-    onSelectHub?: (hub: Hub) => void;
+    onSelectHub: (hub: Hub | null) => void;
 }
 
 export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps) {
@@ -16,7 +18,7 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
         <TacticalMapContainer
             onEntityClick={(entityId) => {
                 const found = hubs.find((h) => h.id === entityId);
-                if (found && onSelectHub) {
+                if (found) {
                     onSelectHub(found);
                 }
             }}
@@ -25,22 +27,27 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
                     <MapInspector
                         code={selectedHub.code}
                         title={selectedHub.name}
+                        badge={<StatusBadge status={selectedHub.status || "active"} />}
                         metaItems={[
                             {
                                 label: "Lat",
-                                value: (selectedHub.location?.lat ?? 0).toFixed(4),
+                                value: formatCoordinate(selectedHub.location?.latitude),
                             },
                             {
                                 label: "Lng",
-                                value: (selectedHub.location?.lng ?? 0).toFixed(4),
+                                value: formatCoordinate(selectedHub.location?.longitude),
                             },
                             {
                                 label: "Radius",
-                                value: `${selectedHub.airspaceRadius || 5000}m`,
+                                value: formatDistance(selectedHub.airspaceRadius),
+                            },
+                            {
+                                label: "Altitude",
+                                value: formatAltitude(selectedHub.altitudeMsl),
                             },
                         ]}
                         accentColor="default"
-                        onClose={() => onSelectHub?.(null as unknown as Hub)}
+                        onClose={() => onSelectHub(null)}
                         closeTooltip="Close hub inspector"
                     />
                 ) : null
@@ -50,5 +57,3 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
         </TacticalMapContainer>
     );
 }
-
-export default HubsMap;

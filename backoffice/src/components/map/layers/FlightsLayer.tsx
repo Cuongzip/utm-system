@@ -76,10 +76,10 @@ export function FlightsLayer({
             const effectiveHubMap = new Map<string, FlightHubCoord>();
             if (hubs && hubs.length > 0) {
                 hubs.forEach((h) => {
-                    if (h.location?.lat !== undefined && h.location?.lng !== undefined) {
+                    if (h.location?.latitude !== undefined && h.location?.longitude !== undefined) {
                         effectiveHubMap.set(h.id, {
-                            lat: h.location.lat,
-                            lng: h.location.lng,
+                            lat: h.location.latitude,
+                            lng: h.location.longitude,
                             name: h.name,
                             code: h.code,
                         });

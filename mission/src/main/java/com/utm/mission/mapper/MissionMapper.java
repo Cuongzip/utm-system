@@ -57,6 +57,7 @@ public interface MissionMapper {
     List<MissionVm> toVmList(List<Mission> entities);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "code", ignore = true)
     @Mapping(target = "waypoints", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
@@ -65,6 +66,7 @@ public interface MissionMapper {
     Mission cloneEntity(Mission original);
 
     @Mapping(target = "id", source = "entity.id")
+    @Mapping(target = "code", source = "entity.code")
     @Mapping(target = "name", source = "entity.name")
     @Mapping(target = "description", source = "entity.description")
     @Mapping(target = "departureHubId", source = "entity.departureHubId")

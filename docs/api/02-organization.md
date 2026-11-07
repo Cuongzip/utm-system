@@ -61,8 +61,10 @@ export type OrganizationStatus = "active" | "suspended" | "inactive";
   }
   ```
 - **Logic xử lý cốt lõi**:
-  1. **Validation**: `name` và `type` và `registrationNumber` bắt buộc không để trống.
-  2. **Check Unique**: `registrationNumber` chưa từng tồn tại. Nếu đã có $\rightarrow$ Trả về `409 Conflict`.
+  1. **Validation**: `name` và `type` bắt buộc không để trống.
+  2. **Registration Number Generation & Unique Check**:
+     - Nếu `registrationNumber` bỏ trống hoặc null: Tự động sinh mã duy nhất theo rule `ORGANIZATION_REGISTRATION` (`ORG-YYYY-XXXX`, ví dụ `ORG-2026-5SP4`).
+     - Nếu người dùng nhập tay: Chuẩn hóa trim/uppercase và kiểm tra trùng lặp trong DB. Nếu đã tồn tại $\rightarrow$ Trả về `409 Conflict`.
   3. **Khởi tạo**: Gán `status = 'active'`, tự động sinh UUID `id`.
 - **Phản hồi thành công**: `201 Created` - Model: `OrganizationVm`:
   ```json

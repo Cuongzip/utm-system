@@ -11,9 +11,8 @@ public record DeviceRegistrationPostVm(
         @Schema(description = "Unique UUID of the drone", example = "d1b2c3d4-e5f6-7890-abcd-ef1234567890")
         String droneId,
 
-        @NotBlank(message = "Device identifier must not be blank")
         @Size(max = 100, message = "Device identifier must not exceed 100 characters")
-        @Schema(description = "Unique hardware identifier (MAC address, IMEI, or serial number)", example = "DRONE-MAC-9876543210AB")
+        @Schema(description = "Unique hardware identifier (MAC address, IMEI, or serial number). If omitted or blank, a unique identifier will be auto-generated (e.g. DEV-XXXXXXXX).", example = "DRONE-MAC-9876543210AB")
         String deviceIdentifier,
 
         @Size(max = 128, message = "Certificate fingerprint must not exceed 128 characters")

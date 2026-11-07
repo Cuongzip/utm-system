@@ -3,12 +3,18 @@ package com.utm.mission.viewmodel.mission;
 import com.utm.mission.model.enumeration.MissionScheduleType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.ZonedDateTime;
 
 @Schema(description = "Request payload for creating a mission")
 public record MissionPostVm(
+        @Schema(description = "Mission business tracking code (e.g. MSN-YYMMDD-XXXX). If omitted or blank, auto-generated.", example = "MSN-261107-A4B2")
+        @Size(min = 3, max = 50, message = "Mission code must be between 3 and 50 characters")
+        @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Mission code must contain only alphanumeric characters, dashes, and underscores")
+        String code,
+
         @Schema(description = "Mission name", example = "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2")
         @NotBlank(message = "Mission name is required")
         @Size(max = 255, message = "Mission name must not exceed 255 characters")

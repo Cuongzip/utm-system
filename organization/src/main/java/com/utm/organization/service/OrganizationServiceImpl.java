@@ -4,6 +4,8 @@ import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.generator.BusinessCodeGenerator;
+import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.organization.mapper.OrganizationMapper;
 import com.utm.organization.model.Organization;
 import com.utm.organization.model.enumeration.OrganizationStatus;
@@ -89,11 +91,18 @@ public class OrganizationServiceImpl implements OrganizationService {
     public OrganizationVm createOrganization(OrganizationPostVm organizationPostVm) {
         Organization organization = organizationMapper.toEntity(organizationPostVm);
 
-        if (organizationRepository.existsByRegistrationNumber(organization.getRegistrationNumber())) {
-            throw new DuplicatedException(
-                    MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
-                    organization.getRegistrationNumber()
-            );
+        if (organization.getRegistrationNumber() == null || organization.getRegistrationNumber().isBlank()) {
+            organization.setRegistrationNumber(BusinessCodeGenerator.generateUnique(
+                    CodePatternRule.ORGANIZATION_REGISTRATION,
+                    organizationRepository::existsByRegistrationNumber));
+        } else {
+            organization.setRegistrationNumber(organization.getRegistrationNumber().trim().toUpperCase());
+            if (organizationRepository.existsByRegistrationNumber(organization.getRegistrationNumber())) {
+                throw new DuplicatedException(
+                        MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
+                        organization.getRegistrationNumber()
+                );
+            }
         }
 
         Organization savedOrganization = organizationRepository.saveAndFlush(organization);

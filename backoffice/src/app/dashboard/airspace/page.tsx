@@ -7,7 +7,6 @@ import {
     ChamferButton,
     OutlineButton,
     PageHeader,
-    AlertBanner,
     TableFilterBar,
     type SelectOption,
 } from "@/components/ui";
@@ -33,8 +32,6 @@ export default function AirspacePage() {
     const {
         items: zones,
         loading,
-        error,
-        setError,
         refresh: refreshZones,
         highlightedId: highlightedZoneId,
         handleDelete: handleDeleteZone,
@@ -64,6 +61,7 @@ export default function AirspacePage() {
             const hubName = (z.hubId ? hubMap.get(z.hubId) : "") || "";
             const matchesSearch =
                 !query ||
+                (z.code || "").toLowerCase().includes(query) ||
                 (z.name || "").toLowerCase().includes(query) ||
                 (z.zoneType || "").toLowerCase().includes(query) ||
                 (z.description || "").toLowerCase().includes(query) ||
@@ -102,8 +100,6 @@ export default function AirspacePage() {
                 </ChamferButton>
             </PageHeader>
 
-            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
-
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -118,7 +114,6 @@ export default function AirspacePage() {
                 loading={loading}
                 selectedZoneId={highlightedZoneId}
                 onSelectZone={handleSelectZone}
-                onEditZone={handleSelectZone}
                 onDeleteZone={handleDeleteZone}
                 hubMap={hubMap}
             />

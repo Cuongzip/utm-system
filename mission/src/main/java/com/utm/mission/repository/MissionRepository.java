@@ -16,4 +16,8 @@ public interface MissionRepository extends JpaRepository<Mission, String>, JpaSp
     @EntityGraph(attributePaths = {"waypoints"})
     @Query("SELECT m FROM Mission m WHERE m.id = :id")
     Optional<Mission> findByIdWithWaypoints(@Param("id") String id);
+
+    boolean existsByCode(String code);
+
+    Optional<Mission> findByCode(String code);
 }

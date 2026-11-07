@@ -36,6 +36,9 @@ public class EmergencyIncident extends AbstractAuditEntity {
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
 
+    @Column(name = "incident_number", length = 50, unique = true)
+    private String incidentNumber;
+
     @Column(name = "drone_id", length = 36, nullable = false)
     private String droneId;
 

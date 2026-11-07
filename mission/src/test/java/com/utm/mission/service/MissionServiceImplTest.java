@@ -1,6 +1,7 @@
 package com.utm.mission.service;
 
 import com.utm.commonlibrary.exception.BadRequestException;
+import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.mission.mapper.MissionMapper;
 import com.utm.mission.mapper.WaypointMapper;
@@ -87,6 +88,7 @@ class MissionServiceImplTest {
 
         testMission = Mission.builder()
                 .id(MISSION_ID)
+                .code("MSN-261107-TEST")
                 .name("Medical Supply Transport")
                 .description("Urgent blood delivery")
                 .departureHubId(DEP_HUB_ID)
@@ -102,6 +104,7 @@ class MissionServiceImplTest {
     @DisplayName("createMission - with valid immediate schedule creates and returns mission")
     void createMission_withValidImmediateSchedule_shouldCreateAndReturnMission() {
         MissionPostVm postVm = new MissionPostVm(
+                null,
                 "Medical Supply Transport",
                 "Urgent blood delivery",
                 DEP_HUB_ID,
@@ -139,6 +142,7 @@ class MissionServiceImplTest {
     void createMission_withFutureScheduledTime_shouldCreateMissionSuccessfully() {
         ZonedDateTime futureTime = ZonedDateTime.now().plusDays(1);
         MissionPostVm postVm = new MissionPostVm(
+                null,
                 "Scheduled Inspection Mission",
                 "Bridge structural inspection",
                 DEP_HUB_ID,
@@ -149,6 +153,7 @@ class MissionServiceImplTest {
 
         Mission scheduledMission = Mission.builder()
                 .id(MISSION_ID)
+                .code("MSN-261107-SCHED")
                 .name(postVm.name())
                 .description(postVm.description())
                 .departureHubId(DEP_HUB_ID)
@@ -178,10 +183,65 @@ class MissionServiceImplTest {
     }
 
     @Test
+    @DisplayName("createMission - with manual unique code uses manual code")
+    void createMission_withManualUniqueCode_shouldUseManualCode() {
+        MissionPostVm postVm = new MissionPostVm(
+                "MSN-261107-MANU",
+                "Medical Supply Transport",
+                "Urgent blood delivery",
+                DEP_HUB_ID,
+                ARR_HUB_ID,
+                MissionScheduleType.IMMEDIATE,
+                null
+        );
+
+        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
+        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
+        when(missionRepository.existsByCode("MSN-261107-MANU")).thenReturn(false);
+        when(missionMapper.toEntity(postVm)).thenReturn(testMission);
+        when(missionRepository.save(testMission)).thenReturn(testMission);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
+
+        MissionVm expectedVm = createMissionVm(testMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
+        when(missionMapper.toVm(eq(testMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
+                .thenReturn(expectedVm);
+
+        MissionVm result = missionService.createMission(postVm);
+
+        assertThat(result).isNotNull();
+        assertThat(testMission.getCode()).isEqualTo("MSN-261107-MANU");
+        verify(missionRepository).save(testMission);
+    }
+
+    @Test
+    @DisplayName("createMission - with duplicate manual code throws DuplicatedException")
+    void createMission_withDuplicateManualCode_shouldThrowDuplicatedException() {
+        MissionPostVm postVm = new MissionPostVm(
+                "MSN-261107-DUPL",
+                "Medical Supply Transport",
+                "Urgent blood delivery",
+                DEP_HUB_ID,
+                ARR_HUB_ID,
+                MissionScheduleType.IMMEDIATE,
+                null
+        );
+
+        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
+        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
+        when(missionRepository.existsByCode("MSN-261107-DUPL")).thenReturn(true);
+
+        assertThatThrownBy(() -> missionService.createMission(postVm))
+                .isInstanceOf(DuplicatedException.class);
+
+        verify(missionRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("createMission - when departure hub does not exist throws NotFoundException")
     void createMission_whenDepartureHubNotFound_shouldThrowNotFoundException() {
         MissionPostVm postVm = new MissionPostVm(
-                "Test Mission", "Desc", "non-existent-dep", ARR_HUB_ID, MissionScheduleType.IMMEDIATE, null
+                null, "Test Mission", "Desc", "non-existent-dep", ARR_HUB_ID, MissionScheduleType.IMMEDIATE, null
         );
         when(hubClientService.checkHubExists("non-existent-dep")).thenReturn(false);
 
@@ -195,7 +255,7 @@ class MissionServiceImplTest {
     @DisplayName("createMission - when arrival hub does not exist throws NotFoundException")
     void createMission_whenArrivalHubNotFound_shouldThrowNotFoundException() {
         MissionPostVm postVm = new MissionPostVm(
-                "Test Mission", "Desc", DEP_HUB_ID, "non-existent-arr", MissionScheduleType.IMMEDIATE, null
+                null, "Test Mission", "Desc", DEP_HUB_ID, "non-existent-arr", MissionScheduleType.IMMEDIATE, null
         );
         when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
         when(hubClientService.checkHubExists("non-existent-arr")).thenReturn(false);
@@ -210,7 +270,7 @@ class MissionServiceImplTest {
     @DisplayName("createMission - when scheduled type has null scheduledAt throws BadRequestException")
     void createMission_whenScheduledAtIsNull_shouldThrowBadRequestException() {
         MissionPostVm postVm = new MissionPostVm(
-                "Test Mission", "Desc", DEP_HUB_ID, ARR_HUB_ID, MissionScheduleType.SCHEDULED, null
+                null, "Test Mission", "Desc", DEP_HUB_ID, ARR_HUB_ID, MissionScheduleType.SCHEDULED, null
         );
         when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
         when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
@@ -225,7 +285,7 @@ class MissionServiceImplTest {
     @DisplayName("createMission - when scheduledAt is in the past throws BadRequestException")
     void createMission_whenScheduledAtIsInPast_shouldThrowBadRequestException() {
         MissionPostVm postVm = new MissionPostVm(
-                "Test Mission", "Desc", DEP_HUB_ID, ARR_HUB_ID, MissionScheduleType.SCHEDULED, ZonedDateTime.now().minusHours(2)
+                null, "Test Mission", "Desc", DEP_HUB_ID, ARR_HUB_ID, MissionScheduleType.SCHEDULED, ZonedDateTime.now().minusHours(2)
         );
         when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
         when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
@@ -512,6 +572,7 @@ class MissionServiceImplTest {
                                       List<WaypointVm> waypoints, HubBriefVm depHub, HubBriefVm arrHub) {
         return new MissionVm(
                 mission.getId(),
+                mission.getCode(),
                 mission.getName(),
                 mission.getDescription(),
                 mission.getDepartureHubId(),

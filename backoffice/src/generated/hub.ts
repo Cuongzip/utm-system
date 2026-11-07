@@ -8,17 +8,17 @@
 import zod from "zod";
 
 /**
- * Retrieve complete technical profile, coordinates, available drones count, and corridors of a Hub.
+ * Retrieve operational specifications and coordinates of a Hub.
  * @summary Get Hub by ID
  */
 export const getHubByIdParams = zod.object({
     id: zod.string().describe("Unique UUID of the Hub"),
 });
 
-export const getHubByIdResponseLocationLatMin = -90;
-export const getHubByIdResponseLocationLatMax = 90;
-export const getHubByIdResponseLocationLngMin = -180;
-export const getHubByIdResponseLocationLngMax = 180;
+export const getHubByIdResponseLocationLatitudeMin = -90;
+export const getHubByIdResponseLocationLatitudeMax = 90;
+export const getHubByIdResponseLocationLongitudeMin = -180;
+export const getHubByIdResponseLocationLongitudeMax = 180;
 
 export const getHubByIdResponse = zod
     .object({
@@ -27,15 +27,15 @@ export const getHubByIdResponse = zod
         name: zod.string().optional().describe("Display name of the Hub / Vertiport"),
         location: zod
             .object({
-                lat: zod
+                latitude: zod
                     .number()
-                    .min(getHubByIdResponseLocationLatMin)
-                    .max(getHubByIdResponseLocationLatMax)
+                    .min(getHubByIdResponseLocationLatitudeMin)
+                    .max(getHubByIdResponseLocationLatitudeMax)
                     .describe("Latitude (-90 to 90)"),
-                lng: zod
+                longitude: zod
                     .number()
-                    .min(getHubByIdResponseLocationLngMin)
-                    .max(getHubByIdResponseLocationLngMax)
+                    .min(getHubByIdResponseLocationLongitudeMin)
+                    .max(getHubByIdResponseLocationLongitudeMax)
                     .describe("Longitude (-180 to 180)"),
             })
             .optional()
@@ -46,14 +46,6 @@ export const getHubByIdResponse = zod
             .enum(["active", "inactive", "maintenance"])
             .optional()
             .describe("Current operational status of the Hub"),
-        availableDronesCount: zod
-            .number()
-            .optional()
-            .describe("Number of available drones currently docked at the Hub"),
-        corridors: zod
-            .array(zod.string())
-            .optional()
-            .describe("Airspace corridors associated with the Hub"),
         createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
     })
@@ -67,9 +59,29 @@ export const updateHubParams = zod.object({
     id: zod.string().describe("Unique UUID of the Hub"),
 });
 
+export const updateHubBodyLocationLatitudeMin = -90;
+export const updateHubBodyLocationLatitudeMax = 90;
+export const updateHubBodyLocationLongitudeMin = -180;
+export const updateHubBodyLocationLongitudeMax = 180;
+
 export const updateHubBody = zod
     .object({
         name: zod.string().optional().describe("Updated name of the Hub"),
+        location: zod
+            .object({
+                latitude: zod
+                    .number()
+                    .min(updateHubBodyLocationLatitudeMin)
+                    .max(updateHubBodyLocationLatitudeMax)
+                    .describe("Latitude (-90 to 90)"),
+                longitude: zod
+                    .number()
+                    .min(updateHubBodyLocationLongitudeMin)
+                    .max(updateHubBodyLocationLongitudeMax)
+                    .describe("Longitude (-180 to 180)"),
+            })
+            .optional()
+            .describe("WGS84 Geographical coordinates"),
         altitudeMsl: zod
             .number()
             .optional()
@@ -85,10 +97,10 @@ export const updateHubBody = zod
     })
     .describe("Request payload for updating an existing Hub / Vertiport");
 
-export const updateHubResponseLocationLatMin = -90;
-export const updateHubResponseLocationLatMax = 90;
-export const updateHubResponseLocationLngMin = -180;
-export const updateHubResponseLocationLngMax = 180;
+export const updateHubResponseLocationLatitudeMin = -90;
+export const updateHubResponseLocationLatitudeMax = 90;
+export const updateHubResponseLocationLongitudeMin = -180;
+export const updateHubResponseLocationLongitudeMax = 180;
 
 export const updateHubResponse = zod
     .object({
@@ -97,15 +109,15 @@ export const updateHubResponse = zod
         name: zod.string().optional().describe("Display name of the Hub / Vertiport"),
         location: zod
             .object({
-                lat: zod
+                latitude: zod
                     .number()
-                    .min(updateHubResponseLocationLatMin)
-                    .max(updateHubResponseLocationLatMax)
+                    .min(updateHubResponseLocationLatitudeMin)
+                    .max(updateHubResponseLocationLatitudeMax)
                     .describe("Latitude (-90 to 90)"),
-                lng: zod
+                longitude: zod
                     .number()
-                    .min(updateHubResponseLocationLngMin)
-                    .max(updateHubResponseLocationLngMax)
+                    .min(updateHubResponseLocationLongitudeMin)
+                    .max(updateHubResponseLocationLongitudeMax)
                     .describe("Longitude (-180 to 180)"),
             })
             .optional()
@@ -116,14 +128,6 @@ export const updateHubResponse = zod
             .enum(["active", "inactive", "maintenance"])
             .optional()
             .describe("Current operational status of the Hub"),
-        availableDronesCount: zod
-            .number()
-            .optional()
-            .describe("Number of available drones currently docked at the Hub"),
-        corridors: zod
-            .array(zod.string())
-            .optional()
-            .describe("Airspace corridors associated with the Hub"),
         createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
     })
@@ -157,10 +161,10 @@ export const getHubsQueryParams = zod.object({
     offset: zod.number().optional().describe("Offset index (default: 0)"),
 });
 
-export const getHubsResponseItemsItemLocationLatMin = -90;
-export const getHubsResponseItemsItemLocationLatMax = 90;
-export const getHubsResponseItemsItemLocationLngMin = -180;
-export const getHubsResponseItemsItemLocationLngMax = 180;
+export const getHubsResponseItemsItemLocationLatitudeMin = -90;
+export const getHubsResponseItemsItemLocationLatitudeMax = 90;
+export const getHubsResponseItemsItemLocationLongitudeMin = -180;
+export const getHubsResponseItemsItemLocationLongitudeMax = 180;
 
 export const getHubsResponse = zod
     .object({
@@ -179,15 +183,15 @@ export const getHubsResponse = zod
                             .describe("Display name of the Hub / Vertiport"),
                         location: zod
                             .object({
-                                lat: zod
+                                latitude: zod
                                     .number()
-                                    .min(getHubsResponseItemsItemLocationLatMin)
-                                    .max(getHubsResponseItemsItemLocationLatMax)
+                                    .min(getHubsResponseItemsItemLocationLatitudeMin)
+                                    .max(getHubsResponseItemsItemLocationLatitudeMax)
                                     .describe("Latitude (-90 to 90)"),
-                                lng: zod
+                                longitude: zod
                                     .number()
-                                    .min(getHubsResponseItemsItemLocationLngMin)
-                                    .max(getHubsResponseItemsItemLocationLngMax)
+                                    .min(getHubsResponseItemsItemLocationLongitudeMin)
+                                    .max(getHubsResponseItemsItemLocationLongitudeMax)
                                     .describe("Longitude (-180 to 180)"),
                             })
                             .optional()
@@ -201,14 +205,6 @@ export const getHubsResponse = zod
                             .enum(["active", "inactive", "maintenance"])
                             .optional()
                             .describe("Current operational status of the Hub"),
-                        availableDronesCount: zod
-                            .number()
-                            .optional()
-                            .describe("Number of available drones currently docked at the Hub"),
-                        corridors: zod
-                            .array(zod.string())
-                            .optional()
-                            .describe("Airspace corridors associated with the Hub"),
                         createdOn: zod.iso
                             .datetime({})
                             .optional()
@@ -232,26 +228,35 @@ export const getHubsResponse = zod
  * Register a new Takeoff/Landing Hub or Vertiport. Requires admin role.
  * @summary Create a new Hub
  */
-export const createHubBodyLocationLatMin = -90;
-export const createHubBodyLocationLatMax = 90;
-export const createHubBodyLocationLngMin = -180;
-export const createHubBodyLocationLngMax = 180;
+export const createHubBodyCodeMin = 3;
+export const createHubBodyCodeMax = 50;
+export const createHubBodyCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const createHubBodyLocationLatitudeMin = -90;
+export const createHubBodyLocationLatitudeMax = 90;
+export const createHubBodyLocationLongitudeMin = -180;
+export const createHubBodyLocationLongitudeMax = 180;
 
 export const createHubBody = zod
     .object({
-        code: zod.string().min(1).describe("Unique code / callsign identifier of the Hub"),
+        code: zod
+            .string()
+            .min(createHubBodyCodeMin)
+            .max(createHubBodyCodeMax)
+            .regex(createHubBodyCodeRegExp)
+            .optional()
+            .describe("Unique code / callsign identifier of the Hub (auto-generated if omitted)"),
         name: zod.string().min(1).describe("Name of the Hub / Vertiport"),
         location: zod
             .object({
-                lat: zod
+                latitude: zod
                     .number()
-                    .min(createHubBodyLocationLatMin)
-                    .max(createHubBodyLocationLatMax)
+                    .min(createHubBodyLocationLatitudeMin)
+                    .max(createHubBodyLocationLatitudeMax)
                     .describe("Latitude (-90 to 90)"),
-                lng: zod
+                longitude: zod
                     .number()
-                    .min(createHubBodyLocationLngMin)
-                    .max(createHubBodyLocationLngMax)
+                    .min(createHubBodyLocationLongitudeMin)
+                    .max(createHubBodyLocationLongitudeMax)
                     .describe("Longitude (-180 to 180)"),
             })
             .describe("WGS84 Geographical coordinates"),

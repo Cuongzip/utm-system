@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-add-code-to-mission
+      author: cuong
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: mission
+                columnName: code
+      changes:
+        - addColumn:
+            tableName: mission
+            columns:
+              - column:
+                  name: code
+                  type: varchar(50)
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uq_mission_code
