@@ -1,5 +1,6 @@
 import type zod from "zod";
-import type {
+import {
+    getSessionsQueryParams,
     getSessionByIdResponse,
     createSessionBody,
     injectScenarioBody,
@@ -17,12 +18,17 @@ export type SimulationSession = SimulationSessionGenerated & {
     id: string;
 };
 
-export type SimulationStatus =
-    | NonNullable<SimulationSessionGenerated["status"]>
-    | "RUNNING"
-    | "PAUSED"
-    | "STOPPED"
-    | "COMPLETED";
+export const SIMULATION_SESSION_STATUSES = getSessionsQueryParams.shape.status.unwrap().options;
+
+export const SIMULATION_STATUS = {
+    RUNNING: "running",
+    PAUSED: "paused",
+    STOPPED: "stopped",
+    COMPLETED: "completed",
+} as const;
+
+export type SimulationStatus = (typeof SIMULATION_SESSION_STATUSES)[number];
+export const DEFAULT_SIMULATION_STATUS: SimulationStatus = SIMULATION_STATUS.RUNNING;
 
 export type SimulationEvent = zod.infer<typeof getSessionEventsResponseItem> & {
     configJson?: string;

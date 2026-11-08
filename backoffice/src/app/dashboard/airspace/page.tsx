@@ -3,13 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw, ShieldCheck } from "lucide-react";
-import {
-    ChamferButton,
-    OutlineButton,
-    PageHeader,
-    TableFilterBar,
-    type SelectOption,
-} from "@/components/ui";
+import { ChamferButton, PageHeader, TableFilterBar, type SelectOption } from "@/components/ui";
 import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
@@ -82,15 +76,20 @@ export default function AirspacePage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="AIRSPACE & GEOFENCING">
-                <OutlineButton size="sm" onClick={() => setIsBriefingOpen(true)}>
+                <ChamferButton
+                    variant="outline"
+                    size="sm"
+                    clip="xs"
+                    onClick={() => setIsBriefingOpen(true)}
+                >
                     <ShieldCheck className="w-3.5 h-3.5 text-[#334155]" />
                     <span>Pre-Flight Check</span>
-                </OutlineButton>
+                </ChamferButton>
 
-                <OutlineButton size="sm" onClick={handleRefreshAll}>
+                <ChamferButton variant="outline" size="sm" clip="xs" onClick={handleRefreshAll}>
                     <RotateCw className="w-3.5 h-3.5 text-[#334155]" />
                     <span>Refresh</span>
-                </OutlineButton>
+                </ChamferButton>
 
                 <ChamferButton
                     variant="dark"

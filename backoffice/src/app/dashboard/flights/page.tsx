@@ -4,13 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
-import {
-    ChamferButton,
-    OutlineButton,
-    PageHeader,
-    TableFilterBar,
-    type SelectOption,
-} from "@/components/ui";
+import { ChamferButton, PageHeader, TableFilterBar, type SelectOption } from "@/components/ui";
 import { FlightsTable } from "@/components/flights";
 import { flightService } from "@/services/flightService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
@@ -135,10 +129,10 @@ export default function FlightsPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="FLIGHTS">
-                <OutlineButton size="sm" onClick={fetchData}>
+                <ChamferButton variant="outline" size="sm" clip="xs" onClick={fetchData}>
                     <RotateCw className="w-3.5 h-3.5 text-slate-500" />
                     <span>Refresh</span>
-                </OutlineButton>
+                </ChamferButton>
 
                 <ChamferButton
                     variant="dark"

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
-import { SplitMapLayout, ChamferButton, OutlineButton, StatusBadge } from "@/components/ui";
+import { SplitMapLayout, ChamferButton, StatusBadge } from "@/components/ui";
 import {
     FlightMapEditor,
     FlightFormSidebar,
@@ -249,19 +249,22 @@ export function FlightEditor({
             badges={mode === "edit" ? <StatusBadge status={flightStatus} showDot /> : null}
             headerActions={
                 <div className="flex items-center gap-2">
-                    <OutlineButton
+                    <ChamferButton
+                        variant="outline"
                         size="sm"
+                        clip="xs"
                         onClick={() => router.push("/dashboard/flights")}
                         disabled={submitting}
                     >
                         <ArrowLeft className="w-3.5 h-3.5 text-current" />
                         <span>Cancel</span>
-                    </OutlineButton>
+                    </ChamferButton>
 
                     {!isReadOnly && (
                         <ChamferButton
                             variant="dark"
                             size="sm"
+                            clip="sm"
                             onClick={handleSave}
                             disabled={submitting || loading}
                         >

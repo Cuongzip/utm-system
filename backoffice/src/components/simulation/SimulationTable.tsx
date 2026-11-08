@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { PlayCircle, Pause, Play, Square, Trash2, Eye, AlertTriangle } from "lucide-react";
 import {
@@ -20,16 +19,17 @@ import {
     EmptyState,
 } from "@/components/ui";
 import { InjectScenarioModal } from "./InjectScenarioModal";
-import type { SimulationSession } from "@/types";
+import { useFlightsAll, useDronesAll } from "@/hooks";
+import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS, type SimulationSession } from "@/types";
 
 interface SimulationTableProps {
     sessions: SimulationSession[];
     loading?: boolean;
-    onPauseSession?: (id: string) => void;
-    onResumeSession?: (id: string) => void;
-    onStopSession?: (id: string) => void;
-    onDeleteSession?: (id: string) => void;
-    onRefresh?: () => void;
+    onPauseSession: (id: string) => void;
+    onResumeSession: (id: string) => void;
+    onStopSession: (id: string) => void;
+    onDeleteSession: (id: string) => void;
+    onRefresh: () => void;
 }
 
 export function SimulationTable({
@@ -42,64 +42,75 @@ export function SimulationTable({
     onRefresh,
 }: SimulationTableProps) {
     const router = useRouter();
+    const { data: flights = [] } = useFlightsAll();
+    const { data: drones = [] } = useDronesAll();
     const [sessionToDelete, setSessionToDelete] = useState<SimulationSession | null>(null);
     const [sessionForInject, setSessionForInject] = useState<SimulationSession | null>(null);
 
+    const flightMap = useMemo(
+        () => new Map(flights.filter((f) => f.id).map((f) => [f.id, f])),
+        [flights]
+    );
+
+    const droneMap = useMemo(
+        () =>
+            new Map(
+                drones
+                    .filter((d) => d.id)
+                    .map((d) => [d.id, d.registrationNumber || d.model || d.id])
+            ),
+        [drones]
+    );
+
     const getActions = (session: SimulationSession): ActionMenuItem[] => {
-        const items: ActionMenuItem[] = [];
+        const items: ActionMenuItem[] = [
+            {
+                label: "View Details",
+                icon: <Eye className="w-3.5 h-3.5 text-slate-600" />,
+                onClick: () => router.push(`/dashboard/simulation/${session.id}`),
+            },
+        ];
         const normStatus = String(session.status || "").toLowerCase();
 
-        items.push({
-            label: "View Details",
-            icon: <Eye className="w-3.5 h-3.5 text-slate-600" />,
-            onClick: () => router.push(`/dashboard/simulation/${session.id}`),
-        });
-
-        if (normStatus === "running") {
-            items.push({
-                label: "Inject Scenario",
-                icon: <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />,
-                onClick: () => setSessionForInject(session),
-            });
-            if (onPauseSession) {
-                items.push({
+        if (normStatus === SIMULATION_STATUS.RUNNING) {
+            items.push(
+                {
+                    label: "Inject Scenario",
+                    icon: <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />,
+                    onClick: () => setSessionForInject(session),
+                },
+                {
                     label: "Pause",
                     icon: <Pause className="w-3.5 h-3.5 text-amber-500" />,
                     onClick: () => onPauseSession(session.id),
-                });
-            }
-            if (onStopSession) {
-                items.push({
+                },
+                {
                     label: "Stop",
                     icon: <Square className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onStopSession(session.id),
-                });
-            }
-        } else if (normStatus === "paused") {
-            if (onResumeSession) {
-                items.push({
+                }
+            );
+        } else if (normStatus === SIMULATION_STATUS.PAUSED) {
+            items.push(
+                {
                     label: "Resume",
                     icon: <Play className="w-3.5 h-3.5 text-emerald-500" />,
                     onClick: () => onResumeSession(session.id),
-                });
-            }
-            if (onStopSession) {
-                items.push({
+                },
+                {
                     label: "Stop",
                     icon: <Square className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onStopSession(session.id),
-                });
-            }
+                }
+            );
         }
 
-        if (onDeleteSession) {
-            items.push({
-                label: "Delete",
-                icon: <Trash2 className="w-3.5 h-3.5" />,
-                danger: true,
-                onClick: () => setSessionToDelete(session),
-            });
-        }
+        items.push({
+            label: "Delete",
+            icon: <Trash2 className="w-3.5 h-3.5" />,
+            danger: true,
+            onClick: () => setSessionToDelete(session),
+        });
 
         return items;
     };
@@ -111,8 +122,8 @@ export function SimulationTable({
                     <TableHeader>
                         <TableRow>
                             <TableHead width="160px">SESSION ID</TableHead>
-                            <TableHead width="160px">FLIGHT</TableHead>
-                            <TableHead width="140px">DRONE</TableHead>
+                            <TableHead width="170px">FLIGHT NUMBER</TableHead>
+                            <TableHead width="200px">DRONE REGISTER NUMBER</TableHead>
                             <TableHead width="130px">STATUS</TableHead>
                             <TableHead width="140px">SPEED & ACCEL</TableHead>
                             <TableHead width="100px">BATTERY</TableHead>
@@ -138,8 +149,17 @@ export function SimulationTable({
                         ) : (
                             sessions.map((session) => {
                                 const sessionIdText = session.id || "—";
-                                const flightText = session.flightId || "—";
-                                const droneText = session.droneId || "Auto (from flight)";
+                                const flight = session.flightId
+                                    ? flightMap.get(session.flightId)
+                                    : undefined;
+                                const flightNumText =
+                                    flight?.flightNumber || session.flightId || "—";
+
+                                const effectiveDroneId = session.droneId || flight?.droneId;
+                                const droneRegText = effectiveDroneId
+                                    ? droneMap.get(effectiveDroneId) || effectiveDroneId
+                                    : "—";
+
                                 const speedScaleText = `${(session.speed ?? 15).toFixed(1)} m/s (${(session.timeScale ?? 1).toFixed(1)}x)`;
 
                                 const battery = session.currentBattery ?? 100;
@@ -154,7 +174,7 @@ export function SimulationTable({
                                 const distText =
                                     session.traveledDistance != null
                                         ? `${(session.traveledDistance / 1000).toFixed(1)} / ${(
-                                              (session.totalDistance || 0) / 1000
+                                              (session.totalDistance ?? 0) / 1000
                                           ).toFixed(1)} km`
                                         : "";
 
@@ -167,21 +187,18 @@ export function SimulationTable({
                                         }
                                     >
                                         <TableCell mono bold truncate tooltip={sessionIdText}>
-                                            <Link
-                                                href={`/dashboard/simulation/${session.id}`}
-                                                className="text-slate-900 hover:text-cyan-600 hover:underline transition-colors cursor-pointer"
-                                            >
-                                                {sessionIdText}
-                                            </Link>
+                                            {sessionIdText}
                                         </TableCell>
-                                        <TableCell mono truncate tooltip={flightText}>
-                                            {flightText}
+                                        <TableCell mono truncate tooltip={flightNumText}>
+                                            {flightNumText}
                                         </TableCell>
-                                        <TableCell darkText truncate tooltip={droneText}>
-                                            {droneText}
+                                        <TableCell darkText truncate tooltip={droneRegText}>
+                                            {droneRegText}
                                         </TableCell>
                                         <TableCell>
-                                            <StatusBadge status={session.status || "RUNNING"} />
+                                            <StatusBadge
+                                                status={session.status ?? DEFAULT_SIMULATION_STATUS}
+                                            />
                                         </TableCell>
                                         <TableCell mono darkText>
                                             {speedScaleText}
@@ -227,7 +244,7 @@ export function SimulationTable({
                 isOpen={!!sessionToDelete}
                 onClose={() => setSessionToDelete(null)}
                 onConfirm={() => {
-                    if (sessionToDelete && onDeleteSession) {
+                    if (sessionToDelete) {
                         onDeleteSession(sessionToDelete.id);
                         setSessionToDelete(null);
                     }
@@ -255,5 +272,3 @@ export function SimulationTable({
         </div>
     );
 }
-
-export default SimulationTable;

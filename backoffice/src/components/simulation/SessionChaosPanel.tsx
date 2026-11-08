@@ -1,24 +1,17 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-    Satellite,
-    ZapOff,
-    WifiOff,
-    TriangleAlert,
-    ShieldAlert,
-    Loader2,
-    Flame,
-} from "lucide-react";
-import { ChamferCard, StatusBadge } from "@/components/ui";
+import { Satellite, ZapOff, WifiOff, TriangleAlert, ShieldAlert, Loader2 } from "lucide-react";
+import { ChamferCard, ChamferButton, StatusBadge } from "@/components/ui";
+import { cn } from "@/lib";
 import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
 import { toast } from "sonner";
-import type { SimulationSession, InjectScenarioPayload } from "@/types";
+import { SIMULATION_STATUS, type SimulationSession, type InjectScenarioPayload } from "@/types";
 
 export interface SessionChaosPanelProps {
     session: SimulationSession;
-    onScenarioInjected?: () => void;
+    onScenarioInjected: () => void;
 }
 
 export interface ScenarioDefinition {
@@ -26,8 +19,6 @@ export interface ScenarioDefinition {
     name: string;
     description: string;
     icon: React.ComponentType<{ className?: string }>;
-    accentColor: string;
-    badgeColor: string;
 }
 
 export const CHAOS_SCENARIOS: ScenarioDefinition[] = [
@@ -36,46 +27,36 @@ export const CHAOS_SCENARIOS: ScenarioDefinition[] = [
         name: "GPS Failure",
         description: "Simulates complete loss of GNSS positioning.",
         icon: Satellite,
-        accentColor: "text-amber-500",
-        badgeColor: "border-amber-200 bg-amber-50 text-amber-700",
     },
     {
         type: "battery_drain",
         name: "Battery Drain",
         description: "Forces rapid battery level depletion.",
         icon: ZapOff,
-        accentColor: "text-red-500",
-        badgeColor: "border-red-200 bg-red-50 text-red-700",
     },
     {
         type: "c2_lost",
         name: "C2 Link Lost",
         description: "Simulates lost C2 command telemetry link.",
         icon: WifiOff,
-        accentColor: "text-orange-500",
-        badgeColor: "border-orange-200 bg-orange-50 text-orange-700",
     },
     {
         type: "motor_failure",
         name: "Motor Failure",
         description: "Simulates propulsion motor subsystem fault.",
         icon: TriangleAlert,
-        accentColor: "text-red-600",
-        badgeColor: "border-red-300 bg-red-100 text-red-800",
     },
     {
         type: "geofence_breach",
         name: "Geofence Breach",
         description: "Forces flight outside authorized airspace boundaries.",
         icon: ShieldAlert,
-        accentColor: "text-purple-500",
-        badgeColor: "border-purple-200 bg-purple-50 text-purple-700",
     },
 ];
 
 export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosPanelProps) {
     const normStatus = String(session.status || "").toLowerCase();
-    const isRunning = normStatus === "running";
+    const isRunning = normStatus === SIMULATION_STATUS.RUNNING;
     const activeScenario = session.activeScenario;
 
     const queryClient = useQueryClient();
@@ -86,7 +67,7 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
             toast.success(`Injected scenario: ${scenario.name}`);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationEvents(session.id) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(session.id) });
-            onScenarioInjected?.();
+            onScenarioInjected();
         },
         meta: { defaultErrorMessage: "Failed to inject emergency scenario" },
     });
@@ -102,26 +83,9 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
     return (
         <div className="flex flex-col gap-3 w-full">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-amber-500" />
-                    <h2 className="text-sm font-bold tracking-wider text-slate-800 uppercase font-mono">
-                        EMERGENCY SCENARIO INJECTION
-                    </h2>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono text-slate-500 uppercase">
-                        Active Scenario:
-                    </span>
-                    {activeScenario ? (
-                        <StatusBadge
-                            status={activeScenario}
-                            label={activeScenario.toUpperCase()}
-                            dotShape="circle"
-                        />
-                    ) : (
-                        <StatusBadge status="offline" label="NONE" dotShape="circle" />
-                    )}
-                </div>
+                <h2 className="text-sm font-bold tracking-wider text-slate-800 uppercase font-mono">
+                    EMERGENCY SCENARIO INJECTION
+                </h2>
             </div>
 
             <ChamferCard size="lg" className="w-full">
@@ -134,18 +98,25 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                             activeScenario?.toLowerCase() === sc.type.toLowerCase();
 
                         return (
-                            <div
+                            <ChamferCard
                                 key={sc.type}
-                                className={`flex flex-col justify-between p-3.5 rounded-lg border transition-all ${
+                                size="sm"
+                                className="w-full flex-1 min-h-[170px]"
+                                innerClassName={cn(
+                                    "p-3.5 flex flex-col justify-between h-full transition-colors",
                                     isThisActive
-                                        ? "border-red-400 bg-red-50/50 shadow-xs"
-                                        : "border-slate-200 bg-slate-50/60 hover:bg-white hover:border-slate-300"
-                                }`}
+                                        ? "bg-red-50/40"
+                                        : "bg-[var(--color-surface-panel)]"
+                                )}
                             >
                                 <div className="flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div
-                                            className={`w-8 h-8 rounded-md flex items-center justify-center bg-white border border-slate-200 shadow-2xs ${sc.accentColor}`}
+                                            className={`w-8 h-8 rounded-md flex items-center justify-center bg-white border shadow-2xs ${
+                                                isThisActive
+                                                    ? "text-rose-600 border-rose-200"
+                                                    : "text-slate-600 border-slate-200"
+                                            }`}
                                         >
                                             <Icon className="w-4 h-4" />
                                         </div>
@@ -167,27 +138,22 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                                     </div>
                                 </div>
 
-                                <div className="mt-3.5 pt-2.5 border-t border-slate-200/80">
-                                    <button
-                                        type="button"
+                                <div className="mt-3.5 pt-2.5 border-t border-[var(--color-border-subtle)]">
+                                    <ChamferButton
+                                        size="xs"
+                                        variant={isThisActive ? "danger" : "outline"}
                                         disabled={!isRunning || injectMutation.isPending}
                                         onClick={() => handleInject(sc)}
-                                        className={`w-full h-7 px-2 text-[11px] font-mono font-bold rounded flex items-center justify-center gap-1.5 transition-all border ${
-                                            !isRunning
-                                                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
-                                                : isThisActive
-                                                  ? "bg-red-600 text-white border-red-700 hover:bg-red-700 cursor-pointer shadow-2xs"
-                                                  : "bg-white text-slate-800 border-slate-300 hover:bg-slate-100 hover:border-slate-400 cursor-pointer shadow-2xs active:scale-98"
-                                        }`}
+                                        className="w-full"
                                     >
                                         {isThisInjecting ? (
-                                            <Loader2 className="w-3 h-3 animate-spin text-slate-600" />
+                                            <Loader2 className="w-3 h-3 animate-spin" />
                                         ) : (
                                             <span>Inject</span>
                                         )}
-                                    </button>
+                                    </ChamferButton>
                                 </div>
-                            </div>
+                            </ChamferCard>
                         );
                     })}
                 </div>
@@ -195,5 +161,3 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
         </div>
     );
 }
-
-export default SessionChaosPanel;

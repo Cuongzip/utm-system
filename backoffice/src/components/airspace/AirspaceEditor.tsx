@@ -3,13 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Trash2, Loader2 } from "lucide-react";
-import {
-    SplitMapLayout,
-    ChamferButton,
-    OutlineButton,
-    StatusBadge,
-    ConfirmDialog,
-} from "@/components/ui";
+import { SplitMapLayout, ChamferButton, StatusBadge, ConfirmDialog } from "@/components/ui";
 import { validateSchema, createFieldErrorCleaner, parseApiError } from "@/utils";
 import { createZoneBody, updateZoneBody } from "@/generated/airspace";
 import type {
@@ -159,30 +153,34 @@ export function AirspaceEditor({
                 }
                 headerActions={
                     <div className="flex items-center gap-3">
-                        <OutlineButton
+                        <ChamferButton
+                            variant="outline"
                             size="sm"
+                            clip="xs"
                             onClick={() => router.push("/dashboard/airspace")}
                             disabled={submitting || isDeleting}
                         >
                             <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
                             <span>Cancel</span>
-                        </OutlineButton>
+                        </ChamferButton>
 
                         {mode === "edit" && onDelete && (
-                            <OutlineButton
+                            <ChamferButton
+                                variant="outline"
                                 size="sm"
+                                clip="xs"
                                 onClick={() => setShowDeleteConfirm(true)}
                                 disabled={submitting || isDeleting}
-                                className="text-rose-500 hover:text-rose-600 hover:border-rose-400"
                             >
-                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                <Trash2 className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Delete</span>
-                            </OutlineButton>
+                            </ChamferButton>
                         )}
 
                         <ChamferButton
                             variant="dark"
                             size="sm"
+                            clip="sm"
                             onClick={handleSave}
                             disabled={submitting || isDeleting || loading}
                         >

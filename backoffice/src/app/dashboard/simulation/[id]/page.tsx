@@ -4,7 +4,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { OutlineButton, StatusBadge, EmptyState, PageHeader } from "@/components/ui";
+import { ChamferButton, StatusBadge, EmptyState, PageHeader } from "@/components/ui";
 import {
     SessionControlsPanel,
     SessionTelemetryCards,
@@ -13,6 +13,7 @@ import {
 } from "@/components/simulation";
 import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
+import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS } from "@/types";
 
 interface SimulationDetailPageProps {
     params: Promise<{ id: string }>;
@@ -32,7 +33,7 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
         enabled: Boolean(id),
         refetchInterval: (query) => {
             const status = String(query.state.data?.status || "").toLowerCase();
-            return status === "running" ? 2000 : false;
+            return status === SIMULATION_STATUS.RUNNING ? 2000 : false;
         },
     });
 
@@ -56,27 +57,36 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
                     title="Simulation session not found"
                     description={`No simulation session found with ID: ${id}`}
                 />
-                <OutlineButton onClick={() => router.push("/dashboard/simulation")}>
+                <ChamferButton
+                    variant="outline"
+                    size="sm"
+                    clip="xs"
+                    onClick={() => router.push("/dashboard/simulation")}
+                >
                     <ArrowLeft className="w-4 h-4 mr-1.5" />
                     <span>Back to Simulations</span>
-                </OutlineButton>
+                </ChamferButton>
             </div>
         );
     }
-
-    const normStatus = String(session.status || "").toLowerCase();
-    const isRunning = normStatus === "running";
 
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader
                 title={`SESSION: ${session.id}`}
-                badges={<StatusBadge status={session.status || "RUNNING"} showDot />}
+                badges={
+                    <StatusBadge status={session.status ?? DEFAULT_SIMULATION_STATUS} showDot />
+                }
             >
-                <OutlineButton size="sm" onClick={() => router.push("/dashboard/simulation")}>
-                    <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
+                <ChamferButton
+                    variant="outline"
+                    size="sm"
+                    clip="xs"
+                    onClick={() => router.push("/dashboard/simulation")}
+                >
+                    <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
                     <span>Back to Sessions</span>
-                </OutlineButton>
+                </ChamferButton>
             </PageHeader>
 
             <SessionControlsPanel session={session} onRefresh={refetch} />

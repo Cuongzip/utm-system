@@ -10,6 +10,7 @@ import type {
     OperationModeVm,
     OperationMode,
     EmergencyProtocolVm,
+    ConfirmIncidentPayload,
 } from "@/types";
 
 export const emergencyService = {
@@ -40,10 +41,17 @@ export const emergencyService = {
         return apiClient<IncidentPageVm>(url);
     },
 
-    confirmIncident: async (id: string, approved: boolean): Promise<EmergencyIncidentVm> => {
+    confirmIncident: async (
+        id: string,
+        payloadOrApproved: ConfirmIncidentPayload | boolean
+    ): Promise<EmergencyIncidentVm> => {
+        const body =
+            typeof payloadOrApproved === "boolean"
+                ? { approved: payloadOrApproved }
+                : payloadOrApproved;
         return apiClient<EmergencyIncidentVm>(API_ENDPOINTS.EMERGENCY.CONFIRM_INCIDENT(id), {
             method: "POST",
-            body: JSON.stringify({ approved }),
+            body: JSON.stringify(body),
         });
     },
 

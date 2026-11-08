@@ -3,7 +3,7 @@
 import React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { ChamferCard, ChamferButton, OutlineButton } from "@/components/ui";
+import { ChamferCard, ChamferButton } from "@/components/ui";
 import { cn } from "@/lib";
 
 export interface ConfirmDialogProps {
@@ -65,19 +65,22 @@ export function ConfirmDialog({
 
                                     <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                                         <AlertDialogPrimitive.Cancel asChild>
-                                            <OutlineButton
+                                            <ChamferButton
+                                                variant="outline"
                                                 size="sm"
+                                                clip="xs"
                                                 onClick={onClose}
                                                 disabled={loading}
                                             >
                                                 {cancelText}
-                                            </OutlineButton>
+                                            </ChamferButton>
                                         </AlertDialogPrimitive.Cancel>
 
                                         <AlertDialogPrimitive.Action asChild>
                                             <ChamferButton
-                                                variant={variant === "danger" ? "danger" : "dark"}
+                                                variant="dark"
                                                 size="sm"
+                                                clip="sm"
                                                 onClick={async (e) => {
                                                     e.preventDefault();
                                                     await onConfirm();

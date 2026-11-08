@@ -4,13 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
-import {
-    PageHeader,
-    ChamferButton,
-    OutlineButton,
-    TableFilterBar,
-    type SelectOption,
-} from "@/components/ui";
+import { PageHeader, ChamferButton, TableFilterBar, type SelectOption } from "@/components/ui";
 import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
@@ -109,10 +103,10 @@ export default function MissionsPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="MISSION PLANNING">
-                <OutlineButton size="sm" onClick={fetchData}>
+                <ChamferButton variant="outline" size="sm" clip="xs" onClick={fetchData}>
                     <RotateCw className="w-3.5 h-3.5 text-slate-500" />
                     <span>Refresh</span>
-                </OutlineButton>
+                </ChamferButton>
 
                 <ChamferButton
                     variant="dark"

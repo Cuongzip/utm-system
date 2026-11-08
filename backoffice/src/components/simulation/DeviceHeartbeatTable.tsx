@@ -14,7 +14,7 @@ import {
     TableLoading,
     EmptyState,
 } from "@/components/ui";
-import type { DeviceRegistration } from "@/types";
+import { ONLINE_DEVICE_STATUS, OFFLINE_DEVICE_STATUS, type DeviceRegistration } from "@/types";
 import { formatRelativeTime, formatDateTime } from "@/utils";
 
 interface DeviceHeartbeatTableProps {
@@ -41,7 +41,6 @@ export function DeviceHeartbeatTable({
         setPendingActions((prev) => ({ ...prev, [actionKey]: true }));
         try {
             await fn(id);
-        } catch {
         } finally {
             setPendingActions((prev) => {
                 const next = { ...prev };
@@ -51,7 +50,7 @@ export function DeviceHeartbeatTable({
         }
     };
 
-    const onlineCount = devices.filter((d) => d.connectionStatus === "online").length;
+    const onlineCount = devices.filter((d) => d.connectionStatus === ONLINE_DEVICE_STATUS).length;
 
     return (
         <div className="flex flex-col gap-3 w-full">
@@ -99,7 +98,7 @@ export function DeviceHeartbeatTable({
                         ) : (
                             devices.map((device) => {
                                 const deviceId = device.id;
-                                const isOnline = device.connectionStatus === "online";
+                                const isOnline = device.connectionStatus === ONLINE_DEVICE_STATUS;
                                 const isPendingOn = Boolean(pendingActions[`${deviceId}-on`]);
                                 const isPendingOff = Boolean(pendingActions[`${deviceId}-off`]);
 
@@ -136,7 +135,9 @@ export function DeviceHeartbeatTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={device.connectionStatus || "offline"}
+                                                status={
+                                                    device.connectionStatus ?? OFFLINE_DEVICE_STATUS
+                                                }
                                             />
                                         </TableCell>
                                         <TableCell
@@ -222,5 +223,3 @@ export function DeviceHeartbeatTable({
         </div>
     );
 }
-
-export default DeviceHeartbeatTable;

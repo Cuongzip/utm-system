@@ -2,16 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import {
-    Radio,
-    Terminal,
-    Cpu,
-    Copy,
-    Check,
-    ExternalLink,
-    ScrollText,
-    Satellite,
-} from "lucide-react";
+import { Copy, Check, ExternalLink, ScrollText, Satellite } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
@@ -28,7 +19,7 @@ import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
 import { toast } from "sonner";
 import { formatTime } from "@/utils";
-import type { SimulationSession, TelemetryRecord } from "@/types";
+import { SIMULATION_STATUS, type SimulationSession, type TelemetryRecord } from "@/types";
 
 export interface SessionLiveFeedProps {
     session: SimulationSession;
@@ -42,7 +33,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
     const normStatus = String(session.status || "").toLowerCase();
-    const isRunning = normStatus === "running";
+    const isRunning = normStatus === SIMULATION_STATUS.RUNNING;
     const isC2Lost = String(session.activeScenario || "").toLowerCase() === "c2_lost";
 
     const handleIncomingRecord = useCallback(
@@ -69,6 +60,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                 speed: session.speed ?? 0,
                 heading: session.currentHeading ?? 0,
                 batteryPercentage: session.currentBattery ?? 100,
+                timestamp: new Date().toISOString(),
             };
 
             setRecords((prev) => {
@@ -112,7 +104,8 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     };
 
     const isCompleted =
-        normStatus === "completed" || (session.progress != null && session.progress >= 100);
+        normStatus === SIMULATION_STATUS.COMPLETED ||
+        (session.progress != null && session.progress >= 100);
 
     const latLonText =
         session.currentLat != null && session.currentLon != null
@@ -126,39 +119,36 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                     <button
                         type="button"
                         onClick={() => setActiveTab("telemetry")}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
                             activeTab === "telemetry"
                                 ? "bg-white text-slate-900 shadow-xs"
                                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                         }`}
                     >
-                        <Radio className="w-3.5 h-3.5 text-cyan-600" />
                         <span>Telemetry</span>
                     </button>
 
                     <button
                         type="button"
                         onClick={() => setActiveTab("events")}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
                             activeTab === "events"
                                 ? "bg-white text-slate-900 shadow-xs"
                                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                         }`}
                     >
-                        <Terminal className="w-3.5 h-3.5 text-slate-700" />
                         <span>Activity Log</span>
                     </button>
 
                     <button
                         type="button"
                         onClick={() => setActiveTab("specs")}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
                             activeTab === "specs"
                                 ? "bg-white text-slate-900 shadow-xs"
                                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                         }`}
                     >
-                        <Cpu className="w-3.5 h-3.5 text-slate-700" />
                         <span>Specs</span>
                     </button>
                 </div>
@@ -233,10 +223,12 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                         return (
                                             <TableRow
                                                 key={rec.id || index}
-                                                className={`transition-colors hover:bg-slate-50 ${isFirst ? "bg-cyan-50/30" : ""}`}
+                                                className={`transition-colors hover:bg-slate-50 ${isFirst ? "bg-slate-50/80" : ""}`}
                                             >
                                                 <TableCell className="font-semibold text-slate-500 whitespace-nowrap">
-                                                    {formatTime(new Date().toISOString())}
+                                                    {formatTime(
+                                                        rec.timestamp ?? new Date().toISOString()
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="font-medium text-slate-800 whitespace-nowrap">
                                                     {lat}, {lon}
@@ -357,7 +349,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                     <>
                                         <Link
                                             href={`/dashboard/flights/${session.flightId}`}
-                                            className="font-bold text-slate-800 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                                            className="font-bold text-slate-800 hover:text-cyan-600 hover:underline transition-colors flex items-center gap-1"
                                             title={session.flightId}
                                         >
                                             <span>
@@ -396,7 +388,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                     <>
                                         <Link
                                             href="/dashboard/drones"
-                                            className="font-bold text-slate-800 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                                            className="font-bold text-slate-800 hover:text-cyan-600 hover:underline transition-colors flex items-center gap-1"
                                             title={session.droneId}
                                         >
                                             <span>
@@ -477,5 +469,3 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
         </div>
     );
 }
-
-export default SessionLiveFeed;

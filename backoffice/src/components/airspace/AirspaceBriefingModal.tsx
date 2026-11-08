@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
-import { Modal, OutlineButton, ChamferButton, StatusBadge } from "@/components/ui";
+import { Modal, ChamferButton, StatusBadge } from "@/components/ui";
 import { formatCoordinates, formatAltitude, formatNullable } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
 import type { CheckPathPayload, CheckPathResult } from "@/types";
@@ -169,9 +169,15 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
             title="Pre-Flight Airspace Check"
             maxWidth="620px"
             footer={
-                <OutlineButton type="button" onClick={handleClose}>
+                <ChamferButton
+                    variant="outline"
+                    size="sm"
+                    clip="xs"
+                    type="button"
+                    onClick={handleClose}
+                >
                     Close
-                </OutlineButton>
+                </ChamferButton>
             }
         >
             <div className="flex flex-col gap-4">
@@ -233,6 +239,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                     <ChamferButton
                         type="button"
                         variant="dark"
+                        size="sm"
+                        clip="sm"
                         onClick={handleRunCheck}
                         disabled={checkMutation.isPending}
                     >

@@ -81,7 +81,7 @@ export default function SimulationPage() {
         onSuccess: (_data, id) => {
             toast.success(`Device ${id.slice(0, 8)}... powered ON`);
             refetchDevices();
-            queryClient.invalidateQueries({ queryKey: ["connectivity"] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
         },
         meta: { defaultErrorMessage: "Failed to power ON device" },
     });
@@ -91,7 +91,7 @@ export default function SimulationPage() {
         onSuccess: (_data, id) => {
             toast.success(`Device ${id.slice(0, 8)}... powered OFF`);
             refetchDevices();
-            queryClient.invalidateQueries({ queryKey: ["connectivity"] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
         },
         meta: { defaultErrorMessage: "Failed to power OFF device" },
     });

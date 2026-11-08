@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ChamferButton, OutlineButton, AlertBanner } from "@/components/ui";
+import { PageHeader, ChamferButton, AlertBanner } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -78,10 +78,10 @@ export default function ConnectivityPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="Device Connectivity">
-                <OutlineButton size="sm" onClick={refreshAll}>
+                <ChamferButton variant="outline" size="sm" clip="xs" onClick={refreshAll}>
                     <RotateCw className="w-3.5 h-3.5 text-slate-600" />
                     <span>Refresh</span>
-                </OutlineButton>
+                </ChamferButton>
 
                 <ChamferButton variant="dark" size="sm" onClick={() => setIsRegisterOpen(true)}>
                     <Plus className="w-4 h-4 text-white" />

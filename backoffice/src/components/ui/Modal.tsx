@@ -3,12 +3,7 @@
 import React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
-import {
-    ChamferCard,
-    ChamferButton,
-    OutlineButton,
-    type ChamferButtonVariant,
-} from "@/components/ui";
+import { ChamferCard, ChamferButton, type ChamferButtonVariant } from "@/components/ui";
 import { cn } from "@/lib";
 
 export interface ModalProps {
@@ -103,17 +98,24 @@ export function Modal({
                                             footer
                                         ) : (
                                             <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
-                                                <OutlineButton
+                                                <ChamferButton
+                                                    variant="outline"
                                                     size="sm"
+                                                    clip="xs"
                                                     type="button"
                                                     onClick={onClose}
                                                     disabled={loading}
                                                 >
                                                     {cancelText}
-                                                </OutlineButton>
+                                                </ChamferButton>
                                                 <ChamferButton
-                                                    variant={submitVariant}
+                                                    variant={
+                                                        submitVariant === "danger"
+                                                            ? "dark"
+                                                            : submitVariant
+                                                    }
                                                     size="sm"
+                                                    clip="sm"
                                                     type="submit"
                                                     disabled={loading || submitDisabled}
                                                 >

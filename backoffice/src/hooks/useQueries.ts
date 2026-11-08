@@ -8,7 +8,7 @@ import { alertService } from "@/services/alertService";
 import { airspaceService } from "@/services/airspaceService";
 import { connectivityService } from "@/services/connectivityService";
 import { emergencyService } from "@/services/emergencyService";
-import type { IncidentQueryParams } from "@/types";
+import { INCIDENT_STATUS, type IncidentQueryParams } from "@/types";
 
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
@@ -140,26 +140,29 @@ export function useEmergencyConfig() {
     });
 }
 
-export function useEmergencyProtocols(active?: boolean) {
+export function useEmergencyProtocols(active?: boolean, enabled = true) {
     return useQuery({
         queryKey: [...QUERY_KEYS.emergencyProtocols, active],
         queryFn: () => emergencyService.getProtocols(active),
         staleTime: 1000 * 60,
+        enabled,
     });
 }
 
-export function useEmergencyTrends(from?: string, to?: string, interval?: string) {
+export function useEmergencyTrends(from?: string, to?: string, interval?: string, enabled = true) {
     return useQuery({
         queryKey: [...QUERY_KEYS.emergencyTrends, from, to, interval],
         queryFn: () => emergencyService.getTrends({ from, to, interval }),
         staleTime: 1000 * 60,
+        enabled,
     });
 }
 
-export function useEmergencyResolvedHistory(limit = 10) {
+export function useEmergencyResolvedHistory(limit = 10, enabled = true) {
     return useQuery({
-        queryKey: QUERY_KEYS.emergencyIncidents({ status: "resolved", limit }),
-        queryFn: () => emergencyService.getIncidents({ status: "resolved", limit }),
+        queryKey: QUERY_KEYS.emergencyIncidents({ status: INCIDENT_STATUS.RESOLVED, limit }),
+        queryFn: () => emergencyService.getIncidents({ status: INCIDENT_STATUS.RESOLVED, limit }),
         staleTime: 1000 * 15,
+        enabled,
     });
 }

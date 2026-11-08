@@ -25,7 +25,7 @@ export function EmergencyKpiStrip({
             value: isLoading ? "--" : String(activeCount).padStart(2, "0"),
             subValue: activeCount > 0 ? "ACTION REQUIRED" : "ALL CLEAR",
             icon: AlertTriangle,
-            iconClassName: activeCount > 0 ? "text-rose-600" : "text-emerald-600",
+            iconClassName: activeCount > 0 ? "text-rose-600" : "text-slate-400",
         },
         {
             id: "pending-confirmation",
@@ -41,7 +41,7 @@ export function EmergencyKpiStrip({
             value: isLoading ? "--" : String(resolvedCount).padStart(2, "0"),
             subValue: "INCIDENTS",
             icon: CheckCircle2,
-            iconClassName: "text-emerald-600",
+            iconClassName: "text-slate-400",
         },
         {
             id: "avg-response-time",
@@ -49,7 +49,7 @@ export function EmergencyKpiStrip({
             value: isLoading ? "--" : `${avgResponseTime}s`,
             subValue: "AVG DURATION",
             icon: Activity,
-            iconClassName: "text-cyan-600",
+            iconClassName: "text-slate-400",
         },
     ];
 
@@ -68,5 +68,3 @@ export function EmergencyKpiStrip({
         </div>
     );
 }
-
-export default EmergencyKpiStrip;

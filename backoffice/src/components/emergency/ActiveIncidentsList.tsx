@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useMemo } from "react";
 import {
     AlertTriangle,
     BatteryWarning,
@@ -11,14 +11,20 @@ import {
     Check,
     X,
 } from "lucide-react";
-import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
+import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/components/ui";
 import { formatRelativeTime } from "@/utils";
-import type { EmergencyIncidentVm } from "@/types";
+import { useDronesAll, useFlightsAll } from "@/hooks";
+import {
+    INCIDENT_STATUS,
+    EMERGENCY_SEVERITY,
+    RESPONSE_ACTION,
+    type EmergencyIncidentVm,
+} from "@/types";
 
 export interface ActiveIncidentsListProps {
     incidents: EmergencyIncidentVm[];
-    onSelectIncident?: (incident: EmergencyIncidentVm) => void;
-    onConfirmAction?: (id: string, approved: boolean) => void;
+    onSelectIncident: (incident: EmergencyIncidentVm) => void;
+    onConfirmAction: (id: string, approved: boolean) => void;
 }
 
 export function ActiveIncidentsList({
@@ -26,11 +32,32 @@ export function ActiveIncidentsList({
     onSelectIncident,
     onConfirmAction,
 }: ActiveIncidentsListProps) {
+    const { data: drones = [] } = useDronesAll();
+    const { data: flights = [] } = useFlightsAll();
+
+    const droneMap = useMemo(
+        () =>
+            new Map(
+                drones
+                    .filter((d) => d.id)
+                    .map((d) => [d.id, d.registrationNumber || d.model || d.id])
+            ),
+        [drones]
+    );
+
+    const flightMap = useMemo(
+        () => new Map(flights.filter((f) => f.id).map((f) => [f.id, f])),
+        [flights]
+    );
+
     const getIncidentIcon = (incident: EmergencyIncidentVm) => {
         const type = incident.emergencyType || "";
         if (type.startsWith("battery")) return BatteryWarning;
         if (type.startsWith("signal") || type.startsWith("gps")) return WifiOff;
-        if (incident.severity === "emergency" || incident.severity === "critical") {
+        if (
+            incident.severity === EMERGENCY_SEVERITY.EMERGENCY ||
+            incident.severity === EMERGENCY_SEVERITY.CRITICAL
+        ) {
             return ShieldAlert;
         }
         return AlertTriangle;
@@ -39,11 +66,12 @@ export function ActiveIncidentsList({
     return (
         <ChamferCard size="lg" className="w-full">
             <div className="p-5 sm:p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    <h2 className="text-xs sm:text-sm font-bold font-mono tracking-wider text-slate-900 uppercase">
-                        ACTIVE INCIDENTS
-                    </h2>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-xs sm:text-sm font-bold font-mono tracking-wider text-slate-900 uppercase">
+                            ACTIVE INCIDENTS
+                        </h2>
+                    </div>
                 </div>
 
                 {incidents.length === 0 ? (
@@ -56,26 +84,37 @@ export function ActiveIncidentsList({
                     <div className="flex flex-col gap-3">
                         {incidents.map((incident) => {
                             const Icon = getIncidentIcon(incident);
-                            const isAwaiting = incident.status === "pending_confirmation";
-                            const isResolved = incident.status === "resolved";
+                            const isAwaiting =
+                                incident.status === INCIDENT_STATUS.PENDING_CONFIRMATION;
+                            const isResolved = incident.status === INCIDENT_STATUS.RESOLVED;
+
+                            const flight = incident.flightId
+                                ? flightMap.get(incident.flightId)
+                                : undefined;
+                            const flightNumText =
+                                flight?.flightNumber ||
+                                (incident.flightId && incident.flightId.length > 12
+                                    ? `FLT-${incident.flightId.slice(0, 8).toUpperCase()}`
+                                    : incident.flightId);
+                            const effectiveDroneId = incident.droneId || flight?.droneId;
+                            const droneRegText = effectiveDroneId
+                                ? droneMap.get(effectiveDroneId) ||
+                                  (effectiveDroneId.length > 12
+                                      ? `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
+                                      : effectiveDroneId)
+                                : "Unknown Drone";
 
                             return (
-                                <div
+                                <ChamferCard
                                     key={incident.id}
-                                    onClick={() => onSelectIncident?.(incident)}
-                                    className="chamfer-sm group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[var(--color-surface-subtle)] hover:bg-[var(--color-surface-card)] border border-[var(--color-border-default)] hover:border-[var(--color-border-strong)] transition-all cursor-pointer"
+                                    size="sm"
+                                    onClick={() => onSelectIncident(incident)}
+                                    className="w-full cursor-pointer transition-all hover:bg-[var(--color-border-dark)] group"
+                                    innerClassName="p-3.5 sm:p-4 bg-[var(--color-surface-subtle)] group-hover:bg-[var(--color-surface-card)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors"
                                 >
                                     <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                                        <div
-                                            className={`w-10 h-10 rounded-md border flex items-center justify-center shrink-0 ${
-                                                isAwaiting
-                                                    ? "bg-amber-50 border-amber-200/80 text-amber-600"
-                                                    : isResolved
-                                                      ? "bg-emerald-50 border-emerald-200/80 text-emerald-600"
-                                                      : "bg-rose-50 border-rose-200/80 text-rose-600"
-                                            }`}
-                                        >
-                                            <Icon className="w-5 h-5" strokeWidth={2} />
+                                        <div className="w-9 h-9 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-600 group-hover:text-slate-900 group-hover:bg-slate-200/60 transition-colors">
+                                            <Icon className="w-4 h-4" />
                                         </div>
 
                                         <div className="flex flex-col min-w-0">
@@ -83,11 +122,19 @@ export function ActiveIncidentsList({
                                                 {incident.message ||
                                                     incident.emergencyType?.replace(/_/g, " ")}
                                             </span>
-                                            <div className="flex items-center gap-2 mt-0.5 text-xs font-mono text-slate-500">
-                                                <span className="font-bold text-slate-700">
-                                                    {incident.droneId}
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs font-mono text-slate-500">
+                                                <span className="font-semibold text-slate-800">
+                                                    Drone: {droneRegText}
                                                 </span>
-                                                <span>•</span>
+                                                {flightNumText && (
+                                                    <>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="text-slate-600">
+                                                            Flight: {flightNumText}
+                                                        </span>
+                                                    </>
+                                                )}
+                                                <span className="text-slate-300">•</span>
                                                 <span>
                                                     {formatRelativeTime(incident.detectedAt)}
                                                 </span>
@@ -95,12 +142,9 @@ export function ActiveIncidentsList({
                                         </div>
                                     </div>
 
-                                    <div
-                                        className="flex items-center gap-2.5 self-end sm:self-center shrink-0"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
+                                    <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
                                         {incident.responseAction &&
-                                            incident.responseAction !== "NONE" && (
+                                            incident.responseAction !== RESPONSE_ACTION.NONE && (
                                                 <span className="px-2 py-0.5 text-[11px] font-mono font-bold rounded bg-slate-100 text-slate-700 border border-slate-300">
                                                     {incident.responseAction}
                                                 </span>
@@ -124,54 +168,39 @@ export function ActiveIncidentsList({
                                             shape="rounded"
                                         />
 
-                                        {isAwaiting && onConfirmAction && (
-                                            <div className="flex items-center gap-1.5">
-                                                <button
-                                                    type="button"
+                                        {isAwaiting && (
+                                            <div
+                                                className="flex items-center gap-1.5"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <ChamferButton
+                                                    size="xs"
+                                                    variant="dark"
                                                     onClick={() =>
                                                         onConfirmAction(incident.id, true)
                                                     }
-                                                    className="chamfer-sm px-2.5 py-1 text-xs font-mono font-bold bg-amber-600 hover:bg-amber-700 text-white transition-colors cursor-pointer flex items-center gap-1"
                                                     title="Approve failsafe action"
                                                 >
                                                     <Check className="w-3.5 h-3.5" />
                                                     <span>Confirm</span>
-                                                </button>
-                                                <button
-                                                    type="button"
+                                                </ChamferButton>
+                                                <ChamferButton
+                                                    size="xs"
+                                                    variant="outline"
                                                     onClick={() =>
                                                         onConfirmAction(incident.id, false)
                                                     }
-                                                    className="chamfer-sm px-2 py-1 text-xs font-mono font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer flex items-center gap-1"
                                                     title="Reject failsafe action"
                                                 >
                                                     <X className="w-3.5 h-3.5" />
                                                     <span>Reject</span>
-                                                </button>
+                                                </ChamferButton>
                                             </div>
                                         )}
 
-                                        {!isAwaiting && (
-                                            <button
-                                                type="button"
-                                                onClick={() => onSelectIncident?.(incident)}
-                                                className="chamfer-sm px-2.5 py-1 text-xs font-mono font-bold bg-[var(--color-border-dark)] hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center gap-1"
-                                                title="View incident diagnostics"
-                                            >
-                                                <span>Inspect</span>
-                                            </button>
-                                        )}
-
-                                        <button
-                                            type="button"
-                                            onClick={() => onSelectIncident?.(incident)}
-                                            className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                            aria-label="View Details"
-                                        >
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
+                                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors shrink-0" />
                                     </div>
-                                </div>
+                                </ChamferCard>
                             );
                         })}
                     </div>
@@ -180,5 +209,3 @@ export function ActiveIncidentsList({
         </ChamferCard>
     );
 }
-
-export default ActiveIncidentsList;

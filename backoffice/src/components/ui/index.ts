@@ -1,7 +1,6 @@
 export * from "./ChamferCard";
 export * from "./MetricCard";
 export * from "./ChamferButton";
-export * from "./OutlineButton";
 export * from "./StatusBadge";
 export * from "./PageHeader";
 export * from "./Modal";

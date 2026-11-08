@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, Home, Compass } from "lucide-react";
-import { ChamferCard, ChamferButton, OutlineButton } from "@/components/ui";
+import { ChamferCard, ChamferButton } from "@/components/ui";
 
 export default function NotFound() {
     return (
@@ -34,10 +34,15 @@ export default function NotFound() {
                                     Back to Dashboard
                                 </ChamferButton>
                             </Link>
-                            <OutlineButton size="sm" onClick={() => window.history.back()}>
+                            <ChamferButton
+                                variant="outline"
+                                size="sm"
+                                clip="xs"
+                                onClick={() => window.history.back()}
+                            >
                                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                                 Go Back
-                            </OutlineButton>
+                            </ChamferButton>
                         </div>
                     </div>
                 </ChamferCard>

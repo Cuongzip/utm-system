@@ -1,10 +1,16 @@
 "use client";
 
-import React from "react";
 import { History, TrendingUp, ShieldCheck } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
 
-export type EmergencyProtocolType = "history" | "trends" | "protocols";
+export const EMERGENCY_MODAL_TABS = {
+    HISTORY: "history",
+    TRENDS: "trends",
+    PROTOCOLS: "protocols",
+} as const;
+
+export type EmergencyProtocolType =
+    (typeof EMERGENCY_MODAL_TABS)[keyof typeof EMERGENCY_MODAL_TABS];
 
 export interface EmergencyProtocolsStripProps {
     onSelectProtocol: (type: EmergencyProtocolType) => void;
@@ -13,21 +19,21 @@ export interface EmergencyProtocolsStripProps {
 export function EmergencyProtocolsStrip({ onSelectProtocol }: EmergencyProtocolsStripProps) {
     const protocols = [
         {
-            type: "history" as EmergencyProtocolType,
+            type: EMERGENCY_MODAL_TABS.HISTORY,
             title: "Incident History",
             description: "View all past incidents and investigations",
             icon: History,
         },
         {
-            type: "trends" as EmergencyProtocolType,
+            type: EMERGENCY_MODAL_TABS.TRENDS,
             title: "Trend Analysis",
             description: "Analyze patterns and identify issues",
             icon: TrendingUp,
         },
         {
-            type: "protocols" as EmergencyProtocolType,
+            type: EMERGENCY_MODAL_TABS.PROTOCOLS,
             title: "Response Protocols",
-            description: "Configure thresholds and responses",
+            description: "Inspect active failsafe procedures and actions",
             icon: ShieldCheck,
         },
     ];
@@ -62,5 +68,3 @@ export function EmergencyProtocolsStrip({ onSelectProtocol }: EmergencyProtocols
         </div>
     );
 }
-
-export default EmergencyProtocolsStrip;

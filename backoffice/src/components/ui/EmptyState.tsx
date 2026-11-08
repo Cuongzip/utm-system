@@ -2,7 +2,6 @@
 
 import React from "react";
 import { cn } from "@/lib";
-import { OutlineButton } from "./OutlineButton";
 import { ChamferButton } from "./ChamferButton";
 
 export interface EmptyStateProps {
@@ -81,14 +80,16 @@ export function EmptyState({
                         <span>{action.label}</span>
                     </ChamferButton>
                 ) : (
-                    <OutlineButton
+                    <ChamferButton
                         size="sm"
+                        variant="outline"
+                        clip="xs"
                         onClick={action.onClick}
                         className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
                     >
                         {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-slate-600" />}
                         <span>{action.label}</span>
-                    </OutlineButton>
+                    </ChamferButton>
                 ))}
             {children}
         </div>

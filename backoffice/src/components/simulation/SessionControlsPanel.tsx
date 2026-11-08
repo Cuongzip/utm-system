@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, Pause, Square, Gauge, Loader2, Trash2 } from "lucide-react";
+import { Play, Pause, Square, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ChamferCard, OutlineButton, ChamferButton, ConfirmDialog } from "@/components/ui";
+import { ChamferCard, ChamferButton, ConfirmDialog } from "@/components/ui";
 import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
-import type { SimulationSession } from "@/types";
+import { SIMULATION_STATUS, type SimulationSession } from "@/types";
 
 export interface SessionControlsPanelProps {
     session: SimulationSession;
-    onRefresh?: () => void;
+    onRefresh: () => void;
 }
 
 const TIME_SCALE_OPTIONS = [1, 2, 5, 10] as const;
@@ -25,9 +25,10 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const normStatus = String(session.status || "").toLowerCase();
-    const isRunning = normStatus === "running";
-    const isPaused = normStatus === "paused";
-    const isStopped = normStatus === "stopped" || normStatus === "completed";
+    const isRunning = normStatus === SIMULATION_STATUS.RUNNING;
+    const isPaused = normStatus === SIMULATION_STATUS.PAUSED;
+    const isStopped =
+        normStatus === SIMULATION_STATUS.STOPPED || normStatus === SIMULATION_STATUS.COMPLETED;
     const currentTimeScale = session.timeScale ?? 1.0;
 
     const updateTimeScaleMutation = useMutation({
@@ -36,7 +37,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
             toast.success(`Time-scale updated to ${updated.timeScale ?? 1}x`);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            onRefresh?.();
+            onRefresh();
         },
         meta: { defaultErrorMessage: "Failed to update time-scale" },
     });
@@ -47,7 +48,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
             toast.success("Simulation paused");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            onRefresh?.();
+            onRefresh();
         },
         meta: { defaultErrorMessage: "Failed to pause simulation" },
     });
@@ -58,7 +59,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
             toast.success("Simulation resumed");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            onRefresh?.();
+            onRefresh();
         },
         meta: { defaultErrorMessage: "Failed to resume simulation" },
     });
@@ -69,7 +70,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
             toast.success("Simulation stopped");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            onRefresh?.();
+            onRefresh();
         },
         meta: { defaultErrorMessage: "Failed to stop simulation" },
     });
@@ -89,12 +90,9 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
             <ChamferCard size="lg" className="w-full">
                 <div className="p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                     <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <Gauge className="w-4 h-4 text-slate-500" />
-                            <span className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider">
-                                SPEED FACTOR:
-                            </span>
-                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider">
+                            SPEED FACTOR:
+                        </span>
 
                         <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
                             {TIME_SCALE_OPTIONS.map((scale) => {
@@ -127,67 +125,71 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
 
                     <div className="flex flex-wrap items-center gap-2.5">
                         {isRunning && (
-                            <OutlineButton
+                            <ChamferButton
                                 size="sm"
+                                variant="dark"
+                                clip="xs"
                                 disabled={pauseMutation.isPending}
                                 onClick={() => pauseMutation.mutate()}
-                                className="text-amber-700 hover:bg-amber-50 hover:border-amber-300"
                             >
                                 {pauseMutation.isPending ? (
-                                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin text-amber-500" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 ) : (
-                                    <Pause className="w-3.5 h-3.5 mr-1 text-amber-500" />
+                                    <Pause className="w-3.5 h-3.5" />
                                 )}
                                 <span>Pause</span>
-                            </OutlineButton>
+                            </ChamferButton>
                         )}
 
                         {isPaused && (
-                            <OutlineButton
+                            <ChamferButton
                                 size="sm"
+                                variant="dark"
+                                clip="xs"
                                 disabled={resumeMutation.isPending}
                                 onClick={() => resumeMutation.mutate()}
-                                className="text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300"
                             >
                                 {resumeMutation.isPending ? (
-                                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin text-emerald-600" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 ) : (
-                                    <Play className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                                    <Play className="w-3.5 h-3.5" />
                                 )}
                                 <span>Resume</span>
-                            </OutlineButton>
+                            </ChamferButton>
                         )}
 
                         {!isStopped && (
                             <ChamferButton
-                                variant="danger"
+                                variant="outline"
                                 size="sm"
+                                clip="xs"
                                 disabled={stopMutation.isPending}
                                 onClick={() => stopMutation.mutate()}
                             >
                                 {stopMutation.isPending ? (
-                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 ) : (
-                                    <Square className="w-3 h-3 mr-1" />
+                                    <Square className="w-3.5 h-3.5" />
                                 )}
                                 <span>Stop</span>
                             </ChamferButton>
                         )}
 
-                        <OutlineButton
+                        <ChamferButton
+                            variant="outline"
                             size="sm"
+                            clip="xs"
                             disabled={deleteMutation.isPending}
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="text-rose-600 hover:bg-rose-50 hover:border-rose-300"
                             title="Delete simulation session"
                         >
                             {deleteMutation.isPending ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin text-rose-500" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             ) : (
-                                <Trash2 className="w-3.5 h-3.5 mr-1 text-rose-500" />
+                                <Trash2 className="w-3.5 h-3.5" />
                             )}
                             <span>Delete</span>
-                        </OutlineButton>
+                        </ChamferButton>
                     </div>
                 </div>
             </ChamferCard>
@@ -205,5 +207,3 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
         </>
     );
 }
-
-export default SessionControlsPanel;

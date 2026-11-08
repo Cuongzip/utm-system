@@ -76,5 +76,3 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
         </div>
     );
 }
-
-export default SessionTelemetryCards;

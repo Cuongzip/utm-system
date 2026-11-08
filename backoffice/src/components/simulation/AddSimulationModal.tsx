@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal, CustomSelect, FormInput } from "@/components/ui";
-import { useFlightsAll } from "@/hooks";
+import { Modal, CustomSelect, FormInput, type SelectOption } from "@/components/ui";
+import { useFlightsAll, useDronesAll } from "@/hooks";
 import { parseApiError } from "@/utils";
 import { createSessionBody } from "@/generated";
 import type { CreateSimulationSessionPayload } from "@/types";
@@ -15,9 +15,45 @@ export interface AddSimulationModalProps {
     onSubmit: (payload: CreateSimulationSessionPayload) => Promise<void>;
 }
 
+const DEFAULT_FORM_VALUES: CreateSimulationSessionPayload = {
+    flightId: "",
+    speed: 15.0,
+    timeScale: 1.0,
+    startBattery: 100.0,
+};
+
 export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationModalProps) {
-    const { data: flights = [] } = useFlightsAll();
+    const { data: flights = [], isLoading: flightsLoading } = useFlightsAll();
+    const { data: drones = [] } = useDronesAll();
     const [loading, setLoading] = useState(false);
+
+    const droneMap = useMemo(
+        () =>
+            new Map(
+                drones
+                    .filter((d) => d.id)
+                    .map((d) => [d.id, d.registrationNumber || d.model || d.id])
+            ),
+        [drones]
+    );
+
+    const flightOptions: SelectOption[] = useMemo(() => {
+        return [
+            { value: "", label: "Select a flight plan to simulate..." },
+            ...flights.map((flight) => {
+                const flightLabel = flight.flightNumber || flight.id;
+                const statusLabel = flight.status ? `(${flight.status})` : "";
+                const droneReg = flight.droneId
+                    ? droneMap.get(flight.droneId) || flight.droneId
+                    : null;
+                const droneLabel = droneReg ? `• Drone: ${droneReg}` : "";
+                return {
+                    label: `${flightLabel} ${statusLabel} ${droneLabel}`.trim(),
+                    value: flight.id,
+                };
+            }),
+        ];
+    }, [flights, droneMap]);
 
     const {
         register,
@@ -28,37 +64,23 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
         formState: { errors },
     } = useForm<CreateSimulationSessionPayload>({
         resolver: zodResolver(createSessionBody) as any,
-        defaultValues: {
-            flightId: "",
-            speed: 15.0,
-            timeScale: 1.0,
-            startBattery: 100.0,
-        },
+        defaultValues: DEFAULT_FORM_VALUES,
     });
 
     useEffect(() => {
         if (isOpen) {
-            reset({
-                flightId: "",
-                speed: 15.0,
-                timeScale: 1.0,
-                startBattery: 100.0,
-            });
+            reset(DEFAULT_FORM_VALUES);
         }
     }, [isOpen, reset]);
 
     const onFormSubmit = async (data: CreateSimulationSessionPayload) => {
-        if (!data.flightId || !data.flightId.trim()) {
-            setError("flightId", { message: "Please select a flight plan to simulate" });
-            return;
-        }
         try {
             setLoading(true);
             const payload: CreateSimulationSessionPayload = {
-                flightId: data.flightId.trim(),
-                speed: Number(data.speed) || 15.0,
-                timeScale: Number(data.timeScale) || 1.0,
-                startBattery: Number(data.startBattery) ?? 100.0,
+                flightId: data.flightId,
+                speed: data.speed ?? 15.0,
+                timeScale: data.timeScale ?? 1.0,
+                startBattery: data.startBattery ?? 100.0,
             };
             await onSubmit(payload);
             onClose();
@@ -94,19 +116,15 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
                     render={({ field }) => (
                         <CustomSelect
                             value={field.value || ""}
-                            onValueChange={(val: string) => field.onChange(val)}
-                            options={flights.map((flight) => {
-                                const flightLabel = flight.flightNumber || flight.id;
-                                const statusLabel = flight.status ? `(${flight.status})` : "";
-                                const droneLabel = flight.droneId
-                                    ? `• Drone: ${flight.droneId}`
-                                    : "";
-                                return {
-                                    label: `${flightLabel} ${statusLabel} ${droneLabel}`.trim(),
-                                    value: flight.id,
-                                };
-                            })}
-                            placeholder="Select a flight plan to simulate"
+                            onValueChange={field.onChange}
+                            options={flightOptions}
+                            placeholder={
+                                flightsLoading
+                                    ? "Loading flight plans..."
+                                    : "Select a flight plan to simulate"
+                            }
+                            disabled={loading || flightsLoading}
+                            error={Boolean(errors.flightId)}
                         />
                     )}
                 />
@@ -156,5 +174,3 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
         </Modal>
     );
 }
-
-export default AddSimulationModal;

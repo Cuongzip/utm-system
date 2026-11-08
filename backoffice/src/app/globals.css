@@ -64,6 +64,16 @@
     --color-text-muted: #94a3b8;
     --color-text-light: #ffffff;
 
+    --chamfer-clip-xs: polygon(
+        4px 0,
+        calc(100% - 4px) 0,
+        100% 4px,
+        100% calc(100% - 4px),
+        calc(100% - 4px) 100%,
+        4px 100%,
+        0 calc(100% - 4px),
+        0 4px
+    );
     --chamfer-clip-sm: polygon(
         8px 0,
         calc(100% - 8px) 0,
@@ -154,6 +164,10 @@ body {
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+}
+
+.chamfer-xs {
+    clip-path: var(--chamfer-clip-xs);
 }
 
 .chamfer-sm {

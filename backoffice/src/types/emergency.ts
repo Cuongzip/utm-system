@@ -1,5 +1,5 @@
 import type zod from "zod";
-import type {
+import {
     getIncidentResponse,
     getIncidentsResponse,
     getIncidentsQueryParams,
@@ -8,17 +8,61 @@ import type {
     getConfigResponse,
     setModeBody,
     getProtocolsResponseItem,
+    createIncidentBody,
+    confirmIncidentBody,
 } from "@/generated/emergency";
 
+export const INCIDENT_STATUSES = getIncidentResponse.shape.status.unwrap().options;
+export const EMERGENCY_SEVERITIES = getIncidentResponse.shape.severity.unwrap().options;
+export const RESPONSE_ACTIONS = getIncidentResponse.shape.responseAction.unwrap().options;
+export const OPERATION_MODES = setModeBody.shape.mode.options;
+export const EMERGENCY_TYPES = createIncidentBody.shape.emergencyType.options;
+
+export const INCIDENT_STATUS = {
+    ACTIVE: "active",
+    PENDING_CONFIRMATION: "pending_confirmation",
+    EXECUTING: "executing",
+    RESOLVED: "resolved",
+    ESCALATED: "escalated",
+} as const satisfies Record<string, (typeof INCIDENT_STATUSES)[number]>;
+
+export const ACTIVE_INCIDENT_STATUSES: readonly IncidentStatus[] = [
+    INCIDENT_STATUS.ACTIVE,
+    INCIDENT_STATUS.EXECUTING,
+] as const;
+
+export const EMERGENCY_SEVERITY = {
+    WARNING: "warning",
+    CRITICAL: "critical",
+    EMERGENCY: "emergency",
+} as const satisfies Record<string, (typeof EMERGENCY_SEVERITIES)[number]>;
+
+export const OPERATION_MODE = {
+    AUTO: "auto",
+    SUPERVISED: "supervised",
+} as const satisfies Record<string, (typeof OPERATION_MODES)[number]>;
+
+export const DEFAULT_OPERATION_MODE: OperationMode = OPERATION_MODE.SUPERVISED;
+
+export const RESPONSE_ACTION = {
+    RTH: "RTH",
+    LAND: "LAND",
+    HOVER: "HOVER",
+    DIVERT: "DIVERT",
+    DESCEND: "DESCEND",
+    CLIMB: "CLIMB",
+    ESTOP: "ESTOP",
+    NONE: "NONE",
+} as const satisfies Record<string, (typeof RESPONSE_ACTIONS)[number]>;
+
 export type EmergencySeverity = NonNullable<zod.infer<typeof getIncidentResponse>["severity"]>;
-
 export type EmergencyType = NonNullable<zod.infer<typeof getIncidentResponse>["emergencyType"]>;
-
 export type IncidentStatus = NonNullable<zod.infer<typeof getIncidentResponse>["status"]>;
-
 export type ResponseAction = NonNullable<zod.infer<typeof getIncidentResponse>["responseAction"]>;
-
 export type OperationMode = NonNullable<zod.infer<typeof setModeBody>["mode"]>;
+
+export type CreateIncidentPayload = zod.infer<typeof createIncidentBody>;
+export type ConfirmIncidentPayload = zod.infer<typeof confirmIncidentBody>;
 
 export type EmergencyIncidentGenerated = NonNullable<zod.infer<typeof getIncidentResponse>>;
 

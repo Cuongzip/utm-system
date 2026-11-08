@@ -8,7 +8,6 @@ import {
     ChamferCard,
     StatusBadge,
     ChamferButton,
-    OutlineButton,
     ConfirmDialog,
     Table,
     TableHeader,
@@ -165,10 +164,10 @@ export default function ConflictsPage() {
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="AIRSPACE CONFLICTS">
                 {activeConflicts.length < INITIAL_ACTIVE_CONFLICTS.length && (
-                    <OutlineButton size="sm" onClick={handleResetDemo}>
+                    <ChamferButton variant="outline" size="sm" clip="xs" onClick={handleResetDemo}>
                         <RotateCcw className="w-3.5 h-3.5 text-[#334155]" />
                         <span>Reset Demo</span>
-                    </OutlineButton>
+                    </ChamferButton>
                 )}
             </PageHeader>
 

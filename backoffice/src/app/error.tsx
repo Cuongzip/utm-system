@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { ChamferCard, ChamferButton, OutlineButton } from "@/components/ui";
+import { ChamferCard, ChamferButton } from "@/components/ui";
 
 interface ErrorProps {
     error: Error & { digest?: string };
@@ -110,7 +110,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                             </ChamferButton>
 
                             <Link href="/">
-                                <OutlineButton size="md">
+                                <ChamferButton variant="outline" size="md" clip="xs">
                                     <svg
                                         className="w-4 h-4 mr-1.5"
                                         fill="none"
@@ -125,7 +125,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                                         />
                                     </svg>
                                     VỀ TRANG CHỦ
-                                </OutlineButton>
+                                </ChamferButton>
                             </Link>
                         </div>
                     </div>

@@ -9,7 +9,11 @@ import {
     EmergencyKpiStrip,
     ActiveIncidentsList,
     EmergencyProtocolsStrip,
-    EmergencyModal,
+    IncidentDetailsModal,
+    IncidentHistoryModal,
+    TrendAnalysisModal,
+    ResponseProtocolsModal,
+    EMERGENCY_MODAL_TABS,
     type EmergencyProtocolType,
 } from "@/components/emergency";
 import {
@@ -19,7 +23,14 @@ import {
     useEmergencyConfig,
 } from "@/hooks/useQueries";
 import { emergencyService } from "@/services/emergencyService";
-import type { EmergencyIncidentVm, OperationMode } from "@/types";
+import {
+    INCIDENT_STATUS,
+    ACTIVE_INCIDENT_STATUSES,
+    OPERATION_MODE,
+    DEFAULT_OPERATION_MODE,
+    type EmergencyIncidentVm,
+    type OperationMode,
+} from "@/types";
 
 export default function EmergencyResponsePage() {
     const queryClient = useQueryClient();
@@ -32,13 +43,14 @@ export default function EmergencyResponsePage() {
     const [selectedIncident, setSelectedIncident] = useState<EmergencyIncidentVm | null>(null);
     const [activeProtocol, setActiveProtocol] = useState<EmergencyProtocolType | null>(null);
 
-    const isSupervisedMode = (systemConfig?.mode ?? "supervised") === "supervised";
+    const isSupervisedMode =
+        (systemConfig?.mode ?? DEFAULT_OPERATION_MODE) === OPERATION_MODE.SUPERVISED;
 
     const setModeMutation = useMutation({
         mutationFn: (mode: OperationMode) => emergencyService.setMode(mode),
         onSuccess: (res) => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyConfig });
-            if (res.mode === "supervised") {
+            if (res.mode === OPERATION_MODE.SUPERVISED) {
                 toast.success(
                     "Supervised Mode enabled: Operator confirmation required for all critical flight actions"
                 );
@@ -54,7 +66,7 @@ export default function EmergencyResponsePage() {
     const confirmMutation = useMutation({
         mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
             emergencyService.confirmIncident(id, approved),
-        onSuccess: (_data, variables) => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
@@ -68,7 +80,9 @@ export default function EmergencyResponsePage() {
     });
 
     const handleToggleSupervisedMode = () => {
-        const nextMode: OperationMode = isSupervisedMode ? "auto" : "supervised";
+        const nextMode: OperationMode = isSupervisedMode
+            ? OPERATION_MODE.AUTO
+            : OPERATION_MODE.SUPERVISED;
         setModeMutation.mutate(nextMode);
     };
 
@@ -77,12 +91,14 @@ export default function EmergencyResponsePage() {
     };
 
     const activeCount = activeIncidents.filter(
-        (i) => i.status === "active" || i.status === "executing"
+        (i) => i.status && ACTIVE_INCIDENT_STATUSES.includes(i.status)
     ).length;
-    const pendingCount = activeIncidents.filter((i) => i.status === "pending_confirmation").length;
-    const resolvedCount = Number(
-        stats?.byStatus?.find((s) => s.status?.toLowerCase() === "resolved")?.count ?? 0
-    );
+    const pendingCount = activeIncidents.filter(
+        (i) => i.status === INCIDENT_STATUS.PENDING_CONFIRMATION
+    ).length;
+    const resolvedCount =
+        stats?.byStatus?.find((s) => s.status?.toLowerCase() === INCIDENT_STATUS.RESOLVED)?.count ??
+        0;
     const avgResponseTime = Math.round(stats?.avgResponseTimeSeconds ?? 0);
 
     return (
@@ -126,21 +142,32 @@ export default function EmergencyResponsePage() {
 
             <ActiveIncidentsList
                 incidents={activeIncidents}
-                onSelectIncident={(inc) => setSelectedIncident(inc)}
+                onSelectIncident={setSelectedIncident}
                 onConfirmAction={handleConfirmAction}
             />
 
-            <EmergencyProtocolsStrip onSelectProtocol={(type) => setActiveProtocol(type)} />
+            <EmergencyProtocolsStrip onSelectProtocol={setActiveProtocol} />
 
-            <EmergencyModal
-                isOpen={Boolean(selectedIncident || activeProtocol)}
-                onClose={() => {
-                    setSelectedIncident(null);
-                    setActiveProtocol(null);
-                }}
-                selectedIncident={selectedIncident}
-                activeProtocol={activeProtocol}
+            <IncidentDetailsModal
+                isOpen={Boolean(selectedIncident)}
+                incident={selectedIncident}
+                onClose={() => setSelectedIncident(null)}
                 onConfirmAction={handleConfirmAction}
+            />
+
+            <IncidentHistoryModal
+                isOpen={activeProtocol === EMERGENCY_MODAL_TABS.HISTORY}
+                onClose={() => setActiveProtocol(null)}
+            />
+
+            <TrendAnalysisModal
+                isOpen={activeProtocol === EMERGENCY_MODAL_TABS.TRENDS}
+                onClose={() => setActiveProtocol(null)}
+            />
+
+            <ResponseProtocolsModal
+                isOpen={activeProtocol === EMERGENCY_MODAL_TABS.PROTOCOLS}
+                onClose={() => setActiveProtocol(null)}
             />
         </div>
     );
