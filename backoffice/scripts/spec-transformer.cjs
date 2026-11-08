@@ -63,6 +63,13 @@ module.exports = (spec) => {
                                 prop.pattern = "^[A-Za-z0-9_-]+$";
                             }
                         }
+                        if (propName === "batteryCapacityWh" && prop.type === "number") {
+                            prop.minimum = 0;
+                            prop.exclusiveMinimum = true;
+                        }
+                        if (propName === "maxPayload" && prop.type === "number") {
+                            prop.minimum = 0;
+                        }
                     }
                 }
             }

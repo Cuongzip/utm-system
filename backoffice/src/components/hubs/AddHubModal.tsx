@@ -82,9 +82,8 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                 };
                 await onSubmit(payload, hubToEdit.id);
             } else {
-                const trimmedCode = values.code?.trim();
                 const payload: CreateHubPayload = {
-                    code: trimmedCode ? trimmedCode.toUpperCase() : undefined,
+                    code: values.code?.toUpperCase(),
                     name: values.name.trim(),
                     location: values.location,
                     airspaceRadius: values.airspaceRadius,

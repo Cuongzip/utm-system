@@ -34,7 +34,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             manufacturer: "",
             model: "",
             homeHubId: undefined,
-            batteryCapacityWh: 0,
+            batteryCapacityWh: 1,
             maxPayload: 0,
         },
     });
@@ -47,7 +47,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             manufacturer: droneToEdit?.manufacturer || "",
             model: droneToEdit?.model || "",
             homeHubId: droneToEdit?.homeHubId || droneToEdit?.homeHub?.id || undefined,
-            batteryCapacityWh: droneToEdit?.batteryCapacityWh ?? 0,
+            batteryCapacityWh: droneToEdit?.batteryCapacityWh ?? 1,
             maxPayload: droneToEdit?.maxPayload ?? 0,
         });
     }, [isOpen, droneToEdit, reset]);
@@ -64,10 +64,9 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             if (droneToEdit) {
                 await onSubmit(commonFields, droneToEdit.id);
             } else {
-                const trimmedReg = data.registrationNumber?.trim();
                 const payload: CreateDronePayload = {
                     ...commonFields,
-                    registrationNumber: trimmedReg ? trimmedReg.toUpperCase() : undefined,
+                    registrationNumber: data.registrationNumber?.toUpperCase(),
                     manufacturer: data.manufacturer.trim(),
                     model: data.model.trim(),
                 };
@@ -156,6 +155,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                     label="Battery Capacity (Wh)"
                     type="number"
                     step="any"
+                    min={1}
                     required
                     placeholder="e.g. 5000"
                     error={errors.batteryCapacityWh?.message}

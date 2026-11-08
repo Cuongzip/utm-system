@@ -76,9 +76,9 @@ export function MissionFormSidebar({
     ];
 
     return (
-        <ChamferCard size="lg" className={cn("w-full h-full", className)}>
-            <div className="flex flex-col h-full bg-[var(--color-surface-panel)] select-none overflow-hidden">
-                <div className="grid grid-cols-3 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs">
+        <ChamferCard size="lg" className={cn("w-full h-full min-h-0", className)}>
+            <div className="flex flex-col h-full min-h-0 bg-[var(--color-surface-panel)] select-none overflow-hidden">
+                <div className="grid grid-cols-3 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs shrink-0">
                     <button
                         type="button"
                         onClick={() => onTabChange("details")}
@@ -138,7 +138,7 @@ export function MissionFormSidebar({
                     </button>
                 </div>
 
-                <div className="flex-1 p-5 overflow-y-auto space-y-4">
+                <div className="flex-1 min-h-0 p-5 overflow-y-auto space-y-4">
                     {activeTab === "details" && (
                         <MissionDetailsTab
                             formData={formData}

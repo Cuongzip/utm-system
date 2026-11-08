@@ -18,6 +18,8 @@ export const getDroneByIdParams = zod.object({
 export const getDroneByIdResponseRegistrationNumberMin = 3;
 export const getDroneByIdResponseRegistrationNumberMax = 50;
 export const getDroneByIdResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getDroneByIdResponseBatteryCapacityWhMin = 0;
+export const getDroneByIdResponseMaxPayloadMin = 0;
 export const getDroneByIdResponseOwnerRegistrationNumberMin = 3;
 export const getDroneByIdResponseOwnerRegistrationNumberMax = 50;
 export const getDroneByIdResponseOwnerRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
@@ -41,9 +43,14 @@ export const getDroneByIdResponse = zod
         homeHubId: zod.string().optional().describe("Base / Home hub UUID identifier"),
         batteryCapacityWh: zod
             .number()
+            .min(getDroneByIdResponseBatteryCapacityWhMin)
             .optional()
             .describe("Rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod.number().optional().describe("Maximum payload capacity in kilograms (kg)"),
+        maxPayload: zod
+            .number()
+            .min(getDroneByIdResponseMaxPayloadMin)
+            .optional()
+            .describe("Maximum payload capacity in kilograms (kg)"),
         status: zod
             .enum(["available", "in_flight", "maintenance", "charging", "offline"])
             .optional()
@@ -113,6 +120,9 @@ export const updateDroneParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the drone"),
 });
 
+export const updateDroneBodyBatteryCapacityWhMin = 0;
+export const updateDroneBodyMaxPayloadMin = 0;
+
 export const updateDroneBody = zod
     .object({
         homeHubId: zod
@@ -121,9 +131,14 @@ export const updateDroneBody = zod
             .describe("Identifier of newly assigned home hub station"),
         batteryCapacityWh: zod
             .number()
+            .min(updateDroneBodyBatteryCapacityWhMin)
             .optional()
             .describe("Updated rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod.number().optional().describe("Updated maximum payload capacity in kg"),
+        maxPayload: zod
+            .number()
+            .min(updateDroneBodyMaxPayloadMin)
+            .optional()
+            .describe("Updated maximum payload capacity in kg"),
         status: zod
             .enum(["available", "in_flight", "maintenance", "charging", "offline"])
             .optional()
@@ -136,6 +151,8 @@ export const updateDroneBody = zod
 export const updateDroneResponseRegistrationNumberMin = 3;
 export const updateDroneResponseRegistrationNumberMax = 50;
 export const updateDroneResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateDroneResponseBatteryCapacityWhMin = 0;
+export const updateDroneResponseMaxPayloadMin = 0;
 export const updateDroneResponseOwnerRegistrationNumberMin = 3;
 export const updateDroneResponseOwnerRegistrationNumberMax = 50;
 export const updateDroneResponseOwnerRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
@@ -159,9 +176,14 @@ export const updateDroneResponse = zod
         homeHubId: zod.string().optional().describe("Base / Home hub UUID identifier"),
         batteryCapacityWh: zod
             .number()
+            .min(updateDroneResponseBatteryCapacityWhMin)
             .optional()
             .describe("Rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod.number().optional().describe("Maximum payload capacity in kilograms (kg)"),
+        maxPayload: zod
+            .number()
+            .min(updateDroneResponseMaxPayloadMin)
+            .optional()
+            .describe("Maximum payload capacity in kilograms (kg)"),
         status: zod
             .enum(["available", "in_flight", "maintenance", "charging", "offline"])
             .optional()
@@ -261,6 +283,8 @@ export const getDronesQueryParams = zod.object({
 export const getDronesResponseItemsItemRegistrationNumberMin = 3;
 export const getDronesResponseItemsItemRegistrationNumberMax = 50;
 export const getDronesResponseItemsItemRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getDronesResponseItemsItemBatteryCapacityWhMin = 0;
+export const getDronesResponseItemsItemMaxPayloadMin = 0;
 export const getDronesResponseItemsItemOwnerRegistrationNumberMin = 3;
 export const getDronesResponseItemsItemOwnerRegistrationNumberMax = 50;
 export const getDronesResponseItemsItemOwnerRegistrationNumberRegExp = new RegExp(
@@ -296,10 +320,12 @@ export const getDronesResponse = zod
                             .describe("Base / Home hub UUID identifier"),
                         batteryCapacityWh: zod
                             .number()
+                            .min(getDronesResponseItemsItemBatteryCapacityWhMin)
                             .optional()
                             .describe("Rated battery capacity in Watt-hours (Wh)"),
                         maxPayload: zod
                             .number()
+                            .min(getDronesResponseItemsItemMaxPayloadMin)
                             .optional()
                             .describe("Maximum payload capacity in kilograms (kg)"),
                         status: zod
@@ -399,6 +425,8 @@ export const getDronesResponse = zod
 export const createDroneBodyRegistrationNumberMin = 3;
 export const createDroneBodyRegistrationNumberMax = 50;
 export const createDroneBodyRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const createDroneBodyBatteryCapacityWhMin = 0;
+export const createDroneBodyMaxPayloadMin = 0;
 
 export const createDroneBody = zod
     .object({
@@ -415,8 +443,14 @@ export const createDroneBody = zod
         model: zod.string().min(1).describe("Model / airframe designation"),
         ownerId: zod.string().optional().describe("Identifier of the owner organization"),
         homeHubId: zod.string().optional().describe("Identifier of base / home hub station"),
-        batteryCapacityWh: zod.number().describe("Rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod.number().describe("Maximum payload capacity in kilograms (kg)"),
+        batteryCapacityWh: zod
+            .number()
+            .min(createDroneBodyBatteryCapacityWhMin)
+            .describe("Rated battery capacity in Watt-hours (Wh)"),
+        maxPayload: zod
+            .number()
+            .min(createDroneBodyMaxPayloadMin)
+            .describe("Maximum payload capacity in kilograms (kg)"),
     })
     .describe("Request payload for registering a new Drone / UAS");
 

@@ -86,10 +86,8 @@ export function AirspaceEditor({
     const handleSave = async () => {
         setFieldErrors({});
 
-        const codeValue = formData.code ? formData.code.trim().toUpperCase() : formData.code;
-
         const payload = {
-            ...(mode === "create" ? { code: codeValue } : {}),
+            ...(mode === "create" ? { code: formData.code?.toUpperCase() } : {}),
             name: (formData.name ?? "").trim(),
             zoneType: formData.zoneType,
             status: formData.status,

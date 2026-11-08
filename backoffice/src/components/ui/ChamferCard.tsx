@@ -32,14 +32,14 @@ export function ChamferCard({
             style={style}
             onClick={onClick}
             className={cn(
-                "bg-[var(--color-border-strong)] p-[1.5px] relative drop-shadow-sm flex flex-col",
+                "bg-[var(--color-border-strong)] p-[1.5px] relative drop-shadow-sm flex flex-col min-h-0",
                 SIZE_CLASSES[size],
                 className
             )}
         >
             <div
                 className={cn(
-                    "bg-[var(--color-surface-panel)] flex-1 w-full flex flex-col",
+                    "bg-[var(--color-surface-panel)] flex-1 w-full flex flex-col min-h-0",
                     SIZE_CLASSES[size],
                     innerClassName
                 )}

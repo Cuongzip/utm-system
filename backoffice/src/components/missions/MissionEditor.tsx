@@ -119,7 +119,6 @@ export function MissionEditor({
         selectedWaypoint,
         defaultAltitude,
         setDefaultAltitude,
-        totalDistanceM,
         handleAddWaypoint,
         handleUpdateWaypoint,
         handleDeleteWaypoint,
@@ -168,15 +167,13 @@ export function MissionEditor({
     const handleSave = async () => {
         if (isReadOnly) return;
 
-        const codeValue = formData.code?.trim() ? formData.code.trim().toUpperCase() : undefined;
-
         const scheduledIso =
             formData.scheduleType === "scheduled" && formData.scheduledAt
                 ? new Date(formData.scheduledAt).toISOString()
                 : undefined;
 
         const payload = {
-            ...(mode === "create" ? { code: codeValue } : {}),
+            ...(mode === "create" ? { code: formData.code?.toUpperCase() } : {}),
             name: (formData.name || "").trim(),
             description: formData.description?.trim() || undefined,
             departureHubId: formData.departureHubId,

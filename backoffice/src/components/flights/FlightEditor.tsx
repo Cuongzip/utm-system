@@ -157,19 +157,6 @@ export function FlightEditor({
     const handleSave = async () => {
         setFieldErrors({});
 
-        if (
-            formData.departureHubId &&
-            formData.arrivalHubId &&
-            formData.departureHubId === formData.arrivalHubId &&
-            hubs.length > 1
-        ) {
-            setFieldErrors({
-                arrivalHubId: "Departure and arrival vertiports must be different",
-            });
-            setActiveSidebarTab("details");
-            return;
-        }
-
         if (isFeasibilityWarning && !formData.feasibilityOverride?.trim()) {
             setFieldErrors({
                 feasibilityOverride: "Reason is required",
@@ -227,9 +214,7 @@ export function FlightEditor({
         const payload: Record<string, unknown> = isCreate
             ? {
                   ...basePayload,
-                  flightNumber: formData.flightNumber?.trim()
-                      ? formData.flightNumber.trim().toUpperCase()
-                      : undefined,
+                  flightNumber: formData.flightNumber?.toUpperCase(),
                   executionId: formData.executionId?.trim() || undefined,
               }
             : basePayload;

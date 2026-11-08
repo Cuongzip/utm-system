@@ -35,18 +35,28 @@ export function SplitMapLayout({
         mapSpan === 7 ? "xl:col-span-5" : mapSpan === 9 ? "xl:col-span-3" : "xl:col-span-4";
 
     return (
-        <div className={cn("p-8 flex flex-col gap-6 w-full min-h-[calc(100vh-80px)]", className)}>
+        <div
+            className={cn(
+                "p-8 flex flex-col gap-6 w-full min-h-[calc(100vh-80px)] xl:h-[calc(100vh-80px)] xl:max-h-[calc(100vh-80px)]",
+                className
+            )}
+        >
             <PageHeader title={title} badges={badges}>
                 {headerActions}
             </PageHeader>
 
             {error && <AlertBanner message={error} onDismiss={onErrorDismiss || (() => {})} />}
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full flex-1 min-h-[680px]">
-                <div className={cn(mapColClass, "flex flex-col h-full min-h-[580px]")}>
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full flex-1 min-h-[680px] xl:min-h-0">
+                <div className={cn(mapColClass, "flex flex-col h-full min-h-[580px] xl:min-h-0")}>
                     {mapContent}
                 </div>
-                <div className={cn(sidebarColClass, "flex flex-col h-full min-h-[580px]")}>
+                <div
+                    className={cn(
+                        sidebarColClass,
+                        "flex flex-col h-full min-h-[580px] xl:min-h-0 overflow-hidden"
+                    )}
+                >
                     {sidebarContent}
                 </div>
             </div>

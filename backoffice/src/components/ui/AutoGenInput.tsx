@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useState, useEffect, useRef } from "react";
 import { FormInput, type FormInputProps } from "./FormInput";
 import { Switch } from "./Switch";
 
@@ -39,6 +39,30 @@ export const AutoGenInput = forwardRef<HTMLInputElement, AutoGenInputProps>(
             if (isControlled && value !== "") return false;
             return defaultAutoGen;
         });
+
+        const onChangeRef = useRef(onChange);
+        onChangeRef.current = onChange;
+
+        useEffect(() => {
+            if (!showAutoGen) {
+                setIsAutoGen(false);
+                return;
+            }
+            if (isControlled && value !== "" && value !== undefined) {
+                setIsAutoGen(false);
+            }
+        }, [showAutoGen, isControlled, value]);
+
+        useEffect(() => {
+            if (isAutoGen && onChangeRef.current) {
+                onChangeRef.current({
+                    target: {
+                        name: props.name || id,
+                        value: undefined,
+                    },
+                } as unknown as React.ChangeEvent<HTMLInputElement>);
+            }
+        }, [isAutoGen, props.name, id]);
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             if (!onChange) return;
