@@ -1,22 +1,46 @@
 import type zod from "zod";
-import type {
-    resolveConflictBody,
-    getAllConflictsResponse,
+import {
+    getAllConflictsQueryParams,
     getConflictByIdResponse,
+    resolveConflictBody,
+    evaluateConflictsResponse,
 } from "@/generated/conflict";
 
+export const CONFLICT_TYPES = getConflictByIdResponse.shape.conflictType.unwrap().options;
+export const CONFLICT_SEVERITIES = getConflictByIdResponse.shape.severity.unwrap().options;
+export const CONFLICT_STATUSES = getConflictByIdResponse.shape.status.unwrap().options;
+export const RESOLUTION_STRATEGIES =
+    getConflictByIdResponse.shape.resolutionStrategy.unwrap().options;
+
+export const CONFLICT_STATUS = {
+    DETECTED: "detected",
+    NOTIFIED: "notified",
+    ACKNOWLEDGED: "acknowledged",
+    RESOLVING: "resolving",
+    RESOLVED: "resolved",
+    DISMISSED: "dismissed",
+} as const satisfies Record<string, (typeof CONFLICT_STATUSES)[number]>;
+
+export const RESOLUTION_STRATEGY = {
+    HOVER: "hover",
+    REROUTE: "reroute",
+    DIVERT_ALTITUDE: "divert_altitude",
+    RETURN_TO_BASE: "return_to_base",
+    SPEED_ADJUSTMENT: "speed_adjustment",
+    ALTITUDE_CHANGE: "altitude_change",
+    HOLD: "hold",
+    AUTO_CLEARED: "auto_cleared",
+} as const satisfies Record<string, (typeof RESOLUTION_STRATEGIES)[number]>;
+
+export type ConflictQueryParams = zod.infer<typeof getAllConflictsQueryParams>;
+export type ConflictScanResult = zod.infer<typeof evaluateConflictsResponse>;
 export type ResolveConflictPayload = zod.infer<typeof resolveConflictBody>;
 
-export type ConflictType = NonNullable<zod.infer<typeof getConflictByIdResponse>["conflictType"]>;
-export type ConflictSeverity = NonNullable<zod.infer<typeof getConflictByIdResponse>["severity"]>;
-export type ConflictStatus = NonNullable<zod.infer<typeof getConflictByIdResponse>["status"]>;
-export type ResolutionStrategy = NonNullable<
-    zod.infer<typeof getConflictByIdResponse>["resolutionStrategy"]
->;
+export type ConflictType = (typeof CONFLICT_TYPES)[number];
+export type ConflictSeverity = (typeof CONFLICT_SEVERITIES)[number];
+export type ConflictStatus = (typeof CONFLICT_STATUSES)[number];
+export type ResolutionStrategy = (typeof RESOLUTION_STRATEGIES)[number];
 
-export type ConflictGenerated = NonNullable<zod.infer<typeof getConflictByIdResponse>>;
-export type Conflict = ConflictGenerated & {
+export type Conflict = NonNullable<zod.infer<typeof getConflictByIdResponse>> & {
     id: string;
 };
-
-export type ConflictListResponse = NonNullable<zod.infer<typeof getAllConflictsResponse>>;

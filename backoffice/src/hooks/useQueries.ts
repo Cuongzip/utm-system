@@ -8,7 +8,8 @@ import { alertService } from "@/services/alertService";
 import { airspaceService } from "@/services/airspaceService";
 import { connectivityService } from "@/services/connectivityService";
 import { emergencyService } from "@/services/emergencyService";
-import { INCIDENT_STATUS, type IncidentQueryParams } from "@/types";
+import { conflictService } from "@/services/conflictService";
+import { INCIDENT_STATUS, type IncidentQueryParams, type ConflictQueryParams } from "@/types";
 
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
@@ -164,5 +165,21 @@ export function useEmergencyResolvedHistory(limit = 10, enabled = true) {
         queryFn: () => emergencyService.getIncidents({ status: INCIDENT_STATUS.RESOLVED, limit }),
         staleTime: 1000 * 15,
         enabled,
+    });
+}
+
+export function useConflictsActive() {
+    return useQuery({
+        queryKey: QUERY_KEYS.conflictsActive,
+        queryFn: () => conflictService.getActive(),
+        refetchInterval: 3000,
+    });
+}
+
+export function useConflictsAll(params?: ConflictQueryParams) {
+    return useQuery({
+        queryKey: params ? [...QUERY_KEYS.conflicts, params] : QUERY_KEYS.conflicts,
+        queryFn: () => conflictService.getAll(params),
+        staleTime: 1000 * 15,
     });
 }
