@@ -1,5 +1,6 @@
 package com.utm.simulation.service.client;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.simulation.config.ServiceUrlConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -74,7 +75,8 @@ class ConnectivityClientServiceImplTest {
         @Test
         @DisplayName("whenHeartbeatSuccessful_returnsTrue")
         void whenHeartbeatSuccessful_returnsTrue() {
-            when(serviceUrlConfig.connectivity()).thenReturn(new ServiceUrlConfig.ConnectivityUrlConfig("http://localhost:8085"));
+            when(serviceUrlConfig.connectivity())
+                    .thenReturn(new ServiceUrlConfig.ConnectivityUrlConfig("http://localhost:8085"));
             doReturn(requestBodyUriSpec).when(restClient).post();
             doReturn(requestBodySpec).when(requestBodyUriSpec).uri(anyString());
             doReturn(requestBodySpec).when(requestBodySpec).contentType(any());
@@ -90,25 +92,31 @@ class ConnectivityClientServiceImplTest {
         @Test
         @DisplayName("whenDeviceNotFound404_throwsNotFoundException")
         void whenDeviceNotFound404_throwsNotFoundException() {
-            when(serviceUrlConfig.connectivity()).thenReturn(new ServiceUrlConfig.ConnectivityUrlConfig("http://localhost:8085"));
+            when(serviceUrlConfig.connectivity())
+                    .thenReturn(new ServiceUrlConfig.ConnectivityUrlConfig("http://localhost:8085"));
             doReturn(requestBodyUriSpec).when(restClient).post();
             doReturn(requestBodySpec).when(requestBodyUriSpec).uri(anyString());
             doReturn(requestBodySpec).when(requestBodySpec).contentType(any());
             doReturn(requestBodySpec).when(requestBodySpec).body(any(Object.class));
             doReturn(responseSpec).when(requestBodySpec).retrieve();
             when(responseSpec.toBodilessEntity()).thenThrow(
-                    HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, new byte[0], null)
-            );
+                    HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, new byte[0],
+                            null));
 
             assertThatThrownBy(() -> connectivityClientService.sendHeartbeat(DEVICE_ID))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining(DEVICE_ID);
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.DEVICE_REGISTRATION_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", DEVICE_ID);
+                    });
         }
 
         @Test
         @DisplayName("whenGenericHttpError_returnsFalseGracefully")
         void whenGenericHttpError_returnsFalseGracefully() {
-            when(serviceUrlConfig.connectivity()).thenReturn(new ServiceUrlConfig.ConnectivityUrlConfig("http://localhost:8085"));
+            when(serviceUrlConfig.connectivity())
+                    .thenReturn(new ServiceUrlConfig.ConnectivityUrlConfig("http://localhost:8085"));
             doReturn(requestBodyUriSpec).when(restClient).post();
             doReturn(requestBodySpec).when(requestBodyUriSpec).uri(anyString());
             doReturn(requestBodySpec).when(requestBodySpec).contentType(any());
@@ -122,4 +130,3 @@ class ConnectivityClientServiceImplTest {
         }
     }
 }
-

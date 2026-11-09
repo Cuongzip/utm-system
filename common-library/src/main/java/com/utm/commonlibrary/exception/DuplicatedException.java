@@ -1,17 +1,18 @@
 package com.utm.commonlibrary.exception;
 
-import com.utm.commonlibrary.utils.MessagesUtils;
+import java.util.Map;
 
-public class DuplicatedException extends RuntimeException {
+public class DuplicatedException extends BaseBusinessException {
 
-    private final String message;
-
-    public DuplicatedException(String errorCode, Object... var2) {
-        this.message = MessagesUtils.getMessage(errorCode, var2);
+    public DuplicatedException(String errorCode, String paramKey, Object paramValue) {
+        super(errorCode, paramKey, paramValue);
     }
 
-    @Override
-    public String getMessage() {
-        return message;
+    public DuplicatedException(String errorCode, Map<String, Object> params) {
+        super(errorCode, params);
+    }
+
+    public DuplicatedException(String errorCode, Object... legacyArgs) {
+        super(errorCode, legacyArgs);
     }
 }

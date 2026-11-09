@@ -49,7 +49,8 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
         @Transactional
         public MissionExecutionResultVm executeMission(String missionId, MissionExecutePostVm postVm) {
                 Mission mission = missionRepository.findById(missionId)
-                                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, missionId));
+                                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id",
+                                                missionId));
 
                 if (mission.getStatus() != MissionStatus.DRAFT && mission.getStatus() != MissionStatus.SCHEDULED) {
                         throw new BadRequestException(MessageCode.CANNOT_EDIT_EXECUTING_MISSION,
@@ -64,10 +65,10 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
 
                 String droneId = postVm.droneId().trim();
                 DroneBriefVm drone = droneClientService.getDroneById(droneId)
-                                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId));
+                                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId));
                 if (drone.status() != null && !"available".equalsIgnoreCase(drone.status())
                                 && !"idle".equalsIgnoreCase(drone.status())) {
-                        throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, droneId);
+                        throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber", drone.registrationNumber() != null ? drone.registrationNumber() : droneId);
                 }
 
                 MissionExecution execution = missionExecutionMapper.toEntity(postVm, missionId, waypoints.size());
@@ -126,7 +127,8 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
         @Transactional(readOnly = true)
         public MissionExecutionVm getExecutionById(String id) {
                 MissionExecution execution = missionExecutionRepository.findById(id)
-                                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_EXECUTION_NOT_FOUND, id));
+                                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_EXECUTION_NOT_FOUND, "id",
+                                                id));
                 return missionExecutionMapper.toVm(execution);
         }
 

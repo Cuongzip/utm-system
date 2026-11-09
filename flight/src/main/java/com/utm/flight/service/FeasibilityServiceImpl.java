@@ -59,7 +59,7 @@ public class FeasibilityServiceImpl implements FeasibilityService {
     @Transactional
     public FeasibilityResultVm checkFeasibility(String flightId, FeasibilityCheckPostVm request) {
         Flight flight = flightRepository.findById(flightId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", flightId));
 
         DroneEnergySpecVm droneSpec = droneClientService.getDroneEnergySpec(flight.getDroneId())
                 .orElseGet(() -> new DroneEnergySpecVm(
@@ -70,8 +70,7 @@ public class FeasibilityServiceImpl implements FeasibilityService {
                         FeasibilityConfig.DEFAULT_BATTERY_HEALTH_PCT,
                         FeasibilityConfig.DEFAULT_WIND_TOLERANCE_MS,
                         FeasibilityConfig.DEFAULT_MAX_PAYLOAD_KG,
-                        FeasibilityConfig.DEFAULT_MAX_FLIGHT_TIME_MIN
-                ));
+                        FeasibilityConfig.DEFAULT_MAX_FLIGHT_TIME_MIN));
 
         double distanceM = 0.0;
         if (request != null && request.distanceM() != null && request.distanceM() > 0) {
@@ -114,7 +113,7 @@ public class FeasibilityServiceImpl implements FeasibilityService {
     @Transactional
     public FlightVm overrideFeasibility(String flightId, FeasibilityOverridePostVm request) {
         Flight flight = flightRepository.findById(flightId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", flightId));
 
         if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED
                 || flight.getStatus() == FlightStatus.CANCELLED || flight.getStatus() == FlightStatus.EMERGENCY_LANDING
@@ -123,7 +122,8 @@ public class FeasibilityServiceImpl implements FeasibilityService {
                     "Cannot override feasibility for an active, completed, cancelled, diverted, or emergency landing flight");
         }
 
-        String justification = String.format("Override by %s: %s", request.approvedBy().trim(), request.reason().trim());
+        String justification = String.format("Override by %s: %s", request.approvedBy().trim(),
+                request.reason().trim());
         flight.setFeasibilityOverride(justification);
 
         if (flight.getAuthorizationStatus() == FlightAuthorizationStatus.PENDING) {
@@ -151,7 +151,8 @@ public class FeasibilityServiceImpl implements FeasibilityService {
         };
 
         if (limit <= 0) {
-            List<FeasibilityEvaluation> all = evaluationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
+            List<FeasibilityEvaluation> all = evaluationRepository.findAll(spec,
+                    Sort.by(Sort.Direction.DESC, "createdOn"));
             List<FeasibilityEvaluationVm> vms = feasibilityMapper.toEvaluationVmList(all);
             return FeasibilityEvaluationListVm.of(vms, all.size());
         }
@@ -200,10 +201,8 @@ public class FeasibilityServiceImpl implements FeasibilityService {
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2.0) * Math.sin(dLat / 2.0)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
+                        * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
         double c = 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
         return EARTH_RADIUS_M * c;
     }
 }
-
-

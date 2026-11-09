@@ -36,7 +36,7 @@ public class EmergencyProtocolServiceImpl implements EmergencyProtocolService {
     @Transactional(readOnly = true)
     public EmergencyProtocolVm getProtocolById(String id) {
         EmergencyProtocol protocol = protocolRepo.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_PROTOCOL_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_PROTOCOL_NOT_FOUND, "id", id));
         return protocolMapper.toVm(protocol);
     }
 
@@ -44,7 +44,7 @@ public class EmergencyProtocolServiceImpl implements EmergencyProtocolService {
     @Transactional
     public EmergencyProtocolVm createProtocol(EmergencyProtocolPostVm postVm) {
         if (protocolRepo.findByName(postVm.name().trim()).isPresent()) {
-            throw new BadRequestException("Protocol with name '" + postVm.name().trim() + "' already exists");
+            throw new BadRequestException(MessageCode.NAME_ALREADY_EXISTED, "name", postVm.name().trim());
         }
         EmergencyProtocol protocol = protocolMapper.toEntity(postVm);
         protocol.setSystemDefault(false);
@@ -57,13 +57,13 @@ public class EmergencyProtocolServiceImpl implements EmergencyProtocolService {
     @Transactional
     public EmergencyProtocolVm updateProtocol(String id, EmergencyProtocolPutVm putVm) {
         EmergencyProtocol protocol = protocolRepo.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_PROTOCOL_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_PROTOCOL_NOT_FOUND, "id", id));
 
         if (putVm.name() != null && !putVm.name().isBlank()
                 && !putVm.name().trim().equalsIgnoreCase(protocol.getName())) {
             protocolRepo.findByName(putVm.name().trim()).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
-                    throw new BadRequestException("Protocol with name '" + putVm.name().trim() + "' already exists");
+                    throw new BadRequestException(MessageCode.NAME_ALREADY_EXISTED, "name", putVm.name().trim());
                 }
             });
         }

@@ -375,7 +375,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.getZoneById("non-existent-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .hasMessage("Airspace zone is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-id");
 
             verify(airspaceZoneRepository).findById("non-existent-id");
             verify(airspaceZoneMapper, never()).toVm(any());
@@ -450,7 +452,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.createZone(testPostVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining("ASZ-X1Y2");
+                    .hasMessage("Airspace zone code already exists")
+                    .extracting(ex -> ((DuplicatedException) ex).getParams().get("code"))
+                    .isEqualTo("ASZ-X1Y2");
 
             verify(airspaceZoneRepository).existsByCode("ASZ-X1Y2");
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
@@ -463,7 +467,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.createZone(testPostVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining("Independence Palace No-Fly Zone");
+                    .hasMessage("Airspace zone name already exists")
+                    .extracting(ex -> ((DuplicatedException) ex).getParams().get("name"))
+                    .isEqualTo("Independence Palace No-Fly Zone");
 
             verify(airspaceZoneRepository).existsByName("Independence Palace No-Fly Zone");
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
@@ -477,7 +483,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.createZone(testPostVm))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                    .hasMessage("Hub / Vertiport is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
             verify(hubClientService).existsById("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
@@ -561,7 +569,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.updateZone("z1b2c3d4-e5f6-7890-abcd-ef1234567890", testPutVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining("Independence Palace No-Fly Zone (Expansion)");
+                    .hasMessage("Airspace zone name already exists")
+                    .extracting(ex -> ((DuplicatedException) ex).getParams().get("name"))
+                    .isEqualTo("Independence Palace No-Fly Zone (Expansion)");
 
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
         }
@@ -577,7 +587,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.updateZone("z1b2c3d4-e5f6-7890-abcd-ef1234567890", testPutVm))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                    .hasMessage("Hub / Vertiport is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
         }
@@ -589,7 +601,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.updateZone("non-existent-id", testPutVm))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .hasMessage("Airspace zone is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-id");
 
             verify(airspaceZoneRepository).findById("non-existent-id");
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
@@ -622,7 +636,9 @@ class AirspaceServiceImplTest {
 
             assertThatThrownBy(() -> airspaceService.deleteZone("non-existent-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .hasMessage("Airspace zone is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-id");
 
             verify(airspaceZoneRepository).findById("non-existent-id");
             verify(airspaceZoneRepository, never()).save(any());

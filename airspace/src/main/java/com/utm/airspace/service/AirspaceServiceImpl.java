@@ -57,8 +57,7 @@ public class AirspaceServiceImpl implements AirspaceService {
             boolean inside = spatialCalculationService.isPointInPolygon(
                     checkVm.lat(),
                     checkVm.lon(),
-                    zoneVm.geometry()
-            );
+                    zoneVm.geometry());
 
             if (inside) {
                 if (zone.getZoneType() == AirspaceZoneType.NO_FLY_ZONE) {
@@ -67,16 +66,14 @@ public class AirspaceServiceImpl implements AirspaceService {
                             zone.getId(),
                             zone.getName(),
                             zone.getZoneType().getValue(),
-                            "Point falls inside strictly forbidden airspace"
-                    ));
+                            "Point falls inside strictly forbidden airspace"));
                 } else if (zone.getZoneType() == AirspaceZoneType.RESTRICTED) {
                     safe = false;
                     violations.add(new AirspaceViolationVm(
                             zone.getId(),
                             zone.getName(),
                             zone.getZoneType().getValue(),
-                            "Point falls inside restricted airspace requiring special ATC clearance"
-                    ));
+                            "Point falls inside restricted airspace requiring special ATC clearance"));
                 } else if (checkVm.alt() != null && checkVm.alt() > zone.getAltitudeCeiling()) {
                     safe = false;
                     violations.add(new AirspaceViolationVm(
@@ -84,8 +81,7 @@ public class AirspaceServiceImpl implements AirspaceService {
                             zone.getName(),
                             zone.getZoneType().getValue(),
                             String.format("Point altitude (%.1fm) exceeds ceiling limit (%.1fm) of zone '%s'",
-                                    checkVm.alt(), zone.getAltitudeCeiling(), zone.getName())
-                    ));
+                                    checkVm.alt(), zone.getAltitudeCeiling(), zone.getName())));
                 }
             }
         }
@@ -99,8 +95,8 @@ public class AirspaceServiceImpl implements AirspaceService {
         List<AirspaceZone> activeZones = airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE);
         List<AirspacePathConflictVm> violations = new ArrayList<>();
 
-        List<SpatialCalculationService.SampledPoint> sampledPoints =
-                spatialCalculationService.samplePolyline(checkPathVm.points(), checkPathVm.spacingM());
+        List<SpatialCalculationService.SampledPoint> sampledPoints = spatialCalculationService
+                .samplePolyline(checkPathVm.points(), checkPathVm.spacingM());
 
         for (SpatialCalculationService.SampledPoint pt : sampledPoints) {
             for (AirspaceZone zone : activeZones) {
@@ -108,8 +104,7 @@ public class AirspaceServiceImpl implements AirspaceService {
                 boolean inside = spatialCalculationService.isPointInPolygon(
                         pt.lat(),
                         pt.lon(),
-                        zoneVm.geometry()
-                );
+                        zoneVm.geometry());
 
                 if (inside) {
                     if (zone.getZoneType() == AirspaceZoneType.NO_FLY_ZONE) {
@@ -121,8 +116,8 @@ public class AirspaceServiceImpl implements AirspaceService {
                                 new AirspaceCheckPointVm(pt.lat(), pt.lon(), pt.alt()),
                                 pt.segmentIndex(),
                                 Math.round(pt.distanceFromStartM() * 100.0) / 100.0,
-                                String.format("Trajectory intersects strictly forbidden airspace '%s'", zone.getName())
-                        ));
+                                String.format("Trajectory intersects strictly forbidden airspace '%s'",
+                                        zone.getName())));
                     } else if (zone.getZoneType() == AirspaceZoneType.RESTRICTED) {
                         violations.add(new AirspacePathConflictVm(
                                 zone.getId(),
@@ -132,8 +127,7 @@ public class AirspaceServiceImpl implements AirspaceService {
                                 new AirspaceCheckPointVm(pt.lat(), pt.lon(), pt.alt()),
                                 pt.segmentIndex(),
                                 Math.round(pt.distanceFromStartM() * 100.0) / 100.0,
-                                String.format("Trajectory intersects restricted zone '%s'", zone.getName())
-                        ));
+                                String.format("Trajectory intersects restricted zone '%s'", zone.getName())));
                     } else if (pt.alt() > zone.getAltitudeCeiling()) {
                         violations.add(new AirspacePathConflictVm(
                                 zone.getId(),
@@ -144,8 +138,7 @@ public class AirspaceServiceImpl implements AirspaceService {
                                 pt.segmentIndex(),
                                 Math.round(pt.distanceFromStartM() * 100.0) / 100.0,
                                 String.format("Trajectory altitude (%.1fm) exceeds ceiling limit (%.1fm) in zone '%s'",
-                                        pt.alt(), zone.getAltitudeCeiling(), zone.getName())
-                        ));
+                                        pt.alt(), zone.getAltitudeCeiling(), zone.getName())));
                     }
                 }
             }
@@ -183,7 +176,7 @@ public class AirspaceServiceImpl implements AirspaceService {
     public AirspaceZoneVm getZoneById(String id) {
         AirspaceZone zone = airspaceZoneRepository.findById(id)
                 .or(() -> airspaceZoneRepository.findByCode(id.trim().toUpperCase()))
-                .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, "id", id));
         return airspaceZoneMapper.toVm(zone);
     }
 
@@ -191,22 +184,23 @@ public class AirspaceServiceImpl implements AirspaceService {
     public AirspaceZoneVm createZone(AirspaceZonePostVm postVm) {
         String trimmedName = postVm.name().trim();
         if (airspaceZoneRepository.existsByName(trimmedName)) {
-            throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_NAME_ALREADY_EXISTED, trimmedName);
+            throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_NAME_ALREADY_EXISTED, "name", trimmedName);
         }
 
         String code;
         if (postVm.code() != null && !postVm.code().isBlank()) {
             code = postVm.code().trim().toUpperCase();
             if (airspaceZoneRepository.existsByCode(code)) {
-                throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_CODE_ALREADY_EXISTED, code);
+                throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_CODE_ALREADY_EXISTED, "code", code);
             }
         } else {
-            code = BusinessCodeGenerator.generateUnique(CodePatternRule.AIRSPACE_ZONE, airspaceZoneRepository::existsByCode);
+            code = BusinessCodeGenerator.generateUnique(CodePatternRule.AIRSPACE_ZONE,
+                    airspaceZoneRepository::existsByCode);
         }
 
         if (postVm.hubId() != null && !postVm.hubId().isBlank()) {
             if (!hubClientService.existsById(postVm.hubId().trim())) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, postVm.hubId());
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", postVm.hubId().trim());
             }
         }
 
@@ -216,25 +210,26 @@ public class AirspaceServiceImpl implements AirspaceService {
         zone.setName(trimmedName);
         zone.setCode(code);
         AirspaceZone saved = airspaceZoneRepository.saveAndFlush(zone);
-        log.info("Created new AirspaceZone with ID: {}, code: {} and name: {}", saved.getId(), saved.getCode(), saved.getName());
+        log.info("Created new AirspaceZone with ID: {}, code: {} and name: {}", saved.getId(), saved.getCode(),
+                saved.getName());
         return airspaceZoneMapper.toVm(saved);
     }
 
     @Override
     public AirspaceZoneVm updateZone(String id, AirspaceZonePutVm putVm) {
         AirspaceZone zone = airspaceZoneRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, "id", id));
 
         if (putVm.name() != null) {
             String trimmedName = putVm.name().trim();
             if (airspaceZoneRepository.existsByNameAndIdNot(trimmedName, id)) {
-                throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_NAME_ALREADY_EXISTED, trimmedName);
+                throw new DuplicatedException(MessageCode.AIRSPACE_ZONE_NAME_ALREADY_EXISTED, "name", trimmedName);
             }
         }
 
         if (putVm.hubId() != null && !putVm.hubId().isBlank()) {
             if (!hubClientService.existsById(putVm.hubId().trim())) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, putVm.hubId());
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", putVm.hubId().trim());
             }
         }
 
@@ -254,7 +249,7 @@ public class AirspaceServiceImpl implements AirspaceService {
     @Override
     public void deleteZone(String id) {
         AirspaceZone zone = airspaceZoneRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, "id", id));
         zone.setStatus(AirspaceZoneStatus.INACTIVE);
         airspaceZoneRepository.save(zone);
         log.info("Soft deleted (deactivated) AirspaceZone with ID: {}", id);

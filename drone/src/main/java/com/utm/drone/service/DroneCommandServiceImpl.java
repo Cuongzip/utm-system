@@ -40,7 +40,7 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     @Transactional
     public DroneCommandVm sendCommand(String droneId, DroneCommandPostVm postVm) {
         Drone drone = droneRepository.findById(droneId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId));
 
         int priority = postVm.priority() != null ? postVm.priority() : getPriorityForCommand(postVm.commandType());
         int timeoutMs = postVm.timeoutMs() != null ? postVm.timeoutMs() : getTimeoutForPriority(priority);
@@ -59,8 +59,7 @@ public class DroneCommandServiceImpl implements DroneCommandService {
                 issuedBy,
                 priority,
                 timeoutMs,
-                maxRetries
-        );
+                maxRetries);
 
         DroneCommand saved = droneCommandRepository.save(entity);
         log.info("Issued command {} (type={}) to drone {}", saved.getId(), saved.getCommandType(), droneId);
@@ -119,9 +118,10 @@ public class DroneCommandServiceImpl implements DroneCommandService {
 
     @Override
     @Transactional(readOnly = true)
-    public DroneCommandListVm getCommands(String droneId, CommandStatus status, CommandType commandType, int limit, int offset) {
+    public DroneCommandListVm getCommands(String droneId, CommandStatus status, CommandType commandType, int limit,
+            int offset) {
         if (!droneRepository.existsById(droneId)) {
-            throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId);
+            throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId);
         }
 
         int pageSize = limit > 0 ? limit : 20;
@@ -130,11 +130,13 @@ public class DroneCommandServiceImpl implements DroneCommandService {
 
         Page<DroneCommand> pageResult;
         if (status != null && commandType != null) {
-            pageResult = droneCommandRepository.findByDroneIdAndStatusAndCommandTypeOrderByIssuedAtDesc(droneId, status, commandType, pageable);
+            pageResult = droneCommandRepository.findByDroneIdAndStatusAndCommandTypeOrderByIssuedAtDesc(droneId, status,
+                    commandType, pageable);
         } else if (status != null) {
             pageResult = droneCommandRepository.findByDroneIdAndStatusOrderByIssuedAtDesc(droneId, status, pageable);
         } else if (commandType != null) {
-            pageResult = droneCommandRepository.findByDroneIdAndCommandTypeOrderByIssuedAtDesc(droneId, commandType, pageable);
+            pageResult = droneCommandRepository.findByDroneIdAndCommandTypeOrderByIssuedAtDesc(droneId, commandType,
+                    pageable);
         } else {
             pageResult = droneCommandRepository.findByDroneIdOrderByIssuedAtDesc(droneId, pageable);
         }
@@ -147,7 +149,7 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     @Transactional(readOnly = true)
     public DroneCommandVm getCommandById(String droneId, String commandId) {
         DroneCommand cmd = droneCommandRepository.findByIdAndDroneId(commandId, droneId)
-                .orElseThrow(() -> new NotFoundException("COMMAND_NOT_FOUND", commandId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.COMMAND_NOT_FOUND, "id", commandId));
         return droneCommandMapper.toVm(cmd);
     }
 
@@ -155,10 +157,10 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     @Transactional
     public DroneCommandVm cancelCommand(String droneId, String commandId) {
         DroneCommand cmd = droneCommandRepository.findByIdAndDroneId(commandId, droneId)
-                .orElseThrow(() -> new NotFoundException("COMMAND_NOT_FOUND", commandId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.COMMAND_NOT_FOUND, "id", commandId));
 
         if (cmd.getStatus() != CommandStatus.PENDING && cmd.getStatus() != CommandStatus.SENT) {
-            throw new BadRequestException("CANNOT_CANCEL_EXECUTING_COMMAND",
+            throw new BadRequestException(MessageCode.CANNOT_CANCEL_EXECUTING_COMMAND,
                     "Cannot cancel command that is already executing or completed");
         }
 
@@ -173,22 +175,23 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     @Transactional(readOnly = true)
     public List<DroneCommandVm> getActiveCommands(String droneId) {
         if (!droneRepository.existsById(droneId)) {
-            throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId);
+            throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId);
         }
 
         List<CommandStatus> activeStatuses = List.of(
                 CommandStatus.PENDING,
                 CommandStatus.SENT,
                 CommandStatus.ACKNOWLEDGED,
-                CommandStatus.EXECUTING
-        );
+                CommandStatus.EXECUTING);
 
-        List<DroneCommand> commands = droneCommandRepository.findByDroneIdAndStatusInOrderByIssuedAtDesc(droneId, activeStatuses);
+        List<DroneCommand> commands = droneCommandRepository.findByDroneIdAndStatusInOrderByIssuedAtDesc(droneId,
+                activeStatuses);
         return droneCommandMapper.toVmList(commands);
     }
 
     private int getPriorityForCommand(CommandType commandType) {
-        if (commandType == null) return 2;
+        if (commandType == null)
+            return 2;
         return switch (commandType) {
             case EMERGENCY_STOP, LAND -> 0;
             case RTL, HOVER, PAUSE -> 1;
@@ -215,18 +218,20 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     }
 
     private long getAckDelay(CommandType commandType) {
-        if (commandType == CommandType.EMERGENCY_STOP) return 100;
+        if (commandType == CommandType.EMERGENCY_STOP)
+            return 100;
         return 300;
     }
 
     private long getExecuteDelay(CommandType commandType) {
-        if (commandType == CommandType.EMERGENCY_STOP) return 200;
+        if (commandType == CommandType.EMERGENCY_STOP)
+            return 200;
         return 800;
     }
 
     private long getCompleteDelay(CommandType commandType) {
-        if (commandType == CommandType.EMERGENCY_STOP) return 500;
+        if (commandType == CommandType.EMERGENCY_STOP)
+            return 500;
         return 2000;
     }
 }
-

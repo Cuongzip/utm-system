@@ -6,6 +6,16 @@ export function showApiError(
     defaultMessage = "An unexpected error occurred"
 ): ParsedApiError {
     const parsed = parseApiError(err, defaultMessage);
-    toast.error(parsed.message);
+
+    const hasFieldErrors = Object.keys(parsed.fieldErrors).length > 0;
+    if (hasFieldErrors || parsed.errorCode === "VALIDATION_FAILED") {
+        return parsed;
+    }
+
+    if (parsed.description) {
+        toast.error(parsed.cleanMessage, { description: parsed.description });
+    } else {
+        toast.error(parsed.cleanMessage);
+    }
     return parsed;
 }

@@ -49,10 +49,11 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         String trimmedDroneId = postVm.droneId().trim();
 
         DroneBriefVm drone = droneClientService.getDroneById(trimmedDroneId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, trimmedDroneId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", trimmedDroneId));
 
         if (deviceRegistrationRepository.findByDroneId(trimmedDroneId).isPresent()) {
-            throw new DuplicatedException(MessageCode.DRONE_ALREADY_HAS_DEVICE_REGISTRATION, trimmedDroneId);
+            throw new DuplicatedException(MessageCode.DRONE_ALREADY_HAS_DEVICE_REGISTRATION, "registrationNumber",
+                    drone.registrationNumber() != null ? drone.registrationNumber() : trimmedDroneId);
         }
 
         String trimmedIdentifier;
@@ -63,7 +64,8 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         } else {
             trimmedIdentifier = postVm.deviceIdentifier().trim().toUpperCase();
             if (deviceRegistrationRepository.findByDeviceIdentifier(trimmedIdentifier).isPresent()) {
-                throw new DuplicatedException(MessageCode.DEVICE_IDENTIFIER_ALREADY_EXISTED, trimmedIdentifier);
+                throw new DuplicatedException(MessageCode.DEVICE_IDENTIFIER_ALREADY_EXISTED, "identifier",
+                        trimmedIdentifier);
             }
         }
 
@@ -78,7 +80,8 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
 
     @Override
     @Transactional(readOnly = true)
-    public DeviceRegistrationListVm getDevices(DeviceConnectionStatus connectionStatus, String search, int limit, int offset) {
+    public DeviceRegistrationListVm getDevices(DeviceConnectionStatus connectionStatus, String search, int limit,
+            int offset) {
         Specification<DeviceRegistration> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (connectionStatus != null) {
@@ -88,14 +91,14 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
                 String searchPattern = "%" + search.trim().toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("deviceIdentifier")), searchPattern),
-                        cb.like(cb.lower(root.get("droneId")), searchPattern)
-                ));
+                        cb.like(cb.lower(root.get("droneId")), searchPattern)));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         if (limit <= 0) {
-            List<DeviceRegistration> all = deviceRegistrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
+            List<DeviceRegistration> all = deviceRegistrationRepository.findAll(spec,
+                    Sort.by(Sort.Direction.DESC, "createdOn"));
             List<DeviceRegistrationVm> items = all.stream().map(reg -> {
                 Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
                 return mapper.toVm(reg, droneOpt.orElse(null));
@@ -121,7 +124,8 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     public List<DeviceRegistrationVm> getOnlineDevices() {
         ZonedDateTime cutoff = ZonedDateTime.now().minusSeconds(30);
 
-        List<DeviceRegistration> allOnline = deviceRegistrationRepository.findByConnectionStatus(DeviceConnectionStatus.ONLINE);
+        List<DeviceRegistration> allOnline = deviceRegistrationRepository
+                .findByConnectionStatus(DeviceConnectionStatus.ONLINE);
         for (DeviceRegistration dev : allOnline) {
             if (dev.getLastSeenAt() == null || dev.getLastSeenAt().isBefore(cutoff)) {
                 dev.setConnectionStatus(DeviceConnectionStatus.OFFLINE);
@@ -129,7 +133,8 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
             }
         }
 
-        List<DeviceRegistration> currentOnline = deviceRegistrationRepository.findByConnectionStatus(DeviceConnectionStatus.ONLINE);
+        List<DeviceRegistration> currentOnline = deviceRegistrationRepository
+                .findByConnectionStatus(DeviceConnectionStatus.ONLINE);
         return currentOnline.stream()
                 .map(reg -> {
                     Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
@@ -142,8 +147,9 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Transactional(readOnly = true)
     public DeviceRegistrationVm getDeviceById(String id) {
         String trimmedKey = id.trim();
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, trimmedKey));
+        DeviceRegistration reg = deviceRegistrationRepository
+                .findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "id", trimmedKey));
 
         Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
         return mapper.toVm(reg, droneOpt.orElse(null));
@@ -153,8 +159,9 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Transactional
     public HeartbeatResultVm processHeartbeat(String idOrIdentifier, DeviceHeartbeatPostVm heartbeatVm) {
         String trimmedKey = idOrIdentifier.trim();
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, trimmedKey));
+        DeviceRegistration reg = deviceRegistrationRepository
+                .findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "id", trimmedKey));
 
         reg.setConnectionStatus(DeviceConnectionStatus.ONLINE);
         reg.setLastSeenAt(ZonedDateTime.now());
@@ -170,14 +177,16 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
     @Transactional
     public RevokeResultVm revokeDeviceRegistration(String id) {
         String trimmedKey = id.trim();
-        DeviceRegistration reg = deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, trimmedKey));
+        DeviceRegistration reg = deviceRegistrationRepository
+                .findByIdOrDeviceIdentifierOrDroneId(trimmedKey, trimmedKey, trimmedKey)
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "id", trimmedKey));
 
         Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
         if (droneOpt.isPresent()) {
             String status = droneOpt.get().status();
             if (status != null && (status.equalsIgnoreCase("in_flight") || status.equalsIgnoreCase("in_mission"))) {
-                throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_REVOKE, reg.getDroneId());
+                throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_REVOKE, "registrationNumber",
+                        droneOpt.get().registrationNumber() != null ? droneOpt.get().registrationNumber() : reg.getDroneId());
             }
         }
 

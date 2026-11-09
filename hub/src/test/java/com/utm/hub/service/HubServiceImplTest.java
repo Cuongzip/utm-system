@@ -1,7 +1,9 @@
 package com.utm.hub.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.utils.MessagesUtils;
 import com.utm.hub.mapper.HubMapper;
 import com.utm.hub.model.Hub;
 import com.utm.hub.model.Location;
@@ -84,24 +86,21 @@ class HubServiceImplTest {
                 1500.0,
                 HubStatus.ACTIVE,
                 ZonedDateTime.now(),
-                ZonedDateTime.now()
-        );
+                ZonedDateTime.now());
 
         testPostVm = new HubPostVm(
                 "HUB-SGN-01",
                 "Central Vertiport Hub D1",
                 testLocationVm,
                 12.5,
-                1500.0
-        );
+                1500.0);
 
         testPutVm = new HubPutVm(
                 "Central Vertiport Hub D1 (Expansion)",
                 testLocationVm,
                 15.0,
                 2000.0,
-                HubStatus.MAINTENANCE
-        );
+                HubStatus.MAINTENANCE);
     }
 
     @Nested
@@ -140,7 +139,9 @@ class HubServiceImplTest {
 
             assertThatThrownBy(() -> hubService.createHub(testPostVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining("HUB-SGN-01");
+                    .hasMessage(MessagesUtils.getCleanMessage(MessageCode.HUB_CODE_ALREADY_EXISTED))
+                    .extracting(ex -> ((DuplicatedException) ex).getParams().get("code"))
+                    .isEqualTo("HUB-SGN-01");
 
             verify(hubRepository).existsByCode("HUB-SGN-01");
             verify(hubRepository, never()).saveAndFlush(any());
@@ -154,8 +155,7 @@ class HubServiceImplTest {
                     "Central Vertiport Hub D1",
                     testLocationVm,
                     12.5,
-                    1500.0
-            );
+                    1500.0);
 
             when(hubRepository.existsByCode(anyString())).thenReturn(false);
             when(hubMapper.toEntity(postVmWithoutCode)).thenReturn(testHub);
@@ -259,7 +259,9 @@ class HubServiceImplTest {
 
             assertThatThrownBy(() -> hubService.getHubById("non-existent-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .hasMessage(MessagesUtils.getCleanMessage(MessageCode.HUB_NOT_FOUND))
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-id");
 
             verify(hubRepository).findById("non-existent-id");
             verify(hubMapper, never()).toVm(any());
@@ -292,8 +294,7 @@ class HubServiceImplTest {
                     2000.0,
                     HubStatus.MAINTENANCE,
                     ZonedDateTime.now(),
-                    ZonedDateTime.now()
-            );
+                    ZonedDateTime.now());
 
             when(hubRepository.findById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                     .thenReturn(Optional.of(testHub));
@@ -329,7 +330,9 @@ class HubServiceImplTest {
 
             assertThatThrownBy(() -> hubService.updateHub("non-existent-id", testPutVm))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .hasMessage(MessagesUtils.getCleanMessage(MessageCode.HUB_NOT_FOUND))
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-id");
 
             verify(hubRepository).findById("non-existent-id");
             verify(hubRepository, never()).saveAndFlush(any());
@@ -365,7 +368,9 @@ class HubServiceImplTest {
 
             assertThatThrownBy(() -> hubService.deactivateHub("non-existent-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .hasMessage(MessagesUtils.getCleanMessage(MessageCode.HUB_NOT_FOUND))
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-id");
 
             verify(hubRepository).findById("non-existent-id");
             verify(hubRepository, never()).save(any());

@@ -33,135 +33,139 @@ import static org.mockito.Mockito.when;
 @DisplayName("Unit Tests: ConflictSnapshotServiceImpl (Specification-Driven)")
 class ConflictSnapshotServiceImplTest {
 
-    private static final String CONFLICT_ID = "conflict-123-uuid";
-    private static final String SNAPSHOT_ID = "snapshot-456-uuid";
+        private static final String CONFLICT_ID = "conflict-123-uuid";
+        private static final String SNAPSHOT_ID = "snapshot-456-uuid";
 
-    @Mock
-    private ConflictSnapshotRepository conflictSnapshotRepository;
+        @Mock
+        private ConflictSnapshotRepository conflictSnapshotRepository;
 
-    @Mock
-    private ConflictRepository conflictRepository;
+        @Mock
+        private ConflictRepository conflictRepository;
 
-    @Mock
-    private ConflictSnapshotMapper conflictSnapshotMapper;
+        @Mock
+        private ConflictSnapshotMapper conflictSnapshotMapper;
 
-    @InjectMocks
-    private ConflictSnapshotServiceImpl snapshotService;
+        @InjectMocks
+        private ConflictSnapshotServiceImpl snapshotService;
 
-    private Conflict testConflict;
-    private ConflictSnapshot testSnapshot;
-    private ConflictSnapshotVm testSnapshotVm;
+        private Conflict testConflict;
+        private ConflictSnapshot testSnapshot;
+        private ConflictSnapshotVm testSnapshotVm;
 
-    @BeforeEach
-    void setUp() {
-        testConflict = Conflict.builder()
-                .id(CONFLICT_ID)
-                .primaryFlightId("flight-001-uuid")
-                .secondaryFlightId("flight-002-uuid")
-                .build();
+        @BeforeEach
+        void setUp() {
+                testConflict = Conflict.builder()
+                                .id(CONFLICT_ID)
+                                .primaryFlightId("flight-001-uuid")
+                                .secondaryFlightId("flight-002-uuid")
+                                .build();
 
-        testSnapshot = ConflictSnapshot.builder()
-                .id(SNAPSHOT_ID)
-                .conflict(testConflict)
-                .recordedAt(ZonedDateTime.now())
-                .primaryLat(10.7769)
-                .primaryLon(106.7009)
-                .primaryAlt(100.0)
-                .secondaryLat(10.7780)
-                .secondaryLon(106.7020)
-                .secondaryAlt(115.0)
-                .separationDistance(45.0)
-                .verticalSeparation(15.0)
-                .timeToConflictSec(25)
-                .severity(ConflictSeverity.CRITICAL)
-                .build();
+                testSnapshot = ConflictSnapshot.builder()
+                                .id(SNAPSHOT_ID)
+                                .conflict(testConflict)
+                                .recordedAt(ZonedDateTime.now())
+                                .primaryLat(10.7769)
+                                .primaryLon(106.7009)
+                                .primaryAlt(100.0)
+                                .secondaryLat(10.7780)
+                                .secondaryLon(106.7020)
+                                .secondaryAlt(115.0)
+                                .separationDistance(45.0)
+                                .verticalSeparation(15.0)
+                                .timeToConflictSec(25)
+                                .severity(ConflictSeverity.CRITICAL)
+                                .build();
 
-        testSnapshotVm = new ConflictSnapshotVm(
-                SNAPSHOT_ID,
-                CONFLICT_ID,
-                ZonedDateTime.now(),
-                new LocationVm(10.7769, 106.7009),
-                100.0,
-                new LocationVm(10.7780, 106.7020),
-                115.0,
-                45.0,
-                15.0,
-                25,
-                ConflictSeverity.CRITICAL);
-    }
-
-    @Nested
-    @DisplayName("getSnapshotsByConflictId")
-    class GetSnapshotsByConflictId {
-
-        @Test
-        @DisplayName("whenConflictExists_returnsMappedSnapshotsOrderedByRecordedAtAsc")
-        void whenConflictExists_returnsMappedSnapshotsOrderedByRecordedAtAsc() {
-            when(conflictRepository.existsById(CONFLICT_ID)).thenReturn(true);
-            when(conflictSnapshotRepository.findByConflictIdOrderByRecordedAtAsc(CONFLICT_ID))
-                    .thenReturn(List.of(testSnapshot));
-            when(conflictSnapshotMapper.toVmList(List.of(testSnapshot))).thenReturn(List.of(testSnapshotVm));
-
-            List<ConflictSnapshotVm> result = snapshotService.getSnapshotsByConflictId(CONFLICT_ID);
-
-            assertThat(result).hasSize(1);
-            assertThat(result.getFirst().id()).isEqualTo(SNAPSHOT_ID);
-            assertThat(result.getFirst().conflictId()).isEqualTo(CONFLICT_ID);
-            assertThat(result.getFirst().separationDistance()).isEqualTo(45.0);
-            verify(conflictRepository).existsById(CONFLICT_ID);
-            verify(conflictSnapshotRepository).findByConflictIdOrderByRecordedAtAsc(CONFLICT_ID);
+                testSnapshotVm = new ConflictSnapshotVm(
+                                SNAPSHOT_ID,
+                                CONFLICT_ID,
+                                ZonedDateTime.now(),
+                                new LocationVm(10.7769, 106.7009),
+                                100.0,
+                                new LocationVm(10.7780, 106.7020),
+                                115.0,
+                                45.0,
+                                15.0,
+                                25,
+                                ConflictSeverity.CRITICAL);
         }
 
-        @Test
-        @DisplayName("whenConflictDoesNotExist_throwsNotFoundException")
-        void whenConflictDoesNotExist_throwsNotFoundException() {
-            when(conflictRepository.existsById("unknown-id")).thenReturn(false);
+        @Nested
+        @DisplayName("getSnapshotsByConflictId")
+        class GetSnapshotsByConflictId {
 
-            assertThatThrownBy(() -> snapshotService.getSnapshotsByConflictId("unknown-id"))
-                    .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-id");
+                @Test
+                @DisplayName("whenConflictExists_returnsMappedSnapshotsOrderedByRecordedAtAsc")
+                void whenConflictExists_returnsMappedSnapshotsOrderedByRecordedAtAsc() {
+                        when(conflictRepository.existsById(CONFLICT_ID)).thenReturn(true);
+                        when(conflictSnapshotRepository.findByConflictIdOrderByRecordedAtAsc(CONFLICT_ID))
+                                        .thenReturn(List.of(testSnapshot));
+                        when(conflictSnapshotMapper.toVmList(List.of(testSnapshot)))
+                                        .thenReturn(List.of(testSnapshotVm));
 
-            verify(conflictSnapshotRepository, never()).findByConflictIdOrderByRecordedAtAsc(anyString());
+                        List<ConflictSnapshotVm> result = snapshotService.getSnapshotsByConflictId(CONFLICT_ID);
+
+                        assertThat(result).hasSize(1);
+                        assertThat(result.getFirst().id()).isEqualTo(SNAPSHOT_ID);
+                        assertThat(result.getFirst().conflictId()).isEqualTo(CONFLICT_ID);
+                        assertThat(result.getFirst().separationDistance()).isEqualTo(45.0);
+                        verify(conflictRepository).existsById(CONFLICT_ID);
+                        verify(conflictSnapshotRepository).findByConflictIdOrderByRecordedAtAsc(CONFLICT_ID);
+                }
+
+                @Test
+                @DisplayName("whenConflictDoesNotExist_throwsNotFoundException")
+                void whenConflictDoesNotExist_throwsNotFoundException() {
+                        when(conflictRepository.existsById("unknown-id")).thenReturn(false);
+
+                        assertThatThrownBy(() -> snapshotService.getSnapshotsByConflictId("unknown-id"))
+                                        .isInstanceOf(NotFoundException.class)
+                                        .hasMessage("Airspace conflict is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo("unknown-id");
+
+                        verify(conflictSnapshotRepository, never()).findByConflictIdOrderByRecordedAtAsc(anyString());
+                }
         }
-    }
 
-    @Nested
-    @DisplayName("recordSnapshot")
-    class RecordSnapshot {
+        @Nested
+        @DisplayName("recordSnapshot")
+        class RecordSnapshot {
 
-        @Test
-        @DisplayName("whenConflictIsValid_mapsEntityAndSavesToRepository")
-        void whenConflictIsValid_mapsEntityAndSavesToRepository() {
-            when(conflictSnapshotMapper.toEntity(
-                    testConflict,
-                    10.7769, 106.7009, 100.0,
-                    10.7780, 106.7020, 115.0,
-                    45.0, 15.0, 25,
-                    ConflictSeverity.CRITICAL)).thenReturn(testSnapshot);
+                @Test
+                @DisplayName("whenConflictIsValid_mapsEntityAndSavesToRepository")
+                void whenConflictIsValid_mapsEntityAndSavesToRepository() {
+                        when(conflictSnapshotMapper.toEntity(
+                                        testConflict,
+                                        10.7769, 106.7009, 100.0,
+                                        10.7780, 106.7020, 115.0,
+                                        45.0, 15.0, 25,
+                                        ConflictSeverity.CRITICAL)).thenReturn(testSnapshot);
 
-            snapshotService.recordSnapshot(
-                    testConflict,
-                    10.7769, 106.7009, 100.0,
-                    10.7780, 106.7020, 115.0,
-                    45.0, 15.0, 25,
-                    ConflictSeverity.CRITICAL);
+                        snapshotService.recordSnapshot(
+                                        testConflict,
+                                        10.7769, 106.7009, 100.0,
+                                        10.7780, 106.7020, 115.0,
+                                        45.0, 15.0, 25,
+                                        ConflictSeverity.CRITICAL);
 
-            verify(conflictSnapshotRepository).save(testSnapshot);
+                        verify(conflictSnapshotRepository).save(testSnapshot);
+                }
+
+                @Test
+                @DisplayName("whenConflictIsNull_doesNotSaveAndReturnsEarly")
+                void whenConflictIsNull_doesNotSaveAndReturnsEarly() {
+                        snapshotService.recordSnapshot(
+                                        null,
+                                        10.7769, 106.7009, 100.0,
+                                        10.7780, 106.7020, 115.0,
+                                        45.0, 15.0, 25,
+                                        ConflictSeverity.CRITICAL);
+
+                        verify(conflictSnapshotRepository, never()).save(any(ConflictSnapshot.class));
+                        verify(conflictSnapshotMapper, never()).toEntity(any(), any(), any(), any(), any(), any(),
+                                        any(), any(),
+                                        any(), any(), any());
+                }
         }
-
-        @Test
-        @DisplayName("whenConflictIsNull_doesNotSaveAndReturnsEarly")
-        void whenConflictIsNull_doesNotSaveAndReturnsEarly() {
-            snapshotService.recordSnapshot(
-                    null,
-                    10.7769, 106.7009, 100.0,
-                    10.7780, 106.7020, 115.0,
-                    45.0, 15.0, 25,
-                    ConflictSeverity.CRITICAL);
-
-            verify(conflictSnapshotRepository, never()).save(any(ConflictSnapshot.class));
-            verify(conflictSnapshotMapper, never()).toEntity(any(), any(), any(), any(), any(), any(), any(), any(),
-                    any(), any(), any());
-        }
-    }
 }

@@ -154,7 +154,8 @@ class DeviceRegistrationServiceImplTest {
                         when(deviceRegistrationRepository.findByDeviceIdentifier(anyString()))
                                         .thenReturn(Optional.empty());
                         when(mapper.toEntity(postVmWithoutId)).thenReturn(entity);
-                        when(deviceRegistrationRepository.save(any(DeviceRegistration.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(deviceRegistrationRepository.save(any(DeviceRegistration.class)))
+                                        .thenAnswer(inv -> inv.getArgument(0));
                         when(mapper.toVm(eq(entity), eq(testDrone))).thenAnswer(inv -> new DeviceRegistrationVm(
                                         entity.getId(),
                                         entity.getDroneId(),
@@ -186,7 +187,9 @@ class DeviceRegistrationServiceImplTest {
 
                         assertThatThrownBy(() -> deviceRegistrationService.registerDevice(postVm))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining("non-existent-drone");
+                                        .hasMessage("Drone is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo("non-existent-drone");
 
                         verify(deviceRegistrationRepository, never()).save(any());
                 }
@@ -201,7 +204,9 @@ class DeviceRegistrationServiceImplTest {
 
                         assertThatThrownBy(() -> deviceRegistrationService.registerDevice(testPostVm))
                                         .isInstanceOf(DuplicatedException.class)
-                                        .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                        .hasMessage("Drone already has registered hardware")
+                                        .extracting(ex -> ((DuplicatedException) ex).getParams().get("registrationNumber"))
+                                        .isEqualTo("VN-UAV-001");
 
                         verify(deviceRegistrationRepository, never()).findByDeviceIdentifier(any());
                         verify(deviceRegistrationRepository, never()).save(any());
@@ -219,7 +224,9 @@ class DeviceRegistrationServiceImplTest {
 
                         assertThatThrownBy(() -> deviceRegistrationService.registerDevice(testPostVm))
                                         .isInstanceOf(DuplicatedException.class)
-                                        .hasMessageContaining("DRONE-MAC-9876543210AB");
+                                        .hasMessage("Device identifier is already registered")
+                                        .extracting(ex -> ((DuplicatedException) ex).getParams().get("identifier"))
+                                        .isEqualTo("DRONE-MAC-9876543210AB");
 
                         verify(deviceRegistrationRepository, never()).save(any());
                 }
@@ -353,7 +360,9 @@ class DeviceRegistrationServiceImplTest {
 
                         assertThatThrownBy(() -> deviceRegistrationService.getDeviceById("unknown-key"))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining("unknown-key");
+                                        .hasMessage("Device registration is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo("unknown-key");
 
                         verify(mapper, never()).toVm(any(), any());
                 }
@@ -397,7 +406,9 @@ class DeviceRegistrationServiceImplTest {
 
                         assertThatThrownBy(() -> deviceRegistrationService.processHeartbeat("unknown", null))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining("unknown");
+                                        .hasMessage("Device registration is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo("unknown");
 
                         verify(deviceRegistrationRepository, never()).save(any());
                 }
@@ -443,7 +454,9 @@ class DeviceRegistrationServiceImplTest {
                         assertThatThrownBy(() -> deviceRegistrationService
                                         .revokeDeviceRegistration("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .isInstanceOf(BadRequestException.class)
-                                        .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                        .hasMessage("Cannot revoke hardware registration of a drone currently in flight")
+                                        .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                        .isEqualTo("VN-UAV-001");
 
                         verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
                 }
@@ -465,7 +478,9 @@ class DeviceRegistrationServiceImplTest {
                         assertThatThrownBy(() -> deviceRegistrationService
                                         .revokeDeviceRegistration("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .isInstanceOf(BadRequestException.class)
-                                        .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                        .hasMessage("Cannot revoke hardware registration of a drone currently in flight")
+                                        .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                        .isEqualTo("VN-UAV-001");
 
                         verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
                 }
@@ -479,7 +494,9 @@ class DeviceRegistrationServiceImplTest {
 
                         assertThatThrownBy(() -> deviceRegistrationService.revokeDeviceRegistration("non-existent-id"))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining("non-existent-id");
+                                        .hasMessage("Device registration is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo("non-existent-id");
 
                         verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
                 }

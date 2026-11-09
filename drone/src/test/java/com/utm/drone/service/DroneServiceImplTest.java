@@ -248,7 +248,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.getDroneById("unknown-id"))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("unknown-id");
+                                .hasMessage("Drone is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-id");
         }
 
         @Test
@@ -306,7 +308,8 @@ class DroneServiceImplTest {
                                 .status(DroneStatus.AVAILABLE)
                                 .build();
                 when(droneMapper.toEntity(postVmWithoutRegNumber)).thenReturn(droneToSave);
-                when(droneRepository.saveAndFlush(any(Drone.class))).thenAnswer(invocation -> invocation.getArgument(0));
+                when(droneRepository.saveAndFlush(any(Drone.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
 
                 when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(droneToSave));
@@ -348,7 +351,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
                                 .isInstanceOf(DuplicatedException.class)
-                                .hasMessageContaining("VN-UAV-001");
+                                .hasMessage("Drone registration number already exists")
+                                .extracting(ex -> ((DuplicatedException) ex).getParams().get("registrationNumber"))
+                                .isEqualTo("VN-UAV-001");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -362,7 +367,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Organization is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -377,7 +384,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Hub / Vertiport is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -411,7 +420,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.updateDrone("unknown-id", samplePutVm))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("unknown-id");
+                                .hasMessage("Drone is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-id");
         }
 
         @Test
@@ -430,7 +441,9 @@ class DroneServiceImplTest {
                 assertThatThrownBy(
                                 () -> droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890", changingHubVm))
                                 .isInstanceOf(BadRequestException.class)
-                                .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Cannot update flight parameters of a drone currently in flight")
+                                .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                .isEqualTo("VN-UAV-001");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -451,7 +464,9 @@ class DroneServiceImplTest {
                 assertThatThrownBy(() -> droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
                                 changingPayloadVm))
                                 .isInstanceOf(BadRequestException.class)
-                                .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Cannot update flight parameters of a drone currently in flight")
+                                .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                .isEqualTo("VN-UAV-001");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -472,7 +487,9 @@ class DroneServiceImplTest {
                 assertThatThrownBy(() -> droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
                                 changingStatusVm))
                                 .isInstanceOf(BadRequestException.class)
-                                .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Cannot update flight parameters of a drone currently in flight")
+                                .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                .isEqualTo("VN-UAV-001");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -486,7 +503,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890", samplePutVm))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("h2b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Hub / Vertiport is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("h2b2c3d4-e5f6-7890-abcd-ef1234567890");
 
                 verify(droneRepository, never()).saveAndFlush(any());
         }
@@ -512,7 +531,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.deleteDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .isInstanceOf(BadRequestException.class)
-                                .hasMessageContaining("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
+                                .hasMessage("Cannot delete or deactivate a drone currently in flight")
+                                .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                .isEqualTo("VN-UAV-001");
 
                 verify(droneRepository, never()).save(any());
         }
@@ -524,7 +545,9 @@ class DroneServiceImplTest {
 
                 assertThatThrownBy(() -> droneService.deleteDrone("unknown-id"))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("unknown-id");
+                                .hasMessage("Drone is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-id");
 
                 verify(droneRepository, never()).save(any());
         }

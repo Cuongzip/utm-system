@@ -228,7 +228,9 @@ class ConflictServiceImplTest {
 
             assertThatThrownBy(() -> conflictService.getConflictById("unknown-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-id");
+                    .hasMessage("Airspace conflict is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("unknown-id");
         }
     }
 
@@ -383,7 +385,9 @@ class ConflictServiceImplTest {
 
             assertThatThrownBy(() -> conflictService.acknowledgeConflict("unknown-id", "atc_officer"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-id");
+                    .hasMessage("Airspace conflict is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("unknown-id");
 
             verify(conflictRepository, never()).save(any(Conflict.class));
         }
@@ -448,7 +452,9 @@ class ConflictServiceImplTest {
 
             assertThatThrownBy(() -> conflictService.resolveConflict("unknown-id", resolveVm, "atc_officer"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-id");
+                    .hasMessage("Airspace conflict is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("unknown-id");
 
             verify(conflictRepository, never()).save(any(Conflict.class));
         }

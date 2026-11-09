@@ -57,10 +57,10 @@ public class MissionServiceImpl implements MissionService {
     @Transactional
     public MissionVm createMission(MissionPostVm postVm) {
         if (!hubClientService.checkHubExists(postVm.departureHubId())) {
-            throw new NotFoundException(MessageCode.DEPARTURE_HUB_NOT_FOUND, postVm.departureHubId());
+            throw new NotFoundException(MessageCode.DEPARTURE_HUB_NOT_FOUND, "id", postVm.departureHubId());
         }
         if (!hubClientService.checkHubExists(postVm.arrivalHubId())) {
-            throw new NotFoundException(MessageCode.ARRIVAL_HUB_NOT_FOUND, postVm.arrivalHubId());
+            throw new NotFoundException(MessageCode.ARRIVAL_HUB_NOT_FOUND, "id", postVm.arrivalHubId());
         }
 
         if (postVm.scheduleType() == MissionScheduleType.SCHEDULED) {
@@ -77,7 +77,7 @@ public class MissionServiceImpl implements MissionService {
         } else {
             code = postVm.code().trim().toUpperCase();
             if (missionRepository.existsByCode(code)) {
-                throw new DuplicatedException(MessageCode.MISSION_CODE_ALREADY_EXISTED, code);
+                throw new DuplicatedException(MessageCode.MISSION_CODE_ALREADY_EXISTED, "code", code);
             }
         }
 
@@ -153,7 +153,7 @@ public class MissionServiceImpl implements MissionService {
     @Transactional(readOnly = true)
     public MissionVm getMissionById(String id) {
         Mission mission = missionRepository.findByIdWithWaypoints(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
 
         double estimatedDistance = calculateEstimatedDistance(mission.getWaypoints());
         Optional<HubBriefVm> depHub = hubClientService.getHubById(mission.getDepartureHubId());
@@ -166,7 +166,7 @@ public class MissionServiceImpl implements MissionService {
     @Transactional
     public MissionVm updateMission(String id, MissionPutVm putVm) {
         Mission mission = missionRepository.findByIdWithWaypoints(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
 
         if (mission.getStatus() == MissionStatus.EXECUTING) {
             throw new BadRequestException(MessageCode.CANNOT_EDIT_EXECUTING_MISSION);
@@ -178,13 +178,14 @@ public class MissionServiceImpl implements MissionService {
         if (putVm.departureHubId() != null && !putVm.departureHubId().isBlank()
                 && !putVm.departureHubId().equals(mission.getDepartureHubId())) {
             if (!hubClientService.checkHubExists(putVm.departureHubId())) {
-                throw new NotFoundException(MessageCode.DEPARTURE_HUB_NOT_FOUND, putVm.departureHubId());
+                throw new NotFoundException(MessageCode.DEPARTURE_HUB_NOT_FOUND, "id",
+                        putVm.departureHubId());
             }
         }
         if (putVm.arrivalHubId() != null && !putVm.arrivalHubId().isBlank()
                 && !putVm.arrivalHubId().equals(mission.getArrivalHubId())) {
             if (!hubClientService.checkHubExists(putVm.arrivalHubId())) {
-                throw new NotFoundException(MessageCode.ARRIVAL_HUB_NOT_FOUND, putVm.arrivalHubId());
+                throw new NotFoundException(MessageCode.ARRIVAL_HUB_NOT_FOUND, "id", putVm.arrivalHubId());
             }
         }
 
@@ -211,7 +212,7 @@ public class MissionServiceImpl implements MissionService {
     @Transactional
     public void deleteMission(String id) {
         Mission mission = missionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
 
         if (mission.getStatus() == MissionStatus.EXECUTING) {
             throw new BadRequestException(MessageCode.CANNOT_DELETE_EXECUTING_MISSION);
@@ -224,7 +225,7 @@ public class MissionServiceImpl implements MissionService {
     @Transactional
     public MissionVm duplicateMission(String id) {
         Mission original = missionRepository.findByIdWithWaypoints(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
 
         Mission copy = missionMapper.cloneEntity(original);
         copy.setCode(BusinessCodeGenerator.generateUnique(

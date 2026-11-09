@@ -263,7 +263,9 @@ class DroneCommandServiceImplTest {
 
                 assertThatThrownBy(() -> droneCommandService.sendCommand("unknown-id", samplePostVm))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("unknown-id");
+                                .hasMessage("Drone is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-id");
 
                 verify(droneCommandRepository, never()).save(any());
         }
@@ -369,7 +371,9 @@ class DroneCommandServiceImplTest {
 
                 assertThatThrownBy(() -> droneCommandService.getCommands("unknown-id", null, null, 10, 0))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("unknown-id");
+                                .hasMessage("Drone is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-id");
         }
 
         @Test
@@ -399,7 +403,9 @@ class DroneCommandServiceImplTest {
                 assertThatThrownBy(() -> droneCommandService.getCommandById("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
                                 "unknown-cmd"))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("COMMAND_NOT_FOUND");
+                                .hasMessage("Command is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-cmd");
         }
 
         @Test
@@ -456,7 +462,7 @@ class DroneCommandServiceImplTest {
                 assertThatThrownBy(() -> droneCommandService.cancelCommand("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
                                 "c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .isInstanceOf(BadRequestException.class)
-                                .hasMessageContaining("CANNOT_CANCEL_EXECUTING_COMMAND");
+                                .hasMessage("Cannot cancel command that is already executing or completed");
 
                 verify(droneCommandRepository, never()).save(any());
         }
@@ -472,7 +478,7 @@ class DroneCommandServiceImplTest {
                 assertThatThrownBy(() -> droneCommandService.cancelCommand("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
                                 "c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .isInstanceOf(BadRequestException.class)
-                                .hasMessageContaining("CANNOT_CANCEL_EXECUTING_COMMAND");
+                                .hasMessage("Cannot cancel command that is already executing or completed");
 
                 verify(droneCommandRepository, never()).save(any());
         }
@@ -486,7 +492,9 @@ class DroneCommandServiceImplTest {
                 assertThatThrownBy(() -> droneCommandService.cancelCommand("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
                                 "unknown-cmd"))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("COMMAND_NOT_FOUND");
+                                .hasMessage("Command is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-cmd");
 
                 verify(droneCommandRepository, never()).save(any());
         }
@@ -516,7 +524,9 @@ class DroneCommandServiceImplTest {
 
                 assertThatThrownBy(() -> droneCommandService.getActiveCommands("unknown-id"))
                                 .isInstanceOf(NotFoundException.class)
-                                .hasMessageContaining("unknown-id");
+                                .hasMessage("Drone is not found")
+                                .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                .isEqualTo("unknown-id");
 
                 verify(droneCommandRepository, never()).findByDroneIdAndStatusInOrderByIssuedAtDesc(any(), any());
         }

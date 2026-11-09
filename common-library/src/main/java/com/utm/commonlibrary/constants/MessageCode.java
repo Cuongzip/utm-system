@@ -53,6 +53,8 @@ public final class MessageCode {
     public static final String EMERGENCY_PROTOCOL_NOT_FOUND = "EMERGENCY_PROTOCOL_NOT_FOUND";
     public static final String EMERGENCY_INCIDENT_NOT_FOUND = "EMERGENCY_INCIDENT_NOT_FOUND";
     public static final String PENDING_CONFIRMATION_NOT_FOUND = "PENDING_CONFIRMATION_NOT_FOUND";
+    public static final String COMMAND_NOT_FOUND = "COMMAND_NOT_FOUND";
+    public static final String CANNOT_CANCEL_EXECUTING_COMMAND = "CANNOT_CANCEL_EXECUTING_COMMAND";
 
     private MessageCode() {
     }

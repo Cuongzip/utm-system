@@ -142,7 +142,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     public EmergencyIncidentVm confirmAction(String incidentId, boolean approved, String userId) {
         PendingItem item = pendingConfirmations.remove(incidentId);
         if (item == null) {
-            throw new NotFoundException(MessageCode.PENDING_CONFIRMATION_NOT_FOUND, incidentId);
+            throw new NotFoundException(MessageCode.PENDING_CONFIRMATION_NOT_FOUND, "id", incidentId);
         }
 
         if (item.timerFuture() != null) {
@@ -210,7 +210,8 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                     incident.getFlightId(),
                     incident.getEmergencyType().name(),
                     incident.getSeverity().name(),
-                    "AUTO FAILSAFE: " + protocol.getResponseAction() + " executing for " + incident.getEmergencyType() + ". " + incident.getMessage(),
+                    "AUTO FAILSAFE: " + protocol.getResponseAction() + " executing for " + incident.getEmergencyType()
+                            + ". " + incident.getMessage(),
                     "active"));
             responseExecutorService.executeResponse(incident, protocol.getResponseAction(),
                     protocol.getFallbackAction());

@@ -69,7 +69,7 @@ public class AlertServiceImpl implements AlertService {
     @Transactional(readOnly = true)
     public AlertVm getAlertById(String id) {
         Alert alert = alertRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
         return alertMapper.toVm(alert);
     }
 
@@ -83,8 +83,7 @@ public class AlertServiceImpl implements AlertService {
             Boolean resolved,
             String alertType,
             int pageNo,
-            int pageSize
-    ) {
+            int pageSize) {
         int safePage = Math.max(0, pageNo);
         int safeSize = (pageSize <= 0) ? 20 : Math.min(100, pageSize);
         PageRequest pageRequest = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdOn"));
@@ -124,8 +123,7 @@ public class AlertServiceImpl implements AlertService {
                 page.getSize(),
                 page.getTotalElements(),
                 page.getTotalPages(),
-                page.isLast()
-        );
+                page.isLast());
     }
 
     @Override
@@ -144,14 +142,15 @@ public class AlertServiceImpl implements AlertService {
     @Transactional
     public AlertVm acknowledgeAlert(String id, AlertAcknowledgePostVm acknowledgeVm) {
         Alert alert = alertRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
 
         alert.setAcknowledged(true);
         alert.setAcknowledgedAt(ZonedDateTime.now());
 
-        String operator = (acknowledgeVm != null && acknowledgeVm.acknowledgedBy() != null && !acknowledgeVm.acknowledgedBy().isBlank())
-                ? acknowledgeVm.acknowledgedBy().trim()
-                : getCurrentUserSafely(null);
+        String operator = (acknowledgeVm != null && acknowledgeVm.acknowledgedBy() != null
+                && !acknowledgeVm.acknowledgedBy().isBlank())
+                        ? acknowledgeVm.acknowledgedBy().trim()
+                        : getCurrentUserSafely(null);
         alert.setAcknowledgedBy(operator);
 
         if (alert.getStatus() == AlertStatus.ACTIVE) {
@@ -174,7 +173,7 @@ public class AlertServiceImpl implements AlertService {
     @Transactional
     public AlertVm resolveAlert(String id, AlertResolvePostVm resolveVm) {
         Alert alert = alertRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
 
         alert.setResolved(true);
         alert.setResolvedAt(ZonedDateTime.now());
@@ -187,7 +186,8 @@ public class AlertServiceImpl implements AlertService {
 
         if (resolveVm != null && resolveVm.resolutionNotes() != null && !resolveVm.resolutionNotes().isBlank()) {
             String existingNotes = alert.getResolutionNotes() != null ? alert.getResolutionNotes() + "\n" : "";
-            alert.setResolutionNotes(existingNotes + "[Resolution by " + operator + "]: " + resolveVm.resolutionNotes().trim());
+            alert.setResolutionNotes(
+                    existingNotes + "[Resolution by " + operator + "]: " + resolveVm.resolutionNotes().trim());
         }
 
         Alert updated = alertRepository.save(alert);
@@ -229,4 +229,3 @@ public class AlertServiceImpl implements AlertService {
         return "SYSTEM";
     }
 }
-

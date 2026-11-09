@@ -60,7 +60,8 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
         } else {
             incidentNumber = postVm.incidentNumber().trim().toUpperCase();
             if (incidentRepo.existsByIncidentNumber(incidentNumber)) {
-                throw new DuplicatedException(MessageCode.INCIDENT_NUMBER_ALREADY_EXISTED, incidentNumber);
+                throw new DuplicatedException(MessageCode.INCIDENT_NUMBER_ALREADY_EXISTED, "incidentNumber",
+                        incidentNumber);
             }
         }
 
@@ -73,7 +74,8 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
 
         EmergencyIncident saved = incidentRepo.save(entity);
         log.warn("Emergency incident reported: id={}, incidentNumber={}, type={}, severity={}, drone={}, flight={}",
-                saved.getId(), saved.getIncidentNumber(), saved.getEmergencyType(), saved.getSeverity(), saved.getDroneId(), saved.getFlightId());
+                saved.getId(), saved.getIncidentNumber(), saved.getEmergencyType(), saved.getSeverity(),
+                saved.getDroneId(), saved.getFlightId());
 
         decisionEngine.processEmergency(saved);
 
@@ -151,7 +153,7 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     public EmergencyIncidentVm getIncidentById(String id) {
         EmergencyIncident incident = incidentRepo.findById(id)
                 .or(() -> incidentRepo.findByIncidentNumber(id))
-                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, "id", id));
         return incidentMapper.toVm(incident);
     }
 
@@ -159,7 +161,7 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
     @Transactional
     public EmergencyIncidentVm updateRootCause(String id, RootCauseVm rootCauseVm) {
         EmergencyIncident incident = incidentRepo.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.EMERGENCY_INCIDENT_NOT_FOUND, "id", id));
         incidentMapper.updateEntityFromRootCauseVm(incident, rootCauseVm);
         EmergencyIncident saved = incidentRepo.save(incident);
         EmergencyIncidentVm vm = incidentMapper.toVm(saved);

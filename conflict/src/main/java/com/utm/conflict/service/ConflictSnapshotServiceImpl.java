@@ -29,7 +29,7 @@ public class ConflictSnapshotServiceImpl implements ConflictSnapshotService {
     @Transactional(readOnly = true)
     public List<ConflictSnapshotVm> getSnapshotsByConflictId(String conflictId) {
         if (!conflictRepository.existsById(conflictId)) {
-            throw new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, conflictId);
+            throw new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, "id", conflictId);
         }
         List<ConflictSnapshot> snapshots = conflictSnapshotRepository.findByConflictIdOrderByRecordedAtAsc(conflictId);
         return conflictSnapshotMapper.toVmList(snapshots);
@@ -43,8 +43,7 @@ public class ConflictSnapshotServiceImpl implements ConflictSnapshotService {
             Double sLat, Double sLon, Double sAlt,
             Double distHoriz, Double distVert,
             Integer timeToConflict,
-            ConflictSeverity severity
-    ) {
+            ConflictSeverity severity) {
         if (conflict == null) {
             return;
         }
@@ -54,9 +53,7 @@ public class ConflictSnapshotServiceImpl implements ConflictSnapshotService {
                 sLat, sLon, sAlt,
                 distHoriz, distVert,
                 timeToConflict,
-                severity
-        );
+                severity);
         conflictSnapshotRepository.save(snapshot);
     }
 }
-

@@ -1,5 +1,6 @@
 package com.utm.organization.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -78,22 +79,19 @@ class OrganizationServiceImplTest {
                 ZonedDateTime.now(),
                 "admin-cuong",
                 ZonedDateTime.now(),
-                "admin-cuong"
-        );
+                "admin-cuong");
 
         testPostVm = new OrganizationPostVm(
                 "Drone Express Vietnam Logistics JSC",
                 OrganizationType.OPERATOR,
                 "GP-2026-DK01",
-                "contact@droneexpress.com | +84-28-3822-9999"
-        );
+                "contact@droneexpress.com | +84-28-3822-9999");
 
         testPutVm = new OrganizationPutVm(
                 "Drone Express Global Logistics Corp",
                 OrganizationType.OPERATOR,
                 "support@droneexpress.com | +84-28-3822-0000",
-                OrganizationStatus.ACTIVE
-        );
+                OrganizationStatus.ACTIVE);
     }
 
     @Nested
@@ -131,7 +129,12 @@ class OrganizationServiceImplTest {
 
             assertThatThrownBy(() -> organizationService.createOrganization(testPostVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining("GP-2026-DK01");
+                    .satisfies(ex -> {
+                        DuplicatedException de = (DuplicatedException) ex;
+                        assertThat(de.getErrorCode())
+                                .isEqualTo(MessageCode.ORGANIZATION_REGISTRATION_NUMBER_ALREADY_EXISTED);
+                        assertThat(de.getParams()).containsEntry("registrationNumber", "GP-2026-DK01");
+                    });
 
             verify(organizationRepository).existsByRegistrationNumber("GP-2026-DK01");
             verify(organizationRepository, never()).saveAndFlush(any());
@@ -144,8 +147,7 @@ class OrganizationServiceImplTest {
                     "Startup Drone Co",
                     OrganizationType.OPERATOR,
                     null,
-                    "info@startupdrone.vn"
-            );
+                    "info@startupdrone.vn");
             Organization orgWithoutRegNumber = Organization.builder()
                     .id("a2b2c3d4-e5f6-7890-abcd-ef1234567890")
                     .name("Startup Drone Co")
@@ -156,7 +158,8 @@ class OrganizationServiceImplTest {
 
             when(organizationMapper.toEntity(postVmWithoutRegNumber)).thenReturn(orgWithoutRegNumber);
             when(organizationRepository.existsByRegistrationNumber(anyString())).thenReturn(false);
-            when(organizationRepository.saveAndFlush(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(organizationRepository.saveAndFlush(any(Organization.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
             when(organizationMapper.toVm(orgWithoutRegNumber)).thenAnswer(inv -> new OrganizationVm(
                     orgWithoutRegNumber.getId(),
                     orgWithoutRegNumber.getName(),
@@ -167,8 +170,7 @@ class OrganizationServiceImplTest {
                     null,
                     "admin",
                     null,
-                    null
-            ));
+                    null));
 
             OrganizationVm result = organizationService.createOrganization(postVmWithoutRegNumber);
 
@@ -190,7 +192,8 @@ class OrganizationServiceImplTest {
             when(organizationRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(mockPage);
             when(organizationMapper.toVmList(List.of(testOrg))).thenReturn(List.of(testOrgVm));
 
-            OrganizationListVm result = organizationService.getOrganizations("Express", OrganizationType.OPERATOR, OrganizationStatus.ACTIVE, 10, 0);
+            OrganizationListVm result = organizationService.getOrganizations("Express", OrganizationType.OPERATOR,
+                    OrganizationStatus.ACTIVE, 10, 0);
 
             assertThat(result).isNotNull();
             assertThat(result.total()).isEqualTo(1L);
@@ -248,7 +251,11 @@ class OrganizationServiceImplTest {
 
             assertThatThrownBy(() -> organizationService.getOrganizationById("non-existent-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.ORGANIZATION_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", "non-existent-id");
+                    });
 
             verify(organizationRepository).findById("non-existent-id");
             verify(organizationMapper, never()).toVm(any());
@@ -281,8 +288,7 @@ class OrganizationServiceImplTest {
                     ZonedDateTime.now(),
                     "admin-cuong",
                     ZonedDateTime.now(),
-                    "admin-cuong"
-            );
+                    "admin-cuong");
 
             when(organizationRepository.findById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                     .thenReturn(Optional.of(testOrg));
@@ -295,7 +301,8 @@ class OrganizationServiceImplTest {
             when(organizationRepository.saveAndFlush(testOrg)).thenReturn(updatedOrg);
             when(organizationMapper.toVm(updatedOrg)).thenReturn(updatedVm);
 
-            OrganizationVm result = organizationService.updateOrganization("a1b2c3d4-e5f6-7890-abcd-ef1234567890", testPutVm);
+            OrganizationVm result = organizationService.updateOrganization("a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    testPutVm);
 
             assertThat(result).isNotNull();
             assertThat(result.id()).isEqualTo("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
@@ -315,7 +322,11 @@ class OrganizationServiceImplTest {
 
             assertThatThrownBy(() -> organizationService.updateOrganization("non-existent-id", testPutVm))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.ORGANIZATION_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", "non-existent-id");
+                    });
 
             verify(organizationRepository).findById("non-existent-id");
             verify(organizationRepository, never()).saveAndFlush(any());
@@ -368,7 +379,11 @@ class OrganizationServiceImplTest {
 
             assertThatThrownBy(() -> organizationService.deleteOrganization("non-existent-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-id");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.ORGANIZATION_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", "non-existent-id");
+                    });
 
             verify(organizationRepository).findById("non-existent-id");
             verify(droneClientService, never()).hasActiveInFlightDrones(any());

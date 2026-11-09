@@ -54,7 +54,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         FlightConformance conformance = conformanceRepository.findByFlightId(flightId)
                 .orElseGet(() -> {
                     Flight flight = flightRepository.findById(flightId)
-                            .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId));
+                            .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", flightId));
                     return conformanceMapper.toEntity(flight);
                 });
 
@@ -65,7 +65,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     @Transactional
     public FlightConformanceVm evaluateFlightConformance(String flightId) {
         Flight flight = flightRepository.findById(flightId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", flightId));
 
         FlightConformance evaluated = doEvaluateConformance(flight);
         return conformanceMapper.toVm(evaluated);

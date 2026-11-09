@@ -1,5 +1,6 @@
 package com.utm.simulation.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -190,7 +191,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.createSession(createVm))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("flight-missing");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.FLIGHT_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", "flight-missing");
+                    });
         }
 
         @Test
@@ -214,7 +219,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.createSession(createVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining(DRONE_ID);
+                    .satisfies(ex -> {
+                        DuplicatedException de = (DuplicatedException) ex;
+                        assertThat(de.getErrorCode()).isEqualTo(MessageCode.SIMULATION_ALREADY_ACTIVE);
+                        assertThat(de.getParams()).containsEntry("droneId", DRONE_ID);
+                    });
         }
 
         @Test
@@ -227,7 +236,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.createSession(createVm))
                     .isInstanceOf(DuplicatedException.class)
-                    .hasMessageContaining(FLIGHT_ID);
+                    .satisfies(ex -> {
+                        DuplicatedException de = (DuplicatedException) ex;
+                        assertThat(de.getErrorCode()).isEqualTo(MessageCode.SIMULATION_ALREADY_ACTIVE);
+                        assertThat(de.getParams()).containsEntry("flightId", FLIGHT_ID);
+                    });
         }
 
         @Test
@@ -407,7 +420,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.getSessionById("unknown-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-id");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.SIMULATION_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", "unknown-id");
+                    });
         }
     }
 
@@ -434,7 +451,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.deleteSession("unknown-id"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-id");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.SIMULATION_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("id", "unknown-id");
+                    });
 
             verify(sessionRepository, never()).delete(any(SimulationSession.class));
         }
@@ -478,7 +499,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.pauseSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("already paused");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString().contains("already paused");
+                    });
 
             verify(sessionRepository, never()).save(any());
         }
@@ -491,7 +516,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.pauseSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Cannot pause a stopped");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString().contains("Cannot pause a stopped");
+                    });
 
             verify(sessionRepository, never()).save(any());
         }
@@ -518,7 +547,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.resumeSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("already running");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString().contains("already running");
+                    });
         }
 
         @Test
@@ -529,7 +562,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.resumeSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Cannot resume a stopped");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString().contains("Cannot resume a stopped");
+                    });
         }
 
         @Test
@@ -540,7 +577,12 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.resumeSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("No active in-memory runtime found");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString()
+                                .contains("No active in-memory runtime found");
+                    });
         }
 
         @Test
@@ -627,7 +669,12 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.updateTimeScale(SESSION_ID, 2.0))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Cannot update time scale on a stopped");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString()
+                                .contains("Cannot update time scale on a stopped");
+                    });
         }
 
         @Test
@@ -679,7 +726,12 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.injectScenario(SESSION_ID, injectVm))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Cannot inject scenario into a completed");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString()
+                                .contains("Cannot inject scenario into a completed");
+                    });
         }
 
         @Test
@@ -703,15 +755,15 @@ class SimulationServiceImplTest {
             testSession.setStatus(SimulationStatus.RUNNING);
             when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(testSession));
             when(sessionRepository.save(testSession)).thenReturn(testSession);
-            when(simulationMapper.toEventEntity(eq(SESSION_ID), eq("SESSION_STOPPED"), isNull(), anyString(), eq("LOW"), isNull()))
+            when(simulationMapper.toEventEntity(eq(SESSION_ID), eq("SESSION_STOPPED"), isNull(), anyString(), eq("LOW"),
+                    isNull()))
                     .thenReturn(testEvent);
             when(eventRepository.save(testEvent)).thenReturn(testEvent);
 
             SimulationSessionVm stoppedVm = new SimulationSessionVm(
                     SESSION_ID, FLIGHT_ID, DRONE_ID, SimulationStatus.STOPPED,
                     15.0, 1.0, 10.7769, 106.7009, 50.0, 45.0, 100.0, 0.0, 1500.0, 0.0, 0, null,
-                    ZonedDateTime.now(), ZonedDateTime.now()
-            );
+                    ZonedDateTime.now(), ZonedDateTime.now());
             when(simulationMapper.toVm(testSession)).thenReturn(stoppedVm);
 
             SimulationSessionVm result = simulationService.stopSession(SESSION_ID);
@@ -731,7 +783,11 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.stopSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("already stopped");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString().contains("already stopped");
+                    });
         }
 
         @Test
@@ -742,7 +798,12 @@ class SimulationServiceImplTest {
 
             assertThatThrownBy(() -> simulationService.stopSession(SESSION_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Cannot stop an already completed");
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.INVALID_SIMULATION_STATE);
+                        assertThat(bre.getParams().get("reason")).asString()
+                                .contains("Cannot stop an already completed");
+                    });
         }
 
         @Test

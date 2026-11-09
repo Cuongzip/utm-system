@@ -86,7 +86,7 @@ public class ConflictServiceImpl implements ConflictService {
     @Transactional(readOnly = true)
     public ConflictVm getConflictById(String id) {
         Conflict conflict = conflictRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, "id", id));
         return conflictMapper.toVm(conflict);
     }
 
@@ -128,7 +128,7 @@ public class ConflictServiceImpl implements ConflictService {
     @Override
     public ConflictVm acknowledgeConflict(String id, String acknowledgedBy) {
         Conflict conflict = conflictRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, "id", id));
 
         if (conflict.getStatus() == ConflictStatus.DETECTED || conflict.getStatus() == ConflictStatus.NOTIFIED) {
             conflict.setStatus(ConflictStatus.ACKNOWLEDGED);
@@ -141,7 +141,7 @@ public class ConflictServiceImpl implements ConflictService {
     @Override
     public ConflictVm resolveConflict(String id, ConflictResolvePostVm resolveVm, String resolvedBy) {
         Conflict conflict = conflictRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.CONFLICT_NOT_FOUND, "id", id));
 
         String actionsJson;
         try {

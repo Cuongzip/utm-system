@@ -112,7 +112,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional(readOnly = true)
     public FlightVm getFlightById(String id) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
         return flightMapper.toVm(flight);
     }
 
@@ -125,7 +125,8 @@ public class FlightServiceImpl implements FlightService {
             if (flightRepository.existsByFlightNumber(flightNumber)) {
                 throw new DuplicatedException(
                         MessageCode.FLIGHT_NUMBER_ALREADY_EXISTED,
-                        flightPostVm.flightNumber());
+                        "flightNumber",
+                        flightNumber);
             }
         } else {
             flightNumber = BusinessCodeGenerator.generateUnique(
@@ -135,16 +136,16 @@ public class FlightServiceImpl implements FlightService {
 
         String droneId = flightPostVm.droneId().trim();
         if (!droneClientService.checkDroneExists(droneId)) {
-            throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId);
+            throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId);
         }
 
         String depHubId = flightPostVm.departureHubId().trim();
         HubBriefVm depHub = hubClientService.getHubById(depHubId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, depHubId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", depHubId));
 
         String arrHubId = flightPostVm.arrivalHubId().trim();
         HubBriefVm arrHub = hubClientService.getHubById(arrHubId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, arrHubId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", arrHubId));
 
         String plannedRouteJson = buildPlannedRouteJson(flightPostVm, depHub, arrHub);
 
@@ -171,7 +172,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional
     public FlightVm updateFlight(String id, FlightPutVm flightPutVm) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
         if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.COMPLETED
                 || flight.getStatus() == FlightStatus.CANCELLED || flight.getStatus() == FlightStatus.EMERGENCY_LANDING
@@ -183,21 +184,21 @@ public class FlightServiceImpl implements FlightService {
         if (flightPutVm.droneId() != null && !flightPutVm.droneId().isBlank()) {
             String droneId = flightPutVm.droneId().trim();
             if (!droneClientService.checkDroneExists(droneId)) {
-                throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, droneId);
+                throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId);
             }
         }
 
         if (flightPutVm.departureHubId() != null && !flightPutVm.departureHubId().isBlank()) {
             String depHubId = flightPutVm.departureHubId().trim();
             if (!hubClientService.checkHubExists(depHubId)) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, depHubId);
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", depHubId);
             }
         }
 
         if (flightPutVm.arrivalHubId() != null && !flightPutVm.arrivalHubId().isBlank()) {
             String arrHubId = flightPutVm.arrivalHubId().trim();
             if (!hubClientService.checkHubExists(arrHubId)) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, arrHubId);
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", arrHubId);
             }
         }
 
@@ -226,7 +227,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional
     public FlightVm authorizeFlight(String id) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
         if ((flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED)
                 || flight.getAuthorizationStatus() != FlightAuthorizationStatus.PENDING) {
@@ -251,7 +252,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional
     public FlightVm rejectFlight(String id, FlightRejectVm rejectVm) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
         if ((flight.getStatus() != FlightStatus.PLANNED && flight.getStatus() != FlightStatus.SCHEDULED
                 && flight.getStatus() != FlightStatus.AUTHORIZED)
@@ -277,7 +278,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional
     public FlightVm startFlight(String id) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
         if (flight.getStatus() != FlightStatus.AUTHORIZED
                 || flight.getAuthorizationStatus() != FlightAuthorizationStatus.APPROVED) {
@@ -297,7 +298,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional
     public FlightVm completeFlight(String id) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
         if (flight.getStatus() != FlightStatus.ACTIVE) {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only active flights can be completed");
@@ -315,7 +316,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional
     public FlightVm abortFlight(String id, FlightAbortVm abortVm) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
         if (flight.getStatus() == FlightStatus.COMPLETED || flight.getStatus() == FlightStatus.CANCELLED
                 || flight.getStatus() == FlightStatus.EMERGENCY_LANDING) {

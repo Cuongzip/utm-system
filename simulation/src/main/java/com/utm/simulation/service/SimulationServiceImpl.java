@@ -73,26 +73,27 @@ public class SimulationServiceImpl implements SimulationService {
     public SimulationSessionVm createSession(SimulationSessionCreateVm createVm) {
         String flightId = createVm.flightId();
         if (flightId == null || flightId.isBlank()) {
-            throw new BadRequestException(MessageCode.FLIGHT_NOT_FOUND, "null");
+            throw new BadRequestException(MessageCode.FLIGHT_NOT_FOUND, "id", "null");
         }
 
         FlightDetailVm flight = flightClientService.getFlightDetail(flightId.trim());
         if (flight == null) {
-            throw new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, flightId);
+            throw new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", flightId);
         }
 
         String droneId = flight.droneId();
         if (droneId == null || droneId.isBlank()) {
-            throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, flightId);
+            throw new BadRequestException(MessageCode.DRONE_NOT_FOUND, "id",
+                    flight.flightNumber() != null ? flight.flightNumber() : flightId);
         }
 
         if (sessionRepository.existsByDroneIdAndStatusIn(droneId,
                 List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
-            throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, droneId);
+            throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, "droneId", droneId);
         }
         if (sessionRepository.existsByFlightIdAndStatusIn(flightId,
                 List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
-            throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, flightId);
+            throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, "flightId", flightId);
         }
 
         List<WaypointVm> waypoints = resolveWaypoints(flight);
@@ -198,7 +199,8 @@ public class SimulationServiceImpl implements SimulationService {
     @Override
     @Transactional(readOnly = true)
     public List<SimulationSessionVm> getActiveSessions() {
-        return sessionRepository.findByStatusInOrderByCreatedOnDesc(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
+        return sessionRepository
+                .findByStatusInOrderByCreatedOnDesc(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)).stream()
                 .map(this::syncWithRuntime)
                 .map(simulationMapper::toVm)
                 .toList();
@@ -208,7 +210,7 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional(readOnly = true)
     public SimulationSessionVm getSessionById(String id) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         return simulationMapper.toVm(syncWithRuntime(session));
     }
@@ -217,7 +219,7 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional
     public void deleteSession(String id) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         SimulationSessionRuntime runtime = activeRuntimes.remove(id);
         if (runtime != null && runtime.scheduledFuture != null) {
@@ -237,13 +239,14 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional
     public SimulationSessionVm pauseSession(String id) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         if (session.getStatus() == SimulationStatus.PAUSED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "Simulation session is already paused");
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
+                    "Simulation session is already paused");
         }
         if (session.getStatus() != SimulationStatus.RUNNING) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Cannot pause a " + session.getStatus().getValue()
                             + " simulation session. Only running sessions can be paused.");
         }
@@ -267,21 +270,21 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional
     public SimulationSessionVm resumeSession(String id) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         if (session.getStatus() == SimulationStatus.RUNNING) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Simulation session is already running");
         }
         if (session.getStatus() != SimulationStatus.PAUSED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Cannot resume a " + session.getStatus().getValue()
                             + " simulation session. Only paused sessions can be resumed.");
         }
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
         if (runtime == null) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "No active in-memory runtime found for simulation session: " + id);
         }
 
@@ -301,10 +304,10 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional
     public SimulationSessionVm updateTimeScale(String id, Double timeScale) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         if (session.getStatus() != SimulationStatus.RUNNING && session.getStatus() != SimulationStatus.PAUSED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Cannot update time scale on a " + session.getStatus().getValue() + " simulation session");
         }
 
@@ -327,10 +330,10 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional
     public InjectScenarioResultVm injectScenario(String id, InjectScenarioVm injectVm) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         if (session.getStatus() != SimulationStatus.RUNNING && session.getStatus() != SimulationStatus.PAUSED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Cannot inject scenario into a " + session.getStatus().getValue() + " simulation session");
         }
 
@@ -362,14 +365,14 @@ public class SimulationServiceImpl implements SimulationService {
     @Transactional
     public SimulationSessionVm stopSession(String id) {
         SimulationSession session = sessionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         if (session.getStatus() == SimulationStatus.STOPPED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Simulation session is already stopped");
         }
         if (session.getStatus() == SimulationStatus.COMPLETED) {
-            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE,
+            throw new BadRequestException(MessageCode.INVALID_SIMULATION_STATE, "reason",
                     "Cannot stop an already completed simulation session");
         }
 
@@ -422,12 +425,15 @@ public class SimulationServiceImpl implements SimulationService {
                     activeRuntimes.remove(runtime.sessionId);
                     persistRuntimeState(runtime);
                     recordEvent(runtime.sessionId, "BATTERY_EXHAUSTED", runtime.activeScenario,
-                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.", "CRITICAL", null);
-                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId, runtime.droneId);
+                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.",
+                            "CRITICAL", null);
+                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId,
+                            runtime.droneId);
                     return;
                 }
 
-                boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario) && runtime.currentBattery > 0.0;
+                boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario)
+                        && runtime.currentBattery > 0.0;
 
                 if (sendTelemetry) {
                     double effectiveLat = runtime.currentLat;
@@ -506,8 +512,10 @@ public class SimulationServiceImpl implements SimulationService {
                         activeRuntimes.remove(runtime.sessionId);
                         persistRuntimeState(runtime);
                         recordEvent(runtime.sessionId, "MOTOR_CRASH", runtime.activeScenario,
-                                "Drone reached ground after motor failure. Flight simulation stopped.", "CRITICAL", null);
-                        log.warn("Simulation session '{}' stopped: drone grounded due to motor failure", runtime.sessionId);
+                                "Drone reached ground after motor failure. Flight simulation stopped.", "CRITICAL",
+                                null);
+                        log.warn("Simulation session '{}' stopped: drone grounded due to motor failure",
+                                runtime.sessionId);
                         return;
                     }
                 }
@@ -538,8 +546,10 @@ public class SimulationServiceImpl implements SimulationService {
                     activeRuntimes.remove(runtime.sessionId);
                     persistRuntimeState(runtime);
                     recordEvent(runtime.sessionId, "BATTERY_EXHAUSTED", runtime.activeScenario,
-                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.", "CRITICAL", null);
-                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId, runtime.droneId);
+                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.",
+                            "CRITICAL", null);
+                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId,
+                            runtime.droneId);
                     return;
                 }
 
@@ -604,8 +614,7 @@ public class SimulationServiceImpl implements SimulationService {
                 scenario,
                 message,
                 severity,
-                configJson
-        );
+                configJson);
         return eventRepository.save(event);
     }
 
@@ -637,7 +646,7 @@ public class SimulationServiceImpl implements SimulationService {
             }
         }
 
-        throw new BadRequestException(MessageCode.INVALID_SIMULATION_WAYPOINTS,
+        throw new BadRequestException(MessageCode.INVALID_SIMULATION_WAYPOINTS, "reason",
                 "Flight route has insufficient waypoints (min 2 required)");
     }
 

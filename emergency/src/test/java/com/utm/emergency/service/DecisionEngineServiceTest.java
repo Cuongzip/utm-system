@@ -401,7 +401,9 @@ class DecisionEngineServiceTest {
         void confirmAction_whenNotPending_throwsNotFoundException() {
             assertThatThrownBy(() -> decisionEngineService.confirmAction("non-existent-inc", true, "atc"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("non-existent-inc");
+                    .hasMessage("Pending confirmation for incident is not found")
+                    .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                    .isEqualTo("non-existent-inc");
         }
     }
 

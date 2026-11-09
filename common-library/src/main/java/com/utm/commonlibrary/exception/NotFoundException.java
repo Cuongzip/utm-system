@@ -1,16 +1,18 @@
 package com.utm.commonlibrary.exception;
 
-import com.utm.commonlibrary.utils.MessagesUtils;
+import java.util.Map;
 
-public class NotFoundException extends RuntimeException {
-    private final String message;
+public class NotFoundException extends BaseBusinessException {
 
-    public NotFoundException(String errorCode, Object... var2) {
-        this.message = MessagesUtils.getMessage(errorCode, var2);
+    public NotFoundException(String errorCode, String paramKey, Object paramValue) {
+        super(errorCode, paramKey, paramValue);
     }
 
-    @Override
-    public String getMessage() {
-        return message;
+    public NotFoundException(String errorCode, Map<String, Object> params) {
+        super(errorCode, params);
+    }
+
+    public NotFoundException(String errorCode, Object... legacyArgs) {
+        super(errorCode, legacyArgs);
     }
 }

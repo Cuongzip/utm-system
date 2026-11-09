@@ -69,7 +69,7 @@ public class TelemetryServiceImpl implements TelemetryService {
         }
 
         TelemetryRecord record = telemetryRecordRepository.findTopByDroneIdOrderByCreatedOnDesc(droneId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.TELEMETRY_NOT_FOUND, droneId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.TELEMETRY_NOT_FOUND, "droneId", droneId));
         TelemetryRecordVm vm = telemetryMapper.toVm(record);
         latestDroneTelemetryCache.put(droneId, vm);
         return vm;
@@ -84,7 +84,7 @@ public class TelemetryServiceImpl implements TelemetryService {
         }
 
         TelemetryRecord record = telemetryRecordRepository.findTopByFlightIdOrderByCreatedOnDesc(flightId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.TELEMETRY_NOT_FOUND, flightId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.TELEMETRY_NOT_FOUND, "flightId", flightId));
         TelemetryRecordVm vm = telemetryMapper.toVm(record);
         latestFlightTelemetryCache.put(flightId, vm);
         return vm;

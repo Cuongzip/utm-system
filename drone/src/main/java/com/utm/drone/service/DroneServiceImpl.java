@@ -93,7 +93,7 @@ public class DroneServiceImpl implements DroneService {
     @Transactional(readOnly = true)
     public DroneVm getDroneById(String id) {
         Drone drone = droneRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", id));
 
         Optional<OrganizationBriefVm> owner = Optional.empty();
         if (drone.getOwnerId() != null && !drone.getOwnerId().isBlank()) {
@@ -121,6 +121,7 @@ public class DroneServiceImpl implements DroneService {
             if (droneRepository.existsByRegistrationNumber(registrationNumber)) {
                 throw new DuplicatedException(
                         MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
+                        "registrationNumber",
                         registrationNumber);
             }
         }
@@ -128,14 +129,14 @@ public class DroneServiceImpl implements DroneService {
         if (dronePostVm.ownerId() != null && !dronePostVm.ownerId().trim().isBlank()) {
             String ownerId = dronePostVm.ownerId().trim();
             if (!organizationClientService.checkOrganizationExists(ownerId)) {
-                throw new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, ownerId);
+                throw new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", ownerId);
             }
         }
 
         if (dronePostVm.homeHubId() != null && !dronePostVm.homeHubId().trim().isBlank()) {
             String hubId = dronePostVm.homeHubId().trim();
             if (!hubClientService.checkHubExists(hubId)) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, hubId);
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId);
             }
         }
 
@@ -152,7 +153,7 @@ public class DroneServiceImpl implements DroneService {
     @Transactional
     public DroneVm updateDrone(String id, DronePutVm dronePutVm) {
         Drone drone = droneRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", id));
 
         if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
             boolean changingHub = dronePutVm.homeHubId() != null
@@ -163,14 +164,15 @@ public class DroneServiceImpl implements DroneService {
 
             if (changingHub || changingPayload || changingToMaintenance) {
                 log.warn("Attempted unsafe update for in-flight drone ID: {}", id);
-                throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_UPDATE, id);
+                throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_UPDATE, "registrationNumber",
+                        drone.getRegistrationNumber() != null ? drone.getRegistrationNumber() : id);
             }
         }
 
         if (dronePutVm.homeHubId() != null && !dronePutVm.homeHubId().trim().isBlank()) {
             String hubId = dronePutVm.homeHubId().trim();
             if (!hubClientService.checkHubExists(hubId)) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, hubId);
+                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId);
             }
         }
 
@@ -186,11 +188,12 @@ public class DroneServiceImpl implements DroneService {
     @Transactional
     public void deleteDrone(String id) {
         Drone drone = droneRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", id));
 
         if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
             log.warn("Attempted to delete in-flight drone ID: {}", id);
-            throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_DELETE, id);
+            throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_DELETE, "registrationNumber",
+                    drone.getRegistrationNumber() != null ? drone.getRegistrationNumber() : id);
         }
 
         drone.setStatus(DroneStatus.OFFLINE);

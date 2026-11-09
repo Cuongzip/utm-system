@@ -31,7 +31,8 @@ public class ConnectivityClientServiceImpl implements ConnectivityClientService 
             return false;
         }
 
-        String baseUrl = ClientUrlUtils.normalizeBaseUrl(serviceUrlConfig.connectivity().url(), "http://connectivity:8094", "connectivity");
+        String baseUrl = ClientUrlUtils.normalizeBaseUrl(serviceUrlConfig.connectivity().url(),
+                "http://connectivity:8094", "connectivity");
         String endpoint = baseUrl + "/api/v1/connectivity/devices/" + deviceId.trim() + "/heartbeat";
 
         try {
@@ -45,7 +46,7 @@ public class ConnectivityClientServiceImpl implements ConnectivityClientService 
             return response.getStatusCode().is2xxSuccessful();
         } catch (HttpClientErrorException.NotFound ex) {
             log.warn("Device registration not found in connectivity service: {}", deviceId);
-            throw new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, deviceId);
+            throw new NotFoundException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "id", deviceId);
         } catch (Exception ex) {
             log.warn("Failed to send heartbeat to connectivity service for device '{}': {}", deviceId, ex.getMessage());
             return false;

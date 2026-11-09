@@ -58,7 +58,7 @@ public class WaypointServiceImpl implements WaypointService {
     @Transactional(readOnly = true)
     public List<WaypointVm> getWaypoints(String missionId) {
         if (!missionRepository.existsById(missionId)) {
-            throw new NotFoundException(MessageCode.MISSION_NOT_FOUND, missionId);
+            throw new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", missionId);
         }
         List<Waypoint> waypoints = waypointRepository.findByMissionIdOrderBySequenceAsc(missionId);
         return waypointMapper.toVmList(waypoints);
@@ -70,7 +70,7 @@ public class WaypointServiceImpl implements WaypointService {
         findDraftMissionOrThrow(missionId);
 
         Waypoint waypoint = waypointRepository.findByIdAndMissionId(waypointId, missionId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.WAYPOINT_NOT_FOUND, waypointId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.WAYPOINT_NOT_FOUND, "id", waypointId));
 
         waypointMapper.updateEntityFromVm(putVm, waypoint);
 
@@ -89,7 +89,7 @@ public class WaypointServiceImpl implements WaypointService {
         findDraftMissionOrThrow(missionId);
 
         Waypoint waypoint = waypointRepository.findByIdAndMissionId(waypointId, missionId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.WAYPOINT_NOT_FOUND, waypointId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.WAYPOINT_NOT_FOUND, "id", waypointId));
 
         waypointRepository.delete(waypoint);
 
@@ -139,7 +139,7 @@ public class WaypointServiceImpl implements WaypointService {
 
     private Mission findDraftMissionOrThrow(String missionId) {
         Mission mission = missionRepository.findById(missionId)
-                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, missionId));
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", missionId));
 
         if (mission.getStatus() != MissionStatus.DRAFT) {
             throw new BadRequestException(MessageCode.MISSION_NOT_IN_DRAFT_STATUS);

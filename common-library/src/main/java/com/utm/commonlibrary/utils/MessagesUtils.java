@@ -3,8 +3,6 @@ package com.utm.commonlibrary.utils;
 import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
-import org.slf4j.helpers.FormattingTuple;
-import org.slf4j.helpers.MessageFormatter;
 
 public class MessagesUtils {
     private static final String BUNDLE_NAME = "messages.messages";
@@ -24,15 +22,21 @@ public class MessagesUtils {
         }
     }
 
-    public static String getMessage(String errorCode, Object... var2) {
-        String message;
+    public static String getCleanMessage(String errorCode) {
+        if (errorCode == null || errorCode.isBlank()) {
+            return "An unexpected error occurred";
+        }
         try {
             ResourceBundle bundle = getResourceBundle();
-            message = bundle.getString(errorCode);
-        } catch (MissingResourceException ex) {
-            message = errorCode;
+            if (bundle.containsKey(errorCode)) {
+                return bundle.getString(errorCode).replace("{}", "").replaceAll("\\s+", " ").trim();
+            }
+        } catch (MissingResourceException ignored) {
         }
-        FormattingTuple formattingTuple = MessageFormatter.arrayFormat(message, var2);
-        return formattingTuple.getMessage();
+        return errorCode;
+    }
+
+    public static String getMessage(String errorCode, Object... var2) {
+        return getCleanMessage(errorCode);
     }
 }

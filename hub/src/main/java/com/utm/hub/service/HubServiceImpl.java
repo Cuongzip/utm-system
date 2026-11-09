@@ -47,8 +47,7 @@ public class HubServiceImpl implements HubService {
                 String pattern = "%" + search.trim().toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("name")), pattern),
-                        cb.like(cb.lower(root.get("code")), pattern)
-                ));
+                        cb.like(cb.lower(root.get("code")), pattern)));
             }
             if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
@@ -73,7 +72,7 @@ public class HubServiceImpl implements HubService {
     @Transactional(readOnly = true)
     public HubVm getHubById(String id) {
         Hub hub = hubRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", id));
         return hubMapper.toVm(hub);
     }
 
@@ -86,13 +85,13 @@ public class HubServiceImpl implements HubService {
             if (hubRepository.existsByCode(hubCode)) {
                 throw new DuplicatedException(
                         MessageCode.HUB_CODE_ALREADY_EXISTED,
-                        hubPostVm.code());
+                        "code",
+                        hubCode);
             }
         } else {
             hubCode = BusinessCodeGenerator.generateUnique(
                     CodePatternRule.HUB_CODE,
-                    hubRepository::existsByCode
-            );
+                    hubRepository::existsByCode);
         }
 
         Hub hub = hubMapper.toEntity(hubPostVm);
@@ -106,7 +105,7 @@ public class HubServiceImpl implements HubService {
     @Transactional
     public HubVm updateHub(String id, HubPutVm hubPutVm) {
         Hub hub = hubRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", id));
 
         hubMapper.updateEntityFromPutVm(hub, hubPutVm);
 
@@ -119,7 +118,7 @@ public class HubServiceImpl implements HubService {
     @Transactional
     public void deactivateHub(String id) {
         Hub hub = hubRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", id));
 
         if (flightClientService.hasActiveFlightsAtHub(id)) {
             throw new BadRequestException("Cannot deactivate hub with flights currently active");

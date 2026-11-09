@@ -407,7 +407,9 @@ class AlertServiceImplTest {
 
                         assertThatThrownBy(() -> alertService.getAlertById(alertId))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining(alertId);
+                                        .hasMessage("Alert is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo(alertId);
                 }
         }
 
@@ -754,7 +756,9 @@ class AlertServiceImplTest {
                         assertThatThrownBy(() -> alertService.acknowledgeAlert(alertId,
                                         new AlertAcknowledgePostVm("note", "op")))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining(alertId);
+                                        .hasMessage("Alert is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo(alertId);
 
                         verify(alertRepository, never()).save(any(Alert.class));
                 }
@@ -862,7 +866,9 @@ class AlertServiceImplTest {
                         assertThatThrownBy(
                                         () -> alertService.resolveAlert(alertId, new AlertResolvePostVm("notes", "op")))
                                         .isInstanceOf(NotFoundException.class)
-                                        .hasMessageContaining(alertId);
+                                        .hasMessage("Alert is not found")
+                                        .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
+                                        .isEqualTo(alertId);
 
                         verify(alertRepository, never()).save(any(Alert.class));
                 }

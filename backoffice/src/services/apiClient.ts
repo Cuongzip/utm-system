@@ -1,5 +1,3 @@
-import { toast } from "sonner";
-
 export class ApiError extends Error {
     constructor(
         public status: number,
@@ -57,14 +55,6 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
             errorData = JSON.parse(text);
         } catch {
             errorData = text;
-        }
-
-        if (typeof window !== "undefined") {
-            if (response.status === 401 && !endpoint.includes("/oauth2/")) {
-                toast.error("Session expired. Please log in again.");
-            } else if (response.status === 403) {
-                toast.error("Access denied. You do not have permission to perform this action.");
-            }
         }
 
         throw new ApiError(

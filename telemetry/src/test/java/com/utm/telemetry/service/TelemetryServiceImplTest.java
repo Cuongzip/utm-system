@@ -1,5 +1,6 @@
 package com.utm.telemetry.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.telemetry.mapper.TelemetryMapper;
 import com.utm.telemetry.model.TelemetryRecord;
@@ -253,7 +254,11 @@ class TelemetryServiceImplTest {
 
             assertThatThrownBy(() -> telemetryService.getLatestByDroneId("unknown-drone"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-drone");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.TELEMETRY_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("droneId", "unknown-drone");
+                    });
         }
     }
 
@@ -287,7 +292,11 @@ class TelemetryServiceImplTest {
 
             assertThatThrownBy(() -> telemetryService.getLatestByFlightId("unknown-flight"))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessageContaining("unknown-flight");
+                    .satisfies(ex -> {
+                        NotFoundException nfe = (NotFoundException) ex;
+                        assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.TELEMETRY_NOT_FOUND);
+                        assertThat(nfe.getParams()).containsEntry("flightId", "unknown-flight");
+                    });
         }
     }
 

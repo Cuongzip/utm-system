@@ -2,7 +2,6 @@ package com.utm.simulation.service;
 
 import com.utm.simulation.service.client.ConnectivityClientService;
 
-import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import jakarta.annotation.PostConstruct;
@@ -27,8 +26,7 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
     private final Set<String> activeDeviceIds = ConcurrentHashMap.newKeySet();
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-            Thread.ofVirtual().name("sim-device-keepalive-", 0).factory()
-    );
+            Thread.ofVirtual().name("sim-device-keepalive-", 0).factory());
 
     @PostConstruct
     public void init() {
@@ -43,7 +41,9 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
             try {
                 connectivityClientService.sendHeartbeat(id);
             } catch (NotFoundException ex) {
-                log.warn("Device '{}' not found in connectivity service during keepalive tick. Removing from active simulation.", id);
+                log.warn(
+                        "Device '{}' not found in connectivity service during keepalive tick. Removing from active simulation.",
+                        id);
                 activeDeviceIds.remove(id);
             } catch (Exception ex) {
                 log.warn("Error sending periodic heartbeat for device '{}': {}", id, ex.getMessage());
@@ -54,13 +54,13 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
     @Override
     public void powerOn(String id) {
         if (id == null || id.isBlank()) {
-            throw new BadRequestException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "Device ID cannot be blank");
+            throw new BadRequestException("Device ID cannot be blank");
         }
         String cleanId = id.trim();
 
         boolean ok = connectivityClientService.sendHeartbeat(cleanId);
         if (!ok) {
-            throw new BadRequestException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND,
+            throw new BadRequestException(
                     "Failed to establish initial heartbeat with connectivity service for device: " + cleanId);
         }
 
@@ -71,7 +71,7 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
     @Override
     public void powerOff(String id) {
         if (id == null || id.isBlank()) {
-            throw new BadRequestException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "Device ID cannot be blank");
+            throw new BadRequestException("Device ID cannot be blank");
         }
         String cleanId = id.trim();
         activeDeviceIds.remove(cleanId);
@@ -91,4 +91,3 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
         }
     }
 }
-

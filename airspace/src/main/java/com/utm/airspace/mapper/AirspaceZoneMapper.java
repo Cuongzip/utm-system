@@ -19,11 +19,7 @@ import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        builder = @Builder(disableBuilder = true),
-        unmappedTargetPolicy = ReportingPolicy.IGNORE
-)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true), unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface AirspaceZoneMapper {
 
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();

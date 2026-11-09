@@ -46,8 +46,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             OrganizationType type,
             OrganizationStatus status,
             int limit,
-            int offset
-    ) {
+            int offset) {
         int pageSize = limit > 0 ? limit : 20;
         int pageNumber = offset > 0 ? (offset / pageSize) : 0;
 
@@ -59,8 +58,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 String searchPattern = "%" + search.trim().toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("name")), searchPattern),
-                        cb.like(cb.lower(root.get("registrationNumber")), searchPattern)
-                ));
+                        cb.like(cb.lower(root.get("registrationNumber")), searchPattern)));
             }
             if (type != null) {
                 predicates.add(cb.equal(root.get("type"), type));
@@ -82,7 +80,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional(readOnly = true)
     public OrganizationVm getOrganizationById(String id) {
         Organization organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
         return organizationMapper.toVm(organization);
     }
 
@@ -99,9 +97,9 @@ public class OrganizationServiceImpl implements OrganizationService {
             organization.setRegistrationNumber(organization.getRegistrationNumber().trim().toUpperCase());
             if (organizationRepository.existsByRegistrationNumber(organization.getRegistrationNumber())) {
                 throw new DuplicatedException(
-                        MessageCode.REGISTRATION_NUMBER_ALREADY_EXISTED,
-                        organization.getRegistrationNumber()
-                );
+                        MessageCode.ORGANIZATION_REGISTRATION_NUMBER_ALREADY_EXISTED,
+                        "registrationNumber",
+                        organization.getRegistrationNumber());
             }
         }
 
@@ -115,7 +113,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional
     public OrganizationVm updateOrganization(String id, OrganizationPutVm organizationPutVm) {
         Organization organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
 
         organizationMapper.updateEntityFromPutVm(organization, organizationPutVm);
 
@@ -128,7 +126,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Transactional
     public void deleteOrganization(String id) {
         Organization organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, id));
+                .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
 
         if (droneClientService.hasActiveInFlightDrones(id)) {
             throw new BadRequestException("Cannot deactivate organization with drones currently in active flight");
@@ -139,4 +137,3 @@ public class OrganizationServiceImpl implements OrganizationService {
         log.info("Soft-deleted organization with ID: {} (status set to inactive)", id);
     }
 }
-
