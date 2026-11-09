@@ -14,8 +14,6 @@ export interface DateTimePickerProps {
     disabled?: boolean;
     error?: boolean;
     className?: string;
-    minDate?: Date;
-    maxDate?: Date;
 }
 
 export function DateTimePicker({
@@ -25,7 +23,6 @@ export function DateTimePicker({
     disabled = false,
     error = false,
     className,
-    minDate,
 }: DateTimePickerProps) {
     const [open, setOpen] = useState(false);
 
@@ -153,12 +150,7 @@ export function DateTimePicker({
                 align="start"
             >
                 <div className="space-y-3">
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDaySelect}
-                        disabled={minDate ? (d) => d < minDate : undefined}
-                    />
+                    <Calendar mode="single" selected={selectedDate} onSelect={handleDaySelect} />
 
                     <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
                         <div className="flex items-center gap-1.5 font-mono">
@@ -217,5 +209,3 @@ export function DateTimePicker({
         </Popover>
     );
 }
-
-export default DateTimePicker;

@@ -24,19 +24,36 @@ export const FLIGHT_STATUSES = getFlightByIdResponse.shape.status.unwrap().optio
 export const FLIGHT_AUTHORIZATION_STATUSES =
     getFlightByIdResponse.shape.authorizationStatus.unwrap().options;
 
+export const FLIGHT_STATUS = {
+    PLANNED: "planned",
+    SCHEDULED: "scheduled",
+    AUTHORIZED: "authorized",
+    ACTIVE: "active",
+    COMPLETED: "completed",
+    DIVERTED: "diverted",
+    EMERGENCY_LANDING: "emergency_landing",
+    CANCELLED: "cancelled",
+} as const satisfies Record<string, FlightStatus>;
+
+export const FLIGHT_AUTHORIZATION_STATUS = {
+    PENDING: "pending",
+    APPROVED: "approved",
+    REJECTED: "rejected",
+} as const satisfies Record<string, FlightAuthorizationStatus>;
+
 export const EDITABLE_FLIGHT_STATUSES: readonly FlightStatus[] = [
-    "planned",
-    "scheduled",
-    "authorized",
+    FLIGHT_STATUS.PLANNED,
+    FLIGHT_STATUS.SCHEDULED,
+    FLIGHT_STATUS.AUTHORIZED,
 ] as const;
 
 export const ACTIVE_FLIGHT_STATUSES: readonly FlightStatus[] = [
-    "active",
-    "diverted",
-    "emergency_landing",
+    FLIGHT_STATUS.ACTIVE,
+    FLIGHT_STATUS.DIVERTED,
+    FLIGHT_STATUS.EMERGENCY_LANDING,
 ] as const;
 
-export const DEFAULT_FLIGHT_STATUS: FlightStatus = "planned";
+export const DEFAULT_FLIGHT_STATUS: FlightStatus = FLIGHT_STATUS.PLANNED;
 
 export type FlightFormPayload = Omit<CreateFlightPayload, "plannedRoute"> & {
     cruisingAltitudeM?: number;

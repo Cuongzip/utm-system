@@ -62,7 +62,7 @@ export function ResponseProtocolsModal({ isOpen, onClose }: ResponseProtocolsMod
                             <StatusBadge
                                 status={protocol.isActive ? "success" : "neutral"}
                                 label={protocol.isActive ? "ACTIVE" : "DISABLED"}
-                                shape="rounded"
+                                dotShape="circle"
                             />
                         </div>
                     ))

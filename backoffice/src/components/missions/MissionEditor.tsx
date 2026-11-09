@@ -12,7 +12,7 @@ import {
     sanitizeWaypointForApi,
     determineActiveTabFromErrors,
 } from "@/components/missions";
-import { createFieldErrorCleaner, validateSchema, parseApiError } from "@/utils";
+import { clearFieldError, validateSchema, parseApiError } from "@/utils";
 import { createMissionBody, updateMissionBody } from "@/generated/mission";
 import type {
     Hub,
@@ -23,7 +23,11 @@ import type {
     CreateMissionPayload,
     UpdateMissionPayload,
 } from "@/types";
-import { getInitialMissionFormPayload } from "@/types";
+import {
+    getInitialMissionFormPayload,
+    DEFAULT_MISSION_STATUS,
+    MISSION_SCHEDULE_TYPE,
+} from "@/types";
 
 export interface MissionSaveData {
     payload: CreateMissionPayload | UpdateMissionPayload;
@@ -62,7 +66,8 @@ export function MissionEditor({
         "details"
     );
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+    const handleClearFieldError = (...fields: string[]) =>
+        clearFieldError(setFieldErrors, ...fields);
 
     const isReadOnly = Boolean(
         mode === "edit" && initialData?.status && initialData.status.toLowerCase() !== "draft"
@@ -168,7 +173,7 @@ export function MissionEditor({
         if (isReadOnly) return;
 
         const scheduledIso =
-            formData.scheduleType === "scheduled" && formData.scheduledAt
+            formData.scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED && formData.scheduledAt
                 ? new Date(formData.scheduledAt).toISOString()
                 : undefined;
 
@@ -188,7 +193,7 @@ export function MissionEditor({
         const validation = validateSchema(schema, payload);
         const newFieldErrors: Record<string, string> = {};
 
-        if (formData.scheduleType === "scheduled") {
+        if (formData.scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED) {
             if (!formData.scheduledAt || !formData.scheduledAt.trim()) {
                 newFieldErrors.scheduledAt = "Scheduled departure time is required";
             } else if (new Date(formData.scheduledAt).getTime() <= Date.now()) {
@@ -261,7 +266,7 @@ export function MissionEditor({
             title={pageTitle}
             badges={
                 mode === "edit" ? (
-                    <StatusBadge status={initialData?.status || "draft"} showDot />
+                    <StatusBadge status={initialData?.status ?? DEFAULT_MISSION_STATUS} showDot />
                 ) : null
             }
             headerActions={
@@ -332,7 +337,7 @@ export function MissionEditor({
                     isEdit={mode === "edit"}
                     isReadOnly={isReadOnly}
                     fieldErrors={fieldErrors}
-                    onClearFieldError={clearFieldError}
+                    onClearFieldError={handleClearFieldError}
                 />
             }
         />

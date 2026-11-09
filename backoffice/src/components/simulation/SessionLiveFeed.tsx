@@ -18,7 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
 import { toast } from "sonner";
-import { formatTime } from "@/utils";
+import { formatTime, formatCoordinate, formatAltitude } from "@/utils";
 import { SIMULATION_STATUS, type SimulationSession, type TelemetryRecord } from "@/types";
 
 export interface SessionLiveFeedProps {
@@ -200,14 +200,9 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                 </TableHeader>
                                 <TableBody className="divide-y divide-slate-100 font-mono text-xs">
                                     {records.map((rec, index) => {
-                                        const lat =
-                                            rec.latitude != null ? rec.latitude.toFixed(6) : "—";
-                                        const lon =
-                                            rec.longitude != null ? rec.longitude.toFixed(6) : "—";
-                                        const alt =
-                                            rec.altitude != null
-                                                ? `${rec.altitude.toFixed(1)} m`
-                                                : "—";
+                                        const lat = formatCoordinate(rec.latitude, 6);
+                                        const lon = formatCoordinate(rec.longitude, 6);
+                                        const alt = formatAltitude(rec.altitude);
                                         const spd =
                                             rec.speed != null ? `${rec.speed.toFixed(1)} m/s` : "—";
                                         const hdg =

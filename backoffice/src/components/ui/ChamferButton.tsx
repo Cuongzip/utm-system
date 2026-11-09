@@ -3,7 +3,7 @@
 import React from "react";
 import { cn } from "@/lib";
 
-export type ChamferButtonVariant = "dark" | "active" | "danger" | "outline";
+export type ChamferButtonVariant = "dark" | "outline" | "danger";
 export type ChamferButtonSize = "xs" | "sm" | "md";
 export type ChamferButtonClip = "xs" | "sm" | "md";
 
@@ -28,7 +28,6 @@ const SIZE_CLASSES: Record<ChamferButtonSize, string> = {
 
 const SOLID_VARIANTS: Record<Exclude<ChamferButtonVariant, "outline">, string> = {
     dark: "bg-[var(--color-border-dark)] text-white hover:bg-[#1e293b]",
-    active: "bg-[var(--color-status-offline)] text-white",
     danger: "bg-[var(--color-tech-red)] text-white hover:bg-[var(--color-tech-red-hover)]",
 };
 
@@ -92,5 +91,3 @@ export function ChamferButton({
         </button>
     );
 }
-
-export default ChamferButton;

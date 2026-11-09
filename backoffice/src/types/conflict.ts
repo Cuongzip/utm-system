@@ -12,6 +12,17 @@ export const CONFLICT_STATUSES = getConflictByIdResponse.shape.status.unwrap().o
 export const RESOLUTION_STRATEGIES =
     getConflictByIdResponse.shape.resolutionStrategy.unwrap().options;
 
+export const CONFLICT_SEVERITY = {
+    EMERGENCY: "emergency",
+    CRITICAL: "critical",
+    WARNING: "warning",
+    HIGH: "high",
+    MEDIUM: "medium",
+    LOW: "low",
+} as const satisfies Record<string, (typeof CONFLICT_SEVERITIES)[number]>;
+
+export const DEFAULT_CONFLICT_SEVERITY = CONFLICT_SEVERITY.WARNING;
+
 export const CONFLICT_STATUS = {
     DETECTED: "detected",
     NOTIFIED: "notified",

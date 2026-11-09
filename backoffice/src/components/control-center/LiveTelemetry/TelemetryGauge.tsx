@@ -67,5 +67,3 @@ export function TelemetryGauge({
         </ChamferCard>
     );
 }
-
-export default TelemetryGauge;

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui";
 import { formatDistance, formatAltitude, formatCoordinates } from "@/utils";
 import { usePagination } from "@/hooks";
-import type { Hub } from "@/types";
+import { type Hub, ACTIVE_HUB_STATUS } from "@/types";
 
 interface HubsTableProps {
     hubs: Hub[];
@@ -112,7 +112,7 @@ export function HubsTable({
                                             {hub.name}
                                         </TableCell>
                                         <TableCell>
-                                            <StatusBadge status={hub.status || "ACTIVE"} />
+                                            <StatusBadge status={hub.status ?? ACTIVE_HUB_STATUS} />
                                         </TableCell>
                                         <TableCell mono darkText>
                                             {coords}

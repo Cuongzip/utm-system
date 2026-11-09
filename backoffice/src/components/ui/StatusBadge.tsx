@@ -29,7 +29,6 @@ export interface StatusBadgeProps {
     status: StatusType;
     label?: string;
     showDot?: boolean;
-    shape?: "chamfer" | "rounded" | "diamond" | "circle";
     dotShape?: DotShape;
     className?: string;
 }
@@ -104,15 +103,14 @@ export function StatusBadge({
     status,
     label,
     showDot = true,
-    shape = "diamond",
-    dotShape,
+    dotShape = "diamond",
     className,
 }: StatusBadgeProps) {
     const normalized = (status || "").toLowerCase().replace(/[-\s]/g, "_");
     const displayLabel = label !== undefined ? label : (status || "UNKNOWN").toUpperCase();
 
-    const isDiamond = dotShape === "diamond" || shape === "diamond" || shape === "chamfer";
-    const dotShapeClass = isDiamond ? "rounded-[1px] rotate-45" : "rounded-full rotate-0";
+    const dotShapeClass =
+        dotShape === "diamond" ? "rounded-[1px] rotate-45" : "rounded-full rotate-0";
     const dotColorClass = DOT_COLOR_MAP[normalized] || "bg-slate-400";
 
     return (
@@ -135,5 +133,3 @@ export function StatusBadge({
         </span>
     );
 }
-
-export default StatusBadge;

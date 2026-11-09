@@ -1,3 +1,5 @@
+import { MISSION_SCHEDULE_TYPE } from "@/types";
+
 export function formatMissionSchedule(scheduleType?: string | null): string {
-    return scheduleType === "scheduled" ? "Scheduled" : "Immediate";
+    return scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED ? "Scheduled" : "Immediate";
 }

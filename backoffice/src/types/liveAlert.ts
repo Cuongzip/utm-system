@@ -1,7 +1,16 @@
 import type { EmergencyIncidentVm, EmergencyProtocolVm } from "./emergency";
 
-export type LiveAlertSeverity =
-    "EMERGENCY" | "CRITICAL" | "HIGH" | "WARNING" | "MEDIUM" | "LOW" | "INFO";
+export const LIVE_ALERT_SEVERITY = {
+    EMERGENCY: "EMERGENCY",
+    CRITICAL: "CRITICAL",
+    HIGH: "HIGH",
+    WARNING: "WARNING",
+    MEDIUM: "MEDIUM",
+    LOW: "LOW",
+    INFO: "INFO",
+} as const;
+
+export type LiveAlertSeverity = (typeof LIVE_ALERT_SEVERITY)[keyof typeof LIVE_ALERT_SEVERITY];
 
 export type LiveAlertSource = "alert" | "emergency";
 

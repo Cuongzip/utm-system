@@ -157,5 +157,3 @@ export function FlightSelectorPopover({
         </Popover>
     );
 }
-
-export default FlightSelectorPopover;

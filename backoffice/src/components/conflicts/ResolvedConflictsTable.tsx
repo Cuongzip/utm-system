@@ -14,21 +14,15 @@ import {
     StatusBadge,
     Pagination,
 } from "@/components/ui";
-import { formatDateTime } from "@/utils";
-import { CONFLICT_SEVERITIES, type Conflict } from "@/types";
+import { formatDateTime, createStatusOptions } from "@/utils";
+import { CONFLICT_SEVERITIES, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
 export interface ResolvedConflictsTableProps {
     conflicts: Conflict[];
     isLoading?: boolean;
 }
 
-const SEVERITY_OPTIONS = [
-    { value: "all", label: "All Severities" },
-    ...CONFLICT_SEVERITIES.map((s) => ({
-        value: s,
-        label: s.charAt(0).toUpperCase() + s.slice(1),
-    })),
-];
+const SEVERITY_OPTIONS = createStatusOptions(CONFLICT_SEVERITIES, undefined, "All Severities");
 
 export function ResolvedConflictsTable({
     conflicts,
@@ -124,8 +118,7 @@ export function ResolvedConflictsTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={item.severity || "normal"}
-                                                label={item.severity?.toUpperCase() || "UNKNOWN"}
+                                                status={item.severity ?? DEFAULT_CONFLICT_SEVERITY}
                                             />
                                         </TableCell>
                                         <TableCell className="text-xs text-slate-700 leading-relaxed font-normal">
@@ -159,7 +152,6 @@ export function ResolvedConflictsTable({
                     currentPage={page}
                     totalPages={totalPages}
                     totalItems={filtered.length}
-                    pageSize={pageSize}
                     onPageChange={setPage}
                 />
             )}

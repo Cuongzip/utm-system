@@ -3,44 +3,22 @@
 import Link from "next/link";
 import { AlertTriangle, Info, X } from "lucide-react";
 import { useLiveAlerts } from "@/hooks/useLiveAlerts";
-import type { LiveAlertSeverity } from "@/types";
-
-function formatRelativeTime(timestamp: string): string {
-    try {
-        const time = new Date(timestamp).getTime();
-        if (isNaN(time)) return "just now";
-        const diffSeconds = Math.max(0, Math.floor((Date.now() - time) / 1000));
-        if (diffSeconds < 10) return "just now";
-        if (diffSeconds < 60) return `${diffSeconds}s ago`;
-        const diffMinutes = Math.floor(diffSeconds / 60);
-        if (diffMinutes < 60) return `${diffMinutes}m ago`;
-        const diffHours = Math.floor(diffMinutes / 60);
-        if (diffHours < 24) return `${diffHours}h ago`;
-        const diffDays = Math.floor(diffHours / 24);
-        if (diffDays < 30) return `${diffDays}d ago`;
-        const diffMonths = Math.floor(diffDays / 30);
-        if (diffMonths === 1) return "about 1 month ago";
-        if (diffMonths < 12) return `about ${diffMonths} months ago`;
-        const diffYears = Math.floor(diffMonths / 12);
-        return diffYears === 1 ? "about 1 year ago" : `about ${diffYears} years ago`;
-    } catch {
-        return "just now";
-    }
-}
+import { formatRelativeTime } from "@/utils";
+import { LIVE_ALERT_SEVERITY, type LiveAlertSeverity } from "@/types";
 
 function getSeverityConfig(severity: LiveAlertSeverity) {
     switch (severity) {
-        case "EMERGENCY":
-        case "CRITICAL":
+        case LIVE_ALERT_SEVERITY.EMERGENCY:
+        case LIVE_ALERT_SEVERITY.CRITICAL:
             return {
                 containerClass: "bg-[#fee2e2] border-b border-[#fecaca] text-slate-800",
                 iconClass: "text-red-600",
                 labelClass: "text-red-700 font-bold",
-                label: severity === "EMERGENCY" ? "EMERGENCY" : "CRITICAL",
+                label: severity === LIVE_ALERT_SEVERITY.EMERGENCY ? "EMERGENCY" : "CRITICAL",
                 Icon: AlertTriangle,
             };
-        case "HIGH":
-        case "WARNING":
+        case LIVE_ALERT_SEVERITY.HIGH:
+        case LIVE_ALERT_SEVERITY.WARNING:
             return {
                 containerClass: "bg-[#fef3c7] border-b border-[#fde68a] text-slate-800",
                 iconClass: "text-amber-500",
@@ -48,9 +26,9 @@ function getSeverityConfig(severity: LiveAlertSeverity) {
                 label: "WARNING",
                 Icon: AlertTriangle,
             };
-        case "MEDIUM":
-        case "LOW":
-        case "INFO":
+        case LIVE_ALERT_SEVERITY.MEDIUM:
+        case LIVE_ALERT_SEVERITY.LOW:
+        case LIVE_ALERT_SEVERITY.INFO:
         default:
             return {
                 containerClass: "bg-[#e0f2fe] border-b border-[#bae6fd] text-slate-800",

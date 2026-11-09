@@ -1,7 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import type { GeoPoint } from "@/utils/geo";
 
-export type GeometryMode = "radius" | "polygon";
+export const GEOMETRY_MODE = {
+    RADIUS: "radius",
+    POLYGON: "polygon",
+} as const;
+
+export type GeometryMode = (typeof GEOMETRY_MODE)[keyof typeof GEOMETRY_MODE];
 
 export type { GeoPoint };
 

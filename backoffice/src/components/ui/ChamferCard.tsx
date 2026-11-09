@@ -8,7 +8,6 @@ export interface ChamferCardProps {
     size?: ChamferSize;
     className?: string;
     innerClassName?: string;
-    style?: React.CSSProperties;
     onClick?: React.MouseEventHandler<HTMLDivElement>;
     children: React.ReactNode;
 }
@@ -23,13 +22,11 @@ export function ChamferCard({
     size = "lg",
     className,
     innerClassName,
-    style,
     onClick,
     children,
 }: ChamferCardProps) {
     return (
         <div
-            style={style}
             onClick={onClick}
             className={cn(
                 "bg-[var(--color-border-strong)] p-[1.5px] relative drop-shadow-sm flex flex-col min-h-0",

@@ -9,7 +9,6 @@ import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
-    selectedZoneId?: string | null;
     autoFitBounds?: boolean;
 }
 
@@ -20,11 +19,7 @@ const TYPE_COLOR_MAP: Record<string, string> = {
     warning: MAP_TOKENS.colors.airspace.warning,
 };
 
-export function AirspaceLayer({
-    zones = [],
-    selectedZoneId,
-    autoFitBounds = true,
-}: AirspaceLayerProps) {
+export function AirspaceLayer({ zones = [], autoFitBounds = true }: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
     const hasAutoFittedRef = useRef(false);
@@ -36,7 +31,7 @@ export function AirspaceLayer({
 
         async function renderZones() {
             const Cesium = await import("cesium");
-            if (!viewer || viewer.isDestroyed() || cancelled) return;
+            if (cancelled || !viewer || viewer.isDestroyed()) return;
 
             entityIdsRef.current.forEach((id) => {
                 const entity = viewer.entities.getById(id);
@@ -47,24 +42,19 @@ export function AirspaceLayer({
             const newEntityIds: string[] = [];
 
             zones.forEach((zone) => {
-                const coordinates = zone.geometry?.coordinates;
-                if (!coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
-                    return;
-                }
-
-                const outerRing = coordinates[0];
-                if (!outerRing || outerRing.length < 3) return;
+                const coords = zone.geometry?.coordinates?.[0];
+                if (!Array.isArray(coords) || coords.length < 3) return;
 
                 const degreeArray: number[] = [];
                 let sumLng = 0;
                 let sumLat = 0;
                 let validCount = 0;
 
-                outerRing.forEach((point) => {
-                    if (Array.isArray(point) && point.length >= 2) {
-                        const lng = point[0];
-                        const lat = point[1];
-                        if (typeof lng === "number" && typeof lat === "number") {
+                coords.forEach((coord) => {
+                    if (Array.isArray(coord) && coord.length >= 2) {
+                        const lng = coord[0];
+                        const lat = coord[1];
+                        if (!isNaN(lng) && !isNaN(lat)) {
                             degreeArray.push(lng, lat);
                             sumLng += lng;
                             sumLat += lat;
@@ -78,7 +68,6 @@ export function AirspaceLayer({
                 const centerLng = sumLng / validCount;
                 const centerLat = sumLat / validCount;
 
-                const isSelected = selectedZoneId === zone.id;
                 const zoneTypeKey = zone.zoneType || "warning";
                 const baseColor = TYPE_COLOR_MAP[zoneTypeKey] || "#64748b";
 
@@ -95,32 +84,25 @@ export function AirspaceLayer({
                         hierarchy: new Cesium.PolygonHierarchy(
                             Cesium.Cartesian3.fromDegreesArray(degreeArray)
                         ),
-                        material: isSelected
-                            ? Cesium.Color.fromAlpha(
-                                  Cesium.Color.fromCssColorString(baseColor),
-                                  0.32
-                              )
-                            : Cesium.Color.fromAlpha(
-                                  Cesium.Color.fromCssColorString(baseColor),
-                                  0.16
-                              ),
+                        material: Cesium.Color.fromAlpha(
+                            Cesium.Color.fromCssColorString(baseColor),
+                            0.16
+                        ),
                         outline: true,
-                        outlineColor: isSelected
-                            ? Cesium.Color.fromCssColorString("#ffffff")
-                            : Cesium.Color.fromAlpha(
-                                  Cesium.Color.fromCssColorString(baseColor),
-                                  0.8
-                              ),
-                        outlineWidth: isSelected ? 2.5 : 1.5,
+                        outlineColor: Cesium.Color.fromAlpha(
+                            Cesium.Color.fromCssColorString(baseColor),
+                            0.8
+                        ),
+                        outlineWidth: 1.5,
                         height: floor,
                         extrudedHeight: ceiling,
                     },
                     position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, ceiling + 15),
                     label: createTacticalLabel(Cesium, {
                         text: `${zone.name || zone.id} (${floor}-${ceiling}m)`,
-                        isSelected,
+                        isSelected: false,
                         accentColor: "#f59e0b",
-                        fontSize: isSelected ? 12 : 11,
+                        fontSize: 11,
                         maxDistance: 1500000,
                     }),
                 });
@@ -130,26 +112,7 @@ export function AirspaceLayer({
 
             entityIdsRef.current = newEntityIds;
 
-            if (selectedZoneId) {
-                const target = zones.find((z) => z.id === selectedZoneId);
-                const outerRing = target?.geometry?.coordinates?.[0];
-                if (Array.isArray(outerRing) && outerRing.length > 0) {
-                    const pts: { lat: number; lng: number }[] = [];
-                    outerRing.forEach((point) => {
-                        if (Array.isArray(point) && point.length >= 2) {
-                            pts.push({ lng: point[0], lat: point[1] });
-                        }
-                    });
-                    if (pts.length > 0) {
-                        fitCameraToBounds(viewer, pts, {
-                            animate: true,
-                            duration: 0.8,
-                            minHeight: 1200,
-                            paddingMultiplier: 1.5,
-                        });
-                    }
-                }
-            } else if (autoFitBounds && !hasAutoFittedRef.current && zones.length > 0) {
+            if (autoFitBounds && !hasAutoFittedRef.current && zones.length > 0) {
                 hasAutoFittedRef.current = true;
                 const points = zones.flatMap(
                     (z) =>
@@ -188,9 +151,7 @@ export function AirspaceLayer({
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, zones, selectedZoneId, autoFitBounds]);
+    }, [viewer, isLoaded, zones, autoFitBounds]);
 
     return null;
 }
-
-export default AirspaceLayer;

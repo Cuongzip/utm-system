@@ -2,7 +2,7 @@
 
 import React, { isValidElement } from "react";
 import { cn } from "@/lib";
-import { ChamferCard, ChamferSize } from "./ChamferCard";
+import { ChamferCard } from "./ChamferCard";
 
 export interface MetricCardProps {
     title: string;
@@ -11,9 +11,6 @@ export interface MetricCardProps {
     subValuePosition?: "inline" | "bottom";
     icon?: React.ComponentType<{ className?: string }> | React.ReactNode;
     iconClassName?: string;
-    size?: ChamferSize;
-    className?: string;
-    innerClassName?: string;
     children?: React.ReactNode;
 }
 
@@ -24,9 +21,6 @@ export function MetricCard({
     subValuePosition = "inline",
     icon,
     iconClassName,
-    size = "md",
-    className,
-    innerClassName,
     children,
 }: MetricCardProps) {
     const renderIcon = () => {
@@ -37,11 +31,7 @@ export function MetricCard({
     };
 
     return (
-        <ChamferCard
-            size={size}
-            className={cn("h-[119px]", className)}
-            innerClassName={innerClassName}
-        >
+        <ChamferCard size="md" className="h-[119px]">
             <div className="p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between w-full">
                     <span className="text-[11px] font-bold text-[#64748b] tracking-[0.55px] uppercase font-mono">
@@ -85,5 +75,3 @@ export function MetricCard({
         </ChamferCard>
     );
 }
-
-export default MetricCard;

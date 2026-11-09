@@ -1,7 +1,5 @@
-import { isValid } from "date-fns";
-
 export function toValidDate(val?: string | Date | number | null): Date | null {
     if (!val) return null;
     const d = val instanceof Date ? val : new Date(val);
-    return isValid(d) ? d : null;
+    return !isNaN(d.getTime()) ? d : null;
 }

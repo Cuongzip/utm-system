@@ -101,7 +101,6 @@ export default function ControlCenterPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
                     <TacticalMapContainer
-                        initialMode="2d"
                         initialLayerType="satellite"
                         className="h-[540px]"
                         onEntityClick={(entityId) => {
@@ -128,7 +127,6 @@ export default function ControlCenterPage() {
                             flights={flights}
                             telemetryMap={telemetryMap}
                             selectedFlightId={selectedFlightId}
-                            onSelectFlight={setSelectedFlightId}
                             autoFollowSelected={false}
                         />
                         <HubsLayer hubs={relevantHubs} autoFitBounds={false} />

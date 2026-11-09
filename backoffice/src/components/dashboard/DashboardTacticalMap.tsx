@@ -21,7 +21,6 @@ export interface DashboardTacticalMapProps {
     hubs: Hub[];
     airspaceZones: AirspaceZone[];
     telemetryMap?: Record<string, TelemetryRecord>;
-    telemetryHistoryMap?: Record<string, TelemetryRecord[]>;
     activeTelemetryCount?: number;
     isSocketConnected?: boolean;
 }
@@ -58,7 +57,6 @@ export function DashboardTacticalMap({
     hubs = [],
     airspaceZones = [],
     telemetryMap = {},
-    telemetryHistoryMap = {},
     activeTelemetryCount = 0,
     isSocketConnected = false,
 }: DashboardTacticalMapProps) {
@@ -84,7 +82,6 @@ export function DashboardTacticalMap({
 
     return (
         <TacticalMapContainer
-            initialMode="2d"
             initialLayerType="satellite"
             className="w-full"
             header={
@@ -183,8 +180,6 @@ export function DashboardTacticalMap({
                     <LiveTelemetryLayer
                         flights={activeFlights.length > 0 ? activeFlights : flights}
                         telemetryMap={telemetryMap}
-                        telemetryHistoryMap={telemetryHistoryMap}
-                        showPlannedRoute={showForesight}
                     />
                 </>
             )}

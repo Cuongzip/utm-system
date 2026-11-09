@@ -9,14 +9,12 @@ export interface SelectOption {
     value: string;
     label: string;
     description?: string;
-    icon?: React.ReactNode;
 }
 
 export type CustomSelectOption = SelectOption;
 
 export interface CustomSelectProps {
     value?: string;
-    defaultValue?: string;
     onValueChange?: (value: string) => void;
     options: SelectOption[];
     placeholder?: string;
@@ -29,7 +27,6 @@ const EMPTY_VALUE = "__EMPTY_VALUE__";
 
 export function CustomSelect({
     value,
-    defaultValue,
     onValueChange,
     options,
     placeholder = "Select an option...",
@@ -38,7 +35,6 @@ export function CustomSelect({
     error = false,
 }: CustomSelectProps) {
     const internalValue = value === "" ? EMPTY_VALUE : value;
-    const internalDefaultValue = defaultValue === "" ? EMPTY_VALUE : defaultValue;
 
     const handleValueChange = (val: string) => {
         onValueChange?.(val === EMPTY_VALUE ? "" : val);
@@ -47,7 +43,6 @@ export function CustomSelect({
     return (
         <SelectPrimitive.Root
             value={internalValue}
-            defaultValue={internalDefaultValue}
             onValueChange={handleValueChange}
             disabled={disabled}
         >
@@ -85,7 +80,6 @@ export function CustomSelect({
                                         </SelectPrimitive.ItemIndicator>
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        {opt.icon && <span className="shrink-0">{opt.icon}</span>}
                                         <SelectPrimitive.ItemText>
                                             {opt.label}
                                         </SelectPrimitive.ItemText>
@@ -104,5 +98,3 @@ export function CustomSelect({
         </SelectPrimitive.Root>
     );
 }
-
-export default CustomSelect;

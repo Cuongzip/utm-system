@@ -103,7 +103,6 @@ export function FlightMapEditor({
 
     return (
         <TacticalMapContainer
-            initialMode="2d"
             className={className}
             header={
                 <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">

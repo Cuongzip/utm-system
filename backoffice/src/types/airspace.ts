@@ -21,6 +21,34 @@ export type AirspaceZoneStatus = NonNullable<zod.infer<typeof createZoneBody>["s
 export const AIRSPACE_ZONE_TYPES = updateZoneBody.shape.zoneType.unwrap().options;
 export const AIRSPACE_ZONE_STATUSES = updateZoneBody.shape.status.unwrap().options;
 
+export const AIRSPACE_ZONE_TYPE = {
+    NO_FLY_ZONE: "no_fly_zone",
+    RESTRICTED: "restricted",
+    HUB_CORRIDOR: "hub_corridor",
+    WARNING: "warning",
+} as const satisfies Record<string, AirspaceZoneType>;
+
+export const DEFAULT_AIRSPACE_ZONE_TYPE: AirspaceZoneType = AIRSPACE_ZONE_TYPE.NO_FLY_ZONE;
+
+export const AIRSPACE_ZONE_STATUS = {
+    ACTIVE: "active",
+    INACTIVE: "inactive",
+} as const satisfies Record<string, AirspaceZoneStatus>;
+
+export const DEFAULT_AIRSPACE_ZONE_STATUS: AirspaceZoneStatus = AIRSPACE_ZONE_STATUS.ACTIVE;
+
+export const AIRSPACE_ZONE_TYPE_LABELS: Record<AirspaceZoneType, string> = {
+    [AIRSPACE_ZONE_TYPE.NO_FLY_ZONE]: "No-Fly Zone (NFZ)",
+    [AIRSPACE_ZONE_TYPE.RESTRICTED]: "Restricted Airspace",
+    [AIRSPACE_ZONE_TYPE.HUB_CORRIDOR]: "Hub Corridor",
+    [AIRSPACE_ZONE_TYPE.WARNING]: "Advisory / Warning",
+};
+
+export const AIRSPACE_ZONE_STATUS_LABELS: Record<AirspaceZoneStatus, string> = {
+    [AIRSPACE_ZONE_STATUS.ACTIVE]: "Active",
+    [AIRSPACE_ZONE_STATUS.INACTIVE]: "Inactive",
+};
+
 export type AirspaceZoneFormPayload = Omit<CreateAirspaceZonePayload, "geometry">;
 
 export function getInitialAirspaceFormPayload(

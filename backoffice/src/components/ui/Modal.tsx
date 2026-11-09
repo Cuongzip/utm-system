@@ -17,11 +17,8 @@ export interface ModalProps {
 
     onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void;
     loading?: boolean;
-    error?: string | null;
     submitText?: string;
-    cancelText?: string;
     loadingText?: string;
-    submitDisabled?: boolean;
     submitVariant?: ChamferButtonVariant;
     footer?: React.ReactNode;
 }
@@ -36,11 +33,8 @@ export function Modal({
     children,
     onSubmit,
     loading = false,
-    error = null,
     submitText = "Submit",
-    cancelText = "Cancel",
     loadingText = "Saving...",
-    submitDisabled = false,
     submitVariant = "dark",
     footer,
 }: ModalProps) {
@@ -74,7 +68,7 @@ export function Modal({
                                     <DialogPrimitive.Close asChild>
                                         <button
                                             type="button"
-                                            className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)] transition-all -mt-0.5 -mr-1"
+                                            className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)] transition-all -mt-0.5 -mr-1 cursor-pointer"
                                             aria-label="Close modal"
                                         >
                                             <X className="w-4 h-4" />
@@ -88,11 +82,6 @@ export function Modal({
                                         className="px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto"
                                         noValidate
                                     >
-                                        {error && (
-                                            <div className="p-3 bg-[var(--color-status-alert-bg)] border border-[var(--color-status-alert-border)] text-[var(--color-status-alert-text)] text-xs rounded-md">
-                                                {error}
-                                            </div>
-                                        )}
                                         {children}
                                         {footer ? (
                                             footer
@@ -106,18 +95,14 @@ export function Modal({
                                                     onClick={onClose}
                                                     disabled={loading}
                                                 >
-                                                    {cancelText}
+                                                    Cancel
                                                 </ChamferButton>
                                                 <ChamferButton
-                                                    variant={
-                                                        submitVariant === "danger"
-                                                            ? "dark"
-                                                            : submitVariant
-                                                    }
+                                                    variant={submitVariant}
                                                     size="sm"
                                                     clip="sm"
                                                     type="submit"
-                                                    disabled={loading || submitDisabled}
+                                                    disabled={loading}
                                                 >
                                                     {loading ? (
                                                         <>
@@ -133,11 +118,6 @@ export function Modal({
                                     </form>
                                 ) : (
                                     <div className="px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto">
-                                        {error && (
-                                            <div className="p-3 bg-[var(--color-status-alert-bg)] border border-[var(--color-status-alert-border)] text-[var(--color-status-alert-text)] text-xs rounded-md">
-                                                {error}
-                                            </div>
-                                        )}
                                         {children}
                                         {footer && (
                                             <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
@@ -154,5 +134,3 @@ export function Modal({
         </DialogPrimitive.Root>
     );
 }
-
-export default Modal;

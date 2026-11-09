@@ -10,6 +10,8 @@ import {
     type Hub,
     AIRSPACE_ZONE_TYPES,
     AIRSPACE_ZONE_STATUSES,
+    AIRSPACE_ZONE_TYPE_LABELS,
+    AIRSPACE_ZONE_STATUS_LABELS,
 } from "@/types";
 
 export interface AirspaceDetailsTabProps {
@@ -24,21 +26,14 @@ export interface AirspaceDetailsTabProps {
     onClearFieldError?: (field: string) => void;
 }
 
-const ZONE_TYPE_LABELS: Record<AirspaceZoneType, string> = {
-    no_fly_zone: "No-Fly Zone (NFZ)",
-    restricted: "Restricted Airspace",
-    hub_corridor: "Hub Corridor",
-    warning: "Advisory / Warning",
-};
-
 const ZONE_TYPE_OPTIONS: SelectOption[] = AIRSPACE_ZONE_TYPES.map((type) => ({
     value: type,
-    label: ZONE_TYPE_LABELS[type] || type,
+    label: AIRSPACE_ZONE_TYPE_LABELS[type] || type,
 }));
 
 const ZONE_STATUS_OPTIONS: SelectOption[] = AIRSPACE_ZONE_STATUSES.map((status) => ({
     value: status,
-    label: status === "active" ? "Active" : "Inactive",
+    label: AIRSPACE_ZONE_STATUS_LABELS[status] || status,
 }));
 
 export function AirspaceDetailsTab({
@@ -131,34 +126,21 @@ export function AirspaceDetailsTab({
                 </span>
             </div>
 
-            <div className="form-group">
-                <label className="form-label" htmlFor="altitudeCeiling">
-                    Altitude Ceiling Limit (m) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                    <input
-                        id="altitudeCeiling"
-                        type="number"
-                        min="10"
-                        max="5000"
-                        value={formData.altitudeCeiling ?? 120}
-                        onChange={(e) => {
-                            onFormChange("altitudeCeiling", Number(e.target.value));
-                            onClearFieldError?.("altitudeCeiling");
-                        }}
-                        className={cn(
-                            "form-input font-mono pr-14",
-                            fieldErrors.altitudeCeiling && "form-input-error"
-                        )}
-                    />
-                    <span className="absolute right-3 top-2.5 text-xs text-[var(--color-text-muted)] font-mono pointer-events-none">
-                        meters
-                    </span>
-                </div>
-                {fieldErrors.altitudeCeiling && (
-                    <span className="text-xs text-red-500 mt-1">{fieldErrors.altitudeCeiling}</span>
-                )}
-            </div>
+            <FormInput
+                id="altitudeCeiling"
+                label="Altitude Ceiling Limit (m)"
+                required
+                type="number"
+                min={10}
+                max={5000}
+                className="font-mono"
+                value={formData.altitudeCeiling ?? 120}
+                onChange={(e) => {
+                    onFormChange("altitudeCeiling", Number(e.target.value));
+                    onClearFieldError?.("altitudeCeiling");
+                }}
+                error={fieldErrors.altitudeCeiling}
+            />
 
             <div className="form-group">
                 <label className="form-label" htmlFor="zoneDesc">

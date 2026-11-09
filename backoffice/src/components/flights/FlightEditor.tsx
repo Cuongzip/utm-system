@@ -11,7 +11,7 @@ import {
     determineActiveTabFromFlightErrors,
     estimateRouteFeasibility,
 } from "@/components/flights";
-import { createFieldErrorCleaner, validateSchema } from "@/utils";
+import { clearFieldError, validateSchema } from "@/utils";
 import { createFlightBody, updateFlightBody } from "@/generated/flight";
 import {
     getInitialFlightFormPayload,
@@ -53,14 +53,17 @@ export function FlightEditor({
         "details"
     );
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+    const handleClearFieldError = useCallback(
+        (...fields: string[]) => clearFieldError(setFieldErrors, ...fields),
+        []
+    );
 
     const handleFormChange = useCallback(
         <K extends keyof FlightFormPayload>(field: K, value: FlightFormPayload[K]) => {
             setFormData((prev) => ({ ...prev, [field]: value }));
-            clearFieldError(field);
+            handleClearFieldError(field);
         },
-        [clearFieldError]
+        [handleClearFieldError]
     );
 
     useEffect(() => {
@@ -314,7 +317,7 @@ export function FlightEditor({
                     activeTab={activeSidebarTab}
                     onTabChange={setActiveSidebarTab}
                     fieldErrors={fieldErrors}
-                    onClearFieldError={clearFieldError}
+                    onClearFieldError={handleClearFieldError}
                     isReadOnly={isReadOnly}
                 />
             }

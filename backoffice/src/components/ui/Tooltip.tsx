@@ -8,31 +8,20 @@ export interface TooltipProps {
     content: React.ReactNode;
     children: React.ReactNode;
     side?: "top" | "bottom" | "left" | "right";
-    align?: "start" | "center" | "end";
-    delayDuration?: number;
     className?: string;
-    asChild?: boolean;
 }
 
-export function Tooltip({
-    content,
-    children,
-    side = "top",
-    align = "center",
-    delayDuration = 200,
-    className,
-    asChild = true,
-}: TooltipProps) {
+export function Tooltip({ content, children, side = "top", className }: TooltipProps) {
     if (!content) return <>{children}</>;
 
     return (
-        <TooltipPrimitive.Provider delayDuration={delayDuration}>
+        <TooltipPrimitive.Provider delayDuration={200}>
             <TooltipPrimitive.Root>
-                <TooltipPrimitive.Trigger asChild={asChild}>{children}</TooltipPrimitive.Trigger>
+                <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
                 <TooltipPrimitive.Portal>
                     <TooltipPrimitive.Content
                         side={side}
-                        align={align}
+                        align="center"
                         sideOffset={6}
                         className={cn(
                             "z-[9999] overflow-hidden rounded bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-100 shadow-md",
@@ -49,5 +38,3 @@ export function Tooltip({
         </TooltipPrimitive.Provider>
     );
 }
-
-export default Tooltip;

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
 import { formatNullable } from "@/utils";
-import type { Drone } from "@/types";
+import { type Drone, DEFAULT_DRONE_STATUS } from "@/types";
 
 export interface DronesTableProps {
     drones: Drone[];
@@ -110,7 +110,9 @@ export function DronesTable({
                                             {hubText}
                                         </TableCell>
                                         <TableCell>
-                                            <StatusBadge status={drone.status ?? "available"} />
+                                            <StatusBadge
+                                                status={drone.status ?? DEFAULT_DRONE_STATUS}
+                                            />
                                         </TableCell>
                                         <TableCell mono darkText>
                                             {maxPayloadText}

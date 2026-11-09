@@ -48,7 +48,7 @@ export default function DashboardPage() {
         return allFlights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status));
     }, [allFlights]);
 
-    const { telemetryMap, telemetryHistoryMap, isSocketConnected, activeTelemetryCount } =
+    const { telemetryMap, isSocketConnected, activeTelemetryCount } =
         useLiveTelemetry(activeFlights);
 
     const onlineHubsCount = useMemo(() => {
@@ -94,7 +94,6 @@ export default function DashboardPage() {
                 hubs={hubs}
                 airspaceZones={zones}
                 telemetryMap={telemetryMap}
-                telemetryHistoryMap={telemetryHistoryMap}
                 activeTelemetryCount={activeTelemetryCount}
                 isSocketConnected={isSocketConnected}
             />

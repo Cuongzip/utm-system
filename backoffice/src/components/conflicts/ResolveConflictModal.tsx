@@ -90,7 +90,6 @@ export function ResolveConflictModal({
             onSubmit={handleSubmit}
             loading={isSubmitting}
             submitText="Apply Resolution"
-            cancelText="Cancel"
             loadingText="Applying Resolution..."
         >
             <div className="space-y-4 text-xs">

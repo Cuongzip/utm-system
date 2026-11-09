@@ -13,6 +13,18 @@ export type CommandStatusGenerated = NonNullable<
 export type CommandType = CommandTypeGenerated | Uppercase<CommandTypeGenerated>;
 export type CommandStatus = CommandStatusGenerated | Uppercase<CommandStatusGenerated>;
 
+export const COMMAND_STATUS = {
+    PENDING: "pending",
+    SENT: "sent",
+    ACKNOWLEDGED: "acknowledged",
+    EXECUTING: "executing",
+    COMPLETED: "completed",
+    FAILED: "failed",
+    CANCELLED: "cancelled",
+} as const satisfies Record<string, CommandStatusGenerated>;
+
+export const DEFAULT_COMMAND_STATUS: CommandStatusGenerated = COMMAND_STATUS.PENDING;
+
 export type SendCommandPayload = Omit<zod.infer<typeof sendCommandBody>, "commandType"> & {
     commandType: CommandType;
 };

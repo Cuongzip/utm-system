@@ -15,20 +15,16 @@ export interface ActionMenuItem {
 interface ActionMenuProps {
     items: ActionMenuItem[];
     className?: string;
-    buttonClassName?: string;
 }
 
-export function ActionMenu({ items, className, buttonClassName }: ActionMenuProps) {
+export function ActionMenu({ items, className }: ActionMenuProps) {
     return (
         <DropdownMenuPrimitive.Root>
             <DropdownMenuPrimitive.Trigger asChild>
                 <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
-                    className={cn(
-                        "w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs focus:outline-none",
-                        buttonClassName
-                    )}
+                    className="w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs focus:outline-none"
                     aria-label="Actions"
                 >
                     <MoreHorizontal className="w-4 h-4" />
@@ -74,5 +70,3 @@ export function ActionMenu({ items, className, buttonClassName }: ActionMenuProp
         </DropdownMenuPrimitive.Root>
     );
 }
-
-export default ActionMenu;

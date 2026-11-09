@@ -5,7 +5,7 @@ import { ShieldCheck, Check, ArrowRight } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/components/ui";
 import { formatDateTime, formatDistance, formatAltitude } from "@/utils";
 import { useFlightsAll } from "@/hooks";
-import { CONFLICT_STATUS, type Conflict } from "@/types";
+import { CONFLICT_STATUS, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
 export interface ActiveConflictsListProps {
     conflicts: Conflict[];
@@ -95,8 +95,7 @@ export function ActiveConflictsList({
                                 </div>
 
                                 <StatusBadge
-                                    status={conflict.severity ?? "normal"}
-                                    label={conflict.severity?.toUpperCase() || "UNKNOWN"}
+                                    status={conflict.severity ?? DEFAULT_CONFLICT_SEVERITY}
                                 />
                             </div>
 

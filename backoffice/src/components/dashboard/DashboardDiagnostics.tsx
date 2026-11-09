@@ -100,7 +100,11 @@ export function DashboardDiagnostics({
                             />
                             <span>SYSTEM DIAGNOSTICS</span>
                         </div>
-                        <StatusBadge status={health.status} label={health.label} shape="rounded" />
+                        <StatusBadge
+                            status={health.status}
+                            label={health.label}
+                            dotShape="circle"
+                        />
                     </div>
 
                     <div className="mt-4 space-y-3.5">

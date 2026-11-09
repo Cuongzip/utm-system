@@ -19,13 +19,12 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import type { Mission } from "@/types";
+import { type Mission, MISSION_STATUS, DEFAULT_MISSION_STATUS } from "@/types";
 import { formatDate, formatNullable, formatHubName, formatMissionSchedule } from "@/utils";
 
 export interface MissionsTableProps {
     missions: Mission[];
     loading?: boolean;
-    selectedMissionId?: string | null;
     onSelectMission: (mission: Mission) => void;
     onExecuteMission: (mission: Mission) => void;
     onDuplicateMission: (mission: Mission) => void;
@@ -37,7 +36,6 @@ export interface MissionsTableProps {
 export function MissionsTable({
     missions = [],
     loading = false,
-    selectedMissionId,
     onSelectMission,
     onExecuteMission,
     onDuplicateMission,
@@ -50,8 +48,8 @@ export function MissionsTable({
         usePagination(missions);
 
     const getActions = (mission: Mission): ActionMenuItem[] => {
-        const status = (mission.status || "draft").toLowerCase();
-        const isDraft = status === "draft";
+        const status = (mission.status || DEFAULT_MISSION_STATUS).toLowerCase();
+        const isDraft = status === MISSION_STATUS.DRAFT;
 
         const items: ActionMenuItem[] = [
             {
@@ -61,7 +59,7 @@ export function MissionsTable({
             },
         ];
 
-        if (status === "draft" || status === "scheduled") {
+        if (status === MISSION_STATUS.DRAFT || status === MISSION_STATUS.SCHEDULED) {
             items.push({
                 label: "Execute Mission",
                 icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
@@ -75,7 +73,7 @@ export function MissionsTable({
             onClick: () => onDuplicateMission(mission),
         });
 
-        if (status !== "executing") {
+        if (status !== MISSION_STATUS.EXECUTING) {
             items.push({
                 label: "Delete",
                 icon: <Trash2 className="w-3.5 h-3.5 text-red-500" />,
@@ -124,8 +122,6 @@ export function MissionsTable({
                             </TableRow>
                         ) : (
                             paginatedItems.map((mission) => {
-                                const isSelected = mission.id === selectedMissionId;
-
                                 const depName = formatHubName(
                                     mission.departureHub,
                                     mission.departureHubId,
@@ -143,7 +139,6 @@ export function MissionsTable({
                                 return (
                                     <TableRow
                                         key={mission.id}
-                                        selected={isSelected}
                                         onClick={() => onSelectMission(mission)}
                                     >
                                         <TableCell mono bold darkText>
@@ -162,8 +157,7 @@ export function MissionsTable({
 
                                         <TableCell>
                                             <StatusBadge
-                                                status={mission.status || "draft"}
-                                                shape="chamfer"
+                                                status={mission.status ?? DEFAULT_MISSION_STATUS}
                                             />
                                         </TableCell>
 

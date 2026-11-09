@@ -9,16 +9,12 @@ export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputEleme
     labelRight?: React.ReactNode;
     error?: string;
     required?: boolean;
-    containerClassName?: string;
 }
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
-    (
-        { id, label, labelRight, error, required = false, className, containerClassName, ...props },
-        ref
-    ) => {
+    ({ id, label, labelRight, error, required = false, className, ...props }, ref) => {
         return (
-            <div className={cn("form-group", containerClassName)}>
+            <div className="form-group">
                 {label && (
                     <div className="flex items-center justify-between">
                         <label className="form-label" htmlFor={id}>

@@ -14,15 +14,10 @@ import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createStatusOptions } from "@/utils";
 import { HUB_STATUSES, type Hub, type CreateHubPayload, type UpdateHubPayload } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = [
-    { value: "all", label: "All Statuses" },
-    ...HUB_STATUSES.map((status) => ({
-        value: status,
-        label: status.charAt(0).toUpperCase() + status.slice(1),
-    })),
-];
+const STATUS_OPTIONS: SelectOption[] = createStatusOptions(HUB_STATUSES);
 
 export default function HubsPage() {
     const queryClient = useQueryClient();

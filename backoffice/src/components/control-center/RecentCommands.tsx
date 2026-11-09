@@ -4,18 +4,15 @@ import { Clock, Terminal, Loader2 } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
 import { useDroneCommands } from "@/hooks";
 import { formatTime } from "@/utils/format";
-import type { DroneCommand } from "@/types";
+import { type DroneCommand, DEFAULT_COMMAND_STATUS } from "@/types";
 
 export interface RecentCommandsProps {
     droneId?: string | null;
-    commands?: DroneCommand[];
 }
 
-export function RecentCommands({ droneId, commands: propCommands }: RecentCommandsProps) {
+export function RecentCommands({ droneId }: RecentCommandsProps) {
     const { data: commandList, isLoading } = useDroneCommands(droneId);
-
-    const commands: DroneCommand[] =
-        propCommands !== undefined ? propCommands : commandList?.items || [];
+    const commands: DroneCommand[] = commandList?.items || [];
 
     return (
         <ChamferCard size="lg" className="h-[273px]">
@@ -34,7 +31,7 @@ export function RecentCommands({ droneId, commands: propCommands }: RecentComman
                     </div>
 
                     <div className="mt-2.5 overflow-y-auto max-h-[195px] divide-y divide-slate-100 text-[11px] font-mono pr-1 custom-scrollbar flex-1">
-                        {!droneId && propCommands === undefined ? (
+                        {!droneId ? (
                             <EmptyState
                                 compact
                                 icon={Terminal}
@@ -42,7 +39,7 @@ export function RecentCommands({ droneId, commands: propCommands }: RecentComman
                                 description="Select an active flight to view command history"
                                 className="py-7"
                             />
-                        ) : isLoading && propCommands === undefined ? (
+                        ) : isLoading ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center text-slate-400">
                                 <Loader2 className="h-5 w-5 animate-spin mb-1 text-slate-400" />
                                 <span className="text-[11px]">Loading commands...</span>
@@ -80,7 +77,9 @@ export function RecentCommands({ droneId, commands: propCommands }: RecentComman
                                         )}
                                     </div>
                                     <div className="shrink-0">
-                                        <StatusBadge status={cmd.status || "pending"} />
+                                        <StatusBadge
+                                            status={cmd.status ?? DEFAULT_COMMAND_STATUS}
+                                        />
                                     </div>
                                 </div>
                             ))
@@ -91,5 +90,3 @@ export function RecentCommands({ droneId, commands: propCommands }: RecentComman
         </ChamferCard>
     );
 }
-
-export default RecentCommands;

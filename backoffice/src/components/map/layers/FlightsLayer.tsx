@@ -18,7 +18,6 @@ export interface FlightsLayerProps {
     flights: Flight[];
     selectedFlightId?: string | null;
     hubs?: Hub[];
-    hubCoordsMap?: Map<string, FlightHubCoord>;
     autoFitBounds?: boolean;
     focusOnSelected?: boolean;
     activeOnly?: boolean;
@@ -41,7 +40,6 @@ export function FlightsLayer({
     flights = [],
     selectedFlightId,
     hubs,
-    hubCoordsMap,
     autoFitBounds = true,
     focusOnSelected = true,
     activeOnly = false,
@@ -85,8 +83,6 @@ export function FlightsLayer({
                         });
                     }
                 });
-            } else if (hubCoordsMap) {
-                hubCoordsMap.forEach((val, key) => effectiveHubMap.set(key, val));
             }
 
             const newEntityIds: string[] = [];
@@ -307,7 +303,6 @@ export function FlightsLayer({
         flights,
         selectedFlightId,
         hubs,
-        hubCoordsMap,
         autoFitBounds,
         focusOnSelected,
         activeOnly,
@@ -316,5 +311,3 @@ export function FlightsLayer({
 
     return null;
 }
-
-export default FlightsLayer;

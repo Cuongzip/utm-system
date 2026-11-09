@@ -170,5 +170,3 @@ export function LiveTelemetry({
         </ChamferCard>
     );
 }
-
-export default LiveTelemetry;

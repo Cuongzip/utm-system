@@ -16,6 +16,7 @@ import { formatRelativeTime } from "@/utils";
 import { useDronesAll, useFlightsAll } from "@/hooks";
 import {
     INCIDENT_STATUS,
+    DEFAULT_INCIDENT_STATUS,
     EMERGENCY_SEVERITY,
     RESPONSE_ACTION,
     type EmergencyIncidentVm,
@@ -151,21 +152,9 @@ export function ActiveIncidentsList({
                                             )}
 
                                         <StatusBadge
-                                            status={
-                                                isAwaiting
-                                                    ? "warning"
-                                                    : isResolved
-                                                      ? "success"
-                                                      : "alert"
-                                            }
-                                            label={
-                                                isAwaiting
-                                                    ? "AWAITING CONFIRMATION"
-                                                    : incident.status
-                                                      ? incident.status.toUpperCase()
-                                                      : "ACTIVE"
-                                            }
-                                            shape="rounded"
+                                            status={incident.status ?? DEFAULT_INCIDENT_STATUS}
+                                            label={isAwaiting ? "AWAITING CONFIRMATION" : undefined}
+                                            dotShape="circle"
                                         />
 
                                         {isAwaiting && (

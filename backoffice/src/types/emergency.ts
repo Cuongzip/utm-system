@@ -31,6 +31,8 @@ export const ACTIVE_INCIDENT_STATUSES: readonly IncidentStatus[] = [
     INCIDENT_STATUS.EXECUTING,
 ] as const;
 
+export const DEFAULT_INCIDENT_STATUS: IncidentStatus = INCIDENT_STATUS.ACTIVE;
+
 export const EMERGENCY_SEVERITY = {
     WARNING: "warning",
     CRITICAL: "critical",

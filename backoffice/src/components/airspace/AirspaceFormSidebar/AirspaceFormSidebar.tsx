@@ -54,11 +54,7 @@ export function AirspaceFormSidebar({
     onClearFieldError,
     className = "",
 }: AirspaceFormSidebarProps) {
-    const hasGeometryError = Boolean(
-        fieldErrors.geometry ||
-        fieldErrors["geometry.coordinates"] ||
-        (geometryMode === "polygon" && polygonPoints.length < 3 && fieldErrors.geometry)
-    );
+    const hasGeometryError = Boolean(fieldErrors.geometry || fieldErrors["geometry.coordinates"]);
 
     const hasDetailErrors = Boolean(
         fieldErrors.code ||

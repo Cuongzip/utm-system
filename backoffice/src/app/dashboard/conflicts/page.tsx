@@ -91,7 +91,6 @@ export default function ConflictsPage() {
             </PageHeader>
 
             <TacticalMapContainer
-                initialMode="2d"
                 initialLayerType="satellite"
                 className="w-full h-[480px]"
                 header={

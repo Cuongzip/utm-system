@@ -9,15 +9,10 @@ import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
+import { createStatusOptions } from "@/utils";
 import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = [
-    { value: "all", label: "All Statuses" },
-    ...MISSION_STATUSES.map((status) => ({
-        value: status,
-        label: MISSION_STATUS_LABELS[status] || status,
-    })),
-];
+const STATUS_OPTIONS: SelectOption[] = createStatusOptions(MISSION_STATUSES, MISSION_STATUS_LABELS);
 
 export default function MissionsPage() {
     const router = useRouter();

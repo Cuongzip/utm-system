@@ -3,7 +3,7 @@
 import { TacticalMapContainer, HubsLayer, MapInspector } from "@/components/map";
 import { StatusBadge } from "@/components/ui";
 import { formatDistance, formatAltitude, formatCoordinate } from "@/utils";
-import type { Hub } from "@/types";
+import { type Hub, ACTIVE_HUB_STATUS } from "@/types";
 
 interface HubsMapProps {
     hubs: Hub[];
@@ -27,7 +27,7 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
                     <MapInspector
                         code={selectedHub.code}
                         title={selectedHub.name}
-                        badge={<StatusBadge status={selectedHub.status || "active"} />}
+                        badge={<StatusBadge status={selectedHub.status ?? ACTIVE_HUB_STATUS} />}
                         metaItems={[
                             {
                                 label: "Lat",
@@ -46,9 +46,7 @@ export function HubsMap({ hubs = [], selectedHubId, onSelectHub }: HubsMapProps)
                                 value: formatAltitude(selectedHub.altitudeMsl),
                             },
                         ]}
-                        accentColor="default"
                         onClose={() => onSelectHub(null)}
-                        closeTooltip="Close hub inspector"
                     />
                 ) : null
             }

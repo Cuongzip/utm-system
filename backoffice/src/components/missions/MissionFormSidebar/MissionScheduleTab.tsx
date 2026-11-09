@@ -3,7 +3,11 @@
 import { Clock, Play } from "lucide-react";
 import { DateTimePicker } from "@/components/ui";
 import { cn } from "@/lib";
-import type { MissionFormPayload } from "@/types";
+import {
+    type MissionFormPayload,
+    MISSION_SCHEDULE_TYPE,
+    DEFAULT_MISSION_SCHEDULE_TYPE,
+} from "@/types";
 
 export interface MissionScheduleTabProps {
     formData: MissionFormPayload;
@@ -23,18 +27,20 @@ export function MissionScheduleTab({
     fieldErrors = {},
     onClearFieldError,
 }: MissionScheduleTabProps) {
-    const scheduleType = formData.scheduleType || "immediate";
+    const scheduleType = formData.scheduleType || DEFAULT_MISSION_SCHEDULE_TYPE;
 
     return (
         <div className="space-y-4">
             <label className="form-label block">Schedule Type</label>
 
             <div
-                onClick={() => !isReadOnly && onFormChange("scheduleType", "immediate")}
+                onClick={() =>
+                    !isReadOnly && onFormChange("scheduleType", MISSION_SCHEDULE_TYPE.IMMEDIATE)
+                }
                 className={cn(
                     "p-4 rounded-md border transition-all flex items-start gap-3.5",
                     isReadOnly ? "cursor-default opacity-80" : "cursor-pointer",
-                    scheduleType === "immediate"
+                    scheduleType === MISSION_SCHEDULE_TYPE.IMMEDIATE
                         ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] shadow-xs"
                         : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)]"
                 )}
@@ -42,7 +48,7 @@ export function MissionScheduleTab({
                 <div
                     className={cn(
                         "w-8 h-8 rounded flex items-center justify-center shrink-0 border transition-colors",
-                        scheduleType === "immediate"
+                        scheduleType === MISSION_SCHEDULE_TYPE.IMMEDIATE
                             ? "bg-[var(--color-border-dark)] text-white border-[var(--color-border-dark)]"
                             : "bg-slate-100 text-slate-500 border-slate-200"
                     )}
@@ -60,11 +66,13 @@ export function MissionScheduleTab({
             </div>
 
             <div
-                onClick={() => !isReadOnly && onFormChange("scheduleType", "scheduled")}
+                onClick={() =>
+                    !isReadOnly && onFormChange("scheduleType", MISSION_SCHEDULE_TYPE.SCHEDULED)
+                }
                 className={cn(
                     "p-4 rounded-md border transition-all flex flex-col gap-3",
                     isReadOnly ? "cursor-default opacity-80" : "cursor-pointer",
-                    scheduleType === "scheduled"
+                    scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED
                         ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)] shadow-xs"
                         : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)]"
                 )}
@@ -73,7 +81,7 @@ export function MissionScheduleTab({
                     <div
                         className={cn(
                             "w-8 h-8 rounded flex items-center justify-center shrink-0 border transition-colors",
-                            scheduleType === "scheduled"
+                            scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED
                                 ? "bg-[var(--color-border-dark)] text-white border-[var(--color-border-dark)]"
                                 : "bg-slate-100 text-slate-500 border-slate-200"
                         )}
@@ -90,7 +98,7 @@ export function MissionScheduleTab({
                     </div>
                 </div>
 
-                {scheduleType === "scheduled" && (
+                {scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED && (
                     <div
                         className="pt-2 border-t border-[var(--color-border-default)]"
                         onClick={(e) => e.stopPropagation()}

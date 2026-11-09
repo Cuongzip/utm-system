@@ -6,8 +6,6 @@ import { cn } from "@/lib";
 
 export interface SwitchProps extends React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> {
     label?: React.ReactNode;
-    labelClassName?: string;
-    labelPosition?: "left" | "right";
 }
 
 const CHAMFER_TRACK_CLIP =
@@ -17,7 +15,7 @@ const CHAMFER_THUMB_CLIP =
     "polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px)";
 
 export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.Root>, SwitchProps>(
-    ({ className, label, labelClassName, labelPosition = "left", id, disabled, ...props }, ref) => {
+    ({ className, label, id, disabled, ...props }, ref) => {
         const generatedId = React.useId();
         const switchId = id || generatedId;
 
@@ -52,17 +50,6 @@ export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.
             return switchElement;
         }
 
-        const labelElement = (
-            <span
-                className={cn(
-                    "font-mono text-[11px] font-bold tracking-wider text-[var(--color-text-primary)] uppercase select-none",
-                    labelClassName
-                )}
-            >
-                {label}
-            </span>
-        );
-
         return (
             <label
                 htmlFor={switchId}
@@ -71,14 +58,13 @@ export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.
                     disabled && "cursor-not-allowed opacity-50"
                 )}
             >
-                {labelPosition === "left" && labelElement}
+                <span className="font-mono text-[11px] font-bold tracking-wider text-[var(--color-text-primary)] uppercase select-none">
+                    {label}
+                </span>
                 {switchElement}
-                {labelPosition === "right" && labelElement}
             </label>
         );
     }
 );
 
 Switch.displayName = "Switch";
-
-export default Switch;

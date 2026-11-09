@@ -130,5 +130,3 @@ export function FlightControl({ droneId, flightId }: FlightControlProps) {
         </ChamferCard>
     );
 }
-
-export default FlightControl;

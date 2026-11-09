@@ -38,5 +38,3 @@ export function Toaster({ position = "top-right", duration = 3200, className }: 
         />
     );
 }
-
-export default Toaster;

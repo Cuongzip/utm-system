@@ -107,5 +107,3 @@ export function ConfirmDialog({
         </AlertDialogPrimitive.Root>
     );
 }
-
-export default ConfirmDialog;

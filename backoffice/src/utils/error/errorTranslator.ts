@@ -1,7 +1,7 @@
 import { createTranslator } from "next-intl";
 import enMessages from "@/messages/en.json";
 
-export const errorTranslator = createTranslator({
+const errorTranslator = createTranslator({
     locale: "en",
     messages: enMessages,
 });

@@ -8,11 +8,7 @@ export interface PaginationProps {
     currentPage: number;
     totalPages: number;
     totalItems: number;
-    pageSize?: number;
-    pageSizeOptions?: number[];
     onPageChange: (page: number) => void;
-    onPageSizeChange?: (pageSize: number) => void;
-    showPageSize?: boolean;
     className?: string;
 }
 
@@ -127,5 +123,3 @@ export function Pagination({
         </div>
     );
 }
-
-export default Pagination;

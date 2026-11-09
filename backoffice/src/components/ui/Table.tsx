@@ -59,20 +59,17 @@ TableBody.displayName = "TableBody";
 
 export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
     selected?: boolean;
-    clickable?: boolean;
 }
 
 export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
-    ({ selected = false, clickable, onClick, className, children, ...props }, ref) => {
-        const isClickable = clickable ?? Boolean(onClick);
-
+    ({ selected = false, onClick, className, children, ...props }, ref) => {
         return (
             <tr
                 ref={ref}
                 onClick={onClick}
                 className={cn(
                     "transition-colors duration-150 hover:bg-[var(--color-surface-base)]",
-                    isClickable && "cursor-pointer",
+                    Boolean(onClick) && "cursor-pointer",
                     selected && "!bg-[var(--color-surface-card)]",
                     className
                 )}
@@ -114,7 +111,6 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
 TableHead.displayName = "TableHead";
 
 export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
-    width?: string | number;
     align?: "left" | "center" | "right";
     truncate?: boolean;
     tooltip?: string;
@@ -128,7 +124,6 @@ export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElem
 export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
     (
         {
-            width,
             align = "left",
             truncate = false,
             tooltip,
@@ -137,7 +132,6 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
             muted = false,
             subtle = false,
             darkText = false,
-            style,
             className,
             children,
             ...props
@@ -177,7 +171,6 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
         return (
             <td
                 ref={ref}
-                style={{ width, ...style }}
                 className={cn(
                     "px-[18px] py-3.5 text-[13px] text-[var(--color-text-primary)] border-b border-[var(--color-border-subtle)] whitespace-nowrap",
                     alignClass,
@@ -209,5 +202,3 @@ export function TableLoading({ colSpan = 1, message = "Loading..." }: TableLoadi
         </tr>
     );
 }
-
-export default Table;

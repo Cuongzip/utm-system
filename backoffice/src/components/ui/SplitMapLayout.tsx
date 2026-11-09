@@ -2,18 +2,14 @@
 
 import React from "react";
 import { PageHeader } from "./PageHeader";
-import { AlertBanner } from "./AlertBanner";
 import { cn } from "@/lib";
 
 export interface SplitMapLayoutProps {
     title: string | React.ReactNode;
     badges?: React.ReactNode;
     headerActions?: React.ReactNode;
-    error?: string | null;
-    onErrorDismiss?: () => void;
     mapContent: React.ReactNode;
     sidebarContent: React.ReactNode;
-    mapSpan?: 7 | 8 | 9;
     className?: string;
 }
 
@@ -21,19 +17,10 @@ export function SplitMapLayout({
     title,
     badges,
     headerActions,
-    error,
-    onErrorDismiss,
     mapContent,
     sidebarContent,
-    mapSpan = 8,
     className,
 }: SplitMapLayoutProps) {
-    const mapColClass =
-        mapSpan === 7 ? "xl:col-span-7" : mapSpan === 9 ? "xl:col-span-9" : "xl:col-span-8";
-
-    const sidebarColClass =
-        mapSpan === 7 ? "xl:col-span-5" : mapSpan === 9 ? "xl:col-span-3" : "xl:col-span-4";
-
     return (
         <div
             className={cn(
@@ -45,23 +32,14 @@ export function SplitMapLayout({
                 {headerActions}
             </PageHeader>
 
-            {error && <AlertBanner message={error} onDismiss={onErrorDismiss || (() => {})} />}
-
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full flex-1 min-h-[680px] xl:min-h-0">
-                <div className={cn(mapColClass, "flex flex-col h-full min-h-[580px] xl:min-h-0")}>
+                <div className="xl:col-span-8 flex flex-col h-full min-h-[580px] xl:min-h-0">
                     {mapContent}
                 </div>
-                <div
-                    className={cn(
-                        sidebarColClass,
-                        "flex flex-col h-full min-h-[580px] xl:min-h-0 overflow-hidden"
-                    )}
-                >
+                <div className="xl:col-span-4 flex flex-col h-full min-h-[580px] xl:min-h-0 overflow-hidden">
                     {sidebarContent}
                 </div>
             </div>
         </div>
     );
 }
-
-export default SplitMapLayout;

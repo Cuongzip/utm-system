@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Circle, Pentagon, Trash2, MapPin, AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
 import { formatCoordinates } from "@/utils";
-import type { GeometryMode, GeoPoint } from "../useAirspaceGeometry";
+import { GEOMETRY_MODE, type GeometryMode, type GeoPoint } from "../useAirspaceGeometry";
 
 export interface AirspaceBoundaryTabProps {
     geometryMode: GeometryMode;
@@ -78,10 +78,10 @@ export function AirspaceBoundaryTab({
                 <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                     <button
                         type="button"
-                        onClick={() => onGeometryModeChange("radius")}
+                        onClick={() => onGeometryModeChange(GEOMETRY_MODE.RADIUS)}
                         className={cn(
                             "flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded transition-colors cursor-pointer",
-                            geometryMode === "radius"
+                            geometryMode === GEOMETRY_MODE.RADIUS
                                 ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                 : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                         )}
@@ -92,10 +92,10 @@ export function AirspaceBoundaryTab({
 
                     <button
                         type="button"
-                        onClick={() => onGeometryModeChange("polygon")}
+                        onClick={() => onGeometryModeChange(GEOMETRY_MODE.POLYGON)}
                         className={cn(
                             "flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded transition-colors cursor-pointer",
-                            geometryMode === "polygon"
+                            geometryMode === GEOMETRY_MODE.POLYGON
                                 ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                 : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                         )}
@@ -113,7 +113,7 @@ export function AirspaceBoundaryTab({
                 </div>
             )}
 
-            {geometryMode === "radius" ? (
+            {geometryMode === GEOMETRY_MODE.RADIUS ? (
                 <div className="space-y-4">
                     <div className="p-2.5 bg-[var(--color-surface-card)] rounded border border-[var(--color-border-default)] text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-[var(--color-border-dark)] shrink-0" />

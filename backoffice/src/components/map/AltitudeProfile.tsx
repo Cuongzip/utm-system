@@ -11,8 +11,6 @@ export interface BaseAltitudeWaypoint {
     name?: string;
     latitude?: number;
     longitude?: number;
-    lat?: number;
-    lng?: number;
     altitude?: number;
 }
 
@@ -23,7 +21,6 @@ export interface AltitudeProfileProps<T extends BaseAltitudeWaypoint = BaseAltit
     onPointClick?: (point: ProfilePoint) => void;
     departureHub?: Hub | null;
     arrivalHub?: Hub | null;
-    title?: string;
     className?: string;
 }
 
@@ -34,7 +31,6 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
     onPointClick,
     departureHub,
     arrivalHub,
-    title = "ALTITUDE PROFILE",
     className = "",
 }: AltitudeProfileProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -83,8 +79,8 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         }
 
         sorted.forEach((wp, idx) => {
-            const lat = wp.latitude !== undefined ? wp.latitude : (wp.lat ?? 0);
-            const lng = wp.longitude !== undefined ? wp.longitude : (wp.lng ?? 0);
+            const lat = wp.latitude ?? 0;
+            const lng = wp.longitude ?? 0;
             const alt = wp.altitude ?? 50;
 
             const last = pts[pts.length - 1];
@@ -147,89 +143,101 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         });
 
         const altitudes = pts.map((p) => p.altitude);
-        const min = Math.min(...altitudes, 0);
-        const max = Math.max(...altitudes, 50);
-        const padding = Math.max((max - min) * 0.2, 10);
+        const minA = Math.min(0, ...altitudes);
+        const maxA = Math.max(120, ...altitudes);
 
         return {
-            minAlt: Math.max(0, Math.floor(min - padding)),
-            maxAlt: Math.ceil(max + padding),
-            totalDistance: cumDistance || 1,
+            minAlt: minA,
+            maxAlt: Math.ceil(maxA / 20) * 20,
+            totalDistance: cumDistance,
             segments: segs,
         };
     }, [waypoints, departureHub, arrivalHub]);
 
-    if (waypoints.length === 0) {
+    const chartPadding = { top: 18, bottom: 22, left: 36, right: 36 };
+    const innerW = Math.max(10, chartWidth - chartPadding.left - chartPadding.right);
+    const innerH = Math.max(10, chartHeight - chartPadding.top - chartPadding.bottom);
+
+    const getX = (dist: number) => {
+        if (totalDistance === 0) return chartPadding.left;
+        return chartPadding.left + (dist / totalDistance) * innerW;
+    };
+
+    const getY = (alt: number) => {
+        const range = maxAlt - minAlt || 1;
+        const ratio = (alt - minAlt) / range;
+        return chartPadding.top + innerH * (1 - ratio);
+    };
+
+    const pathD = useMemo(() => {
+        if (segments.length === 0) return "";
+        return segments.reduce((acc, seg, i) => {
+            const x = getX(seg.distance);
+            const y = getY(seg.point.altitude);
+            return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
+        }, "");
+    }, [segments, totalDistance, maxAlt, minAlt, innerW, innerH]);
+
+    const areaD = useMemo(() => {
+        if (segments.length === 0) return "";
+        const baseY = chartPadding.top + innerH;
+        const firstX = getX(segments[0].distance);
+        const lastX = getX(segments[segments.length - 1].distance);
+        return `${pathD} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
+    }, [pathD, segments, totalDistance, maxAlt, minAlt, innerW, innerH]);
+
+    const altSteps = [maxAlt, Math.round((maxAlt + minAlt) / 2), minAlt];
+
+    if (segments.length < 2) {
         return (
             <div
-                className={`p-4 bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] ${className}`}
+                ref={containerRef}
+                className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] select-none font-mono ${className}`}
             >
-                <div className="text-xs font-mono text-[var(--color-text-muted)] text-center py-4">
-                    Add waypoints to inspect vertical altitude profile
-                </div>
+                <span className="font-bold tracking-wider text-[var(--color-text-secondary)]">
+                    ALTITUDE PROFILE
+                </span>
+                <span>Add waypoints or hubs to inspect vertical trajectory profile</span>
             </div>
         );
     }
 
-    const chartPadding = { top: 18, right: 35, bottom: 22, left: 45 };
-    const plotWidth = Math.max(chartWidth - chartPadding.left - chartPadding.right, 100);
-    const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;
-
-    const getY = (altitude: number) => {
-        const range = maxAlt - minAlt;
-        if (range === 0) return chartPadding.top + plotHeight / 2;
-        return chartPadding.top + ((maxAlt - altitude) / range) * plotHeight;
-    };
-
-    const getX = (distance: number) => {
-        if (totalDistance === 0) return chartPadding.left;
-        return chartPadding.left + (distance / totalDistance) * plotWidth;
-    };
-
-    const pathD = segments
-        .map((seg, i) => {
-            const x = getX(seg.distance);
-            const y = getY(seg.point.altitude);
-            return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-        })
-        .join(" ");
-
-    const baselineY = chartPadding.top + plotHeight;
-    const areaD =
-        pathD + ` L ${getX(totalDistance)} ${baselineY} L ${chartPadding.left} ${baselineY} Z`;
-
-    const altSteps = [maxAlt, Math.round((maxAlt + minAlt) / 2), minAlt];
-
     return (
         <div
-            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2.5 select-none ${className}`}
+            ref={containerRef}
+            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2 select-none relative ${className}`}
         >
-            <div className="flex items-center justify-between mb-1.5 px-0.5">
-                <span className="text-xs font-bold text-[var(--color-text-primary)] tracking-wide font-mono">
-                    {title}
+            <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-text-secondary)] mb-1">
+                <span className="font-bold tracking-wider text-[var(--color-text-primary)]">
+                    ALTITUDE PROFILE
                 </span>
-                <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                    Distance: {formatDistance(totalDistance)}
-                </span>
+                <div className="flex items-center gap-4 text-[10px]">
+                    <span>
+                        DISTANCE:{" "}
+                        <strong className="text-[var(--color-text-primary)]">
+                            {formatDistance(totalDistance)}
+                        </strong>
+                    </span>
+                    <span>
+                        CEILING:{" "}
+                        <strong className="text-[var(--color-text-primary)]">{maxAlt}m</strong>
+                    </span>
+                </div>
             </div>
 
-            <div ref={containerRef} className="w-full overflow-hidden">
-                <svg
-                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    width={chartWidth}
-                    height={chartHeight}
-                    className="w-full h-[110px]"
-                >
+            <div className="relative w-full" style={{ height: chartHeight }}>
+                <svg width="100%" height={chartHeight} className="overflow-visible">
                     <defs>
                         <linearGradient
                             id="sharedAltitudeGradient"
-                            x1="0%"
-                            y1="0%"
-                            x2="0%"
-                            y2="100%"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2={chartHeight}
+                            gradientUnits="userSpaceOnUse"
                         >
-                            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.02" />
+                            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
                         </linearGradient>
                     </defs>
 
@@ -339,5 +347,3 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         </div>
     );
 }
-
-export default AltitudeProfile;

@@ -9,18 +9,10 @@ import { FlightsTable } from "@/components/flights";
 import { flightService } from "@/services/flightService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createStatusOptions } from "@/utils";
 import { FLIGHT_STATUSES, type Flight } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = [
-    { value: "all", label: "All Statuses" },
-    ...FLIGHT_STATUSES.map((status) => ({
-        value: status,
-        label: status
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
-    })),
-];
+const STATUS_OPTIONS: SelectOption[] = createStatusOptions(FLIGHT_STATUSES);
 
 export default function FlightsPage() {
     const router = useRouter();

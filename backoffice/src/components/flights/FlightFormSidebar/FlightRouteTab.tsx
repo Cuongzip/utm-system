@@ -194,7 +194,7 @@ export function FlightRouteTab({
                                                     )}
                                                 </div>
                                                 <span className="text-[var(--color-text-muted)] text-[11px]">
-                                                    Alt: {wp.altitude || 50}m
+                                                    Alt: {wp.altitude ?? 50}m
                                                 </span>
                                             </div>
                                         </div>

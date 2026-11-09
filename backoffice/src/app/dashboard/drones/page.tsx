@@ -8,6 +8,7 @@ import { DronesTable, AddDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
 import { useMutation } from "@tanstack/react-query";
+import { createStatusOptions } from "@/utils";
 import {
     DRONE_STATUSES,
     type Drone,
@@ -15,16 +16,7 @@ import {
     type UpdateDronePayload,
 } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = [
-    { value: "all", label: "All Statuses" },
-    ...DRONE_STATUSES.map((status) => ({
-        value: status,
-        label: status
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
-    })),
-];
+const STATUS_OPTIONS: SelectOption[] = createStatusOptions(DRONE_STATUSES);
 
 export default function DronesPage() {
     const fetchDrones = useCallback(() => droneService.getDrones(), []);

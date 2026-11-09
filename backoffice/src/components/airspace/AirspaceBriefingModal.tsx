@@ -7,6 +7,7 @@ import { Modal, ChamferButton, StatusBadge } from "@/components/ui";
 import { formatCoordinates, formatAltitude, formatNullable } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
 import type { CheckPathPayload, CheckPathResult } from "@/types";
+import { DEFAULT_AIRSPACE_ZONE_TYPE } from "@/types";
 
 interface AirspaceBriefingModalProps {
     isOpen: boolean;
@@ -309,7 +310,10 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                                                     </td>
                                                     <td className="p-2">
                                                         <StatusBadge
-                                                            status={v.zoneType || "alert"}
+                                                            status={
+                                                                v.zoneType ??
+                                                                DEFAULT_AIRSPACE_ZONE_TYPE
+                                                            }
                                                         />
                                                     </td>
                                                     <td className="p-2 font-mono text-[11px] text-slate-600">

@@ -25,5 +25,3 @@ export function Calendar({
 }
 
 Calendar.displayName = "Calendar";
-
-export default Calendar;

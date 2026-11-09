@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Trash2, Loader2 } from "lucide-react";
 import { SplitMapLayout, ChamferButton, StatusBadge, ConfirmDialog } from "@/components/ui";
-import { validateSchema, createFieldErrorCleaner, parseApiError } from "@/utils";
+import { validateSchema, clearFieldError as clearFields, parseApiError } from "@/utils";
 import { createZoneBody, updateZoneBody } from "@/generated/airspace";
 import type {
     AirspaceZone,
@@ -13,7 +13,7 @@ import type {
     AirspaceZoneFormPayload,
     Hub,
 } from "@/types";
-import { getInitialAirspaceFormPayload } from "@/types";
+import { getInitialAirspaceFormPayload, DEFAULT_AIRSPACE_ZONE_STATUS } from "@/types";
 import { useAirspaceGeometry } from "./useAirspaceGeometry";
 import { AirspaceMapEditor } from "./AirspaceMapEditor";
 import { AirspaceFormSidebar } from "./AirspaceFormSidebar";
@@ -49,7 +49,7 @@ export function AirspaceEditor({
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "geometry">("details");
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const clearFieldError = createFieldErrorCleaner(setFieldErrors);
+    const clearFieldError = (...fields: string[]) => clearFields(setFieldErrors, ...fields);
 
     const {
         geometryMode,
@@ -145,10 +145,7 @@ export function AirspaceEditor({
                 title={pageTitle}
                 badges={
                     mode === "edit" ? (
-                        <StatusBadge
-                            status={formData.status === "active" ? "active" : "inactive"}
-                            label={(formData.status ?? "active").toUpperCase()}
-                        />
+                        <StatusBadge status={formData.status ?? DEFAULT_AIRSPACE_ZONE_STATUS} />
                     ) : null
                 }
                 headerActions={

@@ -20,7 +20,11 @@ import {
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
 import { formatNullable } from "@/utils";
-import type { AirspaceZone } from "@/types";
+import {
+    type AirspaceZone,
+    DEFAULT_AIRSPACE_ZONE_STATUS,
+    DEFAULT_AIRSPACE_ZONE_TYPE,
+} from "@/types";
 
 interface AirspaceTableProps {
     zones: AirspaceZone[];
@@ -111,7 +115,7 @@ export function AirspaceTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={zone.zoneType ?? "warning"}
+                                                status={zone.zoneType ?? DEFAULT_AIRSPACE_ZONE_TYPE}
                                                 showDot={true}
                                             />
                                         </TableCell>
@@ -120,7 +124,7 @@ export function AirspaceTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={zone.status ?? "active"}
+                                                status={zone.status ?? DEFAULT_AIRSPACE_ZONE_STATUS}
                                                 showDot={true}
                                             />
                                         </TableCell>

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Modal, FormInput, ChamferButton, StatusBadge } from "@/components/ui";
 import { formatDateTime, formatTime } from "@/utils";
-import { INCIDENT_STATUS, type EmergencyIncidentVm } from "@/types";
+import { INCIDENT_STATUS, DEFAULT_INCIDENT_STATUS, type EmergencyIncidentVm } from "@/types";
 import { useDronesAll, useFlightsAll } from "@/hooks/useQueries";
 
 export interface IncidentDetailsModalProps {
@@ -107,15 +107,9 @@ export function IncidentDetailsModal({
                     value={incident.message || incident.emergencyType}
                     labelRight={
                         <StatusBadge
-                            status={isAwaiting ? "warning" : isResolved ? "success" : "alert"}
-                            label={
-                                isAwaiting
-                                    ? "AWAITING CONFIRMATION"
-                                    : incident.status
-                                      ? incident.status.toUpperCase()
-                                      : "ACTIVE"
-                            }
-                            shape="rounded"
+                            status={incident.status ?? DEFAULT_INCIDENT_STATUS}
+                            label={isAwaiting ? "AWAITING CONFIRMATION" : undefined}
+                            dotShape="circle"
                         />
                     }
                 />

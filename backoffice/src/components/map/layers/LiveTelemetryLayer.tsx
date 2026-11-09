@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import type { Flight, TelemetryRecord } from "@/types";
-import type { FlightHubCoord } from "./FlightsLayer";
 import { getDroneIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { formatSpeed } from "@/utils";
@@ -11,23 +10,15 @@ import { formatSpeed } from "@/utils";
 export interface LiveTelemetryLayerProps {
     flights: Flight[];
     telemetryMap: Record<string, TelemetryRecord>;
-    telemetryHistoryMap?: Record<string, TelemetryRecord[]>;
     selectedFlightId?: string | null;
-    onSelectFlight?: (flightId: string) => void;
-    hubCoordsMap?: Map<string, FlightHubCoord>;
     autoFollowSelected?: boolean;
-    showPlannedRoute?: boolean;
 }
 
 export function LiveTelemetryLayer({
     flights = [],
     telemetryMap = {},
-    telemetryHistoryMap: _telemetryHistoryMap = {},
     selectedFlightId,
-    onSelectFlight: _onSelectFlight,
-    hubCoordsMap: _hubCoordsMap = new Map(),
     autoFollowSelected = true,
-    showPlannedRoute: _showPlannedRoute = false,
 }: LiveTelemetryLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
@@ -79,7 +70,7 @@ export function LiveTelemetryLayer({
                         focusedDronePos = { lng: droneLng, lat: droneLat, alt: droneAlt };
                     }
 
-                    const droneHeading = telemetry.heading || 0;
+                    const droneHeading = telemetry.heading ?? 0;
                     const hasAlert =
                         telemetry.batteryPercentage !== undefined &&
                         telemetry.batteryPercentage < 20;
@@ -168,5 +159,3 @@ export function LiveTelemetryLayer({
 
     return null;
 }
-
-export default LiveTelemetryLayer;

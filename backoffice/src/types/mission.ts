@@ -17,10 +17,29 @@ export type UpdateMissionPayload = zod.infer<typeof updateMissionBody>;
 export const MISSION_SCHEDULE_TYPES = createMissionBody.shape.scheduleType.unwrap().options;
 export type MissionScheduleType = (typeof MISSION_SCHEDULE_TYPES)[number];
 
+export const MISSION_SCHEDULE_TYPE = {
+    IMMEDIATE: "immediate",
+    SCHEDULED: "scheduled",
+} as const satisfies Record<string, MissionScheduleType>;
+
+export const DEFAULT_MISSION_SCHEDULE_TYPE: MissionScheduleType = MISSION_SCHEDULE_TYPE.IMMEDIATE;
+
 export type MissionQueryParams = zod.infer<typeof getMissionsQueryParams>;
 
 export const MISSION_STATUSES = getMissionByIdResponse.shape.status.unwrap().options;
 export type MissionStatus = (typeof MISSION_STATUSES)[number];
+
+export const MISSION_STATUS = {
+    DRAFT: "draft",
+    SCHEDULED: "scheduled",
+    EXECUTING: "executing",
+    PAUSED: "paused",
+    COMPLETED: "completed",
+    ABORTED: "aborted",
+    FAILED: "failed",
+} as const satisfies Record<string, MissionStatus>;
+
+export const DEFAULT_MISSION_STATUS: MissionStatus = MISSION_STATUS.DRAFT;
 
 export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
     draft: "Draft",
@@ -41,7 +60,7 @@ export function getInitialMissionFormPayload(initialData?: Mission | null): Miss
         description: initialData?.description || "",
         departureHubId: initialData?.departureHubId || "",
         arrivalHubId: initialData?.arrivalHubId || "",
-        scheduleType: initialData?.scheduleType || "immediate",
+        scheduleType: initialData?.scheduleType || DEFAULT_MISSION_SCHEDULE_TYPE,
         scheduledAt: initialData?.scheduledAt ? initialData.scheduledAt.slice(0, 16) : "",
     };
 }

@@ -14,7 +14,6 @@ export interface MissionLayerProps {
     departureHub?: Hub | null;
     arrivalHub?: Hub | null;
     autoFitBounds?: boolean;
-    routeColor?: string;
 }
 
 export function MissionLayer({
@@ -23,8 +22,8 @@ export function MissionLayer({
     departureHub,
     arrivalHub,
     autoFitBounds = true,
-    routeColor = "#00a3bf",
 }: MissionLayerProps) {
+    const routeColor = "#00a3bf";
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
 
@@ -218,5 +217,3 @@ export function MissionLayer({
 
     return null;
 }
-
-export default MissionLayer;

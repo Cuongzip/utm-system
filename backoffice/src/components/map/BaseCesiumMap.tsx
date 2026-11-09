@@ -22,7 +22,6 @@ export interface BaseCesiumMapProps {
     onEntityClick?: (entityId: string) => void;
     children?: React.ReactNode;
     className?: string;
-    canvasClassName?: string;
     loadingText?: string;
 }
 
@@ -41,7 +40,6 @@ export function BaseCesiumMap({
     onEntityClick,
     children,
     className = "",
-    canvasClassName = "",
     loadingText = "Loading map...",
 }: BaseCesiumMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -269,7 +267,7 @@ export function BaseCesiumMap({
             >
                 <div
                     ref={containerRef}
-                    className={`w-full h-full [&_.cesium-widget]:!absolute [&_.cesium-widget]:!inset-0 [&_.cesium-widget]:!w-full [&_.cesium-widget]:!h-full [&_.cesium-widget]:!overflow-hidden [&_.cesium-widget_canvas]:!w-full [&_.cesium-widget_canvas]:!h-full [&_.cesium-widget_canvas]:!block ${canvasClassName}`}
+                    className="w-full h-full [&_.cesium-widget]:!absolute [&_.cesium-widget]:!inset-0 [&_.cesium-widget]:!w-full [&_.cesium-widget]:!h-full [&_.cesium-widget]:!overflow-hidden [&_.cesium-widget_canvas]:!w-full [&_.cesium-widget_canvas]:!h-full [&_.cesium-widget_canvas]:!block"
                 />
 
                 {!isLoaded && !mapError && (
@@ -292,5 +290,3 @@ export function BaseCesiumMap({
         </CesiumContext.Provider>
     );
 }
-
-export default BaseCesiumMap;

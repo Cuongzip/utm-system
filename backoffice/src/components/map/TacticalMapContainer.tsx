@@ -4,14 +4,11 @@ import React, { useState, useRef, useEffect, useSyncExternalStore } from "react"
 import { Globe, Map as MapIcon, Maximize2, Minimize2, Layers } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
 import { BaseCesiumMap } from "./BaseCesiumMap";
-import type { MapMode, ImageryType, MapCoordinates } from "./types";
+import type { MapMode, ImageryType } from "./types";
 import { cn } from "@/lib";
 
 export interface TacticalMapContainerProps {
-    initialMode?: MapMode;
     initialLayerType?: ImageryType;
-    height?: string;
-    initialCoordinates?: MapCoordinates;
     onEntityClick?: (entityId: string) => void;
     children?: React.ReactNode;
     inspector?: React.ReactNode;
@@ -19,7 +16,6 @@ export interface TacticalMapContainerProps {
     footer?: React.ReactNode;
     overlay?: React.ReactNode;
     className?: string;
-    loadingText?: string;
 }
 
 function subscribeMapMode(callback: () => void) {
@@ -48,10 +44,7 @@ function getServerMapModeSnapshot(): "globe" | "2d" {
 }
 
 export function TacticalMapContainer({
-    initialMode = "2d",
     initialLayerType = "satellite",
-    height = "100%",
-    initialCoordinates,
     onEntityClick,
     children,
     inspector,
@@ -59,7 +52,6 @@ export function TacticalMapContainer({
     footer,
     overlay,
     className,
-    loadingText = "Loading tactical map...",
 }: TacticalMapContainerProps) {
     const mapMode = useSyncExternalStore(
         subscribeMapMode,
@@ -194,11 +186,8 @@ export function TacticalMapContainer({
                     <BaseCesiumMap
                         mode={mapMode === "globe" ? "3d" : "2d"}
                         layerType={imageryType}
-                        height={height}
                         hideToolbar
                         onEntityClick={onEntityClick}
-                        initialCoordinates={initialCoordinates}
-                        loadingText={loadingText}
                     >
                         {children}
                     </BaseCesiumMap>
@@ -211,5 +200,3 @@ export function TacticalMapContainer({
         </ChamferCard>
     );
 }
-
-export default TacticalMapContainer;

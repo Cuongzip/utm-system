@@ -11,7 +11,6 @@ export interface SearchInputProps extends Omit<
     value: string;
     onChange: (value: string) => void;
     className?: string;
-    wrapperClassName?: string;
 }
 
 export function SearchInput({
@@ -19,11 +18,10 @@ export function SearchInput({
     onChange,
     placeholder = "Search...",
     className,
-    wrapperClassName,
     ...props
 }: SearchInputProps) {
     return (
-        <div className={cn("relative flex items-center", wrapperClassName)}>
+        <div className="relative flex items-center">
             <Search className="absolute left-3 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
             <input
                 type="text"
@@ -39,5 +37,3 @@ export function SearchInput({
         </div>
     );
 }
-
-export default SearchInput;

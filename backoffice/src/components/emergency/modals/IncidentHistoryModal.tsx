@@ -109,7 +109,7 @@ export function IncidentHistoryModal({ isOpen, onClose }: IncidentHistoryModalPr
                                     <StatusBadge
                                         status="success"
                                         label="RESOLVED"
-                                        shape="rounded"
+                                        dotShape="circle"
                                         className="shrink-0"
                                     />
                                 </div>

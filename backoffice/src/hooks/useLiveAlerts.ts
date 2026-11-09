@@ -8,12 +8,14 @@ import {
     onServiceStompConnectionChange,
 } from "@/lib/stomp";
 import { QUERY_KEYS, useActiveAlerts, useEmergencyActiveIncidents } from "@/hooks/useQueries";
-import type {
-    LiveAlertItem,
-    LiveAlertSeverity,
-    PendingConfirmationVm,
-    AlertVm,
-    EmergencyIncidentVm,
+import {
+    ALERT_STATUS,
+    INCIDENT_STATUS,
+    type LiveAlertItem,
+    type LiveAlertSeverity,
+    type PendingConfirmationVm,
+    type AlertVm,
+    type EmergencyIncidentVm,
 } from "@/types";
 
 function normalizeAlertSeverity(sev?: string): LiveAlertSeverity {
@@ -82,7 +84,9 @@ function normalizeIncidentItem(incident: EmergencyIncidentVm): LiveAlertItem {
         timestamp: incident.detectedAt || incident.createdOn || new Date().toISOString(),
         actionUrl: "/dashboard/emergency",
         actionLabel:
-            incident.status === "pending_confirmation" ? "CONFIRM ACTION" : "MANAGE INCIDENT",
+            incident.status === INCIDENT_STATUS.PENDING_CONFIRMATION
+                ? "CONFIRM ACTION"
+                : "MANAGE INCIDENT",
         raw: incident,
     };
 }
@@ -116,19 +120,16 @@ export function useLiveAlerts() {
     const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => new Set());
     const dismissedIdsRef = useRef<Set<string>>(dismissedIds);
 
-    // Initial data from REST queries
     const { data: initialAlerts = [] } = useActiveAlerts();
     const { data: initialIncidents = [] } = useEmergencyActiveIncidents();
 
-    // Seed initial alerts when query results change
     useEffect(() => {
         setAlerts((prev) => {
             const currentMap = new Map(prev.map((item) => [item.id, item]));
 
-            // Add or update initial active alerts
             for (const a of initialAlerts) {
                 if (a.id && !dismissedIds.has(a.id)) {
-                    if (a.status === "RESOLVED" || a.status === "DISMISSED") {
+                    if (a.status === ALERT_STATUS.RESOLVED || a.status === ALERT_STATUS.DISMISSED) {
                         currentMap.delete(a.id);
                     } else if (!currentMap.has(a.id)) {
                         currentMap.set(a.id, normalizeAlertItem(a));
@@ -136,10 +137,9 @@ export function useLiveAlerts() {
                 }
             }
 
-            // Add or update initial active incidents
             for (const inc of initialIncidents) {
                 if (inc.id && !dismissedIds.has(inc.id)) {
-                    if (inc.status === "resolved") {
+                    if (inc.status === INCIDENT_STATUS.RESOLVED) {
                         currentMap.delete(inc.id);
                     } else if (!currentMap.has(inc.id)) {
                         currentMap.set(inc.id, normalizeIncidentItem(inc));
@@ -155,7 +155,6 @@ export function useLiveAlerts() {
         });
     }, [initialAlerts, initialIncidents, dismissedIds]);
 
-    // Connect to STOMP services and track connection states
     useEffect(() => {
         connectServiceStomp("alert");
         connectServiceStomp("emergency");
@@ -169,14 +168,15 @@ export function useLiveAlerts() {
         };
     }, []);
 
-    // Subscribe to STOMP topics (persistent across alert dismissals)
     useEffect(() => {
-        // Alert topics - /topic/alerts/live already receives all alerts including CRITICAL
         const handleAlertMessage = (incoming: AlertVm) => {
             if (!incoming || !incoming.id) return;
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alertsActive });
 
-            if (incoming.status === "RESOLVED" || incoming.status === "DISMISSED") {
+            if (
+                incoming.status === ALERT_STATUS.RESOLVED ||
+                incoming.status === ALERT_STATUS.DISMISSED
+            ) {
                 setAlerts((prev) => prev.filter((item) => item.id !== incoming.id));
                 return;
             }
@@ -196,14 +196,13 @@ export function useLiveAlerts() {
             (data) => handleAlertMessage(data)
         );
 
-        // Emergency topics
         const handleEmergencyIncident = (incoming: EmergencyIncidentVm) => {
             if (!incoming || !incoming.id) return;
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
 
-            if (incoming.status === "resolved") {
+            if (incoming.status === INCIDENT_STATUS.RESOLVED) {
                 setAlerts((prev) => prev.filter((item) => item.id !== incoming.id));
                 return;
             }
@@ -252,7 +251,6 @@ export function useLiveAlerts() {
 
     const totalCount = alerts.length;
 
-    // Keep activeIndex within bounds
     const safeIndex = useMemo(() => {
         if (totalCount === 0) return 0;
         if (currentIndex >= totalCount) return 0;

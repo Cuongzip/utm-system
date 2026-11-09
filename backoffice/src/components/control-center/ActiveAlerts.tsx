@@ -8,17 +8,11 @@ import { alertService } from "@/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatTime } from "@/utils/format";
-import type { AlertVm } from "@/types";
+import { ALERT_SEVERITY, ALERT_STATUS } from "@/types";
 
-export interface ActiveAlertsProps {
-    alerts?: AlertVm[];
-}
-
-export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
+export function ActiveAlerts() {
     const queryClient = useQueryClient();
-    const { data: fetchedAlerts = [], isLoading } = useActiveAlerts();
-
-    const alerts = propAlerts !== undefined ? propAlerts : fetchedAlerts;
+    const { data: alerts = [], isLoading } = useActiveAlerts();
 
     const acknowledgeMutation = useMutation({
         mutationFn: (alertId: string) => alertService.acknowledgeAlert(alertId),
@@ -55,12 +49,12 @@ export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
                         <StatusBadge
                             status={activeCount > 0 ? "alert" : "online"}
                             label={activeCount > 0 ? `${activeCount} ACTIVE` : "NOMINAL"}
-                            shape="rounded"
+                            dotShape="circle"
                         />
                     </div>
 
                     <div className="mt-2.5 overflow-y-auto max-h-[195px] space-y-2 pr-1 custom-scrollbar flex-1">
-                        {isLoading && propAlerts === undefined ? (
+                        {isLoading ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center font-mono text-slate-400">
                                 <Loader2 className="h-5 w-5 animate-spin mb-1 text-slate-400" />
                                 <span className="text-[11px]">Monitoring alerts...</span>
@@ -75,9 +69,9 @@ export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
                             />
                         ) : (
                             sortedAlerts.map((alert) => {
-                                const severity = (alert.severity || "MEDIUM").toLowerCase();
                                 const isCriticalOrHigh =
-                                    severity === "critical" || severity === "high";
+                                    alert.severity === ALERT_SEVERITY.CRITICAL ||
+                                    alert.severity === ALERT_SEVERITY.HIGH;
 
                                 return (
                                     <div
@@ -100,8 +94,9 @@ export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
                                                         {alert.alertType || "BREACH"}
                                                     </h4>
                                                     <StatusBadge
-                                                        status={severity}
-                                                        shape="chamfer"
+                                                        status={
+                                                            alert.severity || ALERT_SEVERITY.MEDIUM
+                                                        }
                                                         showDot={false}
                                                         className="text-[9px] px-1.5 py-0 shrink-0"
                                                     />
@@ -124,8 +119,7 @@ export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
                                             </span>
                                             {alert.acknowledged ? (
                                                 <StatusBadge
-                                                    status="acknowledged"
-                                                    shape="rounded"
+                                                    status={ALERT_STATUS.ACKNOWLEDGED}
                                                     showDot={false}
                                                     className="text-[9px] px-1.5 py-0"
                                                 />
@@ -153,5 +147,3 @@ export function ActiveAlerts({ alerts: propAlerts }: ActiveAlertsProps) {
         </ChamferCard>
     );
 }
-
-export default ActiveAlerts;

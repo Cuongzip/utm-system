@@ -36,5 +36,3 @@ export function usePagination<T>(items: T[] = [], options?: UsePaginationOptions
         setPageSize,
     };
 }
-
-export default usePagination;

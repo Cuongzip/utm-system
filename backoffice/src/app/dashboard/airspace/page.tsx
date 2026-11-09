@@ -7,15 +7,13 @@ import { ChamferButton, PageHeader, TableFilterBar, type SelectOption } from "@/
 import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
-import { AIRSPACE_ZONE_STATUSES, type AirspaceZone } from "@/types";
+import { createStatusOptions } from "@/utils";
+import { AIRSPACE_ZONE_STATUSES, AIRSPACE_ZONE_STATUS_LABELS, type AirspaceZone } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = [
-    { value: "all", label: "All Statuses" },
-    ...AIRSPACE_ZONE_STATUSES.map((status) => ({
-        value: status,
-        label: status.charAt(0).toUpperCase() + status.slice(1),
-    })),
-];
+const STATUS_OPTIONS: SelectOption[] = createStatusOptions(
+    AIRSPACE_ZONE_STATUSES,
+    AIRSPACE_ZONE_STATUS_LABELS
+);
 
 export default function AirspacePage() {
     const router = useRouter();

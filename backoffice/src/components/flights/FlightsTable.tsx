@@ -29,6 +29,9 @@ import {
 import { usePagination } from "@/hooks";
 import {
     EDITABLE_FLIGHT_STATUSES,
+    DEFAULT_FLIGHT_STATUS,
+    FLIGHT_STATUS,
+    FLIGHT_AUTHORIZATION_STATUS,
     type Flight,
     type FlightStatus,
     type FlightAuthorizationStatus,
@@ -67,8 +70,9 @@ export function FlightsTable({
         usePagination(flights);
 
     const getActions = (flight: Flight): ActionMenuItem[] => {
-        const status: FlightStatus = flight.status ?? "planned";
-        const authStatus: FlightAuthorizationStatus = flight.authorizationStatus ?? "pending";
+        const status: FlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;
+        const authStatus: FlightAuthorizationStatus =
+            flight.authorizationStatus ?? FLIGHT_AUTHORIZATION_STATUS.PENDING;
         const isEditable = EDITABLE_FLIGHT_STATUSES.includes(status);
 
         const items: ActionMenuItem[] = [
@@ -83,7 +87,10 @@ export function FlightsTable({
             },
         ];
 
-        if ((status === "planned" || status === "scheduled") && authStatus === "pending") {
+        if (
+            (status === FLIGHT_STATUS.PLANNED || status === FLIGHT_STATUS.SCHEDULED) &&
+            authStatus === FLIGHT_AUTHORIZATION_STATUS.PENDING
+        ) {
             items.push({
                 label: "Authorize Flight",
                 icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />,
@@ -91,7 +98,7 @@ export function FlightsTable({
             });
         }
 
-        if (status === "authorized") {
+        if (status === FLIGHT_STATUS.AUTHORIZED) {
             items.push({
                 label: "Start Flight",
                 icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
@@ -99,7 +106,7 @@ export function FlightsTable({
             });
         }
 
-        if (status === "active") {
+        if (status === FLIGHT_STATUS.ACTIVE) {
             items.push({
                 label: "Complete Flight",
                 icon: <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600" />,
@@ -197,7 +204,7 @@ export function FlightsTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={flight.status ?? "planned"}
+                                                status={flight.status ?? DEFAULT_FLIGHT_STATUS}
                                                 showDot={true}
                                             />
                                         </TableCell>
