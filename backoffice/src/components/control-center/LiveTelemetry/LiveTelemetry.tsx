@@ -5,7 +5,7 @@ import { Radio, Bot, Signal } from "lucide-react";
 import { ChamferCard, StatusBadge } from "@/components/ui";
 import { TelemetryGauge } from "./TelemetryGauge";
 import { FlightSelectorPopover } from "./FlightSelectorPopover";
-import type { Flight, TelemetryRecord } from "@/types";
+import { type Flight, type TelemetryRecord, DEFAULT_FLIGHT_STATUS } from "@/types";
 
 export interface LiveTelemetryProps {
     telemetry?: TelemetryRecord | null;
@@ -51,11 +51,11 @@ export function LiveTelemetry({
               ? `UAV-${flight.droneId.slice(0, 8)}`
               : "STANDBY");
     const serialNumber = telemetry?.droneId?.slice(0, 8) || flight?.droneId?.slice(0, 8) || "—";
-    const flightMode = flight?.status ? flight.status.toUpperCase() : "IDLE";
+    const flightMode = (flight?.status ?? DEFAULT_FLIGHT_STATUS).toUpperCase();
     const connectionState = hasTelemetry ? "LIVE" : "OFFLINE";
 
     return (
-        <ChamferCard size="lg" className="h-[490px]">
+        <ChamferCard size="lg" className="h-[540px]">
             <div className="p-4 flex flex-col justify-between h-full relative">
                 <div>
                     <div className="flex items-center justify-between pb-3 border-b border-slate-200">

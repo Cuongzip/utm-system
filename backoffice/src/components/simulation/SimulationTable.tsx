@@ -17,9 +17,10 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
 import { InjectScenarioModal } from "./InjectScenarioModal";
-import { useFlightsAll, useDronesAll } from "@/hooks";
+import { useFlightsAll, useDronesAll, usePagination } from "@/hooks";
 import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS, type SimulationSession } from "@/types";
 
 interface SimulationTableProps {
@@ -46,6 +47,8 @@ export function SimulationTable({
     const { data: drones = [] } = useDronesAll();
     const [sessionToDelete, setSessionToDelete] = useState<SimulationSession | null>(null);
     const [sessionForInject, setSessionForInject] = useState<SimulationSession | null>(null);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(sessions);
 
     const flightMap = useMemo(
         () => new Map(flights.filter((f) => f.id).map((f) => [f.id, f])),
@@ -147,7 +150,7 @@ export function SimulationTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            sessions.map((session) => {
+                            paginatedItems.map((session) => {
                                 const sessionIdText = session.id || "—";
                                 const flight = session.flightId
                                     ? flightMap.get(session.flightId)
@@ -238,6 +241,12 @@ export function SimulationTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
 
             <ConfirmDialog

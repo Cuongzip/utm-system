@@ -14,6 +14,7 @@ import {
     StatusBadge,
     Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import { formatDateTime, createStatusOptions } from "@/utils";
 import { CONFLICT_SEVERITIES, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
@@ -30,8 +31,6 @@ export function ResolvedConflictsTable({
 }: ResolvedConflictsTableProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [severityFilter, setSeverityFilter] = useState("all");
-    const [page, setPage] = useState(1);
-    const pageSize = 10;
 
     const filtered = useMemo(() => {
         const query = searchQuery.toLowerCase().trim();
@@ -40,60 +39,47 @@ export function ResolvedConflictsTable({
         return conflicts.filter((item) => {
             const matchesQuery =
                 !query ||
-                item.id.toLowerCase().includes(query) ||
-                (item.conflictType && item.conflictType.toLowerCase().includes(query)) ||
-                (item.description && item.description.toLowerCase().includes(query)) ||
-                (item.resolutionStrategy && item.resolutionStrategy.toLowerCase().includes(query));
-
+                [item.id, item.conflictType, item.description, item.resolutionStrategy].some((s) =>
+                    s?.toLowerCase().includes(query)
+                );
             const matchesSeverity = severity === "all" || item.severity?.toLowerCase() === severity;
-
             return matchesQuery && matchesSeverity;
         });
     }, [conflicts, searchQuery, severityFilter]);
 
-    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
-    const paginatedItems = useMemo(() => {
-        const start = (page - 1) * pageSize;
-        return filtered.slice(start, start + pageSize);
-    }, [filtered, page, pageSize]);
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(filtered);
 
     return (
         <div className="space-y-3">
             <TableFilterBar
                 searchQuery={searchQuery}
-                onSearchChange={(q) => {
-                    setSearchQuery(q);
-                    setPage(1);
-                }}
+                onSearchChange={setSearchQuery}
                 searchPlaceholder="Search resolved conflicts..."
                 statusFilter={severityFilter}
-                onStatusFilterChange={(s) => {
-                    setSeverityFilter(s);
-                    setPage(1);
-                }}
+                onStatusFilterChange={setSeverityFilter}
                 statusOptions={SEVERITY_OPTIONS}
                 statusPlaceholder="All Severities"
             />
 
             <ChamferCard size="lg" className="w-full">
-                <Table fixed={false}>
+                <Table fixed>
                     <TableHeader>
                         <TableRow>
                             <TableHead width="140px">TYPE</TableHead>
                             <TableHead width="110px">SEVERITY</TableHead>
                             <TableHead>DESCRIPTION</TableHead>
                             <TableHead width="140px">STRATEGY</TableHead>
-                            <TableHead width="160px">DETECTED</TableHead>
-                            <TableHead width="160px">RESOLVED</TableHead>
+                            <TableHead width="160px">RESOLVED AT</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableLoading colSpan={6} message="Loading conflict history..." />
+                            <TableLoading colSpan={5} message="Loading conflict history..." />
                         ) : paginatedItems.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={6}
+                                    colSpan={5}
                                     className="py-8 text-center text-slate-400 text-xs"
                                 >
                                     No resolved conflicts found.
@@ -109,6 +95,10 @@ export function ResolvedConflictsTable({
                                     ? item.resolutionStrategy.replace(/_/g, " ").toUpperCase()
                                     : "—";
 
+                                const timeTooltip = item.detectedAt
+                                    ? `Detected: ${formatDateTime(item.detectedAt)}`
+                                    : undefined;
+
                                 return (
                                     <TableRow key={item.id}>
                                         <TableCell>
@@ -121,7 +111,11 @@ export function ResolvedConflictsTable({
                                                 status={item.severity ?? DEFAULT_CONFLICT_SEVERITY}
                                             />
                                         </TableCell>
-                                        <TableCell className="text-xs text-slate-700 leading-relaxed font-normal">
+                                        <TableCell
+                                            truncate
+                                            tooltip={item.description || undefined}
+                                            className="text-xs text-slate-700 font-normal"
+                                        >
                                             {item.description || "—"}
                                         </TableCell>
                                         <TableCell>
@@ -129,12 +123,12 @@ export function ResolvedConflictsTable({
                                                 {formattedStrategy}
                                             </span>
                                         </TableCell>
-                                        <TableCell mono subtle className="text-xs">
-                                            {item.detectedAt
-                                                ? formatDateTime(item.detectedAt)
-                                                : "—"}
-                                        </TableCell>
-                                        <TableCell mono subtle className="text-xs">
+                                        <TableCell
+                                            mono
+                                            subtle
+                                            className="text-xs"
+                                            tooltip={timeTooltip}
+                                        >
                                             {item.resolvedAt
                                                 ? formatDateTime(item.resolvedAt)
                                                 : "—"}
@@ -145,16 +139,13 @@ export function ResolvedConflictsTable({
                         )}
                     </TableBody>
                 </Table>
-            </ChamferCard>
-
-            {filtered.length > pageSize && (
                 <Pagination
-                    currentPage={page}
+                    currentPage={currentPage}
                     totalPages={totalPages}
-                    totalItems={filtered.length}
-                    onPageChange={setPage}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
                 />
-            )}
+            </ChamferCard>
         </div>
     );
 }

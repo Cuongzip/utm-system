@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Activity, ArrowRight } from "lucide-react";
+import { Activity } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
 import { formatDateTime } from "@/utils/format";
 import { DEFAULT_FLIGHT_STATUS, type Flight, type FlightStatus } from "@/types";
@@ -84,7 +84,7 @@ export function DashboardFlightLog({ flights = [], isLoading = false }: Dashboar
                                                 {indexStr}
                                             </span>
                                             <div className="min-w-0">
-                                                <div className="text-xs font-bold font-mono text-[var(--color-text-primary)] group-hover:text-cyan-600 transition-colors truncate">
+                                                <div className="text-xs font-bold font-mono text-[var(--color-text-primary)] truncate">
                                                     {flightCode}
                                                 </div>
                                                 <div className="text-[11px] font-mono text-[var(--color-text-muted)]">
@@ -99,16 +99,6 @@ export function DashboardFlightLog({ flights = [], isLoading = false }: Dashboar
                             })
                         )}
                     </div>
-                </div>
-
-                <div className="pt-3 border-t border-[var(--color-border-subtle)] mt-2 flex justify-end">
-                    <Link
-                        href="/dashboard/flights"
-                        className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                    >
-                        <span>VIEW COMPLETE AUDIT LOGS</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
                 </div>
             </div>
         </ChamferCard>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import { PageHeader } from "@/components/ui";
 import {
     DashboardKpiStrip,
@@ -20,7 +20,6 @@ import {
     useConnectivityDevices,
 } from "@/hooks";
 import { ACTIVE_FLIGHT_STATUSES, ACTIVE_HUB_STATUS } from "@/types";
-import { formatDateTime } from "@/utils/format";
 
 export default function DashboardPage() {
     const {
@@ -37,12 +36,6 @@ export default function DashboardPage() {
     const { data: alerts = [], isError: isErrorAlerts } = useActiveAlerts();
     const { data: zones = [], isError: isErrorZones } = useAirspaceAll();
     const { data: devices = [] } = useConnectivityDevices();
-
-    const [lastSyncedTime, setLastSyncedTime] = useState("");
-
-    useEffect(() => {
-        setLastSyncedTime(formatDateTime(new Date(), "HH:mm:ss"));
-    }, [allFlights, hubs, drones, alerts, zones, devices]);
 
     const activeFlights = useMemo(() => {
         return allFlights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status));
@@ -109,7 +102,6 @@ export default function DashboardPage() {
                     apiStatus={apiStatus}
                     isSocketConnected={isSocketConnected}
                     activeTelemetryCount={activeTelemetryCount}
-                    lastSyncedTime={lastSyncedTime}
                 />
             </div>
         </div>

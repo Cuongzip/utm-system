@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 export class ApiError extends Error {
     constructor(
         public status: number,
@@ -36,6 +38,8 @@ export function normalizeList<T>(res: { items?: T[]; total?: number } | T[] | nu
     };
 }
 
+let isRedirectingToLogin = false;
+
 export async function apiClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers = new Headers(options.headers);
     if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
@@ -43,10 +47,22 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
     }
 
     const response = await fetch(endpoint, {
-        credentials: "same-origin",
         ...options,
         headers,
     });
+
+    if ((response.type === "cors" && response.redirected) || response.status === 401) {
+        if (typeof window !== "undefined") {
+            if (!isRedirectingToLogin) {
+                isRedirectingToLogin = true;
+                toast.error("Session expired. Redirecting to login...");
+                setTimeout(() => {
+                    window.location.href = response.url || "/";
+                }, 600);
+            }
+            return {} as T;
+        }
+    }
 
     if (!response.ok) {
         let errorData: unknown;
@@ -66,6 +82,23 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
 
     if (response.status === 204) {
         return {} as T;
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (
+        !contentType.includes("application/json") &&
+        (response.url.includes("/openid-connect/auth") || response.url.includes("/login"))
+    ) {
+        if (typeof window !== "undefined") {
+            if (!isRedirectingToLogin) {
+                isRedirectingToLogin = true;
+                toast.error("Session expired. Redirecting to login...");
+                setTimeout(() => {
+                    window.location.href = response.url || "/";
+                }, 600);
+            }
+            return {} as T;
+        }
     }
 
     return response.json() as Promise<T>;

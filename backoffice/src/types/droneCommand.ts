@@ -23,6 +23,16 @@ export const COMMAND_STATUS = {
     CANCELLED: "cancelled",
 } as const satisfies Record<string, CommandStatusGenerated>;
 
+export const COMMAND_TYPE = {
+    TAKEOFF: "takeoff",
+    LAND: "land",
+    RTL: "rtl",
+    EMERGENCY_STOP: "emergency_stop",
+    PAUSE: "pause",
+    HOVER: "hover",
+    RESUME: "resume",
+} as const satisfies Record<string, CommandTypeGenerated>;
+
 export const DEFAULT_COMMAND_STATUS: CommandStatusGenerated = COMMAND_STATUS.PENDING;
 
 export type SendCommandPayload = Omit<zod.infer<typeof sendCommandBody>, "commandType"> & {

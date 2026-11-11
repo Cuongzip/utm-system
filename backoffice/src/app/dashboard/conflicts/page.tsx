@@ -90,53 +90,55 @@ export default function ConflictsPage() {
                 </ChamferButton>
             </PageHeader>
 
-            <TacticalMapContainer
-                initialLayerType="satellite"
-                className="w-full h-[480px]"
-                header={
-                    <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
-                        <div className="flex items-center gap-2">
-                            <ShieldAlert className="w-4 h-4 text-amber-500" />
-                            <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
-                                TACTICAL CONFLICT RADAR & AIRSPACE
-                            </span>
-                        </div>
+            <div className="w-full h-[480px]">
+                <TacticalMapContainer
+                    initialLayerType="satellite"
+                    className="w-full"
+                    header={
+                        <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
+                            <div className="flex items-center gap-2">
+                                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                                <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
+                                    TACTICAL CONFLICT RADAR & AIRSPACE
+                                </span>
+                            </div>
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setShowLiveTraffic((prev) => !prev)}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
-                                    showLiveTraffic
-                                        ? "bg-slate-800 text-white shadow-xs"
-                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                                }`}
-                            >
-                                <Radio className="w-3.5 h-3.5" />
-                                <span>LIVE TRAFFIC</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowLiveTraffic((prev) => !prev)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                        showLiveTraffic
+                                            ? "bg-slate-800 text-white shadow-xs"
+                                            : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                    }`}
+                                >
+                                    <Radio className="w-3.5 h-3.5" />
+                                    <span>LIVE TRAFFIC</span>
+                                </button>
 
-                            <button
-                                type="button"
-                                onClick={() => setShowAirspace((prev) => !prev)}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
-                                    showAirspace
-                                        ? "bg-slate-800 text-white shadow-xs"
-                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                                }`}
-                            >
-                                <Layers className="w-3.5 h-3.5" />
-                                <span>AIRSPACE</span>
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAirspace((prev) => !prev)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                        showAirspace
+                                            ? "bg-slate-800 text-white shadow-xs"
+                                            : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                    }`}
+                                >
+                                    <Layers className="w-3.5 h-3.5" />
+                                    <span>AIRSPACE</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                }
-            >
-                {showLiveTraffic && (
-                    <FlightsLayer flights={flights} activeOnly autoFitBounds={false} />
-                )}
-                {showAirspace && <AirspaceLayer zones={airspaces} autoFitBounds={false} />}
-            </TacticalMapContainer>
+                    }
+                >
+                    {showLiveTraffic && (
+                        <FlightsLayer flights={flights} activeOnly autoFitBounds={false} />
+                    )}
+                    {showAirspace && <AirspaceLayer zones={airspaces} autoFitBounds={false} />}
+                </TacticalMapContainer>
+            </div>
 
             <div className="flex flex-col gap-3">
                 <h2 className="text-base font-bold text-slate-900 tracking-tight">

@@ -13,7 +13,9 @@ import {
     TableCell,
     TableLoading,
     EmptyState,
+    Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import { ONLINE_DEVICE_STATUS, OFFLINE_DEVICE_STATUS, type DeviceRegistration } from "@/types";
 import { formatRelativeTime, formatDateTime } from "@/utils";
 
@@ -31,6 +33,8 @@ export function DeviceHeartbeatTable({
     onPowerOffDevice,
 }: DeviceHeartbeatTableProps) {
     const [pendingActions, setPendingActions] = useState<Record<string, boolean>>({});
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(devices);
 
     const handleAction = async (
         id: string,
@@ -96,7 +100,7 @@ export function DeviceHeartbeatTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            devices.map((device) => {
+                            paginatedItems.map((device) => {
                                 const deviceId = device.id;
                                 const isOnline = device.connectionStatus === ONLINE_DEVICE_STATUS;
                                 const isPendingOn = Boolean(pendingActions[`${deviceId}-on`]);
@@ -219,6 +223,12 @@ export function DeviceHeartbeatTable({
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setCurrentPage}
+                />
             </ChamferCard>
         </div>
     );

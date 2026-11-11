@@ -10,8 +10,8 @@ export interface FlightWaypoint {
     tempId?: string;
     sequence: number;
     name?: string;
-    lat: number;
-    lng: number;
+    latitude: number;
+    longitude: number;
     altitude: number;
 }
 
@@ -82,8 +82,8 @@ function parseInitialRouteWaypoints(
                 tempId: idStr,
                 sequence: seq,
                 name: `Waypoint ${seq}`,
-                lng: pt[0],
-                lat: pt[1],
+                latitude: pt[1],
+                longitude: pt[0],
                 altitude: pt[2] ?? cruisingAltitude,
             });
         }
@@ -148,8 +148,8 @@ export function useFlightRoute({
                 tempId: idStr,
                 sequence: seq,
                 name: `Waypoint ${seq}`,
-                lat,
-                lng,
+                latitude: lat,
+                longitude: lng,
                 altitude: altitude ?? cruisingAltitude,
             };
             setWaypoints((prev) => [...prev, newWp]);
@@ -181,7 +181,9 @@ export function useFlightRoute({
         (id: string, lat: number, lng: number) => {
             if (isReadOnly) return;
             setWaypoints((prev) =>
-                prev.map((wp) => (matchesId(wp, id) ? { ...wp, lat, lng } : wp))
+                prev.map((wp) =>
+                    matchesId(wp, id) ? { ...wp, latitude: lat, longitude: lng } : wp
+                )
             );
         },
         [isReadOnly, matchesId, setWaypoints]

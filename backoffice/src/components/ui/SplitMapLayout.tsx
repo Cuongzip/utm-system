@@ -24,7 +24,7 @@ export function SplitMapLayout({
     return (
         <div
             className={cn(
-                "p-8 flex flex-col gap-6 w-full min-h-[calc(100vh-80px)] xl:h-[calc(100vh-80px)] xl:max-h-[calc(100vh-80px)]",
+                "p-6 xl:p-8 flex flex-col gap-4 xl:gap-6 w-full min-h-[calc(100vh-80px)] xl:h-[calc(100vh-80px)] xl:min-h-[680px]",
                 className
             )}
         >
@@ -32,11 +32,11 @@ export function SplitMapLayout({
                 {headerActions}
             </PageHeader>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full flex-1 min-h-[680px] xl:min-h-0">
-                <div className="xl:col-span-8 flex flex-col h-full min-h-[580px] xl:min-h-0">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full flex-1 min-h-[600px] xl:min-h-0">
+                <div className="xl:col-span-8 flex flex-col h-full min-h-[480px] xl:min-h-0">
                     {mapContent}
                 </div>
-                <div className="xl:col-span-4 flex flex-col h-full min-h-[580px] xl:min-h-0 overflow-hidden">
+                <div className="xl:col-span-4 flex flex-col h-full min-h-[480px] xl:min-h-0 overflow-hidden">
                     {sidebarContent}
                 </div>
             </div>

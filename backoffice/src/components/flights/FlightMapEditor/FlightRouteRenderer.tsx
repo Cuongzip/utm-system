@@ -63,7 +63,7 @@ export function FlightRouteRenderer({
 
             waypoints.forEach((wp) => {
                 const alt = wp.altitude ?? cruisingAltitude;
-                const pos = Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, alt);
+                const pos = Cesium.Cartesian3.fromDegrees(wp.longitude, wp.latitude, alt);
                 routePositions.push(pos);
             });
 
@@ -143,7 +143,7 @@ export function FlightRouteRenderer({
 
             waypoints.forEach((wp, index) => {
                 const alt = wp.altitude ?? cruisingAltitude;
-                const pos = Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, alt);
+                const pos = Cesium.Cartesian3.fromDegrees(wp.longitude, wp.latitude, alt);
                 const isSelected =
                     selectedWaypointId === wp.id ||
                     selectedWaypointId === wp.tempId ||

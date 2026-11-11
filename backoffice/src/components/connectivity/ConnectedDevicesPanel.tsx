@@ -11,7 +11,9 @@ import {
     TableRow,
     TableHead,
     TableCell,
+    Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks";
 import { OFFLINE_DEVICE_STATUS, type DeviceRegistration } from "@/types";
 import { formatDateTime, formatRelativeTime } from "@/utils";
 
@@ -38,6 +40,10 @@ export function ConnectedDevicesPanel({
     onProvisionEdgeAgent,
     onViewAllDevices,
 }: ConnectedDevicesPanelProps) {
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } = usePagination(
+        devices,
+        { defaultPageSize: 5 }
+    );
     return (
         <ChamferCard size="lg" className="min-h-[365px]">
             <div className="p-5 flex flex-col flex-1 w-full">
@@ -123,7 +129,7 @@ export function ConnectedDevicesPanel({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {devices.map((device) => {
+                                {paginatedItems.map((device) => {
                                     const currentStatus =
                                         device.connectionStatus ?? OFFLINE_DEVICE_STATUS;
                                     const droneTooltip =
@@ -215,6 +221,14 @@ export function ConnectedDevicesPanel({
                                 })}
                             </TableBody>
                         </Table>
+                        {totalItems > 5 && (
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                totalItems={totalItems}
+                                onPageChange={setCurrentPage}
+                            />
+                        )}
                     </div>
                 )}
             </div>

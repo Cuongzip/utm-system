@@ -8,6 +8,7 @@ import {
     FlightMapEditor,
     FlightFormSidebar,
     useFlightRoute,
+    type FlightWaypoint,
     determineActiveTabFromFlightErrors,
     estimateRouteFeasibility,
 } from "@/components/flights";
@@ -238,6 +239,16 @@ export function FlightEditor({
         }
     };
 
+    const handleSelectWaypoint = useCallback(
+        (wp: FlightWaypoint | null) => {
+            setSelectedWaypointId(wp ? String(wp.id || wp.tempId) : null);
+            if (wp) {
+                setActiveSidebarTab("waypoints");
+            }
+        },
+        [setSelectedWaypointId]
+    );
+
     const flightStatus: FlightStatus = initialData?.status || "planned";
     const pageTitle =
         mode === "create"
@@ -291,7 +302,7 @@ export function FlightEditor({
                     selectedWaypointId={selectedWaypointId}
                     onAddWaypoint={addWaypoint}
                     onMoveWaypoint={moveWaypoint}
-                    onSelectWaypoint={(wp) => setSelectedWaypointId(wp ? wp.id : null)}
+                    onSelectWaypoint={handleSelectWaypoint}
                     onUndoWaypoint={undoWaypoint}
                     onClearWaypoints={clearWaypoints}
                     isReadOnly={isReadOnly}
@@ -307,7 +318,7 @@ export function FlightEditor({
                     hubs={hubs}
                     waypoints={waypoints}
                     selectedWaypoint={selectedWaypoint}
-                    onSelectWaypoint={(wp) => setSelectedWaypointId(wp ? wp.id : null)}
+                    onSelectWaypoint={handleSelectWaypoint}
                     onUpdateWaypoint={updateWaypoint}
                     onRemoveWaypoint={removeWaypoint}
                     onMoveWaypointOrder={moveWaypointOrder}

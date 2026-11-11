@@ -18,6 +18,8 @@ import {
     Settings,
 } from "lucide-react";
 
+import { AuthenticationInfo } from "./AuthenticationInfo";
+
 export type SidebarTabId =
     | "dashboard"
     | "control-center"
@@ -79,10 +81,7 @@ export function Sidebar() {
                         </div>
                         <div>
                             <span className="block text-sm font-bold tracking-widest text-slate-900 leading-none">
-                                DROPS
-                            </span>
-                            <span className="block text-[9px] tracking-wider text-slate-500 font-semibold uppercase mt-0.5 font-mono">
-                                UTM SYSTEM
+                                UTM
                             </span>
                         </div>
                     </Link>
@@ -118,9 +117,7 @@ export function Sidebar() {
                 </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 text-center">
-                <span className="text-[10px] font-mono text-slate-400">UTM OPS v0.1.0</span>
-            </div>
+            <AuthenticationInfo />
         </nav>
     );
 }

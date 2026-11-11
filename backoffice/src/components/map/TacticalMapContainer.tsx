@@ -90,14 +90,14 @@ export function TacticalMapContainer({
                 "w-full transition-all",
                 isFullscreen
                     ? "fixed inset-0 z-50 h-screen w-screen rounded-none"
-                    : "h-full min-h-[520px]",
+                    : "h-full min-h-[420px]",
                 className
             )}
         >
-            <div className="relative w-full h-full min-h-[520px] flex flex-col overflow-hidden bg-slate-900 select-none">
-                {header}
+            <div className="relative w-full h-full flex-1 flex flex-col overflow-hidden bg-slate-900 select-none min-h-0">
+                {header && <div className="shrink-0 z-10">{header}</div>}
 
-                <div className="relative flex-1 w-full h-full min-h-[460px] overflow-hidden">
+                <div className="relative flex-1 w-full min-h-0 overflow-hidden">
                     <div className="absolute top-4 right-4 z-30 flex items-center gap-2 pointer-events-none">
                         <div className="flex items-center rounded-lg bg-slate-900/90 p-1 border border-slate-700/80 backdrop-blur-md shadow-md pointer-events-auto">
                             <button
@@ -195,7 +195,7 @@ export function TacticalMapContainer({
                     {overlay}
                 </div>
 
-                {footer}
+                {footer && <div className="shrink-0 z-10">{footer}</div>}
             </div>
         </ChamferCard>
     );

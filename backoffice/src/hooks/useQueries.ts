@@ -9,7 +9,13 @@ import { airspaceService } from "@/services/airspaceService";
 import { connectivityService } from "@/services/connectivityService";
 import { emergencyService } from "@/services/emergencyService";
 import { conflictService } from "@/services/conflictService";
-import { INCIDENT_STATUS, type IncidentQueryParams, type ConflictQueryParams } from "@/types";
+import { apiClient } from "@/services/apiClient";
+import {
+    INCIDENT_STATUS,
+    type IncidentQueryParams,
+    type ConflictQueryParams,
+    type AuthenticatedUser,
+} from "@/types";
 
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
@@ -37,6 +43,7 @@ export const QUERY_KEYS = {
     emergencyPending: ["emergency", "pending"] as const,
     emergencyConfig: ["emergency", "config"] as const,
     emergencyProtocols: ["emergency", "protocols"] as const,
+    authUser: ["auth", "user"] as const,
     emergencyIncidents: (params?: IncidentQueryParams) =>
         params
             ? (["emergency", "incidents", params] as const)
@@ -181,5 +188,13 @@ export function useConflictsAll(params?: ConflictQueryParams) {
         queryKey: params ? [...QUERY_KEYS.conflicts, params] : QUERY_KEYS.conflicts,
         queryFn: () => conflictService.getAll(params),
         staleTime: 1000 * 15,
+    });
+}
+
+export function useCurrentUser() {
+    return useQuery({
+        queryKey: QUERY_KEYS.authUser,
+        queryFn: () => apiClient<AuthenticatedUser>("/authentication/user"),
+        staleTime: 1000 * 60 * 5,
     });
 }

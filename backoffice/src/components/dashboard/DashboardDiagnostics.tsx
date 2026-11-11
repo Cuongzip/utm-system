@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ChamferCard, StatusBadge, type StatusType } from "@/components/ui";
+import { ChamferCard } from "@/components/ui";
 
 export const API_HEALTH_STATUSES = {
     LOADING: "loading",
@@ -21,12 +21,9 @@ export interface DashboardDiagnosticsProps {
     isSocketConnected?: boolean;
     activeTelemetryCount?: number;
     connectedDevicesCount?: number;
-    lastSyncedTime?: string;
 }
 
 interface HealthConfig {
-    status: StatusType;
-    label: string;
     textClass: string;
     apiLabel: string;
     dotClass: string;
@@ -34,29 +31,21 @@ interface HealthConfig {
 
 const HEALTH_CONFIG_MAP: Record<ApiHealthStatus, HealthConfig> = {
     [API_HEALTH_STATUSES.LOADING]: {
-        status: "connecting",
-        label: "SYNCING...",
         textClass: "text-amber-500 font-bold animate-pulse",
         apiLabel: "SYNCING...",
         dotClass: "bg-amber-500",
     },
     [API_HEALTH_STATUSES.ERROR]: {
-        status: "offline",
-        label: "OFFLINE",
         textClass: "text-rose-600 font-bold",
         apiLabel: "OFFLINE",
         dotClass: "bg-rose-500",
     },
     [API_HEALTH_STATUSES.DEGRADED]: {
-        status: "warning",
-        label: "DEGRADED",
         textClass: "text-amber-600 font-bold",
         apiLabel: "PARTIAL",
         dotClass: "bg-amber-500",
     },
     [API_HEALTH_STATUSES.CONNECTED]: {
-        status: "online",
-        label: "HEALTHY",
         textClass: "text-emerald-600 font-bold",
         apiLabel: "CONNECTED",
         dotClass: "bg-emerald-500",
@@ -72,22 +61,10 @@ export function DashboardDiagnostics({
     isSocketConnected = false,
     activeTelemetryCount = 0,
     connectedDevicesCount = 0,
-    lastSyncedTime = "--",
 }: DashboardDiagnosticsProps) {
     const isThreatElevated = conflictsCount > 0;
 
-    const health = useMemo(() => {
-        const base = HEALTH_CONFIG_MAP[apiStatus];
-        if (apiStatus === API_HEALTH_STATUSES.CONNECTED && isThreatElevated) {
-            return {
-                ...base,
-                status: "warning",
-                label: "ELEVATED",
-                dotClass: "bg-amber-500",
-            };
-        }
-        return base;
-    }, [apiStatus, isThreatElevated]);
+    const health = useMemo(() => HEALTH_CONFIG_MAP[apiStatus], [apiStatus]);
 
     return (
         <ChamferCard size="lg" className="h-full min-h-[340px]">
@@ -100,11 +77,6 @@ export function DashboardDiagnostics({
                             />
                             <span>SYSTEM DIAGNOSTICS</span>
                         </div>
-                        <StatusBadge
-                            status={health.status}
-                            label={health.label}
-                            dotShape="circle"
-                        />
                     </div>
 
                     <div className="mt-4 space-y-3.5">
@@ -193,18 +165,6 @@ export function DashboardDiagnostics({
                             </span>
                         </div>
                     </div>
-                </div>
-
-                <div className="pt-3 border-t border-[var(--color-border-subtle)] mt-4 flex items-center justify-between text-[11px] font-mono text-[var(--color-text-muted)]">
-                    <span>
-                        SOCKET:{" "}
-                        <strong
-                            className={isSocketConnected ? "text-emerald-600" : "text-amber-600"}
-                        >
-                            {isSocketConnected ? "STOMP SYNCED" : "RECONNECTING"}
-                        </strong>
-                    </span>
-                    <span>LAST SYNC: {lastSyncedTime}</span>
                 </div>
             </div>
         </ChamferCard>

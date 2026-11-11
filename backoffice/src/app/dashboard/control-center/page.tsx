@@ -17,7 +17,7 @@ import {
     fitCameraToBounds,
 } from "@/components/map";
 import { useLiveTelemetry, useFlightsAll, useHubsAll } from "@/hooks";
-import type { Flight, Hub } from "@/types";
+import { type Flight, type Hub, ACTIVE_FLIGHT_STATUSES } from "@/types";
 
 function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flight[] }) {
     const { viewer, isLoaded } = useCesium();
@@ -34,7 +34,18 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
             .filter((pt) => pt.lat >= 8 && pt.lat <= 24 && pt.lng >= 100 && pt.lng <= 112);
 
         const flightPoints = flights
-            .flatMap((f) => ((f.plannedRoute as any)?.coordinates as number[][] | undefined) ?? [])
+            .flatMap((f) => {
+                const route = f.plannedRoute;
+                if (
+                    route &&
+                    typeof route === "object" &&
+                    "coordinates" in route &&
+                    Array.isArray((route as { coordinates?: unknown }).coordinates)
+                ) {
+                    return (route as { coordinates: number[][] }).coordinates;
+                }
+                return [];
+            })
             .filter((pt) => Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1]))
             .map((pt) => ({ lng: Number(pt[0]), lat: Number(pt[1]) }))
             .filter((pt) => pt.lat >= 8 && pt.lat <= 24 && pt.lng >= 100 && pt.lng <= 112);
@@ -61,12 +72,7 @@ export default function ControlCenterPage() {
     const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
 
     const flights = useMemo(() => {
-        return allFlights.filter((f) => {
-            const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
-            return (
-                s === "active" || s === "in_flight" || s === "diverted" || s === "emergency_landing"
-            );
-        });
+        return allFlights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status));
     }, [allFlights]);
 
     const relevantHubs = useMemo(() => {
@@ -99,10 +105,10 @@ export default function ControlCenterPage() {
             <PageHeader title="Live Operations" />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8">
+                <div className="lg:col-span-8 h-[540px]">
                     <TacticalMapContainer
                         initialLayerType="satellite"
-                        className="h-[540px]"
+                        className="w-full"
                         onEntityClick={(entityId) => {
                             const rawId = entityId
                                 .replace(/^drone-live-/, "")

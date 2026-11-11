@@ -20,9 +20,7 @@ export function ActiveAlerts() {
             toast.success("Alert acknowledged");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alertsActive });
         },
-        onError: (err: Error) => {
-            toast.error(err.message || "Failed to acknowledge alert");
-        },
+        meta: { defaultErrorMessage: "Failed to acknowledge alert" },
     });
 
     const activeCount = alerts.length;

@@ -14,8 +14,8 @@ export function buildFlightRoutePoints(
         tempId: wp.tempId,
         sequence: wp.sequence,
         name: wp.name,
-        latitude: wp.lat,
-        longitude: wp.lng,
+        latitude: wp.latitude,
+        longitude: wp.longitude,
         altitude: wp.altitude,
     }));
     return buildMissionRoutePoints(normalized, departureHub, arrivalHub, defaultAltitude);
@@ -52,7 +52,7 @@ export function convertWaypointsToLineString(
 
     const sorted = [...waypoints].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
     sorted.forEach((wp) => {
-        coords.push([wp.lng, wp.lat, wp.altitude ?? cruisingAltitude]);
+        coords.push([wp.longitude, wp.latitude, wp.altitude ?? cruisingAltitude]);
     });
 
     if (

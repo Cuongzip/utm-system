@@ -11,3 +11,4 @@ export * from "./droneCommand";
 export * from "./simulation";
 export * from "./emergency";
 export * from "./liveAlert";
+export * from "./auth";

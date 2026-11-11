@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
-import { Modal, ChamferButton, StatusBadge } from "@/components/ui";
+import { Modal, ChamferButton, StatusBadge, FormInput } from "@/components/ui";
 import { formatCoordinates, formatAltitude, formatNullable } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
 import type { CheckPathPayload, CheckPathResult } from "@/types";
@@ -76,48 +76,47 @@ function WaypointInputs({
             }
         };
 
+    const prefix = title.toLowerCase().replace(/\s+/g, "-");
+
     return (
         <div className="p-3 bg-slate-50 rounded-[6px] border border-slate-200 flex flex-col gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 {title}
             </span>
             <div className="grid grid-cols-3 gap-2">
-                <div className="form-group">
-                    <label className="text-[11px] font-semibold text-slate-500">Latitude</label>
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        value={latStr}
-                        onChange={handleFieldChange("lat", setLatStr)}
-                        onBlur={handleFieldBlur("lat", latStr, setLatStr)}
-                        placeholder="10.8185"
-                        className="form-input font-mono text-xs"
-                    />
-                </div>
-                <div className="form-group">
-                    <label className="text-[11px] font-semibold text-slate-500">Longitude</label>
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        value={lonStr}
-                        onChange={handleFieldChange("lon", setLonStr)}
-                        onBlur={handleFieldBlur("lon", lonStr, setLonStr)}
-                        placeholder="106.6588"
-                        className="form-input font-mono text-xs"
-                    />
-                </div>
-                <div className="form-group">
-                    <label className="text-[11px] font-semibold text-slate-500">Altitude (m)</label>
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        value={altStr}
-                        onChange={handleFieldChange("alt", setAltStr)}
-                        onBlur={handleFieldBlur("alt", altStr, setAltStr)}
-                        placeholder="100"
-                        className="form-input font-mono text-xs"
-                    />
-                </div>
+                <FormInput
+                    id={`${prefix}-lat`}
+                    label="Latitude"
+                    type="text"
+                    inputMode="decimal"
+                    value={latStr}
+                    onChange={handleFieldChange("lat", setLatStr)}
+                    onBlur={handleFieldBlur("lat", latStr, setLatStr)}
+                    placeholder="10.8185"
+                    className="font-mono text-xs"
+                />
+                <FormInput
+                    id={`${prefix}-lon`}
+                    label="Longitude"
+                    type="text"
+                    inputMode="decimal"
+                    value={lonStr}
+                    onChange={handleFieldChange("lon", setLonStr)}
+                    onBlur={handleFieldBlur("lon", lonStr, setLonStr)}
+                    placeholder="106.6588"
+                    className="font-mono text-xs"
+                />
+                <FormInput
+                    id={`${prefix}-alt`}
+                    label="Altitude (m)"
+                    type="text"
+                    inputMode="decimal"
+                    value={altStr}
+                    onChange={handleFieldChange("alt", setAltStr)}
+                    onBlur={handleFieldBlur("alt", altStr, setAltStr)}
+                    placeholder="100"
+                    className="font-mono text-xs"
+                />
             </div>
         </div>
     );
@@ -210,30 +209,36 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600">
+                        <label
+                            htmlFor="briefing-sample-spacing"
+                            className="text-xs font-semibold text-slate-600"
+                        >
                             Sample Spacing:
-                        </span>
-                        <input
-                            type="number"
-                            min="10"
-                            max="5000"
-                            value={spacingStr}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSpacingStr(val);
-                                const parsed = parseInt(val, 10);
-                                if (!isNaN(parsed) && parsed > 0) {
-                                    setSpacingM(parsed);
-                                }
-                            }}
-                            onBlur={() => {
-                                const parsed = parseInt(spacingStr, 10);
-                                if (isNaN(parsed) || parsed <= 0) {
-                                    setSpacingStr(String(spacingM ?? 200));
-                                }
-                            }}
-                            className="w-20 form-input font-mono text-xs py-1 px-2"
-                        />
+                        </label>
+                        <div className="w-20">
+                            <FormInput
+                                id="briefing-sample-spacing"
+                                type="number"
+                                min="10"
+                                max="5000"
+                                value={spacingStr}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSpacingStr(val);
+                                    const parsed = parseInt(val, 10);
+                                    if (!isNaN(parsed) && parsed > 0) {
+                                        setSpacingM(parsed);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const parsed = parseInt(spacingStr, 10);
+                                    if (isNaN(parsed) || parsed <= 0) {
+                                        setSpacingStr(String(spacingM ?? 200));
+                                    }
+                                }}
+                                className="font-mono text-xs py-1 px-2"
+                            />
+                        </div>
                         <span className="text-xs text-slate-500">meters</span>
                     </div>
 

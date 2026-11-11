@@ -10,7 +10,7 @@ import {
     EmptyState,
 } from "@/components/ui";
 import { cn } from "@/lib";
-import type { Flight, TelemetryRecord } from "@/types";
+import { type Flight, type TelemetryRecord, DEFAULT_FLIGHT_STATUS } from "@/types";
 
 export interface FlightSelectorPopoverProps {
     isOpen: boolean;
@@ -140,7 +140,10 @@ export function FlightSelectorPopover({
                                                     {item.droneId
                                                         ? `SN: ${item.droneId.slice(0, 8)}`
                                                         : "No Drone"}{" "}
-                                                    • {(item.status || "ready").toUpperCase()}
+                                                    •{" "}
+                                                    {(
+                                                        item.status ?? DEFAULT_FLIGHT_STATUS
+                                                    ).toUpperCase()}
                                                 </div>
                                             </div>
                                         </div>

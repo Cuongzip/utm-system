@@ -68,7 +68,7 @@ export function FlightMapEditor({
             pts.push({ lat: departureHub.location.latitude, lng: departureHub.location.longitude });
         }
         waypoints.forEach((wp) => {
-            pts.push({ lat: wp.lat, lng: wp.lng });
+            pts.push({ lat: wp.latitude, lng: wp.longitude });
         });
         if (
             arrivalHub?.location?.latitude !== undefined &&
@@ -93,12 +93,17 @@ export function FlightMapEditor({
     };
 
     const handleProfilePointClick = (point: ProfilePoint) => {
-        setFlyToTarget({
-            lat: point.latitude,
-            lng: point.longitude,
-            altitude: point.altitude,
-            key: Date.now(),
-        });
+        if (point.waypoint) {
+            onSelectWaypoint(point.waypoint as unknown as FlightWaypoint);
+        }
+        if (point.latitude !== undefined && point.longitude !== undefined) {
+            setFlyToTarget({
+                lat: point.latitude,
+                lng: point.longitude,
+                altitude: point.altitude,
+                key: Date.now(),
+            });
+        }
     };
 
     return (

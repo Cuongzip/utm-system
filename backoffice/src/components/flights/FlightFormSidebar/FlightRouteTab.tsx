@@ -30,14 +30,14 @@ export function FlightRouteTab({
     const routeError =
         fieldErrors.plannedRoute || fieldErrors["plannedRoute.coordinates"] || fieldErrors.route;
 
-    const [latStr, setLatStr] = useState(String(selectedWaypoint?.lat ?? ""));
-    const [lngStr, setLngStr] = useState(String(selectedWaypoint?.lng ?? ""));
+    const [latStr, setLatStr] = useState(String(selectedWaypoint?.latitude ?? ""));
+    const [lngStr, setLngStr] = useState(String(selectedWaypoint?.longitude ?? ""));
     const [altStr, setAltStr] = useState(String(selectedWaypoint?.altitude ?? "120"));
 
     useEffect(() => {
         if (selectedWaypoint) {
-            setLatStr(String(selectedWaypoint.lat));
-            setLngStr(String(selectedWaypoint.lng));
+            setLatStr(String(selectedWaypoint.latitude));
+            setLngStr(String(selectedWaypoint.longitude));
             setAltStr(String(selectedWaypoint.altitude));
         }
     }, [selectedWaypoint?.id]);
@@ -91,7 +91,7 @@ export function FlightRouteTab({
                                     setLatStr(e.target.value);
                                     const val = parseFloat(e.target.value);
                                     if (!isNaN(val)) {
-                                        onUpdateWaypoint(selectedWaypoint.id, { lat: val });
+                                        onUpdateWaypoint(selectedWaypoint.id, { latitude: val });
                                     }
                                 }}
                             />
@@ -106,7 +106,7 @@ export function FlightRouteTab({
                                     setLngStr(e.target.value);
                                     const val = parseFloat(e.target.value);
                                     if (!isNaN(val)) {
-                                        onUpdateWaypoint(selectedWaypoint.id, { lng: val });
+                                        onUpdateWaypoint(selectedWaypoint.id, { longitude: val });
                                     }
                                 }}
                             />

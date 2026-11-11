@@ -192,7 +192,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         return (
             <div
                 ref={containerRef}
-                className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] select-none font-mono ${className}`}
+                className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] select-none font-mono shrink-0 w-full ${className}`}
             >
                 <span className="font-bold tracking-wider text-[var(--color-text-secondary)]">
                     ALTITUDE PROFILE
@@ -205,7 +205,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
     return (
         <div
             ref={containerRef}
-            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2 select-none relative ${className}`}
+            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2 select-none relative shrink-0 w-full ${className}`}
         >
             <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-text-secondary)] mb-1">
                 <span className="font-bold tracking-wider text-[var(--color-text-primary)]">

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Circle, Pentagon, Trash2, MapPin, AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
 import { formatCoordinates } from "@/utils";
+import { FormInput } from "@/components/ui";
 import { GEOMETRY_MODE, type GeometryMode, type GeoPoint } from "../useAirspaceGeometry";
 
 export interface AirspaceBoundaryTabProps {
@@ -121,30 +122,28 @@ export function AirspaceBoundaryTab({
                     </div>
 
                     <div className="form-row-2">
-                        <div className="form-group">
-                            <label className="form-label text-xs">Center Latitude</label>
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                value={latStr}
-                                onChange={handleLatChange}
-                                onBlur={handleLatBlur}
-                                placeholder="10.7769"
-                                className="form-input font-mono text-xs"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label text-xs">Center Longitude</label>
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                value={lngStr}
-                                onChange={handleLngChange}
-                                onBlur={handleLngBlur}
-                                placeholder="106.7009"
-                                className="form-input font-mono text-xs"
-                            />
-                        </div>
+                        <FormInput
+                            id="center-lat"
+                            label="Center Latitude"
+                            type="text"
+                            inputMode="decimal"
+                            value={latStr}
+                            onChange={handleLatChange}
+                            onBlur={handleLatBlur}
+                            placeholder="10.7769"
+                            className="font-mono text-xs"
+                        />
+                        <FormInput
+                            id="center-lng"
+                            label="Center Longitude"
+                            type="text"
+                            inputMode="decimal"
+                            value={lngStr}
+                            onChange={handleLngChange}
+                            onBlur={handleLngBlur}
+                            placeholder="106.7009"
+                            className="font-mono text-xs"
+                        />
                     </div>
 
                     <div className="form-group">
