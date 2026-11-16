@@ -35,6 +35,8 @@ export const COMMAND_TYPE = {
 
 export const DEFAULT_COMMAND_STATUS: CommandStatusGenerated = COMMAND_STATUS.PENDING;
 
+export type DroneCommandQueryParams = zod.infer<typeof getCommandsQueryParams>;
+
 export type SendCommandPayload = Omit<zod.infer<typeof sendCommandBody>, "commandType"> & {
     commandType: CommandType;
 };

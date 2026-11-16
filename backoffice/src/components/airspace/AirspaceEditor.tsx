@@ -157,7 +157,7 @@ export function AirspaceEditor({
                             onClick={() => router.push("/dashboard/airspace")}
                             disabled={submitting || isDeleting}
                         >
-                            <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-border-dark)]" />
+                            <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
                             <span>Cancel</span>
                         </ChamferButton>
 

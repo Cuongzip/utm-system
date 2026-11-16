@@ -135,9 +135,10 @@ export function FlightDetailsTab({
                         max={1000}
                         value={formData.cruisingAltitudeM ?? 120}
                         disabled={isReadOnly}
-                        onChange={(e) =>
-                            onFormChange("cruisingAltitudeM", Number(e.target.value) || 0)
-                        }
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            onFormChange("cruisingAltitudeM", val === "" ? undefined : Number(val));
+                        }}
                         placeholder="120"
                         error={fieldErrors.cruisingAltitudeM}
                     />

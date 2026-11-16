@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     SimulationSession,
@@ -11,28 +11,14 @@ import type {
 } from "@/types";
 
 export const simulationService = {
-    getAll: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
-        const queryParams = new URLSearchParams();
-        if (params?.status) queryParams.set("status", params.status);
-        if (params?.droneId) queryParams.set("droneId", params.droneId);
-        if (params?.flightId) queryParams.set("flightId", params.flightId);
-        if (params?.search) queryParams.set("search", params.search);
-        if (params?.limit !== undefined) queryParams.set("limit", String(params.limit));
-        if (params?.offset !== undefined) queryParams.set("offset", String(params.offset));
-
-        const queryString = queryParams.toString();
-        const url = queryString
-            ? `${API_ENDPOINTS.SIMULATION.BASE}?${queryString}`
-            : API_ENDPOINTS.SIMULATION.BASE;
-
+    getSessions: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
+        const url = buildUrl(API_ENDPOINTS.SIMULATION.BASE, params as Record<string, unknown>);
         const res = await apiClient<SimulationSessionList | SimulationSession[]>(url);
-        if (Array.isArray(res)) {
-            return { items: res, total: res.length };
-        }
-        return {
-            items: res?.items || [],
-            total: res?.total ?? (res?.items?.length || 0),
-        };
+        return normalizeList<SimulationSession>(res);
+    },
+
+    getAll: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
+        return simulationService.getSessions(params);
     },
 
     getById: async (id: string): Promise<SimulationSession> => {

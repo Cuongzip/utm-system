@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { InjectScenarioModal } from "./InjectScenarioModal";
 import { useFlightsAll, useDronesAll, usePagination } from "@/hooks";
+import { formatDistance } from "@/utils";
 import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS, type SimulationSession } from "@/types";
 
 interface SimulationTableProps {
@@ -176,9 +177,7 @@ export function SimulationTable({
                                 const progress = Math.min(100, Math.max(0, session.progress ?? 0));
                                 const distText =
                                     session.traveledDistance != null
-                                        ? `${(session.traveledDistance / 1000).toFixed(1)} / ${(
-                                              (session.totalDistance ?? 0) / 1000
-                                          ).toFixed(1)} km`
+                                        ? `${formatDistance(session.traveledDistance)} / ${formatDistance(session.totalDistance ?? 0)}`
                                         : "";
 
                                 return (

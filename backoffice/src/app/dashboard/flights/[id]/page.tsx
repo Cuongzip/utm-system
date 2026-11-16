@@ -24,13 +24,14 @@ export default function EditFlightPage() {
         isLoading: flightLoading,
         error: flightError,
     } = useQuery({
-        queryKey: [...QUERY_KEYS.flights, "detail", flightId],
+        queryKey: QUERY_KEYS.flightDetail(flightId),
         queryFn: () => flightService.getById(flightId),
         enabled: Boolean(flightId),
     });
 
     const invalidateAll = () => {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightDetail(flightId) });
     };
 
     const updateMutation = useMutation({
@@ -50,7 +51,7 @@ export default function EditFlightPage() {
     if (flightLoading || hubsLoading || dronesLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-slate-500 animate-spin" />
                 <p className="text-xs font-mono text-[var(--color-text-muted)]">
                     Loading flight operation details...
                 </p>

@@ -41,17 +41,17 @@ export const emergencyService = {
         return apiClient<IncidentPageVm>(url);
     },
 
+    getIncidentById: async (id: string): Promise<EmergencyIncidentVm> => {
+        return apiClient<EmergencyIncidentVm>(API_ENDPOINTS.EMERGENCY.INCIDENT_BY_ID(id));
+    },
+
     confirmIncident: async (
         id: string,
-        payloadOrApproved: ConfirmIncidentPayload | boolean
+        payload: ConfirmIncidentPayload
     ): Promise<EmergencyIncidentVm> => {
-        const body =
-            typeof payloadOrApproved === "boolean"
-                ? { approved: payloadOrApproved }
-                : payloadOrApproved;
         return apiClient<EmergencyIncidentVm>(API_ENDPOINTS.EMERGENCY.CONFIRM_INCIDENT(id), {
             method: "POST",
-            body: JSON.stringify(body),
+            body: JSON.stringify(payload),
         });
     },
 

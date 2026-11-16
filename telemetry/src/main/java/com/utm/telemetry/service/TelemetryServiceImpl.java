@@ -9,6 +9,8 @@ import com.utm.telemetry.viewmodel.telemetry.TelemetryIngestVm;
 import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +27,10 @@ public class TelemetryServiceImpl implements TelemetryService {
     private final TelemetryRecordRepository telemetryRecordRepository;
     private final TelemetryMapper telemetryMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    private final Map<String, TelemetryRecordVm> latestDroneTelemetryCache = new ConcurrentHashMap<>();
-    private final Map<String, TelemetryRecordVm> latestFlightTelemetryCache = new ConcurrentHashMap<>();
+    @Value("${utm.kafka.topic.telemetry-ingest:utm.telemetry.ingest}")
+    private String telemetryTopic;
 
     @Override
     @Transactional
@@ -38,14 +39,18 @@ public class TelemetryServiceImpl implements TelemetryService {
         TelemetryRecord saved = telemetryRecordRepository.saveAndFlush(record);
         TelemetryRecordVm vm = telemetryMapper.toVm(saved);
 
-        latestDroneTelemetryCache.put(vm.droneId(), vm);
-        if (vm.flightId() != null && !vm.flightId().isBlank()) {
-            latestFlightTelemetryCache.put(vm.flightId(), vm);
-        }
-
         broadcastTelemetry(vm);
+        publishTelemetryToKafka(vm);
 
         return vm;
+    }
+
+    private void publishTelemetryToKafka(TelemetryRecordVm vm) {
+        try {
+            kafkaTemplate.send(telemetryTopic, vm.droneId(), vm);
+        } catch (Exception ex) {
+            log.error("Failed to publish telemetry to Kafka topic '{}' for drone '{}': {}", telemetryTopic, vm.droneId(), ex.getMessage());
+        }
     }
 
     private void broadcastTelemetry(TelemetryRecordVm vm) {
@@ -63,31 +68,17 @@ public class TelemetryServiceImpl implements TelemetryService {
     @Override
     @Transactional(readOnly = true)
     public TelemetryRecordVm getLatestByDroneId(String droneId) {
-        TelemetryRecordVm cached = latestDroneTelemetryCache.get(droneId);
-        if (cached != null) {
-            return cached;
-        }
-
         TelemetryRecord record = telemetryRecordRepository.findTopByDroneIdOrderByCreatedOnDesc(droneId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.TELEMETRY_NOT_FOUND, "droneId", droneId));
-        TelemetryRecordVm vm = telemetryMapper.toVm(record);
-        latestDroneTelemetryCache.put(droneId, vm);
-        return vm;
+        return telemetryMapper.toVm(record);
     }
 
     @Override
     @Transactional(readOnly = true)
     public TelemetryRecordVm getLatestByFlightId(String flightId) {
-        TelemetryRecordVm cached = latestFlightTelemetryCache.get(flightId);
-        if (cached != null) {
-            return cached;
-        }
-
         TelemetryRecord record = telemetryRecordRepository.findTopByFlightIdOrderByCreatedOnDesc(flightId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.TELEMETRY_NOT_FOUND, "flightId", flightId));
-        TelemetryRecordVm vm = telemetryMapper.toVm(record);
-        latestFlightTelemetryCache.put(flightId, vm);
-        return vm;
+        return telemetryMapper.toVm(record);
     }
 
     @Override

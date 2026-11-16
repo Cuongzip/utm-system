@@ -18,7 +18,7 @@ export function MapZoneAction({ active, onToggle, count, className }: MapZoneAct
             className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 h-[34px] text-xs font-semibold rounded border transition-colors cursor-pointer",
                 active
-                    ? "bg-[var(--color-surface-card)] border-[var(--color-border-default)] text-[var(--color-border-dark)] font-bold"
+                    ? "bg-[var(--color-surface-card)] border-[var(--color-border-default)] text-[var(--color-text-primary)] font-bold"
                     : "border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)]",
                 className
             )}

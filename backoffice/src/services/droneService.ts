@@ -8,9 +8,8 @@ import type {
     DroneQueryParams,
     DroneCommand,
     DroneCommandListResponse,
+    DroneCommandQueryParams,
     SendCommandPayload,
-    CommandStatus,
-    CommandType,
 } from "@/types";
 
 export const droneService = {
@@ -22,7 +21,11 @@ export const droneService = {
 
     getAll: async (): Promise<Drone[]> => {
         const res = await droneService.getDrones({ limit: 0 });
-        return res.items || [];
+        return res.items ?? [];
+    },
+
+    getById: async (id: string): Promise<Drone> => {
+        return apiClient<Drone>(API_ENDPOINTS.DRONES.BY_ID(id));
     },
 
     createDrone: async (payload: CreateDronePayload): Promise<Drone> => {
@@ -47,12 +50,7 @@ export const droneService = {
 
     getCommands: async (
         droneId: string,
-        params?: {
-            status?: CommandStatus;
-            commandType?: CommandType;
-            limit?: number;
-            offset?: number;
-        }
+        params?: DroneCommandQueryParams
     ): Promise<DroneCommandListResponse> => {
         const url = buildUrl(
             API_ENDPOINTS.DRONES.COMMANDS(droneId),

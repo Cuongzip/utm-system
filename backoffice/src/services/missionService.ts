@@ -6,6 +6,7 @@ import type {
     CreateMissionPayload,
     UpdateMissionPayload,
     ExecuteMissionPayload,
+    MissionExecutionResult,
     AddWaypointPayload,
     UpdateWaypointPayload,
     ReorderWaypointsPayload,
@@ -50,8 +51,11 @@ export const missionService = {
         });
     },
 
-    executeMission: async (id: string, payload: ExecuteMissionPayload): Promise<unknown> => {
-        return apiClient(API_ENDPOINTS.MISSIONS.EXECUTE(id), {
+    executeMission: async (
+        id: string,
+        payload: ExecuteMissionPayload
+    ): Promise<MissionExecutionResult> => {
+        return apiClient<MissionExecutionResult>(API_ENDPOINTS.MISSIONS.EXECUTE(id), {
             method: "POST",
             body: JSON.stringify(payload),
         });

@@ -11,7 +11,7 @@ import type {
 export const flightService = {
     getAll: async (): Promise<Flight[]> => {
         const res = await flightService.getFlights({ limit: 0 });
-        return res.items || [];
+        return res.items ?? [];
     },
 
     getFlights: async (params?: FlightQueryParams): Promise<FlightListResponse> => {
@@ -24,17 +24,14 @@ export const flightService = {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BY_ID(id));
     },
 
-    createFlight: async (payload: CreateFlightPayload | Partial<Flight>): Promise<Flight> => {
+    createFlight: async (payload: CreateFlightPayload): Promise<Flight> => {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BASE, {
             method: "POST",
             body: JSON.stringify(payload),
         });
     },
 
-    updateFlight: async (
-        id: string,
-        payload: UpdateFlightPayload | Partial<Flight>
-    ): Promise<Flight> => {
+    updateFlight: async (id: string, payload: UpdateFlightPayload): Promise<Flight> => {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.BY_ID(id), {
             method: "PUT",
             body: JSON.stringify(payload),
@@ -42,25 +39,25 @@ export const flightService = {
     },
 
     authorizeFlight: async (id: string): Promise<Flight> => {
-        return apiClient<Flight>(`${API_ENDPOINTS.FLIGHTS.BY_ID(id)}/authorize`, {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.AUTHORIZE(id), {
             method: "POST",
         });
     },
 
     startFlight: async (id: string): Promise<Flight> => {
-        return apiClient<Flight>(`${API_ENDPOINTS.FLIGHTS.BY_ID(id)}/start`, {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.START(id), {
             method: "POST",
         });
     },
 
     completeFlight: async (id: string): Promise<Flight> => {
-        return apiClient<Flight>(`${API_ENDPOINTS.FLIGHTS.BY_ID(id)}/complete`, {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.COMPLETE(id), {
             method: "POST",
         });
     },
 
     abortFlight: async (id: string): Promise<Flight> => {
-        return apiClient<Flight>(`${API_ENDPOINTS.FLIGHTS.BY_ID(id)}/abort`, {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.ABORT(id), {
             method: "POST",
         });
     },

@@ -33,8 +33,8 @@ export function normalizeList<T>(res: { items?: T[]; total?: number } | T[] | nu
         return { items: res, total: res.length };
     }
     return {
-        items: res.items || [],
-        total: res.total !== undefined ? res.total : res.items?.length || 0,
+        items: res.items ?? [],
+        total: res.total ?? res.items?.length ?? 0,
     };
 }
 
@@ -60,7 +60,7 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
                     window.location.href = response.url || "/";
                 }, 600);
             }
-            return {} as T;
+            throw new ApiError(401, "Session expired. Redirecting to login...");
         }
     }
 
@@ -97,7 +97,7 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
                     window.location.href = response.url || "/";
                 }, 600);
             }
-            return {} as T;
+            throw new ApiError(401, "Session expired. Redirecting to login...");
         }
     }
 

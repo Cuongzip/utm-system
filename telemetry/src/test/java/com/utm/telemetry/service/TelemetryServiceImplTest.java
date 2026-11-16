@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.ZoneOffset;
@@ -48,6 +49,9 @@ class TelemetryServiceImplTest {
 
     @Mock
     private SimpMessagingTemplate messagingTemplate;
+
+    @Mock
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @InjectMocks
     private TelemetryServiceImpl telemetryService;
@@ -127,14 +131,7 @@ class TelemetryServiceImplTest {
             verify(messagingTemplate).convertAndSend("/topic/telemetry/live", testRecordVm);
             verify(messagingTemplate).convertAndSend("/topic/telemetry/drone/" + DRONE_ID, testRecordVm);
             verify(messagingTemplate).convertAndSend("/topic/telemetry/flight/" + FLIGHT_ID, testRecordVm);
-
-            TelemetryRecordVm cachedDrone = telemetryService.getLatestByDroneId(DRONE_ID);
-            assertThat(cachedDrone).isEqualTo(testRecordVm);
-            verify(telemetryRecordRepository, never()).findTopByDroneIdOrderByCreatedOnDesc(anyString());
-
-            TelemetryRecordVm cachedFlight = telemetryService.getLatestByFlightId(FLIGHT_ID);
-            assertThat(cachedFlight).isEqualTo(testRecordVm);
-            verify(telemetryRecordRepository, never()).findTopByFlightIdOrderByCreatedOnDesc(anyString());
+            verify(kafkaTemplate).send(any(), eq(DRONE_ID), any());
         }
 
         @Test
@@ -240,10 +237,6 @@ class TelemetryServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.droneId()).isEqualTo(DRONE_ID);
             verify(telemetryRecordRepository).findTopByDroneIdOrderByCreatedOnDesc(DRONE_ID);
-
-            TelemetryRecordVm cachedResult = telemetryService.getLatestByDroneId(DRONE_ID);
-            assertThat(cachedResult).isEqualTo(result);
-            verify(telemetryRecordRepository).findTopByDroneIdOrderByCreatedOnDesc(DRONE_ID);
         }
 
         @Test
@@ -277,10 +270,6 @@ class TelemetryServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.flightId()).isEqualTo(FLIGHT_ID);
-            verify(telemetryRecordRepository).findTopByFlightIdOrderByCreatedOnDesc(FLIGHT_ID);
-
-            TelemetryRecordVm cachedResult = telemetryService.getLatestByFlightId(FLIGHT_ID);
-            assertThat(cachedResult).isEqualTo(result);
             verify(telemetryRecordRepository).findTopByFlightIdOrderByCreatedOnDesc(FLIGHT_ID);
         }
 

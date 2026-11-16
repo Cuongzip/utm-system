@@ -44,7 +44,7 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
                 const isSelected = selectedHubId === hub.id;
                 const radius = hub.airspaceRadius ?? 1500;
                 const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
-                const stackIndex = coordCounter[coordKey] || 0;
+                const stackIndex = coordCounter[coordKey] ?? 0;
                 coordCounter[coordKey] = stackIndex + 1;
                 const yOffset = -22 - stackIndex * 24;
 

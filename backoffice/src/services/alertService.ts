@@ -11,7 +11,7 @@ export const alertService = {
     acknowledgeAlert: async (id: string, payload?: AcknowledgeAlertPayload): Promise<AlertVm> => {
         return apiClient<AlertVm>(API_ENDPOINTS.ALERTS.ACKNOWLEDGE(id), {
             method: "POST",
-            body: JSON.stringify(payload || {}),
+            body: JSON.stringify(payload ?? {}),
         });
     },
 };

@@ -54,7 +54,7 @@ export function ActiveAirspaceGraphic({
             const baseColor = Cesium.Color.fromCssColorString(hexColor);
             const fillColor = Cesium.Color.fromAlpha(baseColor, 0.35);
             const outlineColor = Cesium.Color.fromAlpha(baseColor, 0.9);
-            const ceiling = Math.max(altitudeCeiling || 120, 20);
+            const ceiling = Math.max(altitudeCeiling ?? 120, 20);
 
             if (geometryMode === "radius") {
                 const centerPoint = viewer.entities.add({

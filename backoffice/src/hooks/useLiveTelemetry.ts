@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { telemetryService } from "@/services";
+import { telemetryService, ApiError } from "@/services";
 import { useStomp, useTelemetryStream } from "./useStomp";
 import type { Flight, TelemetryRecord } from "@/types";
 
@@ -65,11 +65,25 @@ export function useLiveTelemetry(flights: Flight[], options: UseLiveTelemetryOpt
 
             try {
                 const promises = flights.map(async (flight) => {
-                    const latest = await telemetryService.getLatestByFlightId(flight.id);
+                    const latest = await telemetryService
+                        .getLatestByFlightId(flight.id)
+                        .catch((err) =>
+                            err instanceof ApiError && err.status === 404
+                                ? null
+                                : Promise.reject(err)
+                        );
+
                     if (!latest && flight.droneId) {
+                        const droneLatest = await telemetryService
+                            .getLatestByDroneId(flight.droneId)
+                            .catch((err) =>
+                                err instanceof ApiError && err.status === 404
+                                    ? null
+                                    : Promise.reject(err)
+                            );
                         return {
                             flightId: flight.id,
-                            latest: await telemetryService.getLatestByDroneId(flight.droneId),
+                            latest: droneLatest,
                         };
                     }
                     return { flightId: flight.id, latest };

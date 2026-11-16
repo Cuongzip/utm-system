@@ -11,6 +11,10 @@ export const API_ENDPOINTS = {
     FLIGHTS: {
         BASE: "/api/api/v1/flights",
         BY_ID: (id: string) => `/api/api/v1/flights/${id}`,
+        AUTHORIZE: (id: string) => `/api/api/v1/flights/${id}/authorize`,
+        START: (id: string) => `/api/api/v1/flights/${id}/start`,
+        COMPLETE: (id: string) => `/api/api/v1/flights/${id}/complete`,
+        ABORT: (id: string) => `/api/api/v1/flights/${id}/abort`,
     },
     AIRSPACES: {
         ZONES: "/api/api/v1/airspace/zones",

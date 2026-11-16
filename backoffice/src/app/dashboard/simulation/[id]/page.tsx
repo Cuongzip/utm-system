@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { ChamferButton, StatusBadge, EmptyState, PageHeader } from "@/components/ui";
 import {
     SessionControlsPanel,
@@ -52,20 +52,18 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
 
     if (!session) {
         return (
-            <div className="p-8 flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <div className="flex items-center justify-center min-h-[60vh] p-8">
                 <EmptyState
-                    title="Simulation session not found"
+                    icon={AlertCircle}
+                    title="Simulation Session Not Found"
                     description={`No simulation session found with ID: ${id}`}
+                    action={{
+                        label: "Back to Simulations",
+                        onClick: () => router.push("/dashboard/simulation"),
+                        icon: ArrowLeft,
+                        variant: "outline",
+                    }}
                 />
-                <ChamferButton
-                    variant="outline"
-                    size="sm"
-                    clip="xs"
-                    onClick={() => router.push("/dashboard/simulation")}
-                >
-                    <ArrowLeft className="w-4 h-4 mr-1.5" />
-                    <span>Back to Simulations</span>
-                </ChamferButton>
             </div>
         );
     }

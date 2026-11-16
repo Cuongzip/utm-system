@@ -2,9 +2,11 @@ package com.utm.conflict;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = {"com.utm.conflict", "com.utm.commonlibrary"})
+@ConfigurationPropertiesScan(basePackages = {"com.utm.conflict", "com.utm.commonlibrary"})
 @EnableScheduling
 public class ConflictApplication {
 

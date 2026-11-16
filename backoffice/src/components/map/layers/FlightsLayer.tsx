@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
-import type { Flight, Hub } from "@/types";
+import { ACTIVE_FLIGHT_STATUSES, DEFAULT_FLIGHT_STATUS, type Flight, type Hub } from "@/types";
 import { getWaypointIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
@@ -90,15 +90,13 @@ export function FlightsLayer({
             const allPoints: { lng: number; lat: number }[] = [];
 
             const targetFlights = activeOnly
-                ? flights.filter((f) => {
-                      const s = (f.status || "").toLowerCase().replace(/[\s-]+/g, "_");
-                      return (
-                          s === "active" ||
-                          s === "in_flight" ||
-                          s === "diverted" ||
-                          s === "emergency_landing"
-                      );
-                  })
+                ? flights.filter(
+                      (f) =>
+                          f.status &&
+                          (ACTIVE_FLIGHT_STATUSES as readonly string[]).includes(
+                              f.status.toLowerCase()
+                          )
+                  )
                 : flights;
 
             for (const flight of targetFlights) {
@@ -139,7 +137,7 @@ export function FlightsLayer({
                     const dep = effectiveHubMap.get(flight.departureHubId);
                     const arr = effectiveHubMap.get(flight.arrivalHubId);
                     if (dep && arr) {
-                        const cruiseAlt = flight.cruisingAltitudeM || 120;
+                        const cruiseAlt = flight.cruisingAltitudeM ?? 120;
                         coordinates = [
                             [dep.lng, dep.lat, 10],
                             [arr.lng, arr.lat, 10],
@@ -154,11 +152,11 @@ export function FlightsLayer({
                     selectedCoords = coordinates;
                 }
 
-                const normalizedStatus = (flight.status || "planned")
+                const normalizedStatus = (flight.status ?? DEFAULT_FLIGHT_STATUS)
                     .toLowerCase()
                     .replace(/[\s-]+/g, "_");
                 const routeColor = STATUS_COLOR_MAP[normalizedStatus] || "#00a3bf";
-                const defaultAlt = flight.cruisingAltitudeM || 120;
+                const defaultAlt = flight.cruisingAltitudeM ?? 120;
 
                 const cartesianPositions: any[] = [];
                 coordinates.forEach((pt) => {

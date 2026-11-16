@@ -99,7 +99,6 @@ class ConflictDetectionServiceImplTest {
 
         @BeforeEach
         void setUp() {
-                ReflectionTestUtils.setField(conflictDetectionService, "watchdogEnabled", true);
                 ReflectionTestUtils.setField(conflictDetectionService, "horizontalThresholdM", 150.0);
                 ReflectionTestUtils.setField(conflictDetectionService, "verticalThresholdM", 30.0);
                 ReflectionTestUtils.setField(conflictDetectionService, "criticalHorizontalM", 50.0);
@@ -143,42 +142,47 @@ class ConflictDetectionServiceImplTest {
         }
 
         @Nested
-        @DisplayName("scheduledWatchdogScan")
-        class ScheduledWatchdogScan {
+        @DisplayName("evaluateLiveTelemetry")
+        class EvaluateLiveTelemetry {
 
                 @Test
-                @DisplayName("whenWatchdogDisabled_doesNotTriggerScan")
-                void whenWatchdogDisabled_doesNotTriggerScan() {
-                        ReflectionTestUtils.setField(conflictDetectionService, "watchdogEnabled", false);
-
-                        conflictDetectionService.scheduledWatchdogScan();
+                @DisplayName("whenIncomingTelemetryNull_doesNothing")
+                void whenIncomingTelemetryNull_doesNothing() {
+                        conflictDetectionService.evaluateLiveTelemetry(null);
 
                         verify(restClient, never()).get();
+                        verify(restClient, never()).post();
+                        verify(conflictRepository, never()).save(any());
                 }
 
                 @Test
-                @DisplayName("whenWatchdogEnabled_triggersScan")
-                void whenWatchdogEnabled_triggersScan() {
+                @DisplayName("whenIncomingTelemetryMissingCoordinates_doesNothing")
+                void whenIncomingTelemetryMissingCoordinates_doesNothing() {
+                        TelemetryBriefVm invalid = new TelemetryBriefVm(FLIGHT_1_ID, DRONE_1_ID, null, null, null, 0.0, 0.0);
+
+                        conflictDetectionService.evaluateLiveTelemetry(invalid);
+
+                        verify(restClient, never()).get();
+                        verify(conflictRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("whenAirspaceBreachDetected_createsSingleFlightConflictAndAlerts")
+                void whenAirspaceBreachDetected_createsSingleFlightConflictAndAlerts() {
+                        TelemetryBriefVm incoming = new TelemetryBriefVm(FLIGHT_1_ID, DRONE_1_ID, 10.7769, 106.7009, 100.0, 15.0, 0.0);
+                        when(postResponseSpec.body(AirspaceCheckResponseVm.class))
+                                        .thenReturn(new AirspaceCheckResponseVm(false, List.of("ZONE-NFZ-1")));
+                        when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(FLIGHT_1_ID), anyList()))
+                                        .thenReturn(Collections.emptyList());
+                        when(conflictRepository.save(any(Conflict.class))).thenReturn(testConflict);
                         when(responseSpec.body(FlightListBriefVm.class))
                                         .thenReturn(new FlightListBriefVm(Collections.emptyList(), 0));
-                        when(conflictDetectionMapper.toScanResultVm(anyInt(), anyInt(), anyInt(), anyInt(), anyInt(),
-                                        any()))
-                                        .thenReturn(new ConflictScanResultVm(0, 0, 0, 0, 0, ZonedDateTime.now()));
 
-                        conflictDetectionService.scheduledWatchdogScan();
+                        conflictDetectionService.evaluateLiveTelemetry(incoming);
 
-                        verify(restClient).get();
-                }
-
-                @Test
-                @DisplayName("whenScanThrowsException_handlesGracefullyWithoutRethrowing")
-                void whenScanThrowsException_handlesGracefullyWithoutRethrowing() {
-                        when(responseSpec.body(FlightListBriefVm.class))
-                                        .thenThrow(new RuntimeException("Connection failed"));
-
-                        conflictDetectionService.scheduledWatchdogScan();
-
-                        verify(restClient).get();
+                        verify(conflictRepository).save(any(Conflict.class));
+                        verify(conflictSnapshotService).recordSnapshot(any(), any(), any(), any(), any(), any(), any(),
+                                        anyDouble(), anyDouble(), anyInt(), any());
                 }
         }
 

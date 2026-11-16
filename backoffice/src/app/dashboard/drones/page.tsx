@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { DronesTable, AddDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createStatusOptions } from "@/utils";
 import {
     DRONE_STATUSES,
@@ -19,6 +19,7 @@ import {
 const STATUS_OPTIONS: SelectOption[] = createStatusOptions(DRONE_STATUSES);
 
 export default function DronesPage() {
+    const queryClient = useQueryClient();
     const fetchDrones = useCallback(() => droneService.getDrones(), []);
     const deleteDrone = useCallback((id: string) => droneService.deleteDrone(id), []);
 
@@ -54,6 +55,8 @@ export default function DronesPage() {
             toast.success(
                 variables.id ? "Drone updated successfully" : "Drone registered successfully"
             );
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dronesAll });
             refresh();
         },
         meta: { defaultErrorMessage: "Failed to save drone" },

@@ -152,7 +152,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
                         bold && "font-semibold",
                         muted && "text-[var(--color-text-secondary)] font-medium",
                         subtle && "text-[var(--color-text-muted)]",
-                        darkText && "text-[var(--color-border-dark)]"
+                        darkText && "text-[var(--color-text-primary)]"
                     )}
                 >
                     {content}
@@ -194,8 +194,8 @@ export function TableLoading({ colSpan = 1, message = "Loading..." }: TableLoadi
     return (
         <tr>
             <td colSpan={colSpan} className="py-16 text-center">
-                <div className="flex flex-col items-center justify-center gap-2 w-full text-[var(--color-border-dark)] text-[13px] font-medium">
-                    <Loader2 className="w-6 h-6 animate-spin text-[var(--color-border-dark)]" />
+                <div className="flex flex-col items-center justify-center gap-2 w-full text-[var(--color-text-muted)] text-[13px] font-medium">
+                    <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
                     <span>{message}</span>
                 </div>
             </td>

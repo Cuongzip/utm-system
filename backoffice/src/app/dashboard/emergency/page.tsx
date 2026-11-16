@@ -65,7 +65,7 @@ export default function EmergencyResponsePage() {
 
     const confirmMutation = useMutation({
         mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
-            emergencyService.confirmIncident(id, approved),
+            emergencyService.confirmIncident(id, { approved }),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });

@@ -18,6 +18,12 @@ export interface MissionWaypointsTabProps {
     onClearFieldError?: (field: string) => void;
 }
 
+function parseOptionalNumber(val: string): number | undefined {
+    if (!val.trim()) return undefined;
+    const num = Number.parseFloat(val);
+    return Number.isNaN(num) ? undefined : num;
+}
+
 export function MissionWaypointsTab({
     waypoints = [],
     selectedWaypoint,
@@ -260,16 +266,14 @@ export function MissionWaypointsTab({
                                     <input
                                         type="number"
                                         placeholder="Default"
-                                        value={selectedWaypoint.conditions?.speed || ""}
+                                        value={selectedWaypoint.conditions?.speed ?? ""}
                                         disabled={isReadOnly}
                                         onChange={(e) =>
                                             onUpdateWaypoint({
                                                 ...selectedWaypoint,
                                                 conditions: {
                                                     ...selectedWaypoint.conditions,
-                                                    speed:
-                                                        Number.parseFloat(e.target.value) ||
-                                                        undefined,
+                                                    speed: parseOptionalNumber(e.target.value),
                                                 },
                                             })
                                         }
@@ -281,16 +285,14 @@ export function MissionWaypointsTab({
                                     <input
                                         type="number"
                                         placeholder="Default"
-                                        value={selectedWaypoint.conditions?.turnRadius || ""}
+                                        value={selectedWaypoint.conditions?.turnRadius ?? ""}
                                         disabled={isReadOnly}
                                         onChange={(e) =>
                                             onUpdateWaypoint({
                                                 ...selectedWaypoint,
                                                 conditions: {
                                                     ...selectedWaypoint.conditions,
-                                                    turnRadius:
-                                                        Number.parseFloat(e.target.value) ||
-                                                        undefined,
+                                                    turnRadius: parseOptionalNumber(e.target.value),
                                                 },
                                             })
                                         }
@@ -316,15 +318,14 @@ export function MissionWaypointsTab({
                                     min="0"
                                     max="3600"
                                     placeholder="0"
-                                    value={selectedWaypoint.actions?.hoverDurationS || ""}
+                                    value={selectedWaypoint.actions?.hoverDurationS ?? ""}
                                     disabled={isReadOnly}
                                     onChange={(e) =>
                                         onUpdateWaypoint({
                                             ...selectedWaypoint,
                                             actions: {
                                                 ...selectedWaypoint.actions,
-                                                hoverDurationS:
-                                                    Number.parseFloat(e.target.value) || undefined,
+                                                hoverDurationS: parseOptionalNumber(e.target.value),
                                             },
                                         })
                                     }
@@ -371,15 +372,14 @@ export function MissionWaypointsTab({
                                 <input
                                     type="number"
                                     placeholder="e.g. 15"
-                                    value={selectedWaypoint.conditions?.maxWindSpeed || ""}
+                                    value={selectedWaypoint.conditions?.maxWindSpeed ?? ""}
                                     disabled={isReadOnly}
                                     onChange={(e) =>
                                         onUpdateWaypoint({
                                             ...selectedWaypoint,
                                             conditions: {
                                                 ...selectedWaypoint.conditions,
-                                                maxWindSpeed:
-                                                    Number.parseFloat(e.target.value) || undefined,
+                                                maxWindSpeed: parseOptionalNumber(e.target.value),
                                             },
                                         })
                                     }
@@ -391,15 +391,14 @@ export function MissionWaypointsTab({
                                 <input
                                     type="number"
                                     placeholder="e.g. 5000"
-                                    value={selectedWaypoint.conditions?.minVisibility || ""}
+                                    value={selectedWaypoint.conditions?.minVisibility ?? ""}
                                     disabled={isReadOnly}
                                     onChange={(e) =>
                                         onUpdateWaypoint({
                                             ...selectedWaypoint,
                                             conditions: {
                                                 ...selectedWaypoint.conditions,
-                                                minVisibility:
-                                                    Number.parseFloat(e.target.value) || undefined,
+                                                minVisibility: parseOptionalNumber(e.target.value),
                                             },
                                         })
                                     }

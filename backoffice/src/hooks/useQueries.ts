@@ -20,13 +20,18 @@ import {
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
     hubsAll: ["hubs", "all"] as const,
+    hubDetail: (id: string) => ["hubs", "detail", id] as const,
     drones: ["drones"] as const,
     dronesAll: ["drones", "all"] as const,
+    droneDetail: (id: string) => ["drones", "detail", id] as const,
     droneCommands: (droneId: string) => ["drones", droneId, "commands"] as const,
     flights: ["flights"] as const,
     flightsAll: ["flights", "all"] as const,
+    flightDetail: (id: string) => ["flights", "detail", id] as const,
     airspace: ["airspace"] as const,
+    airspaceDetail: (id: string) => ["airspace", "detail", id] as const,
     missions: ["missions"] as const,
+    missionDetail: (id: string) => ["missions", "detail", id] as const,
     connectivity: ["connectivity"] as const,
     connectivityDevices: ["connectivity", "devices"] as const,
     connectivityOnline: ["connectivity", "online"] as const,
@@ -96,7 +101,7 @@ export function useAirspaceAll() {
         queryKey: QUERY_KEYS.airspace,
         queryFn: async () => {
             const res = await airspaceService.getZones({ limit: 0 });
-            return res.items || [];
+            return res.items ?? [];
         },
         staleTime: 1000 * 60,
     });
@@ -107,7 +112,7 @@ export function useConnectivityDevices() {
         queryKey: QUERY_KEYS.connectivityDevices,
         queryFn: async () => {
             const res = await connectivityService.getDevices({ limit: 0 });
-            return res.items || [];
+            return res.items ?? [];
         },
         refetchInterval: 3000,
     });
@@ -118,7 +123,7 @@ export function useConnectivityOnlineDevices() {
         queryKey: QUERY_KEYS.connectivityOnline,
         queryFn: async () => {
             const res = await connectivityService.getOnlineDevices();
-            return res || [];
+            return res ?? [];
         },
         refetchInterval: 10000,
     });

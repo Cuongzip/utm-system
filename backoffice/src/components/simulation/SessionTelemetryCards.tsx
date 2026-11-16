@@ -2,6 +2,7 @@
 
 import { BatteryCharging, Gauge, Compass, Navigation } from "lucide-react";
 import { MetricCard } from "@/components/ui";
+import { formatAltitude, formatDistance, formatSpeed } from "@/utils";
 import type { SimulationSession } from "@/types";
 
 export interface SessionTelemetryCardsProps {
@@ -11,12 +12,9 @@ export interface SessionTelemetryCardsProps {
 export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
     const battery = session.currentBattery ?? 100;
     const speed = session.speed ?? 0;
-    const speedKmH = speed * 3.6;
     const alt = session.currentAlt ?? 0;
     const heading = session.currentHeading ?? 0;
     const progress = Math.min(100, Math.max(0, session.progress ?? 0));
-    const traveledKm = (session.traveledDistance ?? 0) / 1000;
-    const totalKm = (session.totalDistance ?? 0) / 1000;
 
     const batteryColor =
         battery > 50 ? "text-emerald-500" : battery > 20 ? "text-amber-500" : "text-red-500";
@@ -49,13 +47,13 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
             <MetricCard
                 title="SPEED"
                 value={`${speed.toFixed(1)} m/s`}
-                subValue={`${speedKmH.toFixed(1)} km/h`}
+                subValue={formatSpeed(speed)}
                 icon={Gauge}
             />
 
             <MetricCard
                 title="ALTITUDE & HEADING"
-                value={`${alt.toFixed(1)} m`}
+                value={formatAltitude(alt)}
                 subValue={`HDG ${heading.toFixed(0)}°`}
                 icon={Compass}
             />
@@ -63,7 +61,7 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
             <MetricCard
                 title="TRAJECTORY"
                 value={`${progress.toFixed(1)}%`}
-                subValue={`${traveledKm.toFixed(1)} / ${totalKm.toFixed(1)} km`}
+                subValue={`${formatDistance(session.traveledDistance ?? 0)} / ${formatDistance(session.totalDistance ?? 0)}`}
                 icon={Navigation}
             >
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">

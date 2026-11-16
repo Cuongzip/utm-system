@@ -8,10 +8,8 @@ import type {
     HubQueryParams,
 } from "@/types";
 
-export type GetHubsParams = HubQueryParams;
-
 export const hubService = {
-    getHubs: async (params?: GetHubsParams): Promise<HubListResponse> => {
+    getHubs: async (params?: HubQueryParams): Promise<HubListResponse> => {
         const url = buildUrl(API_ENDPOINTS.HUBS.BASE, params as Record<string, unknown>);
         const res = await apiClient<HubListResponse | Hub[]>(url);
         return normalizeList<Hub>(res);
@@ -19,7 +17,7 @@ export const hubService = {
 
     getAll: async (): Promise<Hub[]> => {
         const res = await hubService.getHubs({ limit: 0 });
-        return res.items || [];
+        return res.items ?? [];
     },
 
     getById: async (id: string): Promise<Hub> => {

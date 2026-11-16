@@ -26,6 +26,7 @@ import type {
 import {
     getInitialMissionFormPayload,
     DEFAULT_MISSION_STATUS,
+    MISSION_STATUS,
     MISSION_SCHEDULE_TYPE,
 } from "@/types";
 
@@ -70,7 +71,7 @@ export function MissionEditor({
         clearFieldError(setFieldErrors, ...fields);
 
     const isReadOnly = Boolean(
-        mode === "edit" && initialData?.status && initialData.status.toLowerCase() !== "draft"
+        mode === "edit" && initialData?.status && initialData.status !== MISSION_STATUS.DRAFT
     );
 
     useEffect(() => {

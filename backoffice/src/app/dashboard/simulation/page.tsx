@@ -44,6 +44,7 @@ export default function SimulationPage() {
             simulationService.createSession(payload),
         onSuccess: () => {
             toast.success("Simulation session launched successfully");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             refresh();
         },
         meta: { defaultErrorMessage: "Failed to launch simulation session" },
@@ -53,6 +54,7 @@ export default function SimulationPage() {
         mutationFn: (id: string) => simulationService.pauseSession(id),
         onSuccess: () => {
             toast.success("Simulation paused");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             refresh();
         },
         meta: { defaultErrorMessage: "Failed to pause simulation" },
@@ -62,6 +64,7 @@ export default function SimulationPage() {
         mutationFn: (id: string) => simulationService.resumeSession(id),
         onSuccess: () => {
             toast.success("Simulation resumed");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             refresh();
         },
         meta: { defaultErrorMessage: "Failed to resume simulation" },
@@ -71,6 +74,7 @@ export default function SimulationPage() {
         mutationFn: (id: string) => simulationService.stopSession(id),
         onSuccess: () => {
             toast.success("Simulation stopped");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             refresh();
         },
         meta: { defaultErrorMessage: "Failed to stop simulation" },

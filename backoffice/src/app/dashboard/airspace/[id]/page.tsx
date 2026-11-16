@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { useHubsAll, useAirspaceAll, QUERY_KEYS } from "@/hooks";
@@ -13,6 +13,7 @@ import type { UpdateAirspaceZonePayload } from "@/types";
 export default function EditAirspacePage() {
     const router = useRouter();
     const params = useParams();
+    const queryClient = useQueryClient();
     const zoneId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
 
     const { data: hubs = [], isLoading: hubsLoading } = useHubsAll();
@@ -23,7 +24,7 @@ export default function EditAirspacePage() {
         isLoading: zoneLoading,
         error: zoneError,
     } = useQuery({
-        queryKey: [...QUERY_KEYS.airspace, "detail", zoneId],
+        queryKey: QUERY_KEYS.airspaceDetail(zoneId),
         queryFn: () => airspaceService.getZoneById(zoneId),
         enabled: Boolean(zoneId),
     });
@@ -32,6 +33,8 @@ export default function EditAirspacePage() {
         mutationFn: (payload: UpdateAirspaceZonePayload) =>
             airspaceService.updateZone(zoneId, payload),
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspace });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspaceDetail(zoneId) });
             toast.success("Airspace zone updated successfully");
             router.push("/dashboard/airspace");
         },
@@ -41,6 +44,7 @@ export default function EditAirspacePage() {
     const deleteMutation = useMutation({
         mutationFn: () => airspaceService.deleteZone(zoneId),
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspace });
             toast.success("Airspace zone deactivated successfully");
             router.push("/dashboard/airspace");
         },
@@ -50,7 +54,7 @@ export default function EditAirspacePage() {
     if (zoneLoading || hubsLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-[var(--color-border-dark)] animate-spin" />
+                <Loader2 className="w-8 h-8 text-slate-500 animate-spin" />
                 <p className="text-xs font-mono text-[var(--color-text-muted)]">
                     Loading airspace zone details...
                 </p>

@@ -117,7 +117,7 @@ export function AirspaceBoundaryTab({
             {geometryMode === GEOMETRY_MODE.RADIUS ? (
                 <div className="space-y-4">
                     <div className="p-2.5 bg-[var(--color-surface-card)] rounded border border-[var(--color-border-default)] text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-[var(--color-border-dark)] shrink-0" />
+                        <MapPin className="w-4 h-4 text-cyan-500 shrink-0" />
                         <span>Click anywhere on the map to place center point.</span>
                     </div>
 
@@ -149,7 +149,7 @@ export function AirspaceBoundaryTab({
                     <div className="form-group">
                         <div className="flex justify-between items-center">
                             <label className="form-label text-xs">Radius</label>
-                            <span className="font-mono text-xs font-bold text-[var(--color-border-dark)]">
+                            <span className="font-mono text-xs font-bold text-[var(--color-text-primary)]">
                                 {radiusMeters} m
                             </span>
                         </div>
@@ -160,7 +160,7 @@ export function AirspaceBoundaryTab({
                             step="50"
                             value={radiusMeters}
                             onChange={(e) => onRadiusChange(Number(e.target.value))}
-                            className="w-full accent-[var(--color-border-dark)] cursor-pointer"
+                            className="w-full accent-cyan-600 cursor-pointer"
                         />
                     </div>
                 </div>

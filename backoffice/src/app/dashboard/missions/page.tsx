@@ -8,7 +8,7 @@ import { PageHeader, ChamferButton, TableFilterBar, type SelectOption } from "@/
 import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
 import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createStatusOptions } from "@/utils";
 import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
 
@@ -16,6 +16,7 @@ const STATUS_OPTIONS: SelectOption[] = createStatusOptions(MISSION_STATUSES, MIS
 
 export default function MissionsPage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { data: hubs = [] } = useHubsAll();
     const { data: drones = [] } = useDronesAll();
 
@@ -59,6 +60,7 @@ export default function MissionsPage() {
         mutationFn: (mission: Mission) => missionService.duplicateMission(mission.id),
         onSuccess: (_data, mission) => {
             toast.success(`Mission "${mission.name || mission.id}" duplicated as draft`);
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
             fetchData();
         },
         meta: { defaultErrorMessage: "Failed to duplicate mission" },
@@ -68,6 +70,7 @@ export default function MissionsPage() {
         mutationFn: (mission: Mission) => missionService.deleteMission(mission.id),
         onSuccess: (_data, mission) => {
             toast.success(`Mission "${mission.name || mission.id}" deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
             fetchData();
         },
         meta: { defaultErrorMessage: "Failed to delete mission" },
@@ -81,6 +84,8 @@ export default function MissionsPage() {
             }),
         onSuccess: () => {
             toast.success("Mission is now executing");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
             fetchData();
         },
         meta: { defaultErrorMessage: "Failed to start mission execution" },

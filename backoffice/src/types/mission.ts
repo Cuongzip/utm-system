@@ -9,6 +9,7 @@ import type {
     getWaypointsResponseItem,
     reorderWaypointsBody,
     executeMissionBody,
+    getExecutionsByMissionIdResponse,
 } from "@/generated/mission";
 
 export type CreateMissionPayload = zod.infer<typeof createMissionBody>;
@@ -96,3 +97,14 @@ export type AddWaypointPayload = zod.infer<typeof addWaypointBody>;
 export type UpdateWaypointPayload = zod.infer<typeof updateWaypointBody>;
 export type ReorderWaypointsPayload = zod.infer<typeof reorderWaypointsBody>;
 export type ExecuteMissionPayload = zod.infer<typeof executeMissionBody>;
+
+export type MissionExecution = NonNullable<zod.infer<typeof getExecutionsByMissionIdResponse>>;
+
+export interface MissionExecutionResult {
+    execution?: MissionExecution;
+    flight?: {
+        id?: string;
+        flightNumber?: string;
+        status?: string;
+    };
+}
