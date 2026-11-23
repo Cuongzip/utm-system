@@ -48,6 +48,10 @@ public class Mission extends AbstractAuditEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "payload_weight_kg", nullable = false)
+    @Builder.Default
+    private Double payloadWeightKg = 0.0;
+
     @Column(name = "departure_hub_id", length = 36, nullable = false)
     private String departureHubId;
 

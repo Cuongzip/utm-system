@@ -11,7 +11,13 @@ import java.util.List;
 
 public interface FlightService {
 
-    FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId, int limit, int offset);
+    FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId,
+            String executionId, int limit, int offset);
+
+    default FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId,
+            int limit, int offset) {
+        return getFlights(status, authorizationStatus, pilotId, droneId, null, limit, offset);
+    }
 
     List<FlightVm> getAllFlights(String status, String pilotId, String droneId);
 
@@ -31,4 +37,3 @@ public interface FlightService {
 
     FlightVm abortFlight(String id, FlightAbortVm abortVm);
 }
-

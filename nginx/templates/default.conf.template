@@ -7,7 +7,7 @@ server {
   server_name api.utm.local localhost;
 
   # Docker DNS
-  resolver 127.0.0.11;
+  resolver 127.0.0.11 valid=30s;
 
   proxy_set_header Host $http_host;
   proxy_set_header X-Real-IP $remote_addr;
@@ -136,7 +136,8 @@ server {
   }
 
   location /swagger-ui/ {
-    proxy_pass http://swagger-ui:8080;
+    set $swagger_upstream http://swagger-ui:8080;
+    proxy_pass $swagger_upstream;
   }
 }
 
@@ -144,7 +145,7 @@ server {
   server_name backoffice.utm.local backoffice;
 
   # Docker DNS
-  resolver 127.0.0.11;
+  resolver 127.0.0.11 valid=30s;
 
   proxy_set_header Host $http_host;
   proxy_set_header X-Real-IP $remote_addr;
@@ -203,7 +204,9 @@ server {
 
 server {
   server_name pgadmin.utm.local;
+  resolver 127.0.0.11 valid=30s;
   location / {
-    proxy_pass http://pgadmin;
+    set $pgadmin_upstream http://pgadmin:80;
+    proxy_pass $pgadmin_upstream;
   }
 }

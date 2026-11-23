@@ -178,6 +178,19 @@ public class SimulationController {
                 return ResponseEntity.ok(simulationService.injectScenario(id, injectVm));
         }
 
+        @PostMapping("/sessions/{id}/clear-scenario")
+        @PreAuthorize("hasAnyRole('admin', 'atc', 'pilot')")
+        @Operation(summary = "Clear active emergency scenario", description = "Clears active emergency scenario and restores normal cruise flight.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Scenario cleared successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SimulationSessionVm.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid simulation state", content = @Content),
+                        @ApiResponse(responseCode = "404", description = "Simulation session not found", content = @Content)
+        })
+        public ResponseEntity<SimulationSessionVm> clearScenario(
+                        @Parameter(description = "Simulation session UUID", required = true) @PathVariable String id) {
+                return ResponseEntity.ok(simulationService.clearScenario(id));
+        }
+
         @PostMapping("/sessions/{id}/stop")
         @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
         @Operation(summary = "Stop simulation session", description = "Stops the simulation while retaining session statistics and telemetry history.")

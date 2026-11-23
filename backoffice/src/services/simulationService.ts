@@ -67,6 +67,12 @@ export const simulationService = {
         });
     },
 
+    clearScenario: async (id: string): Promise<SimulationSession> => {
+        return apiClient<SimulationSession>(API_ENDPOINTS.SIMULATION.CLEAR_SCENARIO(id), {
+            method: "POST",
+        });
+    },
+
     getEvents: async (sessionId: string): Promise<SimulationEvent[]> => {
         const res = await apiClient<SimulationEvent[]>(API_ENDPOINTS.SIMULATION.EVENTS(sessionId));
         return Array.isArray(res) ? res : [];

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import type { Waypoint, Hub } from "@/types";
 import { useWaypointManager } from "@/hooks/useWaypointManager";
-import { calculateMissionDistance, generateHubToHubWaypoints } from "./missionUtils";
+import { extractIntermediateWaypoints } from "@/components/waypoints";
+import { calculateMissionDistance } from "./missionUtils";
 
 export interface UseMissionWaypointsOptions {
     initialWaypoints?: Waypoint[];
@@ -23,6 +24,10 @@ export function useMissionWaypoints({
     arrivalHub,
     onClearWaypointErrors,
 }: UseMissionWaypointsOptions = {}) {
+    const sanitizedInitial = useMemo(() => {
+        return extractIntermediateWaypoints(initialWaypoints, departureHub, arrivalHub);
+    }, [initialWaypoints, departureHub, arrivalHub]);
+
     const {
         waypoints,
         setWaypoints,
@@ -35,7 +40,7 @@ export function useMissionWaypoints({
         clearWaypoints: handleClearWaypoints,
         matchesId,
     } = useWaypointManager<Waypoint>({
-        initialWaypoints,
+        initialWaypoints: sanitizedInitial,
         isReadOnly,
         onClearErrors: onClearWaypointErrors,
     });
@@ -57,19 +62,27 @@ export function useMissionWaypoints({
     const handleAddWaypoint = useCallback(
         (lat: number, lng: number, altitude: number) => {
             if (isReadOnly) return;
-            const nextSeq = waypoints.length + 1;
+            const seqNum = (departureHub ? 2 : 1) + waypoints.length;
             const newWp: Waypoint = {
                 tempId: `wp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                sequence: nextSeq,
-                name: `Waypoint ${nextSeq}`,
+                sequence: seqNum,
+                name: `Waypoint ${seqNum}`,
                 latitude: lat,
                 longitude: lng,
                 altitude: altitude ?? defaultAltitude,
+                actions: { type: "fly_through" },
             };
             setWaypoints((prev) => [...prev, newWp]);
             onClearWaypointErrors?.();
         },
-        [isReadOnly, waypoints.length, defaultAltitude, onClearWaypointErrors, setWaypoints]
+        [
+            isReadOnly,
+            departureHub,
+            waypoints.length,
+            defaultAltitude,
+            onClearWaypointErrors,
+            setWaypoints,
+        ]
     );
 
     const handleUpdateWaypoint = useCallback(
@@ -108,25 +121,12 @@ export function useMissionWaypoints({
             return;
         }
 
-        const newWaypoints = generateHubToHubWaypoints(departureHub, arrivalHub, defaultAltitude);
-        if (newWaypoints.length === 0) {
-            toast.error("Selected hubs do not have valid GPS coordinates");
-            return;
-        }
-
-        setWaypoints(newWaypoints);
+        setWaypoints([]);
         onClearWaypointErrors?.();
         toast.success(
             `Generated direct route from ${departureHub.code || departureHub.name} to ${arrivalHub.code || arrivalHub.name}`
         );
-    }, [
-        isReadOnly,
-        departureHub,
-        arrivalHub,
-        defaultAltitude,
-        onClearWaypointErrors,
-        setWaypoints,
-    ]);
+    }, [isReadOnly, departureHub, arrivalHub, onClearWaypointErrors, setWaypoints]);
 
     return {
         waypoints,

@@ -8,12 +8,38 @@ import type {
     updateWaypointBody,
     getWaypointsResponseItem,
     reorderWaypointsBody,
-    executeMissionBody,
     getExecutionsByMissionIdResponse,
 } from "@/generated/mission";
 
-export type CreateMissionPayload = zod.infer<typeof createMissionBody>;
-export type UpdateMissionPayload = zod.infer<typeof updateMissionBody>;
+export type CreateMissionPayload = zod.infer<typeof createMissionBody> & {
+    payloadWeightKg?: number;
+};
+export type UpdateMissionPayload = zod.infer<typeof updateMissionBody> & {
+    payloadWeightKg?: number;
+};
+
+export const WAYPOINT_ACTION_TYPES = [
+    "takeoff",
+    "fly_through",
+    "hover",
+    "photo",
+    "winch_drop",
+    "payload_pickup",
+    "payload_drop",
+    "land",
+] as const;
+export type WaypointActionType = (typeof WAYPOINT_ACTION_TYPES)[number];
+export const DEFAULT_WAYPOINT_ACTION: WaypointActionType = "fly_through";
+export const WAYPOINT_ACTION_LABELS: Record<WaypointActionType, string> = {
+    takeoff: "Takeoff",
+    fly_through: "Fly Through",
+    hover: "Hover",
+    photo: "Photo",
+    winch_drop: "Winch Drop",
+    payload_pickup: "Payload Pickup",
+    payload_drop: "Payload Drop",
+    land: "Landing",
+};
 
 export const MISSION_SCHEDULE_TYPES = createMissionBody.shape.scheduleType.unwrap().options;
 export type MissionScheduleType = (typeof MISSION_SCHEDULE_TYPES)[number];
@@ -52,13 +78,16 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
     failed: "Failed",
 };
 
-export type MissionFormPayload = CreateMissionPayload;
+export type MissionFormPayload = CreateMissionPayload & {
+    payloadWeightKg?: number;
+};
 
 export function getInitialMissionFormPayload(initialData?: Mission | null): MissionFormPayload {
     return {
         code: initialData?.code || undefined,
         name: initialData?.name || "",
         description: initialData?.description || "",
+        payloadWeightKg: initialData?.payloadWeightKg ?? 0,
         departureHubId: initialData?.departureHubId || "",
         arrivalHubId: initialData?.arrivalHubId || "",
         scheduleType: initialData?.scheduleType || DEFAULT_MISSION_SCHEDULE_TYPE,
@@ -69,6 +98,7 @@ export function getInitialMissionFormPayload(initialData?: Mission | null): Miss
 export type Mission = NonNullable<zod.infer<typeof getMissionByIdResponse>> & {
     id: string;
     code?: string;
+    payloadWeightKg?: number;
 };
 
 export type MissionListResponse = Omit<
@@ -80,6 +110,8 @@ export type MissionListResponse = Omit<
 
 export type Waypoint = NonNullable<zod.infer<typeof getWaypointsResponseItem>> & {
     tempId?: string;
+    actions?: Record<string, unknown>;
+    conditions?: Record<string, unknown>;
 };
 
 export interface ProfilePoint {
@@ -93,10 +125,35 @@ export interface ProfilePoint {
     waypoint?: Waypoint;
 }
 
-export type AddWaypointPayload = zod.infer<typeof addWaypointBody>;
-export type UpdateWaypointPayload = zod.infer<typeof updateWaypointBody>;
+export type AddWaypointPayload = zod.infer<typeof addWaypointBody> & {
+    actions?: Record<string, unknown>;
+    conditions?: Record<string, unknown>;
+};
+export type UpdateWaypointPayload = zod.infer<typeof updateWaypointBody> & {
+    actions?: Record<string, unknown>;
+    conditions?: Record<string, unknown>;
+};
 export type ReorderWaypointsPayload = zod.infer<typeof reorderWaypointsBody>;
-export type ExecuteMissionPayload = zod.infer<typeof executeMissionBody>;
+
+export interface ExecuteMissionPayload {
+    droneId?: string;
+    pilotId: string;
+    autoAssign?: boolean;
+}
+
+export interface ScoredDroneCandidate {
+    droneId: string;
+    registrationNumber: string;
+    manufacturer?: string;
+    model?: string;
+    maxPayloadKg: number;
+    batteryCapacityWh: number;
+    estimatedEnergyConsumptionWh: number;
+    batteryMarginPct: number;
+    eligible: boolean;
+    ineligibilityReason?: string;
+    finalScore: number;
+}
 
 export type MissionExecution = NonNullable<zod.infer<typeof getExecutionsByMissionIdResponse>>;
 
@@ -107,4 +164,12 @@ export interface MissionExecutionResult {
         flightNumber?: string;
         status?: string;
     };
+    flights?: Array<{
+        id?: string;
+        flightNumber?: string;
+        droneId?: string;
+        status?: string;
+        departureHubId?: string;
+        arrivalHubId?: string;
+    }>;
 }

@@ -42,7 +42,18 @@ public record FlightPutVm(
         String feasibilityOverride,
 
         @Schema(description = "Updated pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)", example = "go")
-        Verdict feasibilityVerdict
+        Verdict feasibilityVerdict,
+
+        @Schema(description = "Updated ordered list of waypoints along the flight route")
+        java.util.List<FlightWaypointVm> waypoints
 ) {
+    public FlightPutVm(
+            String droneId, String departureHubId, String arrivalHubId,
+            String pilotId, ZonedDateTime scheduledDeparture, ZonedDateTime scheduledArrival,
+            Double cruisingAltitudeM, String notes, GeoJsonLineStringVm plannedRoute,
+            GeoJsonLineStringVm actualRoute, String feasibilityOverride, Verdict feasibilityVerdict) {
+        this(droneId, departureHubId, arrivalHubId, pilotId, scheduledDeparture, scheduledArrival,
+                cruisingAltitudeM, notes, plannedRoute, actualRoute, feasibilityOverride, feasibilityVerdict, null);
+    }
 }
 

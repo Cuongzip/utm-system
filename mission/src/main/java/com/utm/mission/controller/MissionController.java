@@ -1,6 +1,8 @@
 package com.utm.mission.controller;
 
 import com.utm.mission.service.MissionService;
+import com.utm.mission.service.fleet.FleetScoringService;
+import com.utm.mission.viewmodel.fleet.ScoredDroneCandidateVm;
 import com.utm.mission.viewmodel.mission.MissionListVm;
 import com.utm.mission.viewmodel.mission.MissionPostVm;
 import com.utm.mission.viewmodel.mission.MissionPutVm;
@@ -38,6 +40,7 @@ import java.util.Map;
 public class MissionController {
 
         private final MissionService missionService;
+        private final FleetScoringService fleetScoringService;
 
         @PostMapping
         @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
@@ -81,6 +84,18 @@ public class MissionController {
         public ResponseEntity<MissionVm> getMissionById(
                         @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id) {
                 return ResponseEntity.ok(missionService.getMissionById(id));
+        }
+
+        @GetMapping("/{id}/candidate-drones")
+        @Operation(summary = "Get candidate drones with suitability scores", description = "Evaluate available drones at the departure hub against mission payload and battery consumption requirements")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Candidate drones evaluated and scored successfully"),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+                        @ApiResponse(responseCode = "404", description = "Mission not found", content = @Content)
+        })
+        public ResponseEntity<java.util.List<ScoredDroneCandidateVm>> getCandidateDrones(
+                        @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id) {
+                return ResponseEntity.ok(fleetScoringService.scoreCandidateDrones(id));
         }
 
         @PutMapping("/{id}")

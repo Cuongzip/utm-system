@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - changeSet:
+      id: 06-drop-waypoint-hub-id
+      author: cuong
+      changes:
+        - dropColumn:
+            tableName: waypoint
+            columnName: hub_id

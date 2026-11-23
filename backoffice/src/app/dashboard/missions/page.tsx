@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PageHeader, ChamferButton, TableFilterBar, type SelectOption } from "@/components/ui";
 import { MissionsTable } from "@/components/missions";
 import { missionService } from "@/services/missionService";
-import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
+import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createStatusOptions } from "@/utils";
 import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
@@ -18,7 +18,6 @@ export default function MissionsPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const { data: hubs = [] } = useHubsAll();
-    const { data: drones = [] } = useDronesAll();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -77,13 +76,23 @@ export default function MissionsPage() {
     });
 
     const executeMissionMutation = useMutation({
-        mutationFn: ({ missionId, droneId }: { missionId: string; droneId: string }) =>
+        mutationFn: ({
+            missionId,
+            droneId,
+            autoAssign,
+        }: {
+            missionId: string;
+            droneId?: string;
+            autoAssign?: boolean;
+        }) =>
             missionService.executeMission(missionId, {
-                droneId,
+                droneId: droneId || undefined,
                 pilotId: "operator",
+                autoAssign: autoAssign ?? true,
             }),
-        onSuccess: () => {
-            toast.success("Mission is now executing");
+        onSuccess: (data) => {
+            const legCount = data?.flights?.length || (data?.flight ? 1 : 0);
+            toast.success(`Mission started successfully with ${legCount} flight leg(s)`);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
             fetchData();
@@ -92,12 +101,7 @@ export default function MissionsPage() {
     });
 
     const handleExecute = (mission: Mission) => {
-        const droneIdToUse = drones[0]?.id;
-        if (!droneIdToUse) {
-            toast.error("No active drone found to execute this mission");
-            return;
-        }
-        executeMissionMutation.mutate({ missionId: mission.id, droneId: droneIdToUse });
+        executeMissionMutation.mutate({ missionId: mission.id, autoAssign: true });
     };
 
     return (

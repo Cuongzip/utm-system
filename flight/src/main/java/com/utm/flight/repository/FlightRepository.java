@@ -18,4 +18,6 @@ public interface FlightRepository extends JpaRepository<Flight, String>, JpaSpec
     List<Flight> findByDroneId(String droneId);
 
     List<Flight> findByPilotId(String pilotId);
+
+    List<Flight> findByExecutionIdOrderByScheduledDepartureAsc(String executionId);
 }

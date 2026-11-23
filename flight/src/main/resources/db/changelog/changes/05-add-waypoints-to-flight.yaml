@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 05-add-waypoints-to-flight
+      author: cuong
+      changes:
+        - addColumn:
+            tableName: flight
+            columns:
+              - column:
+                  name: waypoints
+                  type: jsonb
+                  defaultValue: "[]"

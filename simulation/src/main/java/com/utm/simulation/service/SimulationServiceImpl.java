@@ -344,6 +344,9 @@ public class SimulationServiceImpl implements SimulationService {
         if (runtime != null) {
             synchronized (runtime) {
                 runtime.activeScenario = scenarioCode;
+                if ("c2_lost".equalsIgnoreCase(scenarioCode)) {
+                    runtime.speed = 0.0;
+                }
             }
         }
 
@@ -359,6 +362,41 @@ public class SimulationServiceImpl implements SimulationService {
                 session.getDroneId());
 
         return new InjectScenarioResultVm(true, simulationMapper.toVm(event));
+    }
+
+    @Override
+    @Transactional
+    public SimulationSessionVm clearScenario(String id) {
+        SimulationSession session = sessionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
+
+        String previousScenario = session.getActiveScenario();
+
+        SimulationSessionRuntime runtime = activeRuntimes.get(id);
+        if (runtime != null) {
+            synchronized (runtime) {
+                runtime.activeScenario = null;
+                if (runtime.currentBattery > 0.0) {
+                    runtime.speed = runtime.cruiseSpeed;
+                }
+            }
+        }
+
+        session.setActiveScenario(null);
+        if (runtime != null) {
+            session.setSpeed(runtime.cruiseSpeed);
+            session.setCurrentBattery(runtime.currentBattery);
+        } else if (session.getSpeed() <= 0.0) {
+            session.setSpeed(15.0);
+        }
+        SimulationSession saved = sessionRepository.save(session);
+
+        recordEvent(id, "SCENARIO_CLEARED", previousScenario,
+                "Emergency scenario cleared. Restored normal flight parameters.", "LOW", null);
+        log.info("Cleared scenario for simulation session '{}', restored speed to {} m/s",
+                id, saved.getSpeed());
+
+        return simulationMapper.toVm(saved);
     }
 
     @Override
@@ -436,6 +474,7 @@ public class SimulationServiceImpl implements SimulationService {
                         && runtime.currentBattery > 0.0;
 
                 if (sendTelemetry) {
+                    runtime.lastReportedBattery = runtime.currentBattery;
                     double effectiveLat = runtime.currentLat;
                     double effectiveLon = runtime.currentLon;
                     double effectiveAlt = runtime.currentAlt;
@@ -520,6 +559,16 @@ public class SimulationServiceImpl implements SimulationService {
                     }
                 }
 
+                if ("c2_lost".equalsIgnoreCase(runtime.activeScenario)) {
+                    runtime.speed = 0.0;
+                    stepDist = 0.0;
+                } else if (!"motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
+                    if (runtime.currentBattery > 0.0 && runtime.speed < runtime.cruiseSpeed) {
+                        runtime.speed = runtime.cruiseSpeed;
+                        stepDist = runtime.speed * timeStepSeconds;
+                    }
+                }
+
                 if ("battery_drain".equalsIgnoreCase(runtime.activeScenario)) {
                     runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (5.0 * timeStepSeconds));
                     if (runtime.currentBattery <= 5.0) {
@@ -569,13 +618,14 @@ public class SimulationServiceImpl implements SimulationService {
         try {
             sessionRepository.findById(runtime.sessionId).ifPresent(s -> {
                 s.setStatus(runtime.status);
-                s.setSpeed(runtime.speed);
+                boolean isC2Lost = "c2_lost".equalsIgnoreCase(runtime.activeScenario);
+                s.setSpeed(isC2Lost ? 0.0 : runtime.speed);
                 s.setTimeScale(runtime.timeScale);
                 s.setCurrentLat(runtime.currentLat);
                 s.setCurrentLon(runtime.currentLon);
                 s.setCurrentAlt(runtime.currentAlt);
                 s.setCurrentHeading(runtime.currentHeading);
-                s.setCurrentBattery(runtime.currentBattery);
+                s.setCurrentBattery(isC2Lost ? runtime.lastReportedBattery : runtime.currentBattery);
                 s.setProgress(runtime.calculateProgress());
                 s.setTraveledDistance(runtime.cumulativeTraveled);
                 s.setCurrentSegment(runtime.currentSegment);
@@ -590,14 +640,15 @@ public class SimulationServiceImpl implements SimulationService {
     private SimulationSession syncWithRuntime(SimulationSession session) {
         SimulationSessionRuntime runtime = activeRuntimes.get(session.getId());
         if (runtime != null) {
+            boolean isC2Lost = "c2_lost".equalsIgnoreCase(runtime.activeScenario);
             session.setStatus(runtime.status);
             session.setTimeScale(runtime.timeScale);
-            session.setSpeed(runtime.speed);
+            session.setSpeed(isC2Lost ? 0.0 : runtime.speed);
             session.setCurrentLat(runtime.currentLat);
             session.setCurrentLon(runtime.currentLon);
             session.setCurrentAlt(runtime.currentAlt);
             session.setCurrentHeading(runtime.currentHeading);
-            session.setCurrentBattery(runtime.currentBattery);
+            session.setCurrentBattery(isC2Lost ? runtime.lastReportedBattery : runtime.currentBattery);
             session.setProgress(runtime.calculateProgress());
             session.setTraveledDistance(runtime.cumulativeTraveled);
             session.setCurrentSegment(runtime.currentSegment);
@@ -706,6 +757,7 @@ public class SimulationServiceImpl implements SimulationService {
         final double totalDistance;
         final List<Double> segmentDistances;
         final String bearerToken;
+        final double cruiseSpeed;
 
         SimulationStatus status;
         double speed;
@@ -718,6 +770,7 @@ public class SimulationServiceImpl implements SimulationService {
         double currentAlt;
         double currentHeading;
         double currentBattery;
+        double lastReportedBattery;
         String activeScenario;
         long tickCount = 0;
         ScheduledFuture<?> scheduledFuture;
@@ -728,9 +781,11 @@ public class SimulationServiceImpl implements SimulationService {
             this.flightId = session.getFlightId();
             this.waypoints = new ArrayList<>(waypoints);
             this.status = session.getStatus();
-            this.speed = session.getSpeed();
+            this.cruiseSpeed = session.getSpeed() > 0 ? session.getSpeed() : 15.0;
+            this.speed = this.cruiseSpeed;
             this.timeScale = session.getTimeScale();
-            this.currentBattery = session.getCurrentBattery();
+            this.currentBattery = session.getCurrentBattery() != null ? session.getCurrentBattery() : 100.0;
+            this.lastReportedBattery = this.currentBattery;
             this.activeScenario = session.getActiveScenario();
             this.bearerToken = bearerToken;
 

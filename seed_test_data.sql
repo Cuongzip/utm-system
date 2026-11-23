@@ -358,12 +358,13 @@ ALTER TABLE mission ADD COLUMN IF NOT EXISTS code VARCHAR(50) UNIQUE;
 
 TRUNCATE TABLE waypoint, mission_execution, mission CASCADE;
 
-INSERT INTO mission (id, code, name, description, departure_hub_id, arrival_hub_id, schedule_type, scheduled_at, status, created_on, created_by)
+INSERT INTO mission (id, code, name, description, payload_weight_kg, departure_hub_id, arrival_hub_id, schedule_type, scheduled_at, status, created_on, created_by)
 VALUES
   ('m1111111-1111-1111-1111-111111111111', 
    'MSN-261107-MED1',
    'Urgent Medical Blood Pack Transfer', 
    'Emergency transport of emergency O-negative blood units from Saigon Central Vertiport to Thu Thiem Medical Center.', 
+   2.50,
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
    '606a30fb-465a-4016-85f7-85b00467f2f7', 
    'IMMEDIATE', 
@@ -376,6 +377,7 @@ VALUES
    'MSN-261107-EXP2',
    'Autonomous Express Parcel Delivery Flight', 
    'Scheduled commercial express parcel dispatch crossing from Thu Thiem Vertiport to Thu Duc Innovation Park Hub.', 
+   3.20,
    '606a30fb-465a-4016-85f7-85b00467f2f7', 
    'c854d502-2c9b-4e4a-93c2-b8759521e962', 
    'IMMEDIATE', 
@@ -388,6 +390,7 @@ VALUES
    'MSN-261107-VAC3',
    'Emergency Pediatric Vaccine Transport', 
    'Critical temperature-controlled cold-chain pediatric vaccine transport to Phu My Hung South Clinic.', 
+   1.80,
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
    'a942c710-1b8a-4c22-83e1-d647a829f101', 
    'IMMEDIATE', 
@@ -400,6 +403,7 @@ VALUES
    'MSN-261107-AVN4',
    'High-Tech Avionics Component Dispatch', 
    'Routine afternoon logistics transit of replacement sensor payloads from Thu Duc Park to Saigon Central.', 
+   4.50,
    'c854d502-2c9b-4e4a-93c2-b8759521e962', 
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
    'SCHEDULED', 
@@ -412,6 +416,7 @@ VALUES
    'MSN-261107-ENV5',
    'Saigon River Environmental Survey', 
    'Autonomous aerial water quality sensor sampling and LiDAR bathymetry inspection along the river fairway.', 
+   1.20,
    '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 
    '606a30fb-465a-4016-85f7-85b00467f2f7', 
    'IMMEDIATE', 
@@ -422,29 +427,30 @@ VALUES
 
 INSERT INTO waypoint (id, mission_id, sequence, name, latitude, longitude, altitude, actions, conditions, created_on, created_by)
 VALUES
-  -- Mission 1 Waypoints (D1 -> Thu Thiem)
-  ('w1111111-0001-0000-0000-000000000001', 'm1111111-1111-1111-1111-111111111111', 1, 'Saigon Vertiport Departure Pad', 10.7769000, 106.7009000, 30.0, '{"action":"TAKEOFF","speed":5.0}', '{"climbRate":2.5}', NOW(), 'system'),
-  ('w1111111-0002-0000-0000-000000000002', 'm1111111-1111-1111-1111-111111111111', 2, 'Bach Dang River Entry Gate', 10.7750000, 106.7080000, 120.0, '{"action":"NAVIGATE","speed":15.0}', '{"corridorId":"HUB-CORRIDOR-SGN"}', NOW(), 'system'),
-  ('w1111111-0003-0000-0000-000000000003', 'm1111111-1111-1111-1111-111111111111', 3, 'Thu Thiem Inbound Transit Gate', 10.7800000, 106.7220000, 120.0, '{"action":"NAVIGATE","speed":15.0}', '{}', NOW(), 'system'),
-  ('w1111111-0004-0000-0000-000000000004', 'm1111111-1111-1111-1111-111111111111', 4, 'Thu Thiem Vertiport Final Approach', 10.7850000, 106.7350000, 20.0, '{"action":"LAND","speed":3.0}', '{"descentRate":1.5}', NOW(), 'system'),
+  -- Mission 1 Intermediate Waypoints (D1 -> Thu Thiem)
+  ('w1111111-0001-0000-0000-000000000001', 'm1111111-1111-1111-1111-111111111111', 1, 'Bach Dang River Entry Gate', 10.7750000, 106.7080000, 120.0, '{"type":"fly_through","speed":15.0}', '{"speed":15.0,"turnRadius":25.0,"maxWindSpeed":12.0,"minVisibility":3000}', NOW(), 'system'),
+  ('w1111111-0002-0000-0000-000000000002', 'm1111111-1111-1111-1111-111111111111', 2, 'Thu Thiem Inbound Transit Gate', 10.7800000, 106.7220000, 120.0, '{"type":"fly_through","speed":15.0}', '{"speed":15.0,"turnRadius":25.0,"maxWindSpeed":12.0,"minVisibility":3000}', NOW(), 'system'),
 
-  -- Mission 2 Waypoints (Thu Thiem -> Thu Duc)
-  ('w2222222-0001-0000-0000-000000000001', 'm2222222-2222-2222-2222-222222222222', 1, 'Thu Thiem Vertiport Pad 2 Departure', 10.7850000, 106.7350000, 25.0, '{"action":"TAKEOFF","speed":5.0}', '{}', NOW(), 'system'),
-  ('w2222222-0002-0000-0000-000000000002', 'm2222222-2222-2222-2222-222222222222', 2, 'Saigon River Upper Transit Bend', 10.8050000, 106.7450000, 100.0, '{"action":"NAVIGATE","speed":14.0}', '{}', NOW(), 'system'),
-  ('w2222222-0003-0000-0000-000000000003', 'm2222222-2222-2222-2222-222222222222', 3, 'Rach Chiec Navigation Checkpoint', 10.8250000, 106.7600000, 100.0, '{"action":"NAVIGATE","speed":14.0}', '{}', NOW(), 'system'),
-  ('w2222222-0004-0000-0000-000000000004', 'm2222222-2222-2222-2222-222222222222', 4, 'Thu Duc Tech Park Vertipad', 10.8490000, 106.7710000, 30.0, '{"action":"LAND","speed":3.0}', '{}', NOW(), 'system'),
+  -- Mission 2 Intermediate Waypoints (Thu Thiem -> Thu Duc)
+  ('w2222222-0001-0000-0000-000000000001', 'm2222222-2222-2222-2222-222222222222', 1, 'Saigon River Upper Transit Bend', 10.8050000, 106.7450000, 100.0, '{"type":"fly_through","speed":14.0}', '{"speed":14.0,"turnRadius":20.0,"maxWindSpeed":12.0,"minVisibility":4000}', NOW(), 'system'),
+  ('w2222222-0002-0000-0000-000000000002', 'm2222222-2222-2222-2222-222222222222', 2, 'Rach Chiec Navigation Checkpoint', 10.8250000, 106.7600000, 100.0, '{"type":"fly_through","speed":14.0}', '{"speed":14.0,"turnRadius":20.0,"maxWindSpeed":12.0,"minVisibility":4000}', NOW(), 'system'),
 
-  -- Mission 3 Waypoints (D1 -> D7)
-  ('w3333333-0001-0000-0000-000000000001', 'm3333333-3333-3333-3333-333333333333', 1, 'Saigon Vertiport MedPad Departure', 10.7769000, 106.7009000, 30.0, '{"action":"TAKEOFF"}', '{}', NOW(), 'system'),
-  ('w3333333-0002-0000-0000-000000000002', 'm3333333-3333-3333-3333-333333333333', 2, 'Kenh Te Canal Southern Transit Waypoint', 10.7550000, 106.7120000, 110.0, '{"action":"NAVIGATE","speed":16.0}', '{}', NOW(), 'system'),
-  ('w3333333-0003-0000-0000-000000000003', 'm3333333-3333-3333-3333-333333333333', 3, 'Phu My Hung Healthcare Landing Pad', 10.7290000, 106.7210000, 20.0, '{"action":"LAND"}', '{}', NOW(), 'system');
+  -- Mission 3 Intermediate Waypoints (D1 -> D7)
+  ('w3333333-0001-0000-0000-000000000001', 'm3333333-3333-3333-3333-333333333333', 1, 'Kenh Te Canal Southern Transit Waypoint', 10.7550000, 106.7120000, 110.0, '{"type":"fly_through","speed":16.0}', '{"speed":16.0,"turnRadius":30.0,"maxWindSpeed":10.0,"minVisibility":5000}', NOW(), 'system'),
+
+  -- Mission 4 Intermediate Waypoints (Thu Duc -> D1)
+  ('w4444444-0001-0000-0000-000000000001', 'm4444444-4444-4444-4444-444444444444', 1, 'Binh Trieu Navigation Corridor', 10.8150000, 106.7500000, 130.0, '{"type":"fly_through","speed":15.0}', '{"speed":15.0,"turnRadius":25.0,"maxWindSpeed":14.0,"minVisibility":4000}', NOW(), 'system'),
+  ('w4444444-0002-0000-0000-000000000002', 'm4444444-4444-4444-4444-444444444444', 2, 'Thanh Da Bend Entry Point', 10.7850000, 106.7200000, 130.0, '{"type":"fly_through","speed":15.0}', '{"speed":15.0,"turnRadius":25.0,"maxWindSpeed":14.0,"minVisibility":4000}', NOW(), 'system'),
+
+  -- Mission 5 Intermediate Waypoint (Environmental Sampling)
+  ('w5555555-0001-0000-0000-000000000001', 'm5555555-5555-5555-5555-555555555555', 1, 'Saigon River Mid-Channel Water Sampling Point', 10.7780000, 106.7150000, 60.0, '{"type":"hover","durationS":120,"hoverDurationS":120}', '{"speed":10.0,"maxWindSpeed":8.0,"minVisibility":5000}', NOW(), 'system');
 
 INSERT INTO mission_execution (id, mission_id, current_waypoint_index, total_waypoints, completed_waypoints, started_at, completed_at, status, created_on, created_by)
 VALUES
-  ('ex111111-1111-1111-1111-111111111111', 'm1111111-1111-1111-1111-111111111111', 2, 4, 2, NOW() - interval '15 minutes', NULL, 'IN_PROGRESS', NOW(), 'system'),
-  ('ex222222-2222-2222-2222-222222222222', 'm2222222-2222-2222-2222-222222222222', 1, 4, 1, NOW() - interval '8 minutes', NULL, 'IN_PROGRESS', NOW(), 'system'),
-  ('ex333333-3333-3333-3333-333333333333', 'm3333333-3333-3333-3333-333333333333', 1, 3, 1, NOW() - interval '4 minutes', NULL, 'IN_PROGRESS', NOW(), 'system'),
-  ('ex555555-5555-5555-5555-555555555555', 'm5555555-5555-5555-5555-555555555555', 4, 4, 4, NOW() - interval '100 minutes', NOW() - interval '45 minutes', 'COMPLETED', NOW(), 'system');
+  ('ex111111-1111-1111-1111-111111111111', 'm1111111-1111-1111-1111-111111111111', 1, 2, 1, NOW() - interval '15 minutes', NULL, 'IN_PROGRESS', NOW(), 'system'),
+  ('ex222222-2222-2222-2222-222222222222', 'm2222222-2222-2222-2222-222222222222', 1, 2, 1, NOW() - interval '8 minutes', NULL, 'IN_PROGRESS', NOW(), 'system'),
+  ('ex333333-3333-3333-3333-333333333333', 'm3333333-3333-3333-3333-333333333333', 0, 1, 0, NOW() - interval '4 minutes', NULL, 'IN_PROGRESS', NOW(), 'system'),
+  ('ex555555-5555-5555-5555-555555555555', 'm5555555-5555-5555-5555-555555555555', 1, 1, 1, NOW() - interval '100 minutes', NOW() - interval '45 minutes', 'COMPLETED', NOW(), 'system');
 
 -- ------------------------------------------------------------------------------
 -- 7. utm_flight
@@ -456,7 +462,7 @@ TRUNCATE TABLE flight_conformance, feasibility_evaluations, flight CASCADE;
 INSERT INTO flight (
   id, flight_number, drone_id, departure_hub_id, arrival_hub_id, pilot_id, 
   scheduled_departure, scheduled_arrival, actual_departure, actual_arrival, 
-  cruising_altitude_m, execution_id, planned_route, actual_route, 
+  cruising_altitude_m, execution_id, planned_route, actual_route, waypoints,
   authorization_status, conformance_status, status, notes, 
   feasibility_verdict, feasibility_override, created_on, created_by
 )
@@ -476,6 +482,7 @@ VALUES
    'ex111111-1111-1111-1111-111111111111', 
    '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7080,10.7750],[106.7150,10.7780],[106.7220,10.7800],[106.7350,10.7850]]}', 
    '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7080,10.7750],[106.7150,10.7780]]}', 
+   '[{"sequence":1,"name":"Bach Dang River Entry Gate","latitude":10.7750,"longitude":106.7080,"altitude":120.0,"actions":{"type":"fly_through","speed":15.0},"conditions":{"speed":15.0,"turnRadius":25.0}},{"sequence":2,"name":"Thu Thiem Inbound Transit Gate","latitude":10.7800,"longitude":106.7220,"altitude":120.0,"actions":{"type":"fly_through","speed":15.0},"conditions":{"speed":15.0,"turnRadius":25.0}}]',
    'APPROVED', 
    'CONFORMANT', 
    'ACTIVE', 
@@ -500,6 +507,7 @@ VALUES
    'ex222222-2222-2222-2222-222222222222', 
    '{"type":"LineString","coordinates":[[106.7350,10.7850],[106.7450,10.8050],[106.7600,10.8250],[106.7710,10.8490]]}', 
    '{"type":"LineString","coordinates":[[106.7350,10.7850],[106.7400,10.7950]]}', 
+   '[{"sequence":1,"name":"Saigon River Upper Transit Bend","latitude":10.8050,"longitude":106.7450,"altitude":100.0,"actions":{"type":"fly_through","speed":14.0},"conditions":{"speed":14.0,"turnRadius":20.0}},{"sequence":2,"name":"Rach Chiec Navigation Checkpoint","latitude":10.8250,"longitude":106.7600,"altitude":100.0,"actions":{"type":"fly_through","speed":14.0},"conditions":{"speed":14.0,"turnRadius":20.0}}]',
    'APPROVED', 
    'CONFORMANT', 
    'ACTIVE', 
@@ -524,6 +532,7 @@ VALUES
    'ex333333-3333-3333-3333-333333333333', 
    '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7050,10.7650],[106.7120,10.7550],[106.7210,10.7290]]}', 
    '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7060,10.7630],[106.7135,10.7540]]}', 
+   '[{"sequence":1,"name":"Kenh Te Canal Southern Transit Waypoint","latitude":10.7550,"longitude":106.7120,"altitude":110.0,"actions":{"type":"fly_through","speed":16.0},"conditions":{"speed":16.0,"turnRadius":30.0}}]',
    'APPROVED', 
    'NON_CONFORMING', 
    'ACTIVE', 
@@ -548,6 +557,7 @@ VALUES
    NULL, 
    '{"type":"LineString","coordinates":[[106.7710,10.8490],[106.7500,10.8150],[106.7200,10.7850],[106.7009,10.7769]]}', 
    '{"type":"LineString","coordinates":[]}', 
+   '[{"sequence":1,"name":"Binh Trieu Navigation Corridor","latitude":10.8150,"longitude":106.7500,"altitude":130.0,"actions":{"type":"fly_through","speed":15.0},"conditions":{"speed":15.0,"turnRadius":25.0}},{"sequence":2,"name":"Thanh Da Bend Entry Point","latitude":10.7850,"longitude":106.7200,"altitude":130.0,"actions":{"type":"fly_through","speed":15.0},"conditions":{"speed":15.0,"turnRadius":25.0}}]',
    'PENDING', 
    'CONFORMANT', 
    'SCHEDULED', 
@@ -572,6 +582,7 @@ VALUES
    'ex555555-5555-5555-5555-555555555555', 
    '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7150,10.7800],[106.7350,10.7850]]}', 
    '{"type":"LineString","coordinates":[[106.7009,10.7769],[106.7150,10.7800],[106.7350,10.7850]]}', 
+   '[{"sequence":1,"name":"Saigon River Mid-Channel Water Sampling Point","latitude":10.7780,"longitude":106.7150,"altitude":60.0,"actions":{"type":"hover","durationS":120,"hoverDurationS":120},"conditions":{"speed":10.0}}]',
    'APPROVED', 
    'CONFORMANT', 
    'COMPLETED', 

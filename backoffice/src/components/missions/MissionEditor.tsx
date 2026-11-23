@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { SplitMapLayout, ChamferButton, StatusBadge } from "@/components/ui";
+import { extractIntermediateWaypoints } from "@/components/waypoints";
 import {
     MissionMapEditor,
     MissionFormSidebar,
@@ -166,9 +167,14 @@ export function MissionEditor({
                         ? wp.conditions
                         : undefined,
             }));
-            setWaypoints(loadedWaypoints);
+            const intermediate = extractIntermediateWaypoints(
+                loadedWaypoints,
+                selectedDepartureHub,
+                selectedArrivalHub
+            );
+            setWaypoints(intermediate);
         }
-    }, [initialData, defaultAltitude, setWaypoints]);
+    }, [initialData, defaultAltitude, selectedDepartureHub, selectedArrivalHub, setWaypoints]);
 
     const handleSave = async () => {
         if (isReadOnly) return;
@@ -202,8 +208,36 @@ export function MissionEditor({
             }
         }
 
+        const fullWaypointsList: Waypoint[] = [
+            ...(selectedDepartureHub?.location
+                ? [
+                      {
+                          name: `Departure: ${selectedDepartureHub.name || selectedDepartureHub.code || "Hub"}`,
+                          latitude: selectedDepartureHub.location.latitude,
+                          longitude: selectedDepartureHub.location.longitude,
+                          altitude: selectedDepartureHub.altitudeMsl ?? 0,
+                          actions: { type: "takeoff" },
+                      },
+                  ]
+                : []),
+            ...waypoints.map((wp) => ({
+                ...wp,
+            })),
+            ...(selectedArrivalHub?.location
+                ? [
+                      {
+                          name: `Arrival: ${selectedArrivalHub.name || selectedArrivalHub.code || "Hub"}`,
+                          latitude: selectedArrivalHub.location.latitude,
+                          longitude: selectedArrivalHub.location.longitude,
+                          altitude: selectedArrivalHub.altitudeMsl ?? 0,
+                          actions: { type: "land" },
+                      },
+                  ]
+                : []),
+        ].map((wp, idx) => ({ ...wp, sequence: idx + 1 }));
+
         const waypointValidation = validateSchema(waypointsValidationSchema, {
-            waypoints: waypoints.map((w) => sanitizeWaypointForApi(w, defaultAltitude)),
+            waypoints: fullWaypointsList.map((w) => sanitizeWaypointForApi(w, defaultAltitude)),
         });
 
         if (
@@ -233,7 +267,7 @@ export function MissionEditor({
         try {
             await onSave({
                 payload: validation.data as CreateMissionPayload | UpdateMissionPayload,
-                waypoints,
+                waypoints: fullWaypointsList,
                 defaultAltitude,
                 droneId: droneId || undefined,
             });
@@ -327,6 +361,8 @@ export function MissionEditor({
                     onDroneIdChange={setDroneId}
                     drones={drones}
                     hubs={hubs}
+                    departureHub={selectedDepartureHub}
+                    arrivalHub={selectedArrivalHub}
                     waypoints={waypoints}
                     selectedWaypoint={selectedWaypoint}
                     onSelectWaypoint={handleSelectWaypoint}

@@ -32,6 +32,8 @@ public interface SimulationService {
 
     InjectScenarioResultVm injectScenario(String id, InjectScenarioVm injectVm);
 
+    SimulationSessionVm clearScenario(String id);
+
     SimulationSessionVm stopSession(String id);
 
     List<ScenarioCatalogVm> getScenarioCatalog();

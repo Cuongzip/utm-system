@@ -5,3 +5,9 @@ databaseChangeLog:
       file: db/changelog/changes/02-create-mission-execution-table.yaml
   - include:
       file: db/changelog/changes/03-add-code-to-mission.yaml
+  - include:
+      file: db/changelog/changes/04-enrich-mission-and-waypoint-realworld.yaml
+  - include:
+      file: db/changelog/changes/05-clean-mission-and-waypoint-fields.yaml
+  - include:
+      file: db/changelog/changes/06-drop-waypoint-hub-id.yaml

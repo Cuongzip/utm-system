@@ -59,12 +59,14 @@ public class FlightController {
             @RequestParam(required = false) String pilotId,
             @Parameter(description = "Filter by assigned drone ID")
             @RequestParam(required = false) String droneId,
+            @Parameter(description = "Filter by mission execution ID")
+            @RequestParam(required = false) String executionId,
             @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
             @RequestParam(defaultValue = "20") int limit,
             @Parameter(description = "Offset index (default: 0)")
             @RequestParam(defaultValue = "0") int offset
     ) {
-        return ResponseEntity.ok(flightService.getFlights(status, authorizationStatus, pilotId, droneId, limit, offset));
+        return ResponseEntity.ok(flightService.getFlights(status, authorizationStatus, pilotId, droneId, executionId, limit, offset));
     }
 
     @PostMapping

@@ -66,6 +66,36 @@ export function MissionDetailsTab({
             />
 
             <div className="form-group">
+                <label className="form-label" htmlFor="payloadWeight">
+                    Payload Weight (kg)
+                </label>
+                <div className="relative">
+                    <input
+                        id="payloadWeight"
+                        type="number"
+                        min="0"
+                        max="50"
+                        step="0.1"
+                        placeholder="0.0"
+                        value={formData.payloadWeightKg ?? 0}
+                        disabled={isReadOnly}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            onFormChange("payloadWeightKg", isNaN(val) ? 0 : val);
+                            onClearFieldError?.("payloadWeightKg");
+                        }}
+                        className="form-input pr-12"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">
+                        kg
+                    </span>
+                </div>
+                {fieldErrors.payloadWeightKg && (
+                    <span className="form-error-msg">{fieldErrors.payloadWeightKg}</span>
+                )}
+            </div>
+
+            <div className="form-group">
                 <label className="form-label" htmlFor="missionDesc">
                     Description
                 </label>
@@ -81,13 +111,15 @@ export function MissionDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Assigned Drone</label>
+                <label className="form-label">
+                    Assigned Drone (Optional - Fleet can auto-dispatch)
+                </label>
                 <CustomSelect
                     value={droneId}
                     disabled={isReadOnly}
                     onValueChange={onDroneIdChange}
                     options={droneOptions}
-                    placeholder="Select drone"
+                    placeholder="Select drone (or leave empty for auto-dispatch)"
                 />
             </div>
 

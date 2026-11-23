@@ -55,9 +55,10 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     @Transactional(readOnly = true)
-    public FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId, int limit,
+    public FlightListVm getFlights(String status, String authorizationStatus, String pilotId, String droneId,
+            String executionId, int limit,
             int offset) {
-        Specification<Flight> spec = buildSpecification(status, authorizationStatus, pilotId, droneId);
+        Specification<Flight> spec = buildSpecification(status, authorizationStatus, pilotId, droneId, executionId);
 
         if (limit <= 0) {
             List<Flight> all = flightRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
@@ -73,12 +74,12 @@ public class FlightServiceImpl implements FlightService {
     @Override
     @Transactional(readOnly = true)
     public List<FlightVm> getAllFlights(String status, String pilotId, String droneId) {
-        Specification<Flight> spec = buildSpecification(status, null, pilotId, droneId);
+        Specification<Flight> spec = buildSpecification(status, null, pilotId, droneId, null);
         return flightMapper.toVmList(flightRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn")));
     }
 
     private Specification<Flight> buildSpecification(String status, String authorizationStatus, String pilotId,
-            String droneId) {
+            String droneId, String executionId) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (status != null && !status.isBlank()) {
@@ -103,6 +104,9 @@ public class FlightServiceImpl implements FlightService {
             }
             if (droneId != null && !droneId.isBlank()) {
                 predicates.add(cb.equal(root.get("droneId"), droneId.trim()));
+            }
+            if (executionId != null && !executionId.isBlank()) {
+                predicates.add(cb.equal(root.get("executionId"), executionId.trim()));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
@@ -345,6 +349,16 @@ public class FlightServiceImpl implements FlightService {
         if (postVm.plannedRoute() != null && postVm.plannedRoute().coordinates() != null
                 && !postVm.plannedRoute().coordinates().isEmpty()) {
             return serializeGeoJson(postVm.plannedRoute());
+        }
+
+        if (postVm.waypoints() != null && postVm.waypoints().size() >= 2) {
+            List<List<Double>> wpCoords = postVm.waypoints().stream()
+                    .filter(wp -> wp.longitude() != null && wp.latitude() != null)
+                    .map(wp -> List.of(wp.longitude(), wp.latitude(), Objects.requireNonNullElse(wp.altitude(), 0.0)))
+                    .toList();
+            if (wpCoords.size() >= 2) {
+                return serializeGeoJson(GeoJsonLineStringVm.of(wpCoords));
+            }
         }
 
         List<List<Double>> fallbackCoords = new ArrayList<>();

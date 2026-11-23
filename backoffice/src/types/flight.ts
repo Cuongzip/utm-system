@@ -12,8 +12,24 @@ import {
     getHistoryResponse,
 } from "@/generated/flight";
 
-export type CreateFlightPayload = zod.infer<typeof createFlightBody>;
-export type UpdateFlightPayload = zod.infer<typeof updateFlightBody>;
+export interface FlightWaypoint {
+    id?: string;
+    tempId?: string;
+    sequence: number;
+    name?: string;
+    latitude: number;
+    longitude: number;
+    altitude: number;
+    actions?: Record<string, unknown>;
+    conditions?: Record<string, unknown>;
+}
+
+export type CreateFlightPayload = zod.infer<typeof createFlightBody> & {
+    waypoints?: FlightWaypoint[];
+};
+export type UpdateFlightPayload = zod.infer<typeof updateFlightBody> & {
+    waypoints?: FlightWaypoint[];
+};
 export type FlightQueryParams = zod.infer<typeof getFlightsQueryParams>;
 export type FlightStatus = NonNullable<zod.infer<typeof getFlightByIdResponse>["status"]>;
 export type FlightAuthorizationStatus = NonNullable<
@@ -58,6 +74,8 @@ export const DEFAULT_FLIGHT_STATUS: FlightStatus = FLIGHT_STATUS.PLANNED;
 export type FlightFormPayload = Omit<CreateFlightPayload, "plannedRoute"> & {
     cruisingAltitudeM?: number;
     feasibilityOverride?: string;
+    waypoints?: FlightWaypoint[];
+    plannedRoute?: Record<string, unknown> | null;
 };
 
 export function getInitialFlightFormPayload(initialData?: Flight | null): FlightFormPayload {
@@ -80,12 +98,14 @@ export function getInitialFlightFormPayload(initialData?: Flight | null): Flight
         cruisingAltitudeM: initialData?.cruisingAltitudeM ?? 120,
         notes: initialData?.notes || "",
         executionId: initialData?.executionId || "",
-        feasibilityOverride: (initialData as any)?.feasibilityOverride || "",
+        feasibilityOverride: initialData?.feasibilityOverride || "",
     };
 }
 
 export type Flight = NonNullable<zod.infer<typeof getFlightByIdResponse>> & {
     id: string;
+    waypoints?: FlightWaypoint[];
+    feasibilityOverride?: string;
 };
 
 export type FlightListResponse = Omit<

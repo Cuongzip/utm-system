@@ -17,6 +17,8 @@ export interface MissionFormSidebarProps {
     onDroneIdChange: (val: string) => void;
     drones: Drone[];
     hubs: Hub[];
+    departureHub?: Hub | null;
+    arrivalHub?: Hub | null;
     waypoints: Waypoint[];
     selectedWaypoint: Waypoint | null;
     onSelectWaypoint: (wp: Waypoint | null) => void;
@@ -39,6 +41,8 @@ export function MissionFormSidebar({
     onDroneIdChange,
     drones = [],
     hubs = [],
+    departureHub,
+    arrivalHub,
     waypoints = [],
     selectedWaypoint,
     onSelectWaypoint,
@@ -74,6 +78,8 @@ export function MissionFormSidebar({
         { value: "", label: "Same as departure" },
         ...hubOptions,
     ];
+
+    const totalPoints = waypoints.length + (departureHub ? 1 : 0) + (arrivalHub ? 1 : 0);
 
     return (
         <ChamferCard size="lg" className={cn("w-full h-full min-h-0", className)}>
@@ -114,7 +120,7 @@ export function MissionFormSidebar({
                             hasWaypointErrors && "text-red-600"
                         )}
                     >
-                        <span>Waypoints {waypoints.length > 0 && `(${waypoints.length})`}</span>
+                        <span>Waypoints {totalPoints > 0 && `(${totalPoints})`}</span>
                         {hasWaypointErrors && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}
@@ -163,6 +169,20 @@ export function MissionFormSidebar({
                             onUpdateWaypoint={onUpdateWaypoint}
                             onDeleteWaypoint={onDeleteWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
+                            departureHub={
+                                departureHub !== undefined
+                                    ? departureHub
+                                    : hubs.find((h) => h.id === formData.departureHubId) || null
+                            }
+                            arrivalHub={
+                                arrivalHub !== undefined
+                                    ? arrivalHub
+                                    : hubs.find(
+                                          (h) =>
+                                              h.id ===
+                                              (formData.arrivalHubId || formData.departureHubId)
+                                      ) || null
+                            }
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}

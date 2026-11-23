@@ -18,11 +18,13 @@ export interface FlightFormSidebarProps {
     mode: "create" | "edit";
     drones?: Drone[];
     hubs?: Hub[];
+    departureHub?: Hub | null;
+    arrivalHub?: Hub | null;
     waypoints?: FlightWaypoint[];
     selectedWaypoint: FlightWaypoint | null;
     onSelectWaypoint: (wp: FlightWaypoint | null) => void;
-    onUpdateWaypoint: (id: string, updates: Partial<FlightWaypoint>) => void;
-    onRemoveWaypoint: (id: string) => void;
+    onUpdateWaypoint: (wp: FlightWaypoint) => void;
+    onDeleteWaypoint: (id: string) => void;
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     totalDistanceM?: number;
     feasibilityVerdict?: FeasibilityVerdict;
@@ -41,11 +43,13 @@ export function FlightFormSidebar({
     mode,
     drones = [],
     hubs = [],
+    departureHub,
+    arrivalHub,
     waypoints = [],
     selectedWaypoint = null,
     onSelectWaypoint,
     onUpdateWaypoint,
-    onRemoveWaypoint,
+    onDeleteWaypoint,
     onMoveWaypointOrder,
     totalDistanceM = 0,
     feasibilityVerdict,
@@ -105,6 +109,8 @@ export function FlightFormSidebar({
         fieldErrors.scheduledDeparture || fieldErrors.scheduledArrival
     );
 
+    const totalPoints = waypoints.length + (departureHub ? 1 : 0) + (arrivalHub ? 1 : 0);
+
     return (
         <ChamferCard size="lg" className={cn("w-full h-full min-h-0", className)}>
             <div className="flex flex-col h-full min-h-0 bg-[var(--color-surface-panel)] select-none overflow-hidden">
@@ -137,7 +143,7 @@ export function FlightFormSidebar({
                             hasRouteErrors && "text-red-600"
                         )}
                     >
-                        <span>Waypoints {waypoints.length > 0 && `(${waypoints.length})`}</span>
+                        <span>Waypoints {totalPoints > 0 && `(${totalPoints})`}</span>
                         {hasRouteErrors && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
                     </button>
 
@@ -183,10 +189,25 @@ export function FlightFormSidebar({
                             selectedWaypoint={selectedWaypoint}
                             onSelectWaypoint={onSelectWaypoint}
                             onUpdateWaypoint={onUpdateWaypoint}
-                            onRemoveWaypoint={onRemoveWaypoint}
+                            onDeleteWaypoint={onDeleteWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
+                            departureHub={
+                                departureHub !== undefined
+                                    ? departureHub
+                                    : hubs.find((h) => h.id === formData.departureHubId) || null
+                            }
+                            arrivalHub={
+                                arrivalHub !== undefined
+                                    ? arrivalHub
+                                    : hubs.find(
+                                          (h) =>
+                                              h.id ===
+                                              (formData.arrivalHubId || formData.departureHubId)
+                                      ) || null
+                            }
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
+                            onClearFieldError={onClearFieldError}
                         />
                     )}
 

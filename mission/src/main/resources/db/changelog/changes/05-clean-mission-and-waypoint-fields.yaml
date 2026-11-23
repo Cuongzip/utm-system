@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 05-clean-mission-and-waypoint-fields
+      author: cuong
+      changes:
+        - dropColumn:
+            tableName: mission
+            columnName: mission_type
+        - dropColumn:
+            tableName: mission
+            columnName: priority
+        - dropColumn:
+            tableName: waypoint
+            columnName: waypoint_type

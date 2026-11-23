@@ -2,6 +2,8 @@ package com.utm.mission.viewmodel.mission;
 
 import com.utm.mission.model.enumeration.MissionScheduleType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.ZonedDateTime;
@@ -12,6 +14,8 @@ public record MissionPutVm(
 
                 @Schema(description = "Mission detailed description", example = "Giao bưu kiện nhẹ 1.5kg") String description,
 
+                @Schema(description = "Payload mass in kilograms to transport", example = "1.5") @PositiveOrZero(message = "Payload weight must be positive or zero") @DecimalMax(value = "50.0", message = "Payload weight cannot exceed 50kg") Double payloadWeightKg,
+
                 @Schema(description = "Departure Hub UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000") String departureHubId,
 
                 @Schema(description = "Arrival Hub UUID identifier", example = "660e8400-e29b-41d4-a716-446655440001") String arrivalHubId,
@@ -19,4 +23,9 @@ public record MissionPutVm(
                 @Schema(description = "Mission schedule type ('immediate' or 'scheduled')", example = "scheduled") MissionScheduleType scheduleType,
 
                 @Schema(description = "Scheduled flight departure timestamp", example = "2026-10-16T09:00:00Z") ZonedDateTime scheduledAt) {
+
+    public MissionPutVm(String name, String description, String departureHubId, String arrivalHubId,
+                        MissionScheduleType scheduleType, ZonedDateTime scheduledAt) {
+        this(name, description, 0.0, departureHubId, arrivalHubId, scheduleType, scheduledAt);
+    }
 }

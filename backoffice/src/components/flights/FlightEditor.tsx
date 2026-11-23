@@ -17,6 +17,7 @@ import { createFlightBody, updateFlightBody } from "@/generated/flight";
 import {
     getInitialFlightFormPayload,
     EDITABLE_FLIGHT_STATUSES,
+    DEFAULT_FLIGHT_STATUS,
     type Hub,
     type Drone,
     type Flight,
@@ -134,13 +135,14 @@ export function FlightEditor({
         addWaypoint,
         updateWaypoint,
         moveWaypoint,
-        removeWaypoint,
+        deleteWaypoint,
         moveWaypointOrder,
         undoWaypoint,
         clearWaypoints,
         computedGeoJsonLineString,
         totalDistanceM,
     } = useFlightRoute({
+        initialWaypoints: initialData?.waypoints,
         initialRoute: initialData?.plannedRoute as any,
         departureHub: selectedDepHub,
         arrivalHub: selectedArrHub,
@@ -169,7 +171,7 @@ export function FlightEditor({
             return;
         }
 
-        const alt = Number(formData.cruisingAltitudeM) || 120;
+        const alt = formData.cruisingAltitudeM ?? 120;
 
         let plannedRoute = computedGeoJsonLineString;
         if (!plannedRoute && selectedDepHub?.location && selectedArrHub?.location) {
@@ -231,9 +233,49 @@ export function FlightEditor({
             return;
         }
 
+        const validated = validation.data as Record<string, unknown>;
+        const flightWaypoints: FlightWaypoint[] = [
+            ...(selectedDepHub?.location
+                ? [
+                      {
+                          sequence: 1,
+                          name: `Departure: ${selectedDepHub.name || selectedDepHub.code || "Hub"}`,
+                          latitude: Number(selectedDepHub.location.latitude),
+                          longitude: Number(selectedDepHub.location.longitude),
+                          altitude: Number(selectedDepHub.altitudeMsl ?? 0),
+                          actions: { type: "takeoff" },
+                      },
+                  ]
+                : []),
+            ...waypoints.map((wp, idx) => ({
+                sequence: (selectedDepHub?.location ? 2 : 1) + idx,
+                name: wp.name?.trim() || `Waypoint ${(selectedDepHub?.location ? 2 : 1) + idx}`,
+                latitude: Number(wp.latitude),
+                longitude: Number(wp.longitude),
+                altitude: wp.altitude ?? alt,
+                actions: wp.actions || { type: "fly_through" },
+                conditions: wp.conditions || undefined,
+            })),
+            ...(selectedArrHub?.location
+                ? [
+                      {
+                          sequence: (selectedDepHub?.location ? 2 : 1) + waypoints.length,
+                          name: `Arrival: ${selectedArrHub.name || selectedArrHub.code || "Hub"}`,
+                          latitude: Number(selectedArrHub.location.latitude),
+                          longitude: Number(selectedArrHub.location.longitude),
+                          altitude: Number(selectedArrHub.altitudeMsl ?? 0),
+                          actions: { type: "land" },
+                      },
+                  ]
+                : []),
+        ];
+
         setSubmitting(true);
         try {
-            await onSave(validation.data as CreateFlightPayload | UpdateFlightPayload);
+            await onSave({
+                ...validated,
+                waypoints: flightWaypoints,
+            } as CreateFlightPayload | UpdateFlightPayload);
         } finally {
             setSubmitting(false);
         }
@@ -249,7 +291,7 @@ export function FlightEditor({
         [setSelectedWaypointId]
     );
 
-    const flightStatus: FlightStatus = initialData?.status || "planned";
+    const flightStatus: FlightStatus = initialData?.status ?? DEFAULT_FLIGHT_STATUS;
     const pageTitle =
         mode === "create"
             ? "REGISTER NEW FLIGHT"
@@ -316,11 +358,13 @@ export function FlightEditor({
                     mode={mode}
                     drones={drones}
                     hubs={hubs}
+                    departureHub={selectedDepHub}
+                    arrivalHub={selectedArrHub}
                     waypoints={waypoints}
                     selectedWaypoint={selectedWaypoint}
                     onSelectWaypoint={handleSelectWaypoint}
                     onUpdateWaypoint={updateWaypoint}
-                    onRemoveWaypoint={removeWaypoint}
+                    onDeleteWaypoint={deleteWaypoint}
                     onMoveWaypointOrder={moveWaypointOrder}
                     totalDistanceM={totalDistanceM}
                     feasibilityVerdict={routeFeasibility.verdict}

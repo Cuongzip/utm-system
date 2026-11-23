@@ -110,63 +110,11 @@ export function calculateMissionDistance(
 }
 
 export function generateHubToHubWaypoints(
-    departureHub: Hub,
-    arrivalHub: Hub,
-    defaultAltitude = 50
+    _departureHub?: Hub | null,
+    _arrivalHub?: Hub | null,
+    _defaultAltitude = 50
 ): Waypoint[] {
-    const depLat = departureHub.location?.latitude;
-    const depLng = departureHub.location?.longitude;
-    const arrLat = arrivalHub.location?.latitude;
-    const arrLng = arrivalHub.location?.longitude;
-
-    if (
-        depLat === undefined ||
-        depLng === undefined ||
-        arrLat === undefined ||
-        arrLng === undefined
-    ) {
-        return [];
-    }
-
-    const p1 = { lat: depLat, lng: depLng };
-    const p2 = { lat: arrLat, lng: arrLng };
-    const mid1 = interpolatePoint(p1, p2, 0.33);
-    const mid2 = interpolatePoint(p1, p2, 0.66);
-
-    return [
-        {
-            tempId: `hub-wp-1-${Date.now()}`,
-            sequence: 1,
-            name: `Dep: ${departureHub.name}`,
-            latitude: Number(depLat.toFixed(6)),
-            longitude: Number(depLng.toFixed(6)),
-            altitude: defaultAltitude,
-        },
-        {
-            tempId: `hub-wp-2-${Date.now()}`,
-            sequence: 2,
-            name: "Climb & Enroute",
-            latitude: mid1.lat,
-            longitude: mid1.lng,
-            altitude: defaultAltitude + 20,
-        },
-        {
-            tempId: `hub-wp-3-${Date.now()}`,
-            sequence: 3,
-            name: "Approach Fix",
-            latitude: mid2.lat,
-            longitude: mid2.lng,
-            altitude: defaultAltitude + 10,
-        },
-        {
-            tempId: `hub-wp-4-${Date.now()}`,
-            sequence: 4,
-            name: `Arr: ${arrivalHub.name}`,
-            latitude: Number(arrLat.toFixed(6)),
-            longitude: Number(arrLng.toFixed(6)),
-            altitude: defaultAltitude,
-        },
-    ];
+    return [];
 }
 
 export function determineActiveTabFromErrors(

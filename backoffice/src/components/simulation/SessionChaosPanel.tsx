@@ -72,13 +72,30 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
         meta: { defaultErrorMessage: "Failed to inject emergency scenario" },
     });
 
-    const handleInject = (scenario: ScenarioDefinition) => {
+    const clearMutation = useMutation({
+        mutationFn: () => simulationService.clearScenario(session.id),
+        onSuccess: () => {
+            toast.success("Emergency scenario cleared. Restored normal flight.");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationEvents(session.id) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(session.id) });
+            onScenarioInjected();
+        },
+        meta: { defaultErrorMessage: "Failed to clear emergency scenario" },
+    });
+
+    const handleAction = (scenario: ScenarioDefinition, isThisActive: boolean) => {
         if (!isRunning) {
-            toast.error("Simulation session must be RUNNING to inject emergency scenarios");
+            toast.error("Simulation session must be RUNNING to control emergency scenarios");
             return;
         }
-        injectMutation.mutate(scenario);
+        if (isThisActive) {
+            clearMutation.mutate();
+        } else {
+            injectMutation.mutate(scenario);
+        }
     };
+
+    const isActionPending = injectMutation.isPending || clearMutation.isPending;
 
     return (
         <div className="flex flex-col gap-3 w-full">
@@ -86,7 +103,42 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                 <h2 className="text-sm font-bold tracking-wider text-slate-800 uppercase font-mono">
                     EMERGENCY SCENARIO INJECTION
                 </h2>
+                {activeScenario && (
+                    <ChamferButton
+                        size="xs"
+                        variant="danger"
+                        disabled={!isRunning || isActionPending}
+                        onClick={() => clearMutation.mutate()}
+                    >
+                        {clearMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                        ) : (
+                            <TriangleAlert className="w-3 h-3 mr-1" />
+                        )}
+                        <span>Clear Scenario</span>
+                    </ChamferButton>
+                )}
             </div>
+
+            {activeScenario && (
+                <div className="flex items-center justify-between p-3 px-4 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-900">
+                    <div className="flex items-center gap-2">
+                        <TriangleAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span className="text-xs font-mono font-bold uppercase">
+                            ACTIVE SCENARIO:{" "}
+                            <span className="text-rose-600">
+                                {CHAOS_SCENARIOS.find(
+                                    (s) => s.type.toLowerCase() === activeScenario.toLowerCase()
+                                )?.name || activeScenario}
+                            </span>
+                        </span>
+                    </div>
+                    <span className="text-xs font-mono text-amber-700">
+                        Flight in emergency failsafe mode. Click &apos;Clear Scenario&apos; to
+                        restore cruise flight.
+                    </span>
+                </div>
+            )}
 
             <ChamferCard size="lg" className="w-full">
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -96,6 +148,7 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                             injectMutation.isPending && injectMutation.variables?.type === sc.type;
                         const isThisActive =
                             activeScenario?.toLowerCase() === sc.type.toLowerCase();
+                        const isThisClearing = clearMutation.isPending && isThisActive;
 
                         return (
                             <ChamferCard
@@ -142,12 +195,14 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                                     <ChamferButton
                                         size="xs"
                                         variant={isThisActive ? "danger" : "outline"}
-                                        disabled={!isRunning || injectMutation.isPending}
-                                        onClick={() => handleInject(sc)}
+                                        disabled={!isRunning || isActionPending}
+                                        onClick={() => handleAction(sc, isThisActive)}
                                         className="w-full"
                                     >
-                                        {isThisInjecting ? (
+                                        {isThisInjecting || isThisClearing ? (
                                             <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : isThisActive ? (
+                                            <span>Clear Scenario</span>
                                         ) : (
                                             <span>Inject</span>
                                         )}

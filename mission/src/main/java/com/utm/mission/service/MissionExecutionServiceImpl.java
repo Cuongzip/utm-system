@@ -1,9 +1,5 @@
 package com.utm.mission.service;
 
-import com.utm.mission.service.client.DroneClientService;
-
-import com.utm.mission.service.client.FlightClientService;
-
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -17,6 +13,10 @@ import com.utm.mission.model.enumeration.MissionStatus;
 import com.utm.mission.repository.MissionExecutionRepository;
 import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
+import com.utm.mission.service.client.DroneClientService;
+import com.utm.mission.service.client.FlightClientService;
+import com.utm.mission.service.fleet.FleetScoringService;
+import com.utm.mission.util.GeoUtils;
 import com.utm.mission.viewmodel.client.DroneBriefVm;
 import com.utm.mission.viewmodel.client.FlightBriefVm;
 import com.utm.mission.viewmodel.client.FlightCreateRequestVm;
@@ -24,12 +24,14 @@ import com.utm.mission.viewmodel.client.FlightWaypointPayloadVm;
 import com.utm.mission.viewmodel.execution.MissionExecutePostVm;
 import com.utm.mission.viewmodel.execution.MissionExecutionResultVm;
 import com.utm.mission.viewmodel.execution.MissionExecutionVm;
+import com.utm.mission.viewmodel.fleet.ScoredDroneCandidateVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -44,6 +46,13 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
         private final MissionExecutionMapper missionExecutionMapper;
         private final DroneClientService droneClientService;
         private final FlightClientService flightClientService;
+        private final FleetScoringService fleetScoringService;
+
+        private record FlightLeg(
+                        String departureHubId,
+                        String arrivalHubId,
+                        List<Waypoint> waypoints) {
+        }
 
         @Override
         @Transactional
@@ -63,64 +72,116 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                                         "Mission must have at least 2 waypoints to execute");
                 }
 
-                String droneId = postVm.droneId().trim();
-                DroneBriefVm drone = droneClientService.getDroneById(droneId)
-                                .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId));
-                if (drone.status() != null && !"available".equalsIgnoreCase(drone.status())
-                                && !"idle".equalsIgnoreCase(drone.status())) {
-                        throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber", drone.registrationNumber() != null ? drone.registrationNumber() : droneId);
+                String droneId;
+                if (Boolean.TRUE.equals(postVm.autoAssign()) || postVm.droneId() == null
+                                || postVm.droneId().isBlank()) {
+                        ScoredDroneCandidateVm bestCandidate = fleetScoringService.getBestCandidate(missionId);
+                        droneId = bestCandidate.droneId();
+                        log.info("Auto-assigned candidate drone {} ({}) with score {} for mission {}",
+                                        droneId, bestCandidate.registrationNumber(), bestCandidate.finalScore(),
+                                        missionId);
+                } else {
+                        droneId = postVm.droneId().trim();
+                        DroneBriefVm drone = droneClientService.getDroneById(droneId)
+                                        .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id",
+                                                        droneId));
+                        if (drone.status() != null && !"available".equalsIgnoreCase(drone.status())
+                                        && !"idle".equalsIgnoreCase(drone.status())) {
+                                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber",
+                                                drone.registrationNumber() != null ? drone.registrationNumber()
+                                                                : droneId);
+                        }
+                        if (drone.maxPayload() != null && mission.getPayloadWeightKg() != null
+                                        && drone.maxPayload() < mission.getPayloadWeightKg()) {
+                                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber",
+                                                String.format("Drone max payload (%.1f kg) is less than mission required payload (%.1f kg)",
+                                                                drone.maxPayload(), mission.getPayloadWeightKg()));
+                        }
                 }
 
                 MissionExecution execution = missionExecutionMapper.toEntity(postVm, missionId, waypoints.size());
                 MissionExecution savedExecution = missionExecutionRepository.saveAndFlush(execution);
 
-                List<FlightWaypointPayloadVm> flightWaypoints = waypoints.stream()
-                                .map(wp -> new FlightWaypointPayloadVm(
-                                                wp.getLatitude(),
-                                                wp.getLongitude(),
-                                                wp.getAltitude() != null ? wp.getAltitude() : 50.0,
-                                                15.0))
-                                .toList();
+                List<FlightLeg> legs = decomposeIntoLegs(mission, waypoints);
+                List<FlightBriefVm> createdFlights = new ArrayList<>();
 
-                Double cruisingAlt = waypoints.stream()
-                                .map(Waypoint::getAltitude)
-                                .filter(Objects::nonNull)
-                                .mapToDouble(Double::doubleValue)
-                                .max()
-                                .orElse(50.0);
+                ZonedDateTime currentDepartureTime = mission.getScheduledAt() != null
+                                && mission.getScheduledAt().isAfter(ZonedDateTime.now())
+                                                ? mission.getScheduledAt()
+                                                : ZonedDateTime.now();
 
-                String flightNumber = BusinessCodeGenerator.generate(CodePatternRule.FLIGHT_NUMBER);
+                for (int legIndex = 0; legIndex < legs.size(); legIndex++) {
+                        FlightLeg leg = legs.get(legIndex);
+                        double legDistanceMeters = GeoUtils.calculateTotalDistance(leg.waypoints());
+                        long flightDurationSeconds = Math.max(600L,
+                                        (long) (legDistanceMeters / 15.0) + (leg.waypoints().size() * 10L));
+                        ZonedDateTime scheduledArrival = currentDepartureTime.plusSeconds(flightDurationSeconds);
 
-                FlightCreateRequestVm flightReq = new FlightCreateRequestVm(
-                                flightNumber,
-                                droneId,
-                                mission.getDepartureHubId(),
-                                mission.getArrivalHubId(),
-                                postVm.pilotId().trim(),
-                                ZonedDateTime.now(),
-                                ZonedDateTime.now().plusHours(1),
-                                cruisingAlt,
-                                "Generated from mission: " + mission.getName(),
-                                savedExecution.getId(),
-                                flightWaypoints);
+                        Double cruisingAlt = leg.waypoints().stream()
+                                        .map(Waypoint::getAltitude)
+                                        .filter(Objects::nonNull)
+                                        .mapToDouble(Double::doubleValue)
+                                        .max()
+                                        .orElse(50.0);
 
-                FlightBriefVm flightVm = flightClientService.createFlight(flightReq)
-                                .orElseGet(() -> new FlightBriefVm(
-                                                null,
-                                                flightNumber,
-                                                droneId,
-                                                postVm.pilotId().trim(),
-                                                "planned",
-                                                "pending"));
+                        List<FlightWaypointPayloadVm> flightWaypoints = leg.waypoints().stream()
+                                        .map(wp -> new FlightWaypointPayloadVm(
+                                                        wp.getSequence(),
+                                                        wp.getName(),
+                                                        wp.getLatitude(),
+                                                        wp.getLongitude(),
+                                                        wp.getAltitude() != null ? wp.getAltitude() : 50.0,
+                                                        wp.getActions(),
+                                                        wp.getConditions()))
+                                        .toList();
+
+                        String flightNumber = BusinessCodeGenerator.generate(CodePatternRule.FLIGHT_NUMBER);
+                        String notes = String.format("Generated from mission: %s (Leg %d/%d)", mission.getName(),
+                                        legIndex + 1, legs.size());
+
+                        FlightCreateRequestVm flightReq = new FlightCreateRequestVm(
+                                        flightNumber,
+                                        droneId,
+                                        leg.departureHubId(),
+                                        leg.arrivalHubId(),
+                                        postVm.pilotId().trim(),
+                                        currentDepartureTime,
+                                        scheduledArrival,
+                                        cruisingAlt,
+                                        notes,
+                                        savedExecution.getId(),
+                                        flightWaypoints);
+
+                        FlightBriefVm flightVm = flightClientService.createFlight(flightReq)
+                                        .orElseGet(() -> new FlightBriefVm(
+                                                        null,
+                                                        flightNumber,
+                                                        droneId,
+                                                        postVm.pilotId().trim(),
+                                                        "planned",
+                                                        "pending"));
+
+                        createdFlights.add(flightVm);
+                        log.info("Created flight {} for mission {} (Leg {}/{})", flightNumber, missionId, legIndex + 1,
+                                        legs.size());
+
+                        // Turnaround / battery swap buffer between legs: 30 minutes
+                        currentDepartureTime = scheduledArrival.plusMinutes(30);
+                }
 
                 mission.setStatus(MissionStatus.EXECUTING);
                 missionRepository.saveAndFlush(mission);
 
-                log.info("Mission ID: {} executed successfully. Execution ID: {}, Flight Number: {}",
-                                missionId, savedExecution.getId(), flightNumber);
+                log.info("Mission ID: {} executed successfully with {} flight leg(s). Execution ID: {}",
+                                missionId, createdFlights.size(), savedExecution.getId());
 
                 MissionExecutionVm executionVm = missionExecutionMapper.toVm(savedExecution);
-                return new MissionExecutionResultVm(executionVm, flightVm);
+                FlightBriefVm primaryFlight = createdFlights.isEmpty() ? null : createdFlights.get(0);
+                return new MissionExecutionResultVm(executionVm, primaryFlight, createdFlights);
+        }
+
+        private List<FlightLeg> decomposeIntoLegs(Mission mission, List<Waypoint> waypoints) {
+                return List.of(new FlightLeg(mission.getDepartureHubId(), mission.getArrivalHubId(), waypoints));
         }
 
         @Override

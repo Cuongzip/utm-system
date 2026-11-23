@@ -81,7 +81,25 @@ public record FlightVm(
         ZonedDateTime lastModifiedOn,
 
         @Schema(description = "Username who last updated this flight plan", example = "admin")
-        String lastModifiedBy
+        String lastModifiedBy,
+
+        @Schema(description = "Ordered list of waypoints along the flight route with actions and conditions")
+        java.util.List<FlightWaypointVm> waypoints
 ) {
+    public FlightVm(
+            String id, String flightNumber, String droneId, String departureHubId, String arrivalHubId,
+            String pilotId, ZonedDateTime scheduledDeparture, ZonedDateTime scheduledArrival,
+            ZonedDateTime actualDeparture, ZonedDateTime actualArrival, Double cruisingAltitudeM,
+            String executionId, GeoJsonLineStringVm plannedRoute, GeoJsonLineStringVm actualRoute,
+            FlightAuthorizationStatus authorizationStatus, ConformanceStatus conformanceStatus,
+            FlightStatus status, Verdict feasibilityVerdict, String feasibilityOverride,
+            String notes, ZonedDateTime createdOn, String createdBy, ZonedDateTime lastModifiedOn,
+            String lastModifiedBy) {
+        this(id, flightNumber, droneId, departureHubId, arrivalHubId, pilotId, scheduledDeparture,
+                scheduledArrival, actualDeparture, actualArrival, cruisingAltitudeM, executionId,
+                plannedRoute, actualRoute, authorizationStatus, conformanceStatus, status,
+                feasibilityVerdict, feasibilityOverride, notes, createdOn, createdBy,
+                lastModifiedOn, lastModifiedBy, null);
+    }
 }
 

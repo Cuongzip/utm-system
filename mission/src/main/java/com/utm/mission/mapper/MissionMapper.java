@@ -31,6 +31,7 @@ public interface MissionMapper {
     @Mapping(target = "name", source = "name", qualifiedByName = "trimString")
     @Mapping(target = "description", source = "description", qualifiedByName = "trimString")
     @Mapping(target = "scheduleType", source = "scheduleType", defaultExpression = "java(com.utm.mission.model.enumeration.MissionScheduleType.IMMEDIATE)")
+    @Mapping(target = "payloadWeightKg", source = "payloadWeightKg", defaultExpression = "java(0.0)")
     Mission toEntity(MissionPostVm postVm);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -69,6 +70,7 @@ public interface MissionMapper {
     @Mapping(target = "code", source = "entity.code")
     @Mapping(target = "name", source = "entity.name")
     @Mapping(target = "description", source = "entity.description")
+    @Mapping(target = "payloadWeightKg", source = "entity.payloadWeightKg")
     @Mapping(target = "departureHubId", source = "entity.departureHubId")
     @Mapping(target = "arrivalHubId", source = "entity.arrivalHubId")
     @Mapping(target = "scheduleType", source = "entity.scheduleType")

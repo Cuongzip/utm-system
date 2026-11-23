@@ -46,6 +46,8 @@ public abstract class BaseKafkaListenerConfig<K, V> {
     }
 
     private Map<String, Object> buildConsumerProperties() {
-        return kafkaProperties.buildConsumerProperties();
+        Map<String, Object> props = new java.util.HashMap<>(kafkaProperties.buildConsumerProperties());
+        props.keySet().removeIf(key -> key.startsWith("spring.json.") || key.startsWith("spring.deserializer."));
+        return props;
     }
 }

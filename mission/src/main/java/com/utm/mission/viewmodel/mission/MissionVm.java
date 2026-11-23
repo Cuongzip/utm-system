@@ -20,6 +20,8 @@ public record MissionVm(
 
                 @Schema(description = "Mission detailed description", example = "Giao bưu kiện nhẹ 1.2kg") String description,
 
+                @Schema(description = "Payload mass in kilograms to transport", example = "1.5") Double payloadWeightKg,
+
                 @Schema(description = "Departure Hub UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000") String departureHubId,
 
                 @Schema(description = "Arrival Hub UUID identifier", example = "660e8400-e29b-41d4-a716-446655440001") String arrivalHubId,
@@ -47,4 +49,15 @@ public record MissionVm(
                 @Schema(description = "Last modified timestamp") ZonedDateTime lastModifiedOn,
 
                 @Schema(description = "Last modified by user ID") String lastModifiedBy) {
+
+    public MissionVm(String id, String code, String name, String description,
+                     String departureHubId, String arrivalHubId,
+                     MissionScheduleType scheduleType, ZonedDateTime scheduledAt, MissionStatus status,
+                     Integer waypointCount, Double estimatedDistanceMeters,
+                     List<WaypointVm> waypoints, HubBriefVm departureHub, HubBriefVm arrivalHub,
+                     ZonedDateTime createdOn, String createdBy, ZonedDateTime lastModifiedOn, String lastModifiedBy) {
+        this(id, code, name, description, 0.0,
+             departureHubId, arrivalHubId, scheduleType, scheduledAt, status, waypointCount, estimatedDistanceMeters,
+             waypoints, departureHub, arrivalHub, createdOn, createdBy, lastModifiedOn, lastModifiedBy);
+    }
 }

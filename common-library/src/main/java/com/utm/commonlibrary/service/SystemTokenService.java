@@ -3,8 +3,8 @@ package com.utm.commonlibrary.service;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,6 @@ import java.time.Instant;
 
 @Service
 @Slf4j
-@ConditionalOnMissingBean(SystemTokenService.class)
 public class SystemTokenService {
 
     private final RestClient authRestClient;
@@ -30,13 +29,14 @@ public class SystemTokenService {
     private String cachedToken;
     private Instant expiryTime = Instant.MIN;
 
+    @Autowired
     public SystemTokenService(
             @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:http://identity/realms/UTM}") String issuerUri,
             @Value("${utm.system-auth.token-url:}") String customTokenUrl,
             @Value("${utm.system-auth.client-id:swagger-ui}") String clientId,
             @Value("${utm.system-auth.client-secret:}") String clientSecret,
             @Value("${utm.system-auth.username:admin}") String username,
-            @Value("${utm.system-auth.password:admin}") String password
+            @Value("${utm.system-auth.password:${UTM_SYSTEM_AUTH_PASSWORD:Admin123@}}") String password
     ) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));

@@ -5,6 +5,7 @@ import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.model.enumeration.Verdict;
+import com.utm.flight.viewmodel.flight.FlightWaypointVm;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,8 +19,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "flight")
@@ -74,6 +79,11 @@ public class Flight extends AbstractAuditEntity {
     @Column(name = "actual_route", columnDefinition = "TEXT", nullable = false)
     @Builder.Default
     private String actualRoute = "{\"type\":\"LineString\",\"coordinates\":[]}";
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "waypoints", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<FlightWaypointVm> waypoints = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "authorization_status", length = 50, nullable = false)

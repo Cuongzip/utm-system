@@ -1,19 +1,13 @@
 "use client";
 
 import { useMemo, useCallback, useEffect, useRef } from "react";
-import type { Hub } from "@/types";
+import { toast } from "sonner";
+import type { Hub, FlightWaypoint } from "@/types";
 import { useWaypointManager } from "@/hooks/useWaypointManager";
+import { extractIntermediateWaypoints } from "@/components/waypoints";
 import { calculateFlightDistance, convertWaypointsToLineString } from "./flightUtils";
 
-export interface FlightWaypoint {
-    id: string;
-    tempId?: string;
-    sequence: number;
-    name?: string;
-    latitude: number;
-    longitude: number;
-    altitude: number;
-}
+export type { FlightWaypoint };
 
 export interface FlightLineStringGeometry {
     type: string;
@@ -21,6 +15,7 @@ export interface FlightLineStringGeometry {
 }
 
 export interface UseFlightRouteOptions {
+    initialWaypoints?: FlightWaypoint[];
     initialRoute?: FlightLineStringGeometry | string | null;
     departureHub?: Hub | null;
     arrivalHub?: Hub | null;
@@ -85,6 +80,7 @@ function parseInitialRouteWaypoints(
                 latitude: pt[1],
                 longitude: pt[0],
                 altitude: pt[2] ?? cruisingAltitude,
+                actions: { type: "fly_through" },
             });
         }
     }
@@ -93,6 +89,7 @@ function parseInitialRouteWaypoints(
 }
 
 export function useFlightRoute({
+    initialWaypoints,
     initialRoute,
     departureHub,
     arrivalHub,
@@ -100,6 +97,28 @@ export function useFlightRoute({
     isReadOnly = false,
     onClearErrors,
 }: UseFlightRouteOptions) {
+    const parsedInitial = useMemo(() => {
+        let list: FlightWaypoint[] = [];
+        if (initialWaypoints && Array.isArray(initialWaypoints) && initialWaypoints.length > 0) {
+            list = initialWaypoints.map((wp, idx) => ({
+                ...wp,
+                id: wp.id || `wp-init-${idx}`,
+                tempId: wp.tempId || wp.id || `wp-init-${idx}`,
+                sequence: wp.sequence ?? idx + 1,
+                altitude: wp.altitude ?? cruisingAltitude,
+                actions: wp.actions || { type: "fly_through" },
+            }));
+            return extractIntermediateWaypoints(list, departureHub, arrivalHub);
+        }
+        const parsed = parseInitialRouteWaypoints(
+            initialRoute,
+            departureHub,
+            arrivalHub,
+            cruisingAltitude
+        );
+        return extractIntermediateWaypoints(parsed, departureHub, arrivalHub);
+    }, [initialWaypoints, initialRoute, departureHub, arrivalHub, cruisingAltitude]);
+
     const {
         waypoints,
         setWaypoints,
@@ -112,12 +131,7 @@ export function useFlightRoute({
         clearWaypoints,
         matchesId,
     } = useWaypointManager<FlightWaypoint>({
-        initialWaypoints: parseInitialRouteWaypoints(
-            initialRoute,
-            departureHub,
-            arrivalHub,
-            cruisingAltitude
-        ),
+        initialWaypoints: parsedInitial,
         isReadOnly,
         onClearErrors,
     });
@@ -126,6 +140,19 @@ export function useFlightRoute({
 
     useEffect(() => {
         if (initializedRouteRef.current) return;
+        if (initialWaypoints && initialWaypoints.length > 0) {
+            initializedRouteRef.current = true;
+            const list = initialWaypoints.map((wp, idx) => ({
+                ...wp,
+                id: wp.id || `wp-init-${idx}`,
+                tempId: wp.tempId || wp.id || `wp-init-${idx}`,
+                sequence: wp.sequence ?? idx + 1,
+                altitude: wp.altitude ?? cruisingAltitude,
+                actions: wp.actions || { type: "fly_through" },
+            }));
+            setWaypoints(extractIntermediateWaypoints(list, departureHub, arrivalHub));
+            return;
+        }
         const parsed = parseInitialRouteWaypoints(
             initialRoute,
             departureHub,
@@ -134,14 +161,14 @@ export function useFlightRoute({
         );
         if (parsed.length > 0) {
             initializedRouteRef.current = true;
-            setWaypoints(parsed);
+            setWaypoints(extractIntermediateWaypoints(parsed, departureHub, arrivalHub));
         }
-    }, [initialRoute, departureHub, arrivalHub, cruisingAltitude, setWaypoints]);
+    }, [initialWaypoints, initialRoute, departureHub, arrivalHub, cruisingAltitude, setWaypoints]);
 
     const addWaypoint = useCallback(
         (lat: number, lng: number, altitude?: number) => {
             if (isReadOnly) return;
-            const seq = waypoints.length + 1;
+            const seq = (departureHub ? 2 : 1) + waypoints.length;
             const idStr = `wp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
             const newWp: FlightWaypoint = {
                 id: idStr,
@@ -151,6 +178,7 @@ export function useFlightRoute({
                 latitude: lat,
                 longitude: lng,
                 altitude: altitude ?? cruisingAltitude,
+                actions: { type: "fly_through" },
             };
             setWaypoints((prev) => [...prev, newWp]);
             setSelectedWaypointId(idStr);
@@ -158,6 +186,7 @@ export function useFlightRoute({
         },
         [
             isReadOnly,
+            departureHub,
             waypoints.length,
             cruisingAltitude,
             onClearErrors,
@@ -167,14 +196,27 @@ export function useFlightRoute({
     );
 
     const updateWaypoint = useCallback(
-        (id: string, updates: Partial<FlightWaypoint>) => {
+        (wpOrId: string | FlightWaypoint, updates?: Partial<FlightWaypoint>) => {
             if (isReadOnly) return;
-            setWaypoints((prev) =>
-                prev.map((wp) => (matchesId(wp, id) ? { ...wp, ...updates } : wp))
-            );
+            if (typeof wpOrId === "object") {
+                const updated = wpOrId;
+                setWaypoints((prev) =>
+                    prev.map((w) => {
+                        const match =
+                            (w.id && w.id === updated.id) ||
+                            (w.tempId && w.tempId === updated.tempId);
+                        return match ? updated : w;
+                    })
+                );
+            } else {
+                const id = wpOrId;
+                setWaypoints((prev) =>
+                    prev.map((wp) => (matchesId(wp, id) ? { ...wp, ...updates } : wp))
+                );
+            }
             onClearErrors?.();
         },
-        [isReadOnly, onClearErrors, matchesId, setWaypoints]
+        [isReadOnly, matchesId, onClearErrors, setWaypoints]
     );
 
     const moveWaypoint = useCallback(
@@ -207,6 +249,7 @@ export function useFlightRoute({
         updateWaypoint,
         moveWaypoint,
         removeWaypoint,
+        deleteWaypoint: removeWaypoint,
         moveWaypointOrder,
         undoWaypoint,
         clearWaypoints,

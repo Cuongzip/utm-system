@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-enrich-mission-and-waypoint-realworld
+      author: cuong
+      changes:
+        - addColumn:
+            tableName: mission
+            columns:
+              - column:
+                  name: mission_type
+                  type: varchar(50)
+                  defaultValue: "DELIVERY"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_weight_kg
+                  type: numeric(6, 2)
+                  defaultValueNumeric: 0.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: varchar(30)
+                  defaultValue: "ROUTINE"
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: waypoint
+            columns:
+              - column:
+                  name: waypoint_type
+                  type: varchar(50)
+                  defaultValue: "TRANSIT"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hub_id
+                  type: varchar(36)
+        - createIndex:
+            tableName: mission
+            indexName: idx_mission_type
+            columns:
+              - column:
+                  name: mission_type
+        - createIndex:
+            tableName: waypoint
+            indexName: idx_waypoint_hub_id
+            columns:
+              - column:
+                  name: hub_id

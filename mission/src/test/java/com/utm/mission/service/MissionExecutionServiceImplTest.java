@@ -13,6 +13,7 @@ import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
 import com.utm.mission.service.client.DroneClientService;
 import com.utm.mission.service.client.FlightClientService;
+import com.utm.mission.service.fleet.FleetScoringService;
 import com.utm.mission.viewmodel.client.DroneBriefVm;
 import com.utm.mission.viewmodel.client.FlightBriefVm;
 import com.utm.mission.viewmodel.client.FlightCreateRequestVm;
@@ -43,231 +44,294 @@ import static org.mockito.Mockito.when;
 @DisplayName("Unit Tests: MissionExecutionServiceImpl (Specification-Driven)")
 class MissionExecutionServiceImplTest {
 
-    @Mock
-    private MissionRepository missionRepository;
+        @Mock
+        private MissionRepository missionRepository;
 
-    @Mock
-    private WaypointRepository waypointRepository;
+        @Mock
+        private WaypointRepository waypointRepository;
 
-    @Mock
-    private MissionExecutionRepository missionExecutionRepository;
+        @Mock
+        private MissionExecutionRepository missionExecutionRepository;
 
-    @Mock
-    private MissionExecutionMapper missionExecutionMapper;
+        @Mock
+        private MissionExecutionMapper missionExecutionMapper;
 
-    @Mock
-    private DroneClientService droneClientService;
+        @Mock
+        private DroneClientService droneClientService;
 
-    @Mock
-    private FlightClientService flightClientService;
+        @Mock
+        private FlightClientService flightClientService;
 
-    @InjectMocks
-    private MissionExecutionServiceImpl missionExecutionService;
+        @Mock
+        private FleetScoringService fleetScoringService;
 
-    private static final String MISSION_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-    private static final String DRONE_ID = "drone-123-uuid";
-    private static final String PILOT_ID = "PILOT-VN-007";
-    private static final String EXECUTION_ID = "exec-456-uuid";
+        @InjectMocks
+        private MissionExecutionServiceImpl missionExecutionService;
 
-    private Mission draftMission;
-    private List<Waypoint> waypoints;
-    private MissionExecution executionEntity;
-    private MissionExecutionVm executionVm;
+        private static final String MISSION_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+        private static final String DRONE_ID = "drone-123-uuid";
+        private static final String PILOT_ID = "PILOT-VN-007";
+        private static final String EXECUTION_ID = "exec-456-uuid";
 
-    @BeforeEach
-    void setUp() {
-        draftMission = Mission.builder()
-                .id(MISSION_ID)
-                .name("Supply Mission")
-                .departureHubId("dep-hub")
-                .arrivalHubId("arr-hub")
-                .status(MissionStatus.DRAFT)
-                .waypoints(new ArrayList<>())
-                .build();
+        private Mission draftMission;
+        private List<Waypoint> waypoints;
+        private MissionExecution executionEntity;
+        private MissionExecutionVm executionVm;
 
-        Waypoint w1 = Waypoint.builder()
-                .id("wp-1")
-                .sequence(1)
-                .latitude(10.7769)
-                .longitude(106.7009)
-                .altitude(50.0)
-                .build();
+        @BeforeEach
+        void setUp() {
+                draftMission = Mission.builder()
+                                .id(MISSION_ID)
+                                .name("Supply Mission")
+                                .departureHubId("dep-hub")
+                                .arrivalHubId("arr-hub")
+                                .status(MissionStatus.DRAFT)
+                                .waypoints(new ArrayList<>())
+                                .build();
 
-        Waypoint w2 = Waypoint.builder()
-                .id("wp-2")
-                .sequence(2)
-                .latitude(10.7554)
-                .longitude(106.6598)
-                .altitude(80.0)
-                .build();
+                Waypoint w1 = Waypoint.builder()
+                                .id("wp-1")
+                                .sequence(1)
+                                .latitude(10.7769)
+                                .longitude(106.7009)
+                                .altitude(50.0)
+                                .build();
 
-        waypoints = List.of(w1, w2);
+                Waypoint w2 = Waypoint.builder()
+                                .id("wp-2")
+                                .sequence(2)
+                                .latitude(10.7554)
+                                .longitude(106.6598)
+                                .altitude(80.0)
+                                .build();
 
-        executionEntity = MissionExecution.builder()
-                .id(EXECUTION_ID)
-                .missionId(MISSION_ID)
-                .currentWaypointIndex(0)
-                .totalWaypoints(2)
-                .completedWaypoints(0)
-                .startedAt(ZonedDateTime.now())
-                .status(ExecutionStatus.IN_PROGRESS)
-                .build();
+                waypoints = List.of(w1, w2);
 
-        executionVm = new MissionExecutionVm(
-                EXECUTION_ID,
-                MISSION_ID,
-                0,
-                2,
-                0,
-                executionEntity.getStartedAt(),
-                null,
-                ExecutionStatus.IN_PROGRESS,
-                executionEntity.getStartedAt(),
-                "pilot-user"
-        );
-    }
+                executionEntity = MissionExecution.builder()
+                                .id(EXECUTION_ID)
+                                .missionId(MISSION_ID)
+                                .currentWaypointIndex(0)
+                                .totalWaypoints(2)
+                                .completedWaypoints(0)
+                                .startedAt(ZonedDateTime.now())
+                                .status(ExecutionStatus.IN_PROGRESS)
+                                .build();
 
-    @Test
-    @DisplayName("executeMission - when valid with available drone starts execution, creates flight and sets executing")
-    void executeMission_whenValidWithAvailableDrone_shouldStartExecutionAndCreateFlight() {
-        MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
-        DroneBriefVm availableDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "available", "hub-1");
-        FlightBriefVm flightVm = new FlightBriefVm("fl-uuid", "FL-1234567890", DRONE_ID, PILOT_ID, "planned", "pending");
+                executionVm = new MissionExecutionVm(
+                                EXECUTION_ID,
+                                MISSION_ID,
+                                0,
+                                2,
+                                0,
+                                executionEntity.getStartedAt(),
+                                null,
+                                ExecutionStatus.IN_PROGRESS,
+                                executionEntity.getStartedAt(),
+                                "pilot-user");
+        }
 
-        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
-        when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
-        when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(availableDrone));
-        when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
-        when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
-        when(flightClientService.createFlight(any(FlightCreateRequestVm.class))).thenReturn(Optional.of(flightVm));
-        when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
+        @Test
+        @DisplayName("executeMission - when valid with available drone starts execution, creates flight and sets executing")
+        void executeMission_whenValidWithAvailableDrone_shouldStartExecutionAndCreateFlight() {
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+                DroneBriefVm availableDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "available", "hub-1");
+                FlightBriefVm flightVm = new FlightBriefVm("fl-uuid", "FL-1234567890", DRONE_ID, PILOT_ID, "planned",
+                                "pending");
 
-        MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
+                when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(availableDrone));
+                when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
+                when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
+                when(flightClientService.createFlight(any(FlightCreateRequestVm.class)))
+                                .thenReturn(Optional.of(flightVm));
+                when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
 
-        assertThat(result).isNotNull();
-        assertThat(result.execution().id()).isEqualTo(EXECUTION_ID);
-        assertThat(result.execution().totalWaypoints()).isEqualTo(2);
-        assertThat(result.flight().flightNumber()).isEqualTo("FL-1234567890");
-        assertThat(result.flight().droneId()).isEqualTo(DRONE_ID);
+                MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
 
-        assertThat(draftMission.getStatus()).isEqualTo(MissionStatus.EXECUTING);
-        verify(missionRepository).saveAndFlush(draftMission);
-    }
+                assertThat(result).isNotNull();
+                assertThat(result.execution().id()).isEqualTo(EXECUTION_ID);
+                assertThat(result.execution().totalWaypoints()).isEqualTo(2);
+                assertThat(result.flight().flightNumber()).isEqualTo("FL-1234567890");
+                assertThat(result.flight().droneId()).isEqualTo(DRONE_ID);
 
-    @Test
-    @DisplayName("executeMission - when drone is idle proceeds successfully")
-    void executeMission_whenDroneIsIdle_shouldProceedSuccessfully() {
-        MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
-        DroneBriefVm idleDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "idle", "hub-1");
+                assertThat(draftMission.getStatus()).isEqualTo(MissionStatus.EXECUTING);
+                verify(missionRepository).saveAndFlush(draftMission);
+        }
 
-        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
-        when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
-        when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(idleDrone));
-        when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
-        when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
-        when(flightClientService.createFlight(any(FlightCreateRequestVm.class))).thenReturn(Optional.empty());
-        when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
+        @Test
+        @DisplayName("executeMission - when drone is idle proceeds successfully")
+        void executeMission_whenDroneIsIdle_shouldProceedSuccessfully() {
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+                DroneBriefVm idleDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "idle", "hub-1");
 
-        MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
+                when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(idleDrone));
+                when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
+                when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
+                when(flightClientService.createFlight(any(FlightCreateRequestVm.class))).thenReturn(Optional.empty());
+                when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
 
-        assertThat(result).isNotNull();
-        assertThat(result.flight()).isNotNull();
-        assertThat(result.flight().droneId()).isEqualTo(DRONE_ID);
-        assertThat(result.flight().status()).isEqualTo("planned");
-        assertThat(draftMission.getStatus()).isEqualTo(MissionStatus.EXECUTING);
-    }
+                MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
 
-    @Test
-    @DisplayName("executeMission - when mission status is already executing throws BadRequestException")
-    void executeMission_whenMissionStatusInvalid_shouldThrowBadRequestException() {
-        draftMission.setStatus(MissionStatus.EXECUTING);
-        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                assertThat(result).isNotNull();
+                assertThat(result.flight()).isNotNull();
+                assertThat(result.flight().droneId()).isEqualTo(DRONE_ID);
+                assertThat(result.flight().status()).isEqualTo("planned");
+                assertThat(draftMission.getStatus()).isEqualTo(MissionStatus.EXECUTING);
+        }
 
-        MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+        @Test
+        @DisplayName("executeMission - when mission status is already executing throws BadRequestException")
+        void executeMission_whenMissionStatusInvalid_shouldThrowBadRequestException() {
+                draftMission.setStatus(MissionStatus.EXECUTING);
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
 
-        assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
-                .isInstanceOf(BadRequestException.class);
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
 
-        verify(missionExecutionRepository, never()).saveAndFlush(any());
-    }
+                assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
+                                .isInstanceOf(BadRequestException.class);
 
-    @Test
-    @DisplayName("executeMission - when mission has fewer than 2 waypoints throws BadRequestException")
-    void executeMission_whenFewerThanTwoWaypoints_shouldThrowBadRequestException() {
-        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
-        when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID))
-                .thenReturn(List.of(waypoints.get(0)));
+                verify(missionExecutionRepository, never()).saveAndFlush(any());
+        }
 
-        MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+        @Test
+        @DisplayName("executeMission - when mission has fewer than 2 waypoints throws BadRequestException")
+        void executeMission_whenFewerThanTwoWaypoints_shouldThrowBadRequestException() {
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID))
+                                .thenReturn(List.of(waypoints.get(0)));
 
-        assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
-                .isInstanceOf(BadRequestException.class);
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
 
-        verify(droneClientService, never()).getDroneById(any());
-        verify(missionExecutionRepository, never()).saveAndFlush(any());
-    }
+                assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
+                                .isInstanceOf(BadRequestException.class);
 
-    @Test
-    @DisplayName("executeMission - when drone is not available or idle throws BadRequestException")
-    void executeMission_whenDroneNotAvailable_shouldThrowBadRequestException() {
-        MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
-        DroneBriefVm busyDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "in_flight", "hub-1");
+                verify(droneClientService, never()).getDroneById(any());
+                verify(missionExecutionRepository, never()).saveAndFlush(any());
+        }
 
-        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
-        when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
-        when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(busyDrone));
+        @Test
+        @DisplayName("executeMission - when drone is not available or idle throws BadRequestException")
+        void executeMission_whenDroneNotAvailable_shouldThrowBadRequestException() {
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+                DroneBriefVm busyDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "in_flight", "hub-1");
 
-        assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
-                .isInstanceOf(BadRequestException.class);
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
+                when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(busyDrone));
 
-        verify(missionExecutionRepository, never()).saveAndFlush(any());
-    }
+                assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
+                                .isInstanceOf(BadRequestException.class);
 
-    @Test
-    @DisplayName("executeMission - when mission not found throws NotFoundException")
-    void executeMission_whenMissionNotFound_shouldThrowNotFoundException() {
-        when(missionRepository.findById("unknown-mission")).thenReturn(Optional.empty());
+                verify(missionExecutionRepository, never()).saveAndFlush(any());
+        }
 
-        MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+        @Test
+        @DisplayName("executeMission - when mission not found throws NotFoundException")
+        void executeMission_whenMissionNotFound_shouldThrowNotFoundException() {
+                when(missionRepository.findById("unknown-mission")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> missionExecutionService.executeMission("unknown-mission", postVm))
-                .isInstanceOf(NotFoundException.class);
-    }
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
 
-    @Test
-    @DisplayName("getExecutionById - when found returns mapped execution VM")
-    void getExecutionById_whenFound_shouldReturnVm() {
-        when(missionExecutionRepository.findById(EXECUTION_ID)).thenReturn(Optional.of(executionEntity));
-        when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
+                assertThatThrownBy(() -> missionExecutionService.executeMission("unknown-mission", postVm))
+                                .isInstanceOf(NotFoundException.class);
+        }
 
-        MissionExecutionVm result = missionExecutionService.getExecutionById(EXECUTION_ID);
+        @Test
+        @DisplayName("getExecutionById - when found returns mapped execution VM")
+        void getExecutionById_whenFound_shouldReturnVm() {
+                when(missionExecutionRepository.findById(EXECUTION_ID)).thenReturn(Optional.of(executionEntity));
+                when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
 
-        assertThat(result).isNotNull();
-        assertThat(result.id()).isEqualTo(EXECUTION_ID);
-        assertThat(result.missionId()).isEqualTo(MISSION_ID);
-        assertThat(result.status()).isEqualTo(ExecutionStatus.IN_PROGRESS);
-    }
+                MissionExecutionVm result = missionExecutionService.getExecutionById(EXECUTION_ID);
 
-    @Test
-    @DisplayName("getExecutionById - when not found throws NotFoundException")
-    void getExecutionById_whenNotFound_shouldThrowNotFoundException() {
-        when(missionExecutionRepository.findById("unknown-exec")).thenReturn(Optional.empty());
+                assertThat(result).isNotNull();
+                assertThat(result.id()).isEqualTo(EXECUTION_ID);
+                assertThat(result.missionId()).isEqualTo(MISSION_ID);
+                assertThat(result.status()).isEqualTo(ExecutionStatus.IN_PROGRESS);
+        }
 
-        assertThatThrownBy(() -> missionExecutionService.getExecutionById("unknown-exec"))
-                .isInstanceOf(NotFoundException.class);
-    }
+        @Test
+        @DisplayName("getExecutionById - when not found throws NotFoundException")
+        void getExecutionById_whenNotFound_shouldThrowNotFoundException() {
+                when(missionExecutionRepository.findById("unknown-exec")).thenReturn(Optional.empty());
 
-    @Test
-    @DisplayName("getExecutionsByMissionId - returns list of executions ordered by startedAt desc")
-    void getExecutionsByMissionId_shouldReturnListOrderedByStartedAtDesc() {
-        when(missionExecutionRepository.findByMissionIdOrderByStartedAtDesc(MISSION_ID))
-                .thenReturn(List.of(executionEntity));
-        when(missionExecutionMapper.toVmList(List.of(executionEntity)))
-                .thenReturn(List.of(executionVm));
+                assertThatThrownBy(() -> missionExecutionService.getExecutionById("unknown-exec"))
+                                .isInstanceOf(NotFoundException.class);
+        }
 
-        List<MissionExecutionVm> result = missionExecutionService.getExecutionsByMissionId(MISSION_ID);
+        @Test
+        @DisplayName("getExecutionsByMissionId - returns list of executions ordered by startedAt desc")
+        void getExecutionsByMissionId_shouldReturnListOrderedByStartedAtDesc() {
+                when(missionExecutionRepository.findByMissionIdOrderByStartedAtDesc(MISSION_ID))
+                                .thenReturn(List.of(executionEntity));
+                when(missionExecutionMapper.toVmList(List.of(executionEntity)))
+                                .thenReturn(List.of(executionVm));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).id()).isEqualTo(EXECUTION_ID);
-    }
+                List<MissionExecutionVm> result = missionExecutionService.getExecutionsByMissionId(MISSION_ID);
+
+                assertThat(result).hasSize(1);
+                assertThat(result.get(0).id()).isEqualTo(EXECUTION_ID);
+        }
+
+        @Test
+        @DisplayName("executeMission - should create flight leg for mission waypoints")
+        void executeMission_whenValid_shouldCreateFlightLeg() {
+                Waypoint w1 = Waypoint.builder().id("w1").sequence(1).latitude(10.77).longitude(106.70).altitude(50.0)
+                                .build();
+                Waypoint w2 = Waypoint.builder().id("w2").sequence(2).latitude(10.76).longitude(106.68).altitude(50.0)
+                                .build();
+                Waypoint w3 = Waypoint.builder().id("w3").sequence(3).latitude(10.75).longitude(106.66).altitude(50.0)
+                                .build();
+                List<Waypoint> threeWaypoints = List.of(w1, w2, w3);
+
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+                DroneBriefVm availableDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "available", "hub-1");
+                FlightBriefVm flightVm1 = new FlightBriefVm("fl-1", "FL-LEG-01", DRONE_ID, PILOT_ID, "planned",
+                                "pending");
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(threeWaypoints);
+                when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(availableDrone));
+                when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 3)).thenReturn(executionEntity);
+                when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
+                when(flightClientService.createFlight(any(FlightCreateRequestVm.class)))
+                                .thenReturn(Optional.of(flightVm1));
+                when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
+
+                MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
+
+                assertThat(result).isNotNull();
+                assertThat(result.flights()).hasSize(1);
+                assertThat(result.flights().get(0).flightNumber()).isEqualTo("FL-LEG-01");
+        }
+
+        @Test
+        @DisplayName("executeMission - when autoAssign is true should select best drone from fleet scoring service")
+        void executeMission_whenAutoAssignIsTrue_shouldSelectBestDroneFromFleetScoring() {
+                MissionExecutePostVm postVm = new MissionExecutePostVm(null, PILOT_ID, true);
+                com.utm.mission.viewmodel.fleet.ScoredDroneCandidateVm bestDrone = new com.utm.mission.viewmodel.fleet.ScoredDroneCandidateVm(
+                                "best-drone-uuid", "VN-BEST-01", "DJI", "M350", 3.0, 588.0, 100.0, 70.0, true, null,
+                                95.5);
+                FlightBriefVm flightVm = new FlightBriefVm("fl-1", "FL-001", "best-drone-uuid", PILOT_ID, "planned",
+                                "pending");
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
+                when(fleetScoringService.getBestCandidate(MISSION_ID)).thenReturn(bestDrone);
+                when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
+                when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
+                when(flightClientService.createFlight(any(FlightCreateRequestVm.class)))
+                                .thenReturn(Optional.of(flightVm));
+                when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
+
+                MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
+
+                assertThat(result).isNotNull();
+                assertThat(result.flight().droneId()).isEqualTo("best-drone-uuid");
+                verify(fleetScoringService).getBestCandidate(MISSION_ID);
+                verify(droneClientService, never()).getDroneById(any());
+        }
 }
