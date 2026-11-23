@@ -93,7 +93,11 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                         }
                         if (drone.maxPayload() != null && mission.getPayloadWeightKg() != null
                                         && drone.maxPayload() < mission.getPayloadWeightKg()) {
-                                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber",
+                                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE,
+                                                "registrationNumber",
+                                                drone.registrationNumber() != null ? drone.registrationNumber()
+                                                                : droneId,
+                                                "reason",
                                                 String.format("Drone max payload (%.1f kg) is less than mission required payload (%.1f kg)",
                                                                 drone.maxPayload(), mission.getPayloadWeightKg()));
                         }
@@ -153,13 +157,8 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                                         flightWaypoints);
 
                         FlightBriefVm flightVm = flightClientService.createFlight(flightReq)
-                                        .orElseGet(() -> new FlightBriefVm(
-                                                        null,
-                                                        flightNumber,
-                                                        droneId,
-                                                        postVm.pilotId().trim(),
-                                                        "planned",
-                                                        "pending"));
+                                        .orElseThrow(() -> new BadRequestException(MessageCode.FLIGHT_CREATION_FAILED,
+                                                        "flightNumber", flightNumber));
 
                         createdFlights.add(flightVm);
                         log.info("Created flight {} for mission {} (Leg {}/{})", flightNumber, missionId, legIndex + 1,

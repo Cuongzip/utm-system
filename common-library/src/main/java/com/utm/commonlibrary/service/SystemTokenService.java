@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
@@ -25,9 +26,10 @@ public class SystemTokenService {
     private final String clientSecret;
     private final String username;
     private final String password;
+    private final ReentrantLock tokenLock = new ReentrantLock();
 
-    private String cachedToken;
-    private Instant expiryTime = Instant.MIN;
+    private volatile String cachedToken;
+    private volatile Instant expiryTime = Instant.MIN;
 
     @Autowired
     public SystemTokenService(
@@ -36,7 +38,7 @@ public class SystemTokenService {
             @Value("${utm.system-auth.client-id:swagger-ui}") String clientId,
             @Value("${utm.system-auth.client-secret:}") String clientSecret,
             @Value("${utm.system-auth.username:admin}") String username,
-            @Value("${utm.system-auth.password:${UTM_SYSTEM_AUTH_PASSWORD:Admin123@}}") String password
+            @Value("${utm.system-auth.password:${UTM_SYSTEM_AUTH_PASSWORD:}}") String password
     ) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
@@ -56,22 +58,31 @@ public class SystemTokenService {
         this(issuerUri, customTokenUrl, clientId, null, username, password);
     }
 
-    public synchronized String getSystemToken() {
-        if (cachedToken != null && Instant.now().isBefore(expiryTime.minusSeconds(30))) {
-            return cachedToken;
+    public String getSystemToken() {
+        String token = cachedToken;
+        if (token != null && Instant.now().isBefore(expiryTime.minusSeconds(30))) {
+            return token;
         }
 
+        tokenLock.lock();
         try {
+            if (cachedToken != null && Instant.now().isBefore(expiryTime.minusSeconds(30))) {
+                return cachedToken;
+            }
+
             MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
             formData.add("client_id", clientId);
 
             if (clientSecret != null && !clientSecret.isBlank()) {
                 formData.add("client_secret", clientSecret);
                 formData.add("grant_type", "client_credentials");
-            } else {
+            } else if (password != null && !password.isBlank()) {
                 formData.add("username", username);
                 formData.add("password", password);
                 formData.add("grant_type", "password");
+            } else {
+                log.warn("SystemTokenService credentials not configured (set utm.system-auth.client-secret or UTM_SYSTEM_AUTH_PASSWORD)");
+                return null;
             }
 
             TokenResponse response = authRestClient.post()
@@ -90,6 +101,8 @@ public class SystemTokenService {
             }
         } catch (Exception ex) {
             log.error("Failed to obtain system auth token from {}: {}", tokenUrl, ex.getMessage());
+        } finally {
+            tokenLock.unlock();
         }
         return null;
     }

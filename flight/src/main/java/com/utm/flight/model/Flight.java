@@ -93,7 +93,7 @@ public class Flight extends AbstractAuditEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "conformance_status", length = 50, nullable = false)
     @Builder.Default
-    private ConformanceStatus conformanceStatus = ConformanceStatus.CONFORMING;
+    private ConformanceStatus conformanceStatus = ConformanceStatus.CONFORMANT;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)

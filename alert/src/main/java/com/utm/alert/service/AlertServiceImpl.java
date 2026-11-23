@@ -11,6 +11,7 @@ import com.utm.alert.viewmodel.alert.AlertPostVm;
 import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
 import com.utm.alert.viewmodel.alert.AlertVm;
 import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -144,6 +145,10 @@ public class AlertServiceImpl implements AlertService {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
 
+        if (alert.getStatus() == AlertStatus.RESOLVED || Boolean.TRUE.equals(alert.getResolved())) {
+            throw new BadRequestException(MessageCode.ALERT_ALREADY_RESOLVED, "id", id);
+        }
+
         alert.setAcknowledged(true);
         alert.setAcknowledgedAt(ZonedDateTime.now());
 
@@ -174,6 +179,10 @@ public class AlertServiceImpl implements AlertService {
     public AlertVm resolveAlert(String id, AlertResolvePostVm resolveVm) {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
+
+        if (alert.getStatus() == AlertStatus.RESOLVED || Boolean.TRUE.equals(alert.getResolved())) {
+            throw new BadRequestException(MessageCode.ALERT_ALREADY_RESOLVED, "id", id);
+        }
 
         alert.setResolved(true);
         alert.setResolvedAt(ZonedDateTime.now());

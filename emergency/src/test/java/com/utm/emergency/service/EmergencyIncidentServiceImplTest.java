@@ -183,11 +183,7 @@ class EmergencyIncidentServiceImplTest {
                         assertThat(captured.getCreatedBy()).isEqualTo("pilot-dave");
 
                         verify(decisionEngine).processEmergency(savedEntity);
-                        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/incidents"), eq(expectedVm));
-                        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/drone/drone-001"),
-                                        eq(expectedVm));
-                        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/flight/flight-001"),
-                                        eq(expectedVm));
+                        verify(messagingTemplate, never()).convertAndSend(any(String.class), any(Object.class));
                 }
 
                 @Test
@@ -288,11 +284,8 @@ class EmergencyIncidentServiceImplTest {
                         assertThat(captured.getStatus()).isEqualTo(IncidentStatus.active);
                         assertThat(captured.getCreatedBy()).isEqualTo("system");
 
-                        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/incidents"), eq(expectedVm));
-                        verify(messagingTemplate).convertAndSend(eq("/topic/emergency/drone/drone-002"),
-                                        eq(expectedVm));
-                        verify(messagingTemplate, never()).convertAndSend(eq("/topic/emergency/flight/null"),
-                                        any(EmergencyIncidentVm.class));
+                        verify(decisionEngine).processEmergency(savedEntity);
+                        verify(messagingTemplate, never()).convertAndSend(any(String.class), any(Object.class));
                 }
         }
 
@@ -559,6 +552,7 @@ class EmergencyIncidentServiceImplTest {
                         when(incidentRepo.countBySeverityGrouped(from, to)).thenReturn(severityRows);
                         when(incidentRepo.countByDroneGrouped(from, to)).thenReturn(droneRows);
                         when(incidentRepo.countByResolutionGrouped(from, to)).thenReturn(resolutionRows);
+                        when(incidentRepo.calculateAvgResponseTimeSeconds(from, to)).thenReturn(3.756);
 
                         EmergencyStatsVm result = incidentService.getStats(from, to);
 
@@ -571,7 +565,7 @@ class EmergencyIncidentServiceImplTest {
                         assertThat(result.bySeverity()).hasSize(2);
                         assertThat(result.byDrone()).hasSize(2);
                         assertThat(result.resolutionStats()).hasSize(2);
-                        assertThat(result.avgResponseTimeSeconds()).isEqualTo(2.4);
+                        assertThat(result.avgResponseTimeSeconds()).isEqualTo(3.76);
                 }
 
                 @Test
@@ -587,11 +581,14 @@ class EmergencyIncidentServiceImplTest {
                                         .thenReturn(Collections.emptyList());
                         when(incidentRepo.countByResolutionGrouped(any(ZonedDateTime.class), any(ZonedDateTime.class)))
                                         .thenReturn(Collections.emptyList());
+                        when(incidentRepo.calculateAvgResponseTimeSeconds(any(ZonedDateTime.class),
+                                        any(ZonedDateTime.class))).thenReturn(null);
 
                         EmergencyStatsVm result = incidentService.getStats(null, null);
 
                         assertThat(result).isNotNull();
                         assertThat(result.byStatus()).isEmpty();
+                        assertThat(result.avgResponseTimeSeconds()).isZero();
                         verify(incidentRepo).countByStatusGrouped(
                                         eq(ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)),
                                         any(ZonedDateTime.class));

@@ -16,6 +16,7 @@ import com.utm.mission.model.enumeration.MissionScheduleType;
 import com.utm.mission.model.enumeration.MissionStatus;
 import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
+import com.utm.mission.util.GeoUtils;
 import com.utm.mission.viewmodel.client.HubBriefVm;
 import com.utm.mission.viewmodel.mission.MissionListVm;
 import com.utm.mission.viewmodel.mission.MissionPostVm;
@@ -56,12 +57,12 @@ public class MissionServiceImpl implements MissionService {
     @Override
     @Transactional
     public MissionVm createMission(MissionPostVm postVm) {
-        if (!hubClientService.checkHubExists(postVm.departureHubId())) {
-            throw new NotFoundException(MessageCode.DEPARTURE_HUB_NOT_FOUND, "id", postVm.departureHubId());
-        }
-        if (!hubClientService.checkHubExists(postVm.arrivalHubId())) {
-            throw new NotFoundException(MessageCode.ARRIVAL_HUB_NOT_FOUND, "id", postVm.arrivalHubId());
-        }
+        HubBriefVm depHub = hubClientService.getHubById(postVm.departureHubId())
+                .orElseThrow(() -> new NotFoundException(MessageCode.DEPARTURE_HUB_NOT_FOUND, "id",
+                        postVm.departureHubId()));
+        HubBriefVm arrHub = hubClientService.getHubById(postVm.arrivalHubId())
+                .orElseThrow(() -> new NotFoundException(MessageCode.ARRIVAL_HUB_NOT_FOUND, "id",
+                        postVm.arrivalHubId()));
 
         if (postVm.scheduleType() == MissionScheduleType.SCHEDULED) {
             if (postVm.scheduledAt() == null || !postVm.scheduledAt().isAfter(ZonedDateTime.now())) {
@@ -86,10 +87,7 @@ public class MissionServiceImpl implements MissionService {
         mission.setStatus(MissionStatus.DRAFT);
         Mission saved = missionRepository.save(mission);
 
-        Optional<HubBriefVm> depHub = hubClientService.getHubById(saved.getDepartureHubId());
-        Optional<HubBriefVm> arrHub = hubClientService.getHubById(saved.getArrivalHubId());
-
-        return toEnrichedMissionVm(saved, depHub.orElse(null), arrHub.orElse(null), 0.0);
+        return toEnrichedMissionVm(saved, depHub, arrHub, 0.0);
     }
 
     @Override
@@ -129,7 +127,9 @@ public class MissionServiceImpl implements MissionService {
         Page<Mission> page = missionRepository.findAll(spec, pageable);
 
         Set<String> hubIds = new HashSet<>();
+        List<String> missionIds = new ArrayList<>();
         for (Mission m : page.getContent()) {
+            missionIds.add(m.getId());
             if (m.getDepartureHubId() != null)
                 hubIds.add(m.getDepartureHubId());
             if (m.getArrivalHubId() != null)
@@ -137,9 +137,16 @@ public class MissionServiceImpl implements MissionService {
         }
         Map<String, HubBriefVm> hubMap = hubClientService.getHubsByIds(hubIds);
 
+        Map<String, Long> wpCountMap = new HashMap<>();
+        if (!missionIds.isEmpty()) {
+            for (Object[] row : waypointRepository.countByMissionIds(missionIds)) {
+                wpCountMap.put((String) row[0], ((Number) row[1]).longValue());
+            }
+        }
+
         List<MissionVm> items = page.getContent().stream()
                 .map(m -> {
-                    long wpCount = waypointRepository.countByMissionId(m.getId());
+                    long wpCount = wpCountMap.getOrDefault(m.getId(), 0L);
                     HubBriefVm depHub = hubMap.get(m.getDepartureHubId());
                     HubBriefVm arrHub = hubMap.get(m.getArrivalHubId());
                     return missionMapper.toVm(m, (int) wpCount, null, null, depHub, arrHub);
@@ -231,7 +238,7 @@ public class MissionServiceImpl implements MissionService {
         copy.setCode(BusinessCodeGenerator.generateUnique(
                 CodePatternRule.MISSION_CODE,
                 missionRepository::existsByCode));
-        copy.setName(original.getName() + " (Bản sao)");
+        copy.setName(original.getName() + " (Copy)");
         copy.setScheduleType(MissionScheduleType.IMMEDIATE);
         copy.setStatus(MissionStatus.DRAFT);
 
@@ -265,29 +272,7 @@ public class MissionServiceImpl implements MissionService {
     }
 
     private double calculateEstimatedDistance(List<Waypoint> waypoints) {
-        if (waypoints == null || waypoints.size() < 2) {
-            return 0.0;
-        }
-        double totalDistance = 0.0;
-        for (int i = 0; i < waypoints.size() - 1; i++) {
-            Waypoint w1 = waypoints.get(i);
-            Waypoint w2 = waypoints.get(i + 1);
-            if (w1.getLatitude() != null && w1.getLongitude() != null
-                    && w2.getLatitude() != null && w2.getLongitude() != null) {
-                totalDistance += haversine(w1.getLatitude(), w1.getLongitude(), w2.getLatitude(), w2.getLongitude());
-            }
-        }
+        double totalDistance = GeoUtils.calculateTotalDistance(waypoints);
         return Math.round(totalDistance * 100.0) / 100.0;
-    }
-
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        final double R = 6371000.0;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2.0) * Math.sin(dLat / 2.0)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                        * Math.sin(dLon / 2.0) * Math.sin(dLon / 2.0);
-        double c = 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
-        return R * c;
     }
 }

@@ -126,18 +126,18 @@ public class DroneServiceImpl implements DroneService {
             }
         }
 
+        OrganizationBriefVm owner = null;
         if (dronePostVm.ownerId() != null && !dronePostVm.ownerId().trim().isBlank()) {
             String ownerId = dronePostVm.ownerId().trim();
-            if (!organizationClientService.checkOrganizationExists(ownerId)) {
-                throw new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", ownerId);
-            }
+            owner = organizationClientService.getOrganizationById(ownerId)
+                    .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", ownerId));
         }
 
+        HubBriefVm hub = null;
         if (dronePostVm.homeHubId() != null && !dronePostVm.homeHubId().trim().isBlank()) {
             String hubId = dronePostVm.homeHubId().trim();
-            if (!hubClientService.checkHubExists(hubId)) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId);
-            }
+            hub = hubClientService.getHubById(hubId)
+                    .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId));
         }
 
         Drone drone = droneMapper.toEntity(dronePostVm);
@@ -146,7 +146,7 @@ public class DroneServiceImpl implements DroneService {
         log.info("Created new drone with ID: {} and registration number: {}", savedDrone.getId(),
                 savedDrone.getRegistrationNumber());
 
-        return getDroneById(savedDrone.getId());
+        return droneMapper.toVm(savedDrone, owner, hub, null);
     }
 
     @Override
@@ -160,20 +160,23 @@ public class DroneServiceImpl implements DroneService {
                     && !dronePutVm.homeHubId().trim().equals(drone.getHomeHubId());
             boolean changingPayload = dronePutVm.maxPayload() != null
                     && !dronePutVm.maxPayload().equals(drone.getMaxPayload());
-            boolean changingToMaintenance = dronePutVm.status() == DroneStatus.MAINTENANCE;
+            boolean changingToUnsafeStatus = dronePutVm.status() == DroneStatus.MAINTENANCE
+                    || dronePutVm.status() == DroneStatus.OFFLINE;
 
-            if (changingHub || changingPayload || changingToMaintenance) {
+            if (changingHub || changingPayload || changingToUnsafeStatus) {
                 log.warn("Attempted unsafe update for in-flight drone ID: {}", id);
                 throw new BadRequestException(MessageCode.DRONE_IN_FLIGHT_CANNOT_UPDATE, "registrationNumber",
                         drone.getRegistrationNumber() != null ? drone.getRegistrationNumber() : id);
             }
         }
 
+        HubBriefVm hub = null;
         if (dronePutVm.homeHubId() != null && !dronePutVm.homeHubId().trim().isBlank()) {
             String hubId = dronePutVm.homeHubId().trim();
-            if (!hubClientService.checkHubExists(hubId)) {
-                throw new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId);
-            }
+            hub = hubClientService.getHubById(hubId)
+                    .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId));
+        } else if (drone.getHomeHubId() != null && !drone.getHomeHubId().isBlank()) {
+            hub = hubClientService.getHubById(drone.getHomeHubId()).orElse(null);
         }
 
         droneMapper.updateEntityFromPutVm(drone, dronePutVm);
@@ -181,7 +184,10 @@ public class DroneServiceImpl implements DroneService {
         Drone updatedDrone = droneRepository.saveAndFlush(drone);
         log.info("Updated drone with ID: {}", id);
 
-        return getDroneById(updatedDrone.getId());
+        OrganizationBriefVm owner = (updatedDrone.getOwnerId() != null && !updatedDrone.getOwnerId().isBlank())
+                ? organizationClientService.getOrganizationById(updatedDrone.getOwnerId()).orElse(null)
+                : null;
+        return droneMapper.toVm(updatedDrone, owner, hub, null);
     }
 
     @Override

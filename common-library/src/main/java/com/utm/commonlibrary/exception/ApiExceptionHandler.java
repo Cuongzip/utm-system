@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @ControllerAdvice
 @Slf4j
@@ -75,14 +77,40 @@ public class ApiExceptionHandler {
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
         List<String> errors = ex.getConstraintViolations().stream()
-                .map(violation -> String.format("%s %s: %s",
-                        violation.getRootBeanClass().getName(),
+                .map(violation -> String.format("%s: %s",
                         violation.getPropertyPath(),
                         violation.getMessage()))
                 .toList();
 
         return buildStandardResponse(status, "VALIDATION_FAILED", INVALID_REQUEST_INFORMATION_MESSAGE,
                 Collections.emptyMap(), errors, ex, null, 400);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorVm> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        String detail = ex.getMessage() != null && !ex.getMessage().isBlank()
+                ? ex.getMessage()
+                : INVALID_REQUEST_INFORMATION_MESSAGE;
+        return buildStandardResponse(status, "INVALID_ARGUMENT", detail,
+                Collections.emptyMap(), Collections.emptyList(), ex, request, 400);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorVm> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+            WebRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return buildStandardResponse(status, "MALFORMED_REQUEST", "Malformed JSON request or invalid field value",
+                Collections.emptyMap(), Collections.emptyList(), ex, request, 400);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorVm> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex,
+            WebRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        String detail = "Invalid value for parameter '" + ex.getName() + "'";
+        return buildStandardResponse(status, "INVALID_ARGUMENT", detail,
+                Map.of("parameterName", ex.getName()), Collections.emptyList(), ex, request, 400);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -154,10 +182,8 @@ public class ApiExceptionHandler {
                 params,
                 Collections.emptyList());
 
-        if (request != null) {
-            log.warn(ERROR_LOG_FORMAT, this.getServletPath(request), statusCode, detail);
-        }
-        log.warn("Business Exception: {} (params: {})", detail, params);
+        log.warn("Error: URI: {}, Status: {}, ErrorCode: {}, Message: {}, Params: {}",
+                request != null ? this.getServletPath(request) : "unknown", statusCode, errorCode, detail, params);
 
         return ResponseEntity.status(status).body(errorVm);
     }

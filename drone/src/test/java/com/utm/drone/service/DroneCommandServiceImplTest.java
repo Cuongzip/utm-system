@@ -13,6 +13,7 @@ import com.utm.drone.repository.DroneRepository;
 import com.utm.drone.viewmodel.command.DroneCommandListVm;
 import com.utm.drone.viewmodel.command.DroneCommandPostVm;
 import com.utm.drone.viewmodel.command.DroneCommandVm;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
 import java.util.List;
@@ -93,6 +95,11 @@ class DroneCommandServiceImplTest {
                                 "{\"reason\": \"BATTERY_LOW\"}",
                                 null,
                                 null);
+        }
+
+        @AfterEach
+        void tearDown() {
+                droneCommandService.destroy();
         }
 
         private DroneCommandVm createCommandVm(String id, CommandType type, CommandStatus status, Integer priority,
@@ -271,15 +278,37 @@ class DroneCommandServiceImplTest {
         }
 
         @Test
+        @DisplayName("sendCommand throws BadRequestException when TAKEOFF issued to drone in MAINTENANCE or OFFLINE")
+        void sendCommand_takeoffWhenDroneUnavailable_throwsBadRequestException() {
+                sampleDrone.setStatus(DroneStatus.MAINTENANCE);
+                DroneCommandPostVm takeoffVm = new DroneCommandPostVm(
+                                CommandType.TAKEOFF,
+                                "f1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                null,
+                                null,
+                                null);
+                when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleDrone));
+
+                assertThatThrownBy(() -> droneCommandService.sendCommand("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                takeoffVm))
+                                .isInstanceOf(BadRequestException.class);
+
+                sampleDrone.setStatus(DroneStatus.OFFLINE);
+                assertThatThrownBy(() -> droneCommandService.sendCommand("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                takeoffVm))
+                                .isInstanceOf(BadRequestException.class);
+
+                verify(droneCommandRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("getCommands returns filtered list when both status and commandType are provided")
+        @SuppressWarnings("unchecked")
         void getCommands_bothStatusAndTypeProvided_callsSpecificQuery() {
                 when(droneRepository.existsById("d1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
                 Page<DroneCommand> page = new PageImpl<>(List.of(sampleCommand));
-                when(droneCommandRepository.findByDroneIdAndStatusAndCommandTypeOrderByIssuedAtDesc(
-                                eq("d1b2c3d4-e5f6-7890-abcd-ef1234567890"),
-                                eq(CommandStatus.PENDING),
-                                eq(CommandType.RTL),
-                                any(Pageable.class))).thenReturn(page);
+                when(droneCommandRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
                 when(droneCommandMapper.toVmList(List.of(sampleCommand))).thenReturn(List.of(sampleCommandVm));
 
                 DroneCommandListVm result = droneCommandService.getCommands(
@@ -294,17 +323,16 @@ class DroneCommandServiceImplTest {
                 assertThat(result.items()).hasSize(1);
                 assertThat(result.items().get(0).commandType()).isEqualTo(CommandType.RTL);
                 assertThat(result.items().get(0).status()).isEqualTo(CommandStatus.PENDING);
+                verify(droneCommandRepository).findAll(any(Specification.class), any(Pageable.class));
         }
 
         @Test
         @DisplayName("getCommands returns filtered list when status only is provided")
+        @SuppressWarnings("unchecked")
         void getCommands_statusOnlyProvided_callsStatusQuery() {
                 when(droneRepository.existsById("d1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
                 Page<DroneCommand> page = new PageImpl<>(List.of(sampleCommand));
-                when(droneCommandRepository.findByDroneIdAndStatusOrderByIssuedAtDesc(
-                                eq("d1b2c3d4-e5f6-7890-abcd-ef1234567890"),
-                                eq(CommandStatus.PENDING),
-                                any(Pageable.class))).thenReturn(page);
+                when(droneCommandRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
                 when(droneCommandMapper.toVmList(List.of(sampleCommand))).thenReturn(List.of(sampleCommandVm));
 
                 DroneCommandListVm result = droneCommandService.getCommands(
@@ -321,13 +349,11 @@ class DroneCommandServiceImplTest {
 
         @Test
         @DisplayName("getCommands returns filtered list when commandType only is provided")
+        @SuppressWarnings("unchecked")
         void getCommands_commandTypeOnlyProvided_callsCommandTypeQuery() {
                 when(droneRepository.existsById("d1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
                 Page<DroneCommand> page = new PageImpl<>(List.of(sampleCommand));
-                when(droneCommandRepository.findByDroneIdAndCommandTypeOrderByIssuedAtDesc(
-                                eq("d1b2c3d4-e5f6-7890-abcd-ef1234567890"),
-                                eq(CommandType.RTL),
-                                any(Pageable.class))).thenReturn(page);
+                when(droneCommandRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
                 when(droneCommandMapper.toVmList(List.of(sampleCommand))).thenReturn(List.of(sampleCommandVm));
 
                 DroneCommandListVm result = droneCommandService.getCommands(
@@ -344,12 +370,11 @@ class DroneCommandServiceImplTest {
 
         @Test
         @DisplayName("getCommands returns all drone commands when no filters are provided")
+        @SuppressWarnings("unchecked")
         void getCommands_noFiltersProvided_callsAllForDroneQuery() {
                 when(droneRepository.existsById("d1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
                 Page<DroneCommand> page = new PageImpl<>(List.of(sampleCommand));
-                when(droneCommandRepository.findByDroneIdOrderByIssuedAtDesc(
-                                eq("d1b2c3d4-e5f6-7890-abcd-ef1234567890"),
-                                any(Pageable.class))).thenReturn(page);
+                when(droneCommandRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
                 when(droneCommandMapper.toVmList(List.of(sampleCommand))).thenReturn(List.of(sampleCommandVm));
 
                 DroneCommandListVm result = droneCommandService.getCommands(

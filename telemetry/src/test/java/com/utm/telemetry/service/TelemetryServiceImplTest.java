@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
@@ -294,17 +295,18 @@ class TelemetryServiceImplTest {
     class GetFlightTrackHistory {
 
         @Test
-        @DisplayName("whenTimeRangeNotSpecified_returnsAllFlightRecordsOrderedAsc")
+        @DisplayName("whenTimeRangeNotSpecified_returnsBoundedFlightRecordsOrderedAsc")
         void whenTimeRangeNotSpecified_returnsAllFlightRecordsOrderedAsc() {
-            when(telemetryRecordRepository.findByFlightIdOrderByCreatedOnAsc(FLIGHT_ID))
+            when(telemetryRecordRepository.findByFlightIdOrderByCreatedOnAsc(FLIGHT_ID, PageRequest.of(0, 5000)))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getFlightTrackHistory(FLIGHT_ID, null, null);
 
             assertThat(result).hasSize(1);
             assertThat(result.getFirst().flightId()).isEqualTo(FLIGHT_ID);
-            verify(telemetryRecordRepository).findByFlightIdOrderByCreatedOnAsc(FLIGHT_ID);
+            verify(telemetryRecordRepository).findByFlightIdOrderByCreatedOnAsc(FLIGHT_ID, PageRequest.of(0, 5000));
+            verify(telemetryMapper).toVmList(List.of(testRecord));
         }
 
         @Test
@@ -315,7 +317,7 @@ class TelemetryServiceImplTest {
 
             when(telemetryRecordRepository.findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(FLIGHT_ID, from, to))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getFlightTrackHistory(FLIGHT_ID, from, to);
 
@@ -330,7 +332,7 @@ class TelemetryServiceImplTest {
 
             when(telemetryRecordRepository.findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(eq(FLIGHT_ID), eq(from), any(ZonedDateTime.class)))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getFlightTrackHistory(FLIGHT_ID, from, null);
 
@@ -346,7 +348,7 @@ class TelemetryServiceImplTest {
 
             when(telemetryRecordRepository.findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(eq(FLIGHT_ID), eq(epoch), eq(to)))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getFlightTrackHistory(FLIGHT_ID, null, to);
 
@@ -360,17 +362,18 @@ class TelemetryServiceImplTest {
     class GetDroneTrackHistory {
 
         @Test
-        @DisplayName("whenTimeRangeNotSpecified_returnsAllDroneRecordsOrderedAsc")
+        @DisplayName("whenTimeRangeNotSpecified_returnsBoundedDroneRecordsOrderedAsc")
         void whenTimeRangeNotSpecified_returnsAllDroneRecordsOrderedAsc() {
-            when(telemetryRecordRepository.findByDroneIdOrderByCreatedOnAsc(DRONE_ID))
+            when(telemetryRecordRepository.findByDroneIdOrderByCreatedOnAsc(DRONE_ID, PageRequest.of(0, 5000)))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getDroneTrackHistory(DRONE_ID, null, null);
 
             assertThat(result).hasSize(1);
             assertThat(result.getFirst().droneId()).isEqualTo(DRONE_ID);
-            verify(telemetryRecordRepository).findByDroneIdOrderByCreatedOnAsc(DRONE_ID);
+            verify(telemetryRecordRepository).findByDroneIdOrderByCreatedOnAsc(DRONE_ID, PageRequest.of(0, 5000));
+            verify(telemetryMapper).toVmList(List.of(testRecord));
         }
 
         @Test
@@ -381,7 +384,7 @@ class TelemetryServiceImplTest {
 
             when(telemetryRecordRepository.findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(DRONE_ID, from, to))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getDroneTrackHistory(DRONE_ID, from, to);
 
@@ -396,7 +399,7 @@ class TelemetryServiceImplTest {
 
             when(telemetryRecordRepository.findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(eq(DRONE_ID), eq(from), any(ZonedDateTime.class)))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getDroneTrackHistory(DRONE_ID, from, null);
 
@@ -412,7 +415,7 @@ class TelemetryServiceImplTest {
 
             when(telemetryRecordRepository.findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(eq(DRONE_ID), eq(epoch), eq(to)))
                     .thenReturn(List.of(testRecord));
-            when(telemetryMapper.toVm(testRecord)).thenReturn(testRecordVm);
+            when(telemetryMapper.toVmList(List.of(testRecord))).thenReturn(List.of(testRecordVm));
 
             List<TelemetryRecordVm> result = telemetryService.getDroneTrackHistory(DRONE_ID, null, to);
 

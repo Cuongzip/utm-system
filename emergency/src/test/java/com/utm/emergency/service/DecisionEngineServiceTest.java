@@ -16,6 +16,7 @@ import com.utm.emergency.repository.EmergencyConfigRepository;
 import com.utm.emergency.repository.EmergencyIncidentRepository;
 import com.utm.emergency.repository.EmergencyProtocolRepository;
 import com.utm.emergency.service.client.AlertClientService;
+import com.utm.emergency.viewmodel.client.AlertPostVm;
 import com.utm.emergency.viewmodel.config.OperationModeVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.PendingConfirmationVm;
@@ -85,7 +86,7 @@ class DecisionEngineServiceTest {
     private ArgumentCaptor<EmergencyIncident> incidentCaptor;
 
     @Captor
-    private ArgumentCaptor<AlertClientService.AlertPostVm> alertPostCaptor;
+    private ArgumentCaptor<AlertPostVm> alertPostCaptor;
 
     private EmergencyProtocol aircraftCollisionProtocol;
     private EmergencyProtocol batteryLowProtocol;
@@ -394,6 +395,31 @@ class DecisionEngineServiceTest {
             verify(incidentRepo, times(2)).save(incident);
             verify(responseExecutorService, never()).executeResponse(any(), any(), any());
             assertThat(decisionEngineService.getPendingConfirmations()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("confirmAction recovers pending confirmation from DB when in-memory queue was cleared after restart")
+        void confirmAction_whenPendingInDbAfterRestart_executesResponse() {
+            EmergencyIncident dbIncident = EmergencyIncident.builder()
+                    .id("inc-restart-1")
+                    .droneId("drone-201")
+                    .flightId("flight-201")
+                    .emergencyType(EmergencyType.battery_low)
+                    .severity(EmergencySeverity.warning)
+                    .status(IncidentStatus.pending_confirmation)
+                    .responseAction(ResponseAction.RTH)
+                    .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
+                    .build();
+
+            when(incidentRepo.findById("inc-restart-1")).thenReturn(Optional.of(dbIncident));
+            when(incidentMapper.toVm(dbIncident)).thenReturn(createSampleIncidentVm("inc-restart-1", "drone-201",
+                    "flight-201", EmergencyType.battery_low, EmergencySeverity.warning, IncidentStatus.executing));
+
+            EmergencyIncidentVm result = decisionEngineService.confirmAction("inc-restart-1", true, "atc_ops");
+
+            assertThat(result).isNotNull();
+            assertThat(dbIncident.getConfirmedBy()).isEqualTo("atc_ops");
+            verify(responseExecutorService).executeResponse(dbIncident, ResponseAction.RTH, ResponseAction.LAND);
         }
 
         @Test

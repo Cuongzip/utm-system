@@ -1,5 +1,7 @@
 package com.utm.simulation.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.simulation.service.client.FlightClientService;
 import com.utm.simulation.service.client.TelemetryClientService;
 
@@ -13,11 +15,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
@@ -41,6 +44,7 @@ import com.utm.simulation.viewmodel.session.SimulationSessionVm;
 import com.utm.simulation.viewmodel.client.TelemetryPushVm;
 import com.utm.simulation.viewmodel.client.WaypointVm;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -63,10 +67,28 @@ public class SimulationServiceImpl implements SimulationService {
     private final SimulationMapper simulationMapper;
     private final TelemetryClientService telemetryClientService;
     private final FlightClientService flightClientService;
+    private final ObjectMapper objectMapper;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8,
             Thread.ofVirtual().factory());
     private final Map<String, SimulationSessionRuntime> activeRuntimes = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    public void recoverOrphanedSessions() {
+        try {
+            List<SimulationSession> orphaned = sessionRepository.findByStatusIn(
+                    List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED));
+            if (!orphaned.isEmpty()) {
+                for (SimulationSession session : orphaned) {
+                    session.setStatus(SimulationStatus.STOPPED);
+                }
+                sessionRepository.saveAll(orphaned);
+                log.warn("Marked {} orphaned simulation sessions as STOPPED on startup", orphaned.size());
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to recover orphaned simulation sessions on startup: {}", ex.getMessage());
+        }
+    }
 
     @Override
     @Transactional
@@ -118,21 +140,26 @@ public class SimulationServiceImpl implements SimulationService {
 
         SimulationSession saved = sessionRepository.saveAndFlush(entity);
 
-        String bearerToken = null;
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-            bearerToken = jwtAuth.getToken().getTokenValue();
+        SimulationSessionRuntime runtime = new SimulationSessionRuntime(saved, waypoints);
+        Runnable startRuntime = () -> {
+            activeRuntimes.put(saved.getId(), runtime);
+            runtime.scheduledFuture = scheduler.scheduleAtFixedRate(
+                    () -> runSimulationTick(runtime),
+                    0,
+                    1000,
+                    TimeUnit.MILLISECONDS);
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    startRuntime.run();
+                }
+            });
+        } else {
+            startRuntime.run();
         }
-
-        SimulationSessionRuntime runtime = new SimulationSessionRuntime(saved, waypoints, bearerToken);
-        activeRuntimes.put(saved.getId(), runtime);
-
-        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
-                () -> runSimulationTick(runtime),
-                0,
-                1000,
-                TimeUnit.MILLISECONDS);
-        runtime.scheduledFuture = future;
 
         log.info(
                 "Initialized virtual flight simulation session '{}' for drone '{}' from flight '{}' at speed {} m/s (scale {}x)",
@@ -222,8 +249,8 @@ public class SimulationServiceImpl implements SimulationService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.SIMULATION_NOT_FOUND, "id", id));
 
         SimulationSessionRuntime runtime = activeRuntimes.remove(id);
-        if (runtime != null && runtime.scheduledFuture != null) {
-            runtime.scheduledFuture.cancel(true);
+        if (runtime != null) {
+            runtime.cancelFutures(true);
         }
 
         List<SimulationEvent> events = eventRepository.findBySessionIdOrderByCreatedOnAsc(id);
@@ -253,8 +280,11 @@ public class SimulationServiceImpl implements SimulationService {
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
         if (runtime != null) {
-            synchronized (runtime) {
+            runtime.lock.lock();
+            try {
                 runtime.status = SimulationStatus.PAUSED;
+            } finally {
+                runtime.lock.unlock();
             }
         }
 
@@ -288,8 +318,11 @@ public class SimulationServiceImpl implements SimulationService {
                     "No active in-memory runtime found for simulation session: " + id);
         }
 
-        synchronized (runtime) {
+        runtime.lock.lock();
+        try {
             runtime.status = SimulationStatus.RUNNING;
+        } finally {
+            runtime.lock.unlock();
         }
 
         session.setStatus(SimulationStatus.RUNNING);
@@ -313,8 +346,11 @@ public class SimulationServiceImpl implements SimulationService {
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
         if (runtime != null) {
-            synchronized (runtime) {
+            runtime.lock.lock();
+            try {
                 runtime.timeScale = timeScale;
+            } finally {
+                runtime.lock.unlock();
             }
         }
 
@@ -339,14 +375,29 @@ public class SimulationServiceImpl implements SimulationService {
 
         EmergencyScenarioType scenario = injectVm.scenario();
         String scenarioCode = scenario.getValue();
+        String configJson = serializeConfig(injectVm.config());
+        Long durationSeconds = extractDurationSeconds(injectVm.config());
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
         if (runtime != null) {
-            synchronized (runtime) {
+            runtime.lock.lock();
+            try {
                 runtime.activeScenario = scenarioCode;
                 if ("c2_lost".equalsIgnoreCase(scenarioCode)) {
                     runtime.speed = 0.0;
                 }
+                if (runtime.scenarioClearFuture != null) {
+                    runtime.scenarioClearFuture.cancel(false);
+                    runtime.scenarioClearFuture = null;
+                }
+                if (durationSeconds != null && durationSeconds > 0) {
+                    runtime.scenarioClearFuture = scheduler.schedule(
+                            () -> autoClearScenarioIfMatches(id, scenarioCode),
+                            durationSeconds,
+                            TimeUnit.SECONDS);
+                }
+            } finally {
+                runtime.lock.unlock();
             }
         }
 
@@ -356,7 +407,7 @@ public class SimulationServiceImpl implements SimulationService {
         String message = String.format("Injected emergency scenario '%s' (%s)", scenario.getDisplayName(),
                 scenario.getDescription());
         SimulationEvent event = recordEvent(id, "SCENARIO_INJECTED", scenarioCode, message,
-                scenario.getDefaultSeverity(), null);
+                scenario.getDefaultSeverity(), configJson);
 
         log.warn("Injected emergency scenario '{}' into session '{}' for drone '{}'", scenarioCode, id,
                 session.getDroneId());
@@ -373,21 +424,30 @@ public class SimulationServiceImpl implements SimulationService {
         String previousScenario = session.getActiveScenario();
 
         SimulationSessionRuntime runtime = activeRuntimes.get(id);
+        double restoredSpeed = session.getSpeed() != null && session.getSpeed() > 0.0 ? session.getSpeed() : 15.0;
+        Double restoredBattery = session.getCurrentBattery();
         if (runtime != null) {
-            synchronized (runtime) {
+            runtime.lock.lock();
+            try {
+                if (runtime.scenarioClearFuture != null) {
+                    runtime.scenarioClearFuture.cancel(false);
+                    runtime.scenarioClearFuture = null;
+                }
                 runtime.activeScenario = null;
                 if (runtime.currentBattery > 0.0) {
                     runtime.speed = runtime.cruiseSpeed;
                 }
+                restoredSpeed = runtime.cruiseSpeed;
+                restoredBattery = runtime.currentBattery;
+            } finally {
+                runtime.lock.unlock();
             }
         }
 
         session.setActiveScenario(null);
-        if (runtime != null) {
-            session.setSpeed(runtime.cruiseSpeed);
-            session.setCurrentBattery(runtime.currentBattery);
-        } else if (session.getSpeed() <= 0.0) {
-            session.setSpeed(15.0);
+        session.setSpeed(restoredSpeed);
+        if (restoredBattery != null) {
+            session.setCurrentBattery(restoredBattery);
         }
         SimulationSession saved = sessionRepository.save(session);
 
@@ -415,9 +475,14 @@ public class SimulationServiceImpl implements SimulationService {
         }
 
         SimulationSessionRuntime runtime = activeRuntimes.remove(id);
-        if (runtime != null && runtime.scheduledFuture != null) {
-            runtime.scheduledFuture.cancel(true);
-            runtime.status = SimulationStatus.STOPPED;
+        if (runtime != null) {
+            runtime.lock.lock();
+            try {
+                runtime.status = SimulationStatus.STOPPED;
+            } finally {
+                runtime.lock.unlock();
+            }
+            runtime.cancelFutures(true);
         }
 
         session.setStatus(SimulationStatus.STOPPED);
@@ -443,170 +508,267 @@ public class SimulationServiceImpl implements SimulationService {
     @Override
     @Transactional(readOnly = true)
     public List<SimulationEventVm> getSessionEvents(String id) {
-        return eventRepository.findBySessionIdOrderByCreatedOnAsc(id).stream()
-                .map(simulationMapper::toVm)
-                .toList();
+        return simulationMapper.toEventVmList(eventRepository.findBySessionIdOrderByCreatedOnAsc(id));
+    }
+
+    private void autoClearScenarioIfMatches(String sessionId, String expectedScenario) {
+        SimulationSessionRuntime runtime = activeRuntimes.get(sessionId);
+        if (runtime == null) {
+            return;
+        }
+        RuntimeSnapshot snapshot = null;
+        runtime.lock.lock();
+        try {
+            if (!expectedScenario.equalsIgnoreCase(runtime.activeScenario)) {
+                return;
+            }
+            runtime.activeScenario = null;
+            runtime.scenarioClearFuture = null;
+            if (runtime.currentBattery > 0.0) {
+                runtime.speed = runtime.cruiseSpeed;
+            }
+            snapshot = runtime.snapshot();
+        } finally {
+            runtime.lock.unlock();
+        }
+
+        persistRuntimeState(snapshot);
+        recordEvent(sessionId, "SCENARIO_CLEARED", expectedScenario,
+                "Emergency scenario duration elapsed. Restored normal flight parameters.", "LOW", null);
+        log.info("Auto-cleared scenario '{}' for simulation session '{}' after configured duration",
+                expectedScenario, sessionId);
+    }
+
+    private String serializeConfig(Map<String, Object> config) {
+        if (config == null || config.isEmpty() || objectMapper == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(config);
+        } catch (JsonProcessingException ex) {
+            log.warn("Failed to serialize scenario config to JSON: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    private Long extractDurationSeconds(Map<String, Object> config) {
+        if (config == null || config.isEmpty()) {
+            return null;
+        }
+        Object raw = config.get("durationSeconds");
+        if (raw == null) {
+            raw = config.get("lossDurationSeconds");
+        }
+        if (raw instanceof Number num) {
+            long value = num.longValue();
+            return value > 0 ? value : null;
+        }
+        if (raw instanceof String str && !str.isBlank()) {
+            try {
+                long value = Long.parseLong(str.trim());
+                return value > 0 ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private void runSimulationTick(SimulationSessionRuntime runtime) {
         try {
-            synchronized (runtime) {
+            TelemetryPushVm telemetryPush = null;
+            RuntimeSnapshot snapshotToPersist = null;
+            PendingEvent pendingEvent = null;
+            String terminalLog = null;
+
+            runtime.lock.lock();
+            try {
                 if (runtime.status != SimulationStatus.RUNNING) {
                     return;
                 }
 
                 if (runtime.currentBattery <= 0.0) {
                     runtime.status = SimulationStatus.STOPPED;
-                    if (runtime.scheduledFuture != null) {
-                        runtime.scheduledFuture.cancel(false);
-                    }
+                    runtime.cancelFutures(false);
                     activeRuntimes.remove(runtime.sessionId);
-                    persistRuntimeState(runtime);
-                    recordEvent(runtime.sessionId, "BATTERY_EXHAUSTED", runtime.activeScenario,
+                    snapshotToPersist = runtime.snapshot();
+                    pendingEvent = new PendingEvent(
+                            runtime.sessionId,
+                            "BATTERY_EXHAUSTED",
+                            runtime.activeScenario,
                             "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.",
-                            "CRITICAL", null);
-                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId,
-                            runtime.droneId);
-                    return;
-                }
-
-                boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario)
-                        && runtime.currentBattery > 0.0;
-
-                if (sendTelemetry) {
-                    runtime.lastReportedBattery = runtime.currentBattery;
-                    double effectiveLat = runtime.currentLat;
-                    double effectiveLon = runtime.currentLon;
-                    double effectiveAlt = runtime.currentAlt;
-                    double effectiveHeading = runtime.currentHeading;
-                    double effectiveSpeed = runtime.speed;
-
-                    double noiseDistMeters = ThreadLocalRandom.current().nextGaussian() * 0.5;
-                    double noiseLat = (noiseDistMeters / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
-                    double noiseLon = (noiseDistMeters / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(effectiveLat))))
-                            * (180.0 / Math.PI);
-                    double noiseAlt = ThreadLocalRandom.current().nextGaussian() * 0.3;
-                    double noiseHeading = ThreadLocalRandom.current().nextGaussian() * 1.0;
-                    double noiseSpeed = ThreadLocalRandom.current().nextGaussian() * 0.1;
-
-                    effectiveLat += noiseLat;
-                    effectiveLon += noiseLon;
-                    effectiveAlt = Math.max(0.0, effectiveAlt + noiseAlt);
-                    effectiveHeading = (effectiveHeading + noiseHeading + 360.0) % 360.0;
-                    effectiveSpeed = Math.max(0.0, effectiveSpeed + noiseSpeed);
-
-                    if ("gps_failure".equalsIgnoreCase(runtime.activeScenario)) {
-                        effectiveLat += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
-                        effectiveLon += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
-                    } else if ("geofence_breach".equalsIgnoreCase(runtime.activeScenario)) {
-                        double perpHeading = Math.toRadians((runtime.currentHeading + 90.0) % 360.0);
-                        double driftDist = 75.0;
-                        effectiveLat += (driftDist * Math.cos(perpHeading) / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
-                        effectiveLon += (driftDist * Math.sin(perpHeading)
-                                / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat))))
-                                * (180.0 / Math.PI);
-                    }
-
-                    TelemetryPushVm telemetryPush = new TelemetryPushVm(
-                            runtime.droneId,
-                            runtime.flightId,
-                            Math.round(effectiveLat * 1e7) / 1e7,
-                            Math.round(effectiveLon * 1e7) / 1e7,
-                            Math.round(effectiveAlt * 10.0) / 10.0,
-                            Math.round(effectiveSpeed * 10.0) / 10.0,
-                            Math.round(effectiveHeading * 10.0) / 10.0,
-                            0.0,
-                            0.0,
-                            Math.round(effectiveHeading * 10.0) / 10.0,
-                            Math.round(runtime.currentBattery * 10.0) / 10.0);
-
-                    telemetryClientService.pushTelemetry(telemetryPush, runtime.bearerToken);
-                }
-
-                if (runtime.isFinished()) {
-                    runtime.status = SimulationStatus.COMPLETED;
-                    if (runtime.scheduledFuture != null) {
-                        runtime.scheduledFuture.cancel(false);
-                    }
-                    activeRuntimes.remove(runtime.sessionId);
-                    persistRuntimeState(runtime);
-                    recordEvent(runtime.sessionId, "SESSION_COMPLETED", null,
-                            "Flight simulation completed at final waypoint", "LOW", null);
-                    log.info("Simulation session '{}' completed flight path successfully", runtime.sessionId);
-                    return;
-                }
-
-                double timeStepSeconds = 1.0 * runtime.timeScale;
-                double stepDist = runtime.speed * timeStepSeconds;
-
-                if ("motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
-                    runtime.speed = Math.max(3.0, runtime.speed * 0.8);
-                    runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (8.0 * timeStepSeconds));
-                    if (runtime.currentAlt <= 0.0) {
-                        runtime.speed = 0.0;
-                        runtime.status = SimulationStatus.STOPPED;
-                        if (runtime.scheduledFuture != null) {
-                            runtime.scheduledFuture.cancel(false);
-                        }
-                        activeRuntimes.remove(runtime.sessionId);
-                        persistRuntimeState(runtime);
-                        recordEvent(runtime.sessionId, "MOTOR_CRASH", runtime.activeScenario,
-                                "Drone reached ground after motor failure. Flight simulation stopped.", "CRITICAL",
-                                null);
-                        log.warn("Simulation session '{}' stopped: drone grounded due to motor failure",
-                                runtime.sessionId);
-                        return;
-                    }
-                }
-
-                if ("c2_lost".equalsIgnoreCase(runtime.activeScenario)) {
-                    runtime.speed = 0.0;
-                    stepDist = 0.0;
-                } else if (!"motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
-                    if (runtime.currentBattery > 0.0 && runtime.speed < runtime.cruiseSpeed) {
-                        runtime.speed = runtime.cruiseSpeed;
-                        stepDist = runtime.speed * timeStepSeconds;
-                    }
-                }
-
-                if ("battery_drain".equalsIgnoreCase(runtime.activeScenario)) {
-                    runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (5.0 * timeStepSeconds));
-                    if (runtime.currentBattery <= 5.0) {
-                        runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (3.0 * timeStepSeconds));
-                        if (runtime.currentAlt <= 0.0) {
-                            runtime.speed = 0.0;
-                        }
-                    }
+                            "CRITICAL",
+                            null);
+                    terminalLog = "Simulation session '" + runtime.sessionId + "' stopped: battery depleted for drone '"
+                            + runtime.droneId + "'";
                 } else {
-                    runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (0.0333 * timeStepSeconds));
-                    if (runtime.currentBattery <= 5.0) {
-                        runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (3.0 * timeStepSeconds));
-                        if (runtime.currentAlt <= 0.0) {
-                            runtime.speed = 0.0;
+                    boolean sendTelemetry = !"c2_lost".equalsIgnoreCase(runtime.activeScenario)
+                            && runtime.currentBattery > 0.0;
+
+                    if (sendTelemetry) {
+                        runtime.lastReportedBattery = runtime.currentBattery;
+                        double effectiveLat = runtime.currentLat;
+                        double effectiveLon = runtime.currentLon;
+                        double effectiveAlt = runtime.currentAlt;
+                        double effectiveHeading = runtime.currentHeading;
+                        double effectiveSpeed = runtime.speed;
+
+                        double noiseDistMeters = ThreadLocalRandom.current().nextGaussian() * 0.5;
+                        double noiseLat = (noiseDistMeters / EARTH_RADIUS_METERS) * (180.0 / Math.PI);
+                        double noiseLon = (noiseDistMeters
+                                / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(effectiveLat))))
+                                * (180.0 / Math.PI);
+                        double noiseAlt = ThreadLocalRandom.current().nextGaussian() * 0.3;
+                        double noiseHeading = ThreadLocalRandom.current().nextGaussian() * 1.0;
+                        double noiseSpeed = ThreadLocalRandom.current().nextGaussian() * 0.1;
+
+                        effectiveLat += noiseLat;
+                        effectiveLon += noiseLon;
+                        effectiveAlt = Math.max(0.0, effectiveAlt + noiseAlt);
+                        effectiveHeading = (effectiveHeading + noiseHeading + 360.0) % 360.0;
+                        effectiveSpeed = Math.max(0.0, effectiveSpeed + noiseSpeed);
+
+                        if ("gps_failure".equalsIgnoreCase(runtime.activeScenario)) {
+                            effectiveLat += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
+                            effectiveLon += (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.001;
+                        } else if ("geofence_breach".equalsIgnoreCase(runtime.activeScenario)) {
+                            double perpHeading = Math.toRadians((runtime.currentHeading + 90.0) % 360.0);
+                            double driftDist = 75.0;
+                            effectiveLat += (driftDist * Math.cos(perpHeading) / EARTH_RADIUS_METERS)
+                                    * (180.0 / Math.PI);
+                            effectiveLon += (driftDist * Math.sin(perpHeading)
+                                    / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(runtime.currentLat))))
+                                    * (180.0 / Math.PI);
+                        }
+
+                        telemetryPush = new TelemetryPushVm(
+                                runtime.droneId,
+                                runtime.flightId,
+                                Math.round(effectiveLat * 1e7) / 1e7,
+                                Math.round(effectiveLon * 1e7) / 1e7,
+                                Math.round(effectiveAlt * 10.0) / 10.0,
+                                Math.round(effectiveSpeed * 10.0) / 10.0,
+                                Math.round(effectiveHeading * 10.0) / 10.0,
+                                0.0,
+                                0.0,
+                                Math.round(effectiveHeading * 10.0) / 10.0,
+                                Math.round(runtime.currentBattery * 10.0) / 10.0);
+                    }
+
+                    if (runtime.isFinished()) {
+                        runtime.status = SimulationStatus.COMPLETED;
+                        runtime.cancelFutures(false);
+                        activeRuntimes.remove(runtime.sessionId);
+                        snapshotToPersist = runtime.snapshot();
+                        pendingEvent = new PendingEvent(
+                                runtime.sessionId,
+                                "SESSION_COMPLETED",
+                                null,
+                                "Flight simulation completed at final waypoint",
+                                "LOW",
+                                null);
+                        terminalLog = "Simulation session '" + runtime.sessionId
+                                + "' completed flight path successfully";
+                    } else {
+                        double timeStepSeconds = 1.0 * runtime.timeScale;
+                        double stepDist = runtime.speed * timeStepSeconds;
+                        boolean crashed = false;
+
+                        if ("motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
+                            runtime.speed = Math.max(3.0, runtime.speed * 0.8);
+                            runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (8.0 * timeStepSeconds));
+                            if (runtime.currentAlt <= 0.0) {
+                                runtime.speed = 0.0;
+                                runtime.status = SimulationStatus.STOPPED;
+                                runtime.cancelFutures(false);
+                                activeRuntimes.remove(runtime.sessionId);
+                                snapshotToPersist = runtime.snapshot();
+                                pendingEvent = new PendingEvent(
+                                        runtime.sessionId,
+                                        "MOTOR_CRASH",
+                                        runtime.activeScenario,
+                                        "Drone reached ground after motor failure. Flight simulation stopped.",
+                                        "CRITICAL",
+                                        null);
+                                terminalLog = "Simulation session '" + runtime.sessionId
+                                        + "' stopped: drone grounded due to motor failure";
+                                crashed = true;
+                            }
+                        }
+
+                        if (!crashed) {
+                            if ("c2_lost".equalsIgnoreCase(runtime.activeScenario)) {
+                                runtime.speed = 0.0;
+                                stepDist = 0.0;
+                            } else if (!"motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
+                                if (runtime.currentBattery > 0.0 && runtime.speed < runtime.cruiseSpeed) {
+                                    runtime.speed = runtime.cruiseSpeed;
+                                    stepDist = runtime.speed * timeStepSeconds;
+                                }
+                            }
+
+                            if ("battery_drain".equalsIgnoreCase(runtime.activeScenario)) {
+                                runtime.currentBattery = Math.max(0.0, runtime.currentBattery - (5.0 * timeStepSeconds));
+                            } else {
+                                runtime.currentBattery = Math.max(0.0,
+                                        runtime.currentBattery - (0.0333 * timeStepSeconds));
+                            }
+                            if (runtime.currentBattery <= 5.0) {
+                                runtime.currentAlt = Math.max(0.0, runtime.currentAlt - (3.0 * timeStepSeconds));
+                                if (runtime.currentAlt <= 0.0) {
+                                    runtime.speed = 0.0;
+                                }
+                            }
+
+                            if (runtime.currentBattery <= 0.0
+                                    || (runtime.currentBattery <= 5.0 && runtime.currentAlt <= 0.0)) {
+                                runtime.status = SimulationStatus.STOPPED;
+                                runtime.cancelFutures(false);
+                                activeRuntimes.remove(runtime.sessionId);
+                                snapshotToPersist = runtime.snapshot();
+                                pendingEvent = new PendingEvent(
+                                        runtime.sessionId,
+                                        "BATTERY_EXHAUSTED",
+                                        runtime.activeScenario,
+                                        "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.",
+                                        "CRITICAL",
+                                        null);
+                                terminalLog = "Simulation session '" + runtime.sessionId
+                                        + "' stopped: battery depleted for drone '" + runtime.droneId + "'";
+                            } else {
+                                runtime.advance(stepDist);
+                                runtime.tickCount++;
+                                if (runtime.tickCount % 5 == 0) {
+                                    snapshotToPersist = runtime.snapshot();
+                                }
+                            }
                         }
                     }
                 }
+            } finally {
+                runtime.lock.unlock();
+            }
 
-                if (runtime.currentBattery <= 0.0 || (runtime.currentBattery <= 5.0 && runtime.currentAlt <= 0.0)) {
-                    runtime.status = SimulationStatus.STOPPED;
-                    if (runtime.scheduledFuture != null) {
-                        runtime.scheduledFuture.cancel(false);
+            if (telemetryPush != null) {
+                telemetryClientService.pushTelemetry(telemetryPush);
+            }
+            if (snapshotToPersist != null) {
+                persistRuntimeState(snapshotToPersist);
+            }
+            if (pendingEvent != null) {
+                recordEvent(
+                        pendingEvent.sessionId(),
+                        pendingEvent.eventType(),
+                        pendingEvent.scenario(),
+                        pendingEvent.message(),
+                        pendingEvent.severity(),
+                        pendingEvent.configJson());
+                if (terminalLog != null) {
+                    if ("CRITICAL".equals(pendingEvent.severity())) {
+                        log.warn(terminalLog);
+                    } else {
+                        log.info(terminalLog);
                     }
-                    activeRuntimes.remove(runtime.sessionId);
-                    persistRuntimeState(runtime);
-                    recordEvent(runtime.sessionId, "BATTERY_EXHAUSTED", runtime.activeScenario,
-                            "Drone battery depleted to 0.0%. Flight simulation stopped and telemetry downlink severed.",
-                            "CRITICAL", null);
-                    log.warn("Simulation session '{}' stopped: battery depleted for drone '{}'", runtime.sessionId,
-                            runtime.droneId);
-                    return;
-                }
-
-                runtime.advance(stepDist);
-
-                runtime.tickCount++;
-                if (runtime.tickCount % 5 == 0) {
-                    persistRuntimeState(runtime);
                 }
             }
         } catch (Exception ex) {
@@ -614,47 +776,66 @@ public class SimulationServiceImpl implements SimulationService {
         }
     }
 
-    private void persistRuntimeState(SimulationSessionRuntime runtime) {
+    private void persistRuntimeState(RuntimeSnapshot snapshot) {
         try {
-            sessionRepository.findById(runtime.sessionId).ifPresent(s -> {
-                s.setStatus(runtime.status);
-                boolean isC2Lost = "c2_lost".equalsIgnoreCase(runtime.activeScenario);
-                s.setSpeed(isC2Lost ? 0.0 : runtime.speed);
-                s.setTimeScale(runtime.timeScale);
-                s.setCurrentLat(runtime.currentLat);
-                s.setCurrentLon(runtime.currentLon);
-                s.setCurrentAlt(runtime.currentAlt);
-                s.setCurrentHeading(runtime.currentHeading);
-                s.setCurrentBattery(isC2Lost ? runtime.lastReportedBattery : runtime.currentBattery);
-                s.setProgress(runtime.calculateProgress());
-                s.setTraveledDistance(runtime.cumulativeTraveled);
-                s.setCurrentSegment(runtime.currentSegment);
-                s.setActiveScenario(runtime.activeScenario);
+            sessionRepository.findById(snapshot.sessionId()).ifPresent(s -> {
+                s.setStatus(snapshot.status());
+                boolean isC2Lost = "c2_lost".equalsIgnoreCase(snapshot.activeScenario());
+                s.setSpeed(isC2Lost ? 0.0 : snapshot.speed());
+                s.setTimeScale(snapshot.timeScale());
+                s.setCurrentLat(snapshot.currentLat());
+                s.setCurrentLon(snapshot.currentLon());
+                s.setCurrentAlt(snapshot.currentAlt());
+                s.setCurrentHeading(snapshot.currentHeading());
+                s.setCurrentBattery(isC2Lost ? snapshot.lastReportedBattery() : snapshot.currentBattery());
+                s.setProgress(snapshot.progress());
+                s.setTraveledDistance(snapshot.cumulativeTraveled());
+                s.setCurrentSegment(snapshot.currentSegment());
+                s.setActiveScenario(snapshot.activeScenario());
                 sessionRepository.save(s);
             });
         } catch (Exception ex) {
-            log.warn("Failed to persist simulation state for session '{}': {}", runtime.sessionId, ex.getMessage());
+            log.warn("Failed to persist simulation state for session '{}': {}", snapshot.sessionId(), ex.getMessage());
         }
     }
 
     private SimulationSession syncWithRuntime(SimulationSession session) {
         SimulationSessionRuntime runtime = activeRuntimes.get(session.getId());
-        if (runtime != null) {
-            boolean isC2Lost = "c2_lost".equalsIgnoreCase(runtime.activeScenario);
-            session.setStatus(runtime.status);
-            session.setTimeScale(runtime.timeScale);
-            session.setSpeed(isC2Lost ? 0.0 : runtime.speed);
-            session.setCurrentLat(runtime.currentLat);
-            session.setCurrentLon(runtime.currentLon);
-            session.setCurrentAlt(runtime.currentAlt);
-            session.setCurrentHeading(runtime.currentHeading);
-            session.setCurrentBattery(isC2Lost ? runtime.lastReportedBattery : runtime.currentBattery);
-            session.setProgress(runtime.calculateProgress());
-            session.setTraveledDistance(runtime.cumulativeTraveled);
-            session.setCurrentSegment(runtime.currentSegment);
-            session.setActiveScenario(runtime.activeScenario);
+        if (runtime == null) {
+            return session;
         }
-        return session;
+        RuntimeSnapshot snapshot;
+        runtime.lock.lock();
+        try {
+            snapshot = runtime.snapshot();
+        } finally {
+            runtime.lock.unlock();
+        }
+
+        boolean isC2Lost = "c2_lost".equalsIgnoreCase(snapshot.activeScenario());
+        SimulationSession detachedCopy = SimulationSession.builder()
+                .id(session.getId())
+                .flightId(session.getFlightId())
+                .droneId(session.getDroneId())
+                .status(snapshot.status())
+                .timeScale(snapshot.timeScale())
+                .speed(isC2Lost ? 0.0 : snapshot.speed())
+                .currentLat(snapshot.currentLat())
+                .currentLon(snapshot.currentLon())
+                .currentAlt(snapshot.currentAlt())
+                .currentHeading(snapshot.currentHeading())
+                .currentBattery(isC2Lost ? snapshot.lastReportedBattery() : snapshot.currentBattery())
+                .progress(snapshot.progress())
+                .totalDistance(session.getTotalDistance())
+                .traveledDistance(snapshot.cumulativeTraveled())
+                .currentSegment(snapshot.currentSegment())
+                .activeScenario(snapshot.activeScenario())
+                .build();
+        detachedCopy.setCreatedOn(session.getCreatedOn());
+        detachedCopy.setCreatedBy(session.getCreatedBy());
+        detachedCopy.setLastModifiedOn(session.getLastModifiedOn());
+        detachedCopy.setLastModifiedBy(session.getLastModifiedBy());
+        return detachedCopy;
     }
 
     private SimulationEvent recordEvent(String sessionId, String eventType, String scenario, String message,
@@ -749,14 +930,41 @@ public class SimulationServiceImpl implements SimulationService {
         scheduler.shutdownNow();
     }
 
+    private record RuntimeSnapshot(
+            String sessionId,
+            String droneId,
+            SimulationStatus status,
+            double speed,
+            double timeScale,
+            double currentLat,
+            double currentLon,
+            double currentAlt,
+            double currentHeading,
+            double currentBattery,
+            double lastReportedBattery,
+            double progress,
+            double cumulativeTraveled,
+            int currentSegment,
+            String activeScenario) {
+    }
+
+    private record PendingEvent(
+            String sessionId,
+            String eventType,
+            String scenario,
+            String message,
+            String severity,
+            String configJson) {
+    }
+
     private static class SimulationSessionRuntime {
+        final ReentrantLock lock = new ReentrantLock();
         final String sessionId;
         final String droneId;
         final String flightId;
         final List<WaypointVm> waypoints;
         final double totalDistance;
         final List<Double> segmentDistances;
-        final String bearerToken;
         final double cruiseSpeed;
 
         SimulationStatus status;
@@ -773,21 +981,21 @@ public class SimulationServiceImpl implements SimulationService {
         double lastReportedBattery;
         String activeScenario;
         long tickCount = 0;
-        ScheduledFuture<?> scheduledFuture;
+        volatile ScheduledFuture<?> scheduledFuture;
+        volatile ScheduledFuture<?> scenarioClearFuture;
 
-        SimulationSessionRuntime(SimulationSession session, List<WaypointVm> waypoints, String bearerToken) {
+        SimulationSessionRuntime(SimulationSession session, List<WaypointVm> waypoints) {
             this.sessionId = session.getId();
             this.droneId = session.getDroneId();
             this.flightId = session.getFlightId();
             this.waypoints = new ArrayList<>(waypoints);
             this.status = session.getStatus();
-            this.cruiseSpeed = session.getSpeed() > 0 ? session.getSpeed() : 15.0;
+            this.cruiseSpeed = session.getSpeed() != null && session.getSpeed() > 0 ? session.getSpeed() : 15.0;
             this.speed = this.cruiseSpeed;
-            this.timeScale = session.getTimeScale();
+            this.timeScale = session.getTimeScale() != null ? session.getTimeScale() : 1.0;
             this.currentBattery = session.getCurrentBattery() != null ? session.getCurrentBattery() : 100.0;
             this.lastReportedBattery = this.currentBattery;
             this.activeScenario = session.getActiveScenario();
-            this.bearerToken = bearerToken;
 
             this.segmentDistances = new ArrayList<>();
             double total = 0.0;
@@ -806,6 +1014,37 @@ public class SimulationServiceImpl implements SimulationService {
             this.currentAlt = first.alt();
             this.currentHeading = calculateBearing(first.lat(), first.lon(), waypoints.get(1).lat(),
                     waypoints.get(1).lon());
+        }
+
+        RuntimeSnapshot snapshot() {
+            return new RuntimeSnapshot(
+                    sessionId,
+                    droneId,
+                    status,
+                    speed,
+                    timeScale,
+                    currentLat,
+                    currentLon,
+                    currentAlt,
+                    currentHeading,
+                    currentBattery,
+                    lastReportedBattery,
+                    calculateProgress(),
+                    cumulativeTraveled,
+                    currentSegment,
+                    activeScenario);
+        }
+
+        void cancelFutures(boolean mayInterruptIfRunning) {
+            ScheduledFuture<?> tickFuture = this.scheduledFuture;
+            if (tickFuture != null) {
+                tickFuture.cancel(mayInterruptIfRunning);
+            }
+            ScheduledFuture<?> clearFuture = this.scenarioClearFuture;
+            if (clearFuture != null) {
+                clearFuture.cancel(false);
+                this.scenarioClearFuture = null;
+            }
         }
 
         void advance(double stepDist) {

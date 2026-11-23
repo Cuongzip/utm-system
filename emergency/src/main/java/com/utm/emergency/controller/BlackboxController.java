@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +26,7 @@ public class BlackboxController {
     private final BlackboxService blackboxService;
 
     @GetMapping("/incidents/{id}/blackbox")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get high-frequency blackbox data recorded during incident")
     public ResponseEntity<List<BlackboxEntryVm>> getIncidentBlackbox(
             @PathVariable String id,
@@ -34,6 +36,7 @@ public class BlackboxController {
     }
 
     @GetMapping("/blackbox/flight/{flightId}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get blackbox recording stream for a flight")
     public ResponseEntity<List<BlackboxEntryVm>> getFlightBlackbox(
             @PathVariable String flightId,

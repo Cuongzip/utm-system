@@ -174,15 +174,45 @@ class ConflictDetectionServiceImplTest {
                                         .thenReturn(new AirspaceCheckResponseVm(false, List.of("ZONE-NFZ-1")));
                         when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(FLIGHT_1_ID), anyList()))
                                         .thenReturn(Collections.emptyList());
-                        when(conflictRepository.save(any(Conflict.class))).thenReturn(testConflict);
+                        when(conflictDetectionMapper.toLiveSingleFlightConflict(
+                                        eq(FLIGHT_1_ID), eq(ConflictType.AIRSPACE_BREACH), eq(ConflictSeverity.CRITICAL),
+                                        eq(10.7769), eq(106.7009), eq(100.0), anyString()))
+                                        .thenReturn(testConflict);
+                        when(conflictRepository.save(testConflict)).thenReturn(testConflict);
                         when(responseSpec.body(FlightListBriefVm.class))
                                         .thenReturn(new FlightListBriefVm(Collections.emptyList(), 0));
 
                         conflictDetectionService.evaluateLiveTelemetry(incoming);
 
-                        verify(conflictRepository).save(any(Conflict.class));
+                        verify(conflictDetectionMapper).toLiveSingleFlightConflict(
+                                        eq(FLIGHT_1_ID), eq(ConflictType.AIRSPACE_BREACH), eq(ConflictSeverity.CRITICAL),
+                                        eq(10.7769), eq(106.7009), eq(100.0), anyString());
+                        verify(conflictRepository).save(testConflict);
                         verify(conflictSnapshotService).recordSnapshot(any(), any(), any(), any(), any(), any(), any(),
                                         anyDouble(), anyDouble(), anyInt(), any());
+                }
+
+                @Test
+                @DisplayName("whenTwoParallelFlightsMaintainSafeDcpa_doesNotTriggerPredictedConflict")
+                void whenTwoParallelFlightsMaintainSafeDcpa_doesNotTriggerPredictedConflict() {
+                        TelemetryBriefVm parallel1 = new TelemetryBriefVm(FLIGHT_1_ID, DRONE_1_ID, 10.7769, 106.7009,
+                                        100.0, 15.0, 0.0);
+                        TelemetryBriefVm parallel2 = new TelemetryBriefVm(FLIGHT_2_ID, DRONE_2_ID, 10.7778, 106.70273,
+                                        100.0, 10.0, 0.0);
+
+                        when(postResponseSpec.body(AirspaceCheckResponseVm.class))
+                                        .thenReturn(new AirspaceCheckResponseVm(true, Collections.emptyList()));
+                        when(responseSpec.body(FlightListBriefVm.class))
+                                        .thenReturn(new FlightListBriefVm(List.of(flight1, flight2), 2));
+                        when(conflictRepository.findActiveBetweenFlights(eq(FLIGHT_1_ID), eq(FLIGHT_2_ID), anyList()))
+                                        .thenReturn(Collections.emptyList());
+
+                        conflictDetectionService.evaluateLiveTelemetry(parallel2);
+                        conflictDetectionService.evaluateLiveTelemetry(parallel1);
+
+                        verify(conflictRepository, never()).save(any());
+                        verify(conflictDetectionMapper, never()).toLiveEntity(any(), any(), any(), any(), any(), any(),
+                                        any(), any(), any(), any(), any());
                 }
         }
 

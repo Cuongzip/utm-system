@@ -6,6 +6,8 @@ import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
+
 @Mapper(
         componentModel = "spring",
         builder = @org.mapstruct.Builder(disableBuilder = true)
@@ -21,5 +23,7 @@ public interface TelemetryMapper {
 
     @Mapping(target = "timestamp", expression = "java(entity.getCreatedOn() != null ? entity.getCreatedOn() : java.time.ZonedDateTime.now())")
     TelemetryRecordVm toVm(TelemetryRecord entity);
+
+    List<TelemetryRecordVm> toVmList(List<TelemetryRecord> entities);
 }
 

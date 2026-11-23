@@ -37,7 +37,6 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class AirspaceServiceImpl implements AirspaceService {
 
     private final AirspaceZoneRepository airspaceZoneRepository;
@@ -49,11 +48,13 @@ public class AirspaceServiceImpl implements AirspaceService {
     @Transactional(readOnly = true)
     public AirspaceCheckResultVm checkPoint(AirspaceCheckVm checkVm) {
         List<AirspaceZone> activeZones = airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE);
+        List<AirspaceZoneVm> activeZoneVms = airspaceZoneMapper.toVmList(activeZones);
         List<AirspaceViolationVm> violations = new ArrayList<>();
         boolean safe = true;
 
-        for (AirspaceZone zone : activeZones) {
-            AirspaceZoneVm zoneVm = airspaceZoneMapper.toVm(zone);
+        for (int i = 0; i < activeZones.size(); i++) {
+            AirspaceZone zone = activeZones.get(i);
+            AirspaceZoneVm zoneVm = activeZoneVms.get(i);
             boolean inside = spatialCalculationService.isPointInPolygon(
                     checkVm.lat(),
                     checkVm.lon(),
@@ -74,7 +75,8 @@ public class AirspaceServiceImpl implements AirspaceService {
                             zone.getName(),
                             zone.getZoneType().getValue(),
                             "Point falls inside restricted airspace requiring special ATC clearance"));
-                } else if (checkVm.alt() != null && checkVm.alt() > zone.getAltitudeCeiling()) {
+                } else if (checkVm.alt() != null && zone.getAltitudeCeiling() != null
+                        && checkVm.alt() > zone.getAltitudeCeiling()) {
                     safe = false;
                     violations.add(new AirspaceViolationVm(
                             zone.getId(),
@@ -93,14 +95,16 @@ public class AirspaceServiceImpl implements AirspaceService {
     @Transactional(readOnly = true)
     public AirspaceCheckPathResultVm checkPath(AirspaceCheckPathVm checkPathVm) {
         List<AirspaceZone> activeZones = airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE);
+        List<AirspaceZoneVm> activeZoneVms = airspaceZoneMapper.toVmList(activeZones);
         List<AirspacePathConflictVm> violations = new ArrayList<>();
 
         List<SpatialCalculationService.SampledPoint> sampledPoints = spatialCalculationService
                 .samplePolyline(checkPathVm.points(), checkPathVm.spacingM());
 
         for (SpatialCalculationService.SampledPoint pt : sampledPoints) {
-            for (AirspaceZone zone : activeZones) {
-                AirspaceZoneVm zoneVm = airspaceZoneMapper.toVm(zone);
+            for (int i = 0; i < activeZones.size(); i++) {
+                AirspaceZone zone = activeZones.get(i);
+                AirspaceZoneVm zoneVm = activeZoneVms.get(i);
                 boolean inside = spatialCalculationService.isPointInPolygon(
                         pt.lat(),
                         pt.lon(),
@@ -128,7 +132,7 @@ public class AirspaceServiceImpl implements AirspaceService {
                                 pt.segmentIndex(),
                                 Math.round(pt.distanceFromStartM() * 100.0) / 100.0,
                                 String.format("Trajectory intersects restricted zone '%s'", zone.getName())));
-                    } else if (pt.alt() > zone.getAltitudeCeiling()) {
+                    } else if (zone.getAltitudeCeiling() != null && pt.alt() > zone.getAltitudeCeiling()) {
                         violations.add(new AirspacePathConflictVm(
                                 zone.getId(),
                                 zone.getName(),
@@ -155,18 +159,16 @@ public class AirspaceServiceImpl implements AirspaceService {
 
         if (limit <= 0) {
             List<AirspaceZone> all = airspaceZoneRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdOn"));
-            List<AirspaceZoneVm> items = all.stream().map(airspaceZoneMapper::toVm).toList();
+            List<AirspaceZoneVm> items = airspaceZoneMapper.toVmList(all);
             return AirspaceZoneListVm.of(items, items.size());
         }
 
         int pageSize = limit;
-        int pageNumber = offset > 0 ? (offset / pageSize) : 0;
+        int pageNumber = Math.max(0, offset) / pageSize;
         Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdOn"));
 
         Page<AirspaceZone> page = airspaceZoneRepository.findAll(spec, pageable);
-        List<AirspaceZoneVm> items = page.getContent().stream()
-                .map(airspaceZoneMapper::toVm)
-                .toList();
+        List<AirspaceZoneVm> items = airspaceZoneMapper.toVmList(page.getContent());
 
         return AirspaceZoneListVm.of(items, page.getTotalElements());
     }
@@ -181,6 +183,7 @@ public class AirspaceServiceImpl implements AirspaceService {
     }
 
     @Override
+    @Transactional
     public AirspaceZoneVm createZone(AirspaceZonePostVm postVm) {
         String trimmedName = postVm.name().trim();
         if (airspaceZoneRepository.existsByName(trimmedName)) {
@@ -216,6 +219,7 @@ public class AirspaceServiceImpl implements AirspaceService {
     }
 
     @Override
+    @Transactional
     public AirspaceZoneVm updateZone(String id, AirspaceZonePutVm putVm) {
         AirspaceZone zone = airspaceZoneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, "id", id));
@@ -247,6 +251,7 @@ public class AirspaceServiceImpl implements AirspaceService {
     }
 
     @Override
+    @Transactional
     public void deleteZone(String id) {
         AirspaceZone zone = airspaceZoneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.AIRSPACE_ZONE_NOT_FOUND, "id", id));

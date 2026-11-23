@@ -2,6 +2,7 @@ package com.utm.simulation.service;
 
 import com.utm.simulation.service.client.ConnectivityClientService;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import jakarta.annotation.PostConstruct;
@@ -54,14 +55,13 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
     @Override
     public void powerOn(String id) {
         if (id == null || id.isBlank()) {
-            throw new BadRequestException("Device ID cannot be blank");
+            throw new BadRequestException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "id", "blank");
         }
         String cleanId = id.trim();
 
         boolean ok = connectivityClientService.sendHeartbeat(cleanId);
         if (!ok) {
-            throw new BadRequestException(
-                    "Failed to establish initial heartbeat with connectivity service for device: " + cleanId);
+            throw new BadRequestException(MessageCode.DEVICE_HEARTBEAT_FAILED, "id", cleanId);
         }
 
         activeDeviceIds.add(cleanId);
@@ -71,7 +71,7 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
     @Override
     public void powerOff(String id) {
         if (id == null || id.isBlank()) {
-            throw new BadRequestException("Device ID cannot be blank");
+            throw new BadRequestException(MessageCode.DEVICE_REGISTRATION_NOT_FOUND, "id", "blank");
         }
         String cleanId = id.trim();
         activeDeviceIds.remove(cleanId);

@@ -15,17 +15,26 @@ import com.utm.drone.repository.DroneRepository;
 import com.utm.drone.viewmodel.command.DroneCommandListVm;
 import com.utm.drone.viewmodel.command.DroneCommandPostVm;
 import com.utm.drone.viewmodel.command.DroneCommandVm;
+import jakarta.annotation.PreDestroy;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -35,12 +44,20 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     private final DroneRepository droneRepository;
     private final DroneCommandRepository droneCommandRepository;
     private final DroneCommandMapper droneCommandMapper;
+    private final ScheduledExecutorService commandScheduler = Executors.newScheduledThreadPool(2,
+            Thread.ofVirtual().name("drone-cmd-sim-", 0).factory());
 
     @Override
     @Transactional
     public DroneCommandVm sendCommand(String droneId, DroneCommandPostVm postVm) {
         Drone drone = droneRepository.findById(droneId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId));
+
+        if (postVm.commandType() == CommandType.TAKEOFF
+                && (drone.getStatus() == DroneStatus.MAINTENANCE || drone.getStatus() == DroneStatus.OFFLINE)) {
+            throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber",
+                    drone.getRegistrationNumber() != null ? drone.getRegistrationNumber() : droneId);
+        }
 
         int priority = postVm.priority() != null ? postVm.priority() : getPriorityForCommand(postVm.commandType());
         int timeoutMs = postVm.timeoutMs() != null ? postVm.timeoutMs() : getTimeoutForPriority(priority);
@@ -73,47 +90,94 @@ public class DroneCommandServiceImpl implements DroneCommandService {
             droneRepository.save(drone);
         }
 
-        simulateExecution(saved.getId(), saved.getCommandType());
+        scheduleSimulationAfterCommit(saved.getId(), saved.getCommandType());
 
         return droneCommandMapper.toVm(saved);
     }
 
+    private void scheduleSimulationAfterCommit(String commandId, CommandType commandType) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    simulateExecution(commandId, commandType);
+                }
+            });
+        } else {
+            simulateExecution(commandId, commandType);
+        }
+    }
+
     private void simulateExecution(String commandId, CommandType commandType) {
-        CompletableFuture.runAsync(() -> {
+        long ackDelay = Math.min(500, getAckDelay(commandType));
+        long execDelay = Math.min(1000, getExecuteDelay(commandType));
+        long completeDelay = Math.min(2000, getCompleteDelay(commandType));
+
+        commandScheduler.schedule(() -> {
             try {
-                Thread.sleep(Math.min(500, getAckDelay(commandType)));
-                droneCommandRepository.findById(commandId).ifPresent(cmd -> {
-                    if (cmd.getStatus() == CommandStatus.PENDING || cmd.getStatus() == CommandStatus.SENT) {
-                        cmd.setStatus(CommandStatus.ACKNOWLEDGED);
-                        cmd.setAcknowledgedAt(Instant.now());
-                        droneCommandRepository.save(cmd);
+                boolean acked = advanceCommandStatus(commandId, CommandStatus.ACKNOWLEDGED);
+                if (!acked) {
+                    return;
+                }
+                commandScheduler.schedule(() -> {
+                    try {
+                        boolean executing = advanceCommandStatus(commandId, CommandStatus.EXECUTING);
+                        if (!executing) {
+                            return;
+                        }
+                        commandScheduler.schedule(() -> {
+                            try {
+                                advanceCommandStatus(commandId, CommandStatus.COMPLETED);
+                            } catch (Exception e) {
+                                log.error("Error completing simulated command {}: {}", commandId, e.getMessage());
+                            }
+                        }, completeDelay, TimeUnit.MILLISECONDS);
+                    } catch (Exception e) {
+                        log.error("Error executing simulated command {}: {}", commandId, e.getMessage());
                     }
-                });
-
-                Thread.sleep(Math.min(1000, getExecuteDelay(commandType)));
-                droneCommandRepository.findById(commandId).ifPresent(cmd -> {
-                    if (cmd.getStatus() == CommandStatus.ACKNOWLEDGED) {
-                        cmd.setStatus(CommandStatus.EXECUTING);
-                        droneCommandRepository.save(cmd);
-                    }
-                });
-
-                Thread.sleep(Math.min(2000, getCompleteDelay(commandType)));
-                droneCommandRepository.findById(commandId).ifPresent(cmd -> {
-                    if (cmd.getStatus() == CommandStatus.EXECUTING) {
-                        cmd.setStatus(CommandStatus.COMPLETED);
-                        cmd.setCompletedAt(Instant.now());
-                        droneCommandRepository.save(cmd);
-                        log.info("Command {} ({}) completed successfully", cmd.getId(), cmd.getCommandType());
-                    }
-                });
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("Simulation interrupted for command {}", commandId);
+                }, execDelay, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
-                log.error("Error during simulation for command {}: {}", commandId, e.getMessage());
+                log.error("Error acknowledging simulated command {}: {}", commandId, e.getMessage());
             }
-        });
+        }, ackDelay, TimeUnit.MILLISECONDS);
+    }
+
+    private boolean advanceCommandStatus(String commandId, CommandStatus targetStatus) {
+        return droneCommandRepository.findById(commandId).map(cmd -> {
+            if (targetStatus == CommandStatus.ACKNOWLEDGED
+                    && (cmd.getStatus() == CommandStatus.PENDING || cmd.getStatus() == CommandStatus.SENT)) {
+                cmd.setStatus(CommandStatus.ACKNOWLEDGED);
+                cmd.setAcknowledgedAt(Instant.now());
+                droneCommandRepository.save(cmd);
+                return true;
+            }
+            if (targetStatus == CommandStatus.EXECUTING && cmd.getStatus() == CommandStatus.ACKNOWLEDGED) {
+                cmd.setStatus(CommandStatus.EXECUTING);
+                droneCommandRepository.save(cmd);
+                return true;
+            }
+            if (targetStatus == CommandStatus.COMPLETED && cmd.getStatus() == CommandStatus.EXECUTING) {
+                cmd.setStatus(CommandStatus.COMPLETED);
+                cmd.setCompletedAt(Instant.now());
+                droneCommandRepository.save(cmd);
+                if (cmd.getCommandType() == CommandType.LAND || cmd.getCommandType() == CommandType.RTL) {
+                    droneRepository.findById(cmd.getDroneId()).ifPresent(drone -> {
+                        if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
+                            drone.setStatus(DroneStatus.AVAILABLE);
+                            droneRepository.save(drone);
+                        }
+                    });
+                }
+                log.info("Command {} ({}) completed successfully", cmd.getId(), cmd.getCommandType());
+                return true;
+            }
+            return false;
+        }).orElse(false);
+    }
+
+    @PreDestroy
+    public void destroy() {
+        commandScheduler.shutdownNow();
     }
 
     @Override
@@ -125,22 +189,22 @@ public class DroneCommandServiceImpl implements DroneCommandService {
         }
 
         int pageSize = limit > 0 ? limit : 20;
-        int pageIndex = offset >= 0 ? offset / pageSize : 0;
-        Pageable pageable = PageRequest.of(pageIndex, pageSize);
+        int pageIndex = Math.max(0, offset) / pageSize;
+        Pageable pageable = PageRequest.of(pageIndex, pageSize, Sort.by(Sort.Direction.DESC, "issuedAt"));
 
-        Page<DroneCommand> pageResult;
-        if (status != null && commandType != null) {
-            pageResult = droneCommandRepository.findByDroneIdAndStatusAndCommandTypeOrderByIssuedAtDesc(droneId, status,
-                    commandType, pageable);
-        } else if (status != null) {
-            pageResult = droneCommandRepository.findByDroneIdAndStatusOrderByIssuedAtDesc(droneId, status, pageable);
-        } else if (commandType != null) {
-            pageResult = droneCommandRepository.findByDroneIdAndCommandTypeOrderByIssuedAtDesc(droneId, commandType,
-                    pageable);
-        } else {
-            pageResult = droneCommandRepository.findByDroneIdOrderByIssuedAtDesc(droneId, pageable);
-        }
+        Specification<DroneCommand> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("droneId"), droneId));
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (commandType != null) {
+                predicates.add(cb.equal(root.get("commandType"), commandType));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
 
+        Page<DroneCommand> pageResult = droneCommandRepository.findAll(spec, pageable);
         List<DroneCommandVm> items = droneCommandMapper.toVmList(pageResult.getContent());
         return DroneCommandListVm.of(items, pageResult.getTotalElements());
     }

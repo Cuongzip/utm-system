@@ -10,6 +10,8 @@ import com.utm.alert.viewmodel.alert.AlertListVm;
 import com.utm.alert.viewmodel.alert.AlertPostVm;
 import com.utm.alert.viewmodel.alert.AlertResolvePostVm;
 import com.utm.alert.viewmodel.alert.AlertVm;
+import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -706,25 +708,21 @@ class AlertServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("acknowledgeAlert when alert is already RESOLVED preserves RESOLVED status")
-                void acknowledgeAlert_whenAlreadyResolved_preservesResolvedStatus() {
+                @DisplayName("acknowledgeAlert when alert is already RESOLVED throws BadRequestException")
+                void acknowledgeAlert_whenAlreadyResolved_throwsBadRequestException() {
                         String alertId = "alert-uuid-503";
                         Alert alert = createSampleAlert(alertId, "LATERAL_CORRIDOR_BREACH", AlertSeverity.HIGH,
                                         AlertStatus.RESOLVED);
                         AlertAcknowledgePostVm ackVm = new AlertAcknowledgePostVm("Belated ack check", "audit_user");
 
                         when(alertRepository.findById(alertId)).thenReturn(Optional.of(alert));
-                        when(alertRepository.save(alert)).thenReturn(alert);
-                        when(alertMapper.toVm(alert)).thenReturn(
-                                        createSampleAlertVm(alertId, "LATERAL_CORRIDOR_BREACH", AlertSeverity.HIGH,
-                                                        AlertStatus.RESOLVED));
 
-                        alertService.acknowledgeAlert(alertId, ackVm);
+                        assertThatThrownBy(() -> alertService.acknowledgeAlert(alertId, ackVm))
+                                        .isInstanceOf(BadRequestException.class)
+                                        .extracting(ex -> ((BadRequestException) ex).getErrorCode())
+                                        .isEqualTo(MessageCode.ALERT_ALREADY_RESOLVED);
 
-                        verify(alertRepository).save(alertCaptor.capture());
-                        Alert captured = alertCaptor.getValue();
-                        assertThat(captured.getStatus()).isEqualTo(AlertStatus.RESOLVED);
-                        assertThat(captured.getAcknowledged()).isTrue();
+                        verify(alertRepository, never()).save(any(Alert.class));
                 }
 
                 @Test
@@ -855,6 +853,23 @@ class AlertServiceImplTest {
                         assertThat(captured.getResolvedBy()).isEqualTo("SYSTEM");
                         assertThat(captured.getResolved()).isTrue();
                         assertThat(captured.getStatus()).isEqualTo(AlertStatus.RESOLVED);
+                }
+
+                @Test
+                @DisplayName("resolveAlert throws BadRequestException when alert is already RESOLVED")
+                void resolveAlert_whenAlreadyResolved_throwsBadRequestException() {
+                        String alertId = "alert-uuid-604";
+                        Alert alert = createSampleAlert(alertId, "BATTERY_LOW", AlertSeverity.HIGH,
+                                        AlertStatus.RESOLVED);
+                        when(alertRepository.findById(alertId)).thenReturn(Optional.of(alert));
+
+                        assertThatThrownBy(() -> alertService.resolveAlert(alertId,
+                                        new AlertResolvePostVm("duplicate resolve", "op")))
+                                        .isInstanceOf(BadRequestException.class)
+                                        .extracting(ex -> ((BadRequestException) ex).getErrorCode())
+                                        .isEqualTo(MessageCode.ALERT_ALREADY_RESOLVED);
+
+                        verify(alertRepository, never()).save(any(Alert.class));
                 }
 
                 @Test

@@ -42,6 +42,7 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.session.CookieWebSessionIdResolver;
 import org.springframework.web.server.session.WebSessionIdResolver;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 @Configuration
@@ -123,13 +124,14 @@ public class SecurityConfig {
             OAuth2TokenValidator<Jwt> withTimestamp = new JwtTimestampValidator();
             OAuth2TokenValidator<Jwt> withIssuer = jwt -> {
                 String iss = jwt.getIssuer() != null ? jwt.getIssuer().toString() : "";
-                String realmFragment = "/realms/";
+                String realmFragment = null;
                 if (jwkSetUri != null && jwkSetUri.contains("/realms/")) {
                     int start = jwkSetUri.indexOf("/realms/");
                     int end = jwkSetUri.indexOf("/", start + "/realms/".length());
                     realmFragment = end != -1 ? jwkSetUri.substring(start, end) : jwkSetUri.substring(start);
                 }
-                if (iss.contains(realmFragment)) {
+                if (realmFragment != null && realmFragment.length() > "/realms/".length()
+                        && (iss.endsWith(realmFragment) || iss.endsWith(realmFragment + "/"))) {
                     return OAuth2TokenValidatorResult.success();
                 }
                 return OAuth2TokenValidatorResult.failure(
@@ -155,14 +157,14 @@ public class SecurityConfig {
                 scheme = req.getURI().getScheme();
 
             String postLogoutUri = (scheme != null ? scheme : "http") + "://" + host + "/";
-            String idTokenHint = "";
+            String idTokenValue = null;
             if (authentication != null && authentication.getPrincipal() instanceof OidcUser oidcUser) {
                 if (oidcUser.getIdToken() != null && oidcUser.getIdToken().getTokenValue() != null) {
-                    idTokenHint = "&id_token_hint=" + oidcUser.getIdToken().getTokenValue();
+                    idTokenValue = oidcUser.getIdToken().getTokenValue();
                 }
             }
 
-            final String finalIdTokenHint = idTokenHint;
+            final String finalIdTokenValue = idTokenValue;
             final String finalPostLogoutUri = postLogoutUri;
 
             return clientRegistrationRepository.findByRegistrationId(DEFAULT_REGISTRATION_ID)
@@ -176,10 +178,10 @@ public class SecurityConfig {
                                         "/protocol/openid-connect/logout");
                             }
                         }
-                        return buildLogoutUrl(logoutEndpoint, clientId, finalPostLogoutUri, finalIdTokenHint);
+                        return buildLogoutUrl(logoutEndpoint, clientId, finalPostLogoutUri, finalIdTokenValue);
                     })
                     .defaultIfEmpty(buildLogoutUrl(configuredLogoutUrl, DEFAULT_REGISTRATION_ID, finalPostLogoutUri,
-                            finalIdTokenHint))
+                            finalIdTokenValue))
                     .flatMap(redirectUrl -> {
                         exchange.getResponse().setStatusCode(HttpStatus.FOUND);
                         exchange.getResponse().getHeaders().setLocation(URI.create(redirectUrl));
@@ -188,34 +190,36 @@ public class SecurityConfig {
         };
     }
 
-    private String buildLogoutUrl(String baseLogoutUrl, String clientId, String postLogoutUri, String idTokenHint) {
+    private String buildLogoutUrl(String baseLogoutUrl, String clientId, String postLogoutUri, String idTokenValue) {
         String url = (baseLogoutUrl != null && !baseLogoutUrl.isBlank())
                 ? baseLogoutUrl
                 : "http://localhost:8080/realms/UTM/protocol/openid-connect/logout";
-        return url + "?client_id=" + clientId + "&post_logout_redirect_uri=" + postLogoutUri + idTokenHint;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+                .queryParam("client_id", clientId)
+                .queryParam("post_logout_redirect_uri", postLogoutUri);
+        if (idTokenValue != null && !idTokenValue.isBlank()) {
+            builder.queryParam("id_token_hint", idTokenValue);
+        }
+        return builder.encode().toUriString();
     }
 
     @Bean
     public GrantedAuthoritiesMapper userAuthoritiesMapperForKeycloak() {
         return authorities -> {
             Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
-            if (authorities.isEmpty()) {
-                return mappedAuthorities;
-            }
-
-            var authority = authorities.iterator().next();
-            if (authority instanceof OidcUserAuthority oidcUserAuthority) {
-                var userInfo = oidcUserAuthority.getUserInfo();
-                if (userInfo != null && userInfo.hasClaim(REALM_ACCESS_CLAIM)) {
-                    mappedAuthorities.addAll(extractAuthorities(userInfo.getClaimAsMap(REALM_ACCESS_CLAIM)));
-                }
-            } else if (authority instanceof OAuth2UserAuthority oauth2UserAuthority) {
-                Map<String, Object> userAttributes = oauth2UserAuthority.getAttributes();
-                if (userAttributes != null && userAttributes.containsKey(REALM_ACCESS_CLAIM)) {
-                    mappedAuthorities.addAll(extractAuthorities(userAttributes.get(REALM_ACCESS_CLAIM)));
+            for (var authority : authorities) {
+                if (authority instanceof OidcUserAuthority oidcUserAuthority) {
+                    var userInfo = oidcUserAuthority.getUserInfo();
+                    if (userInfo != null && userInfo.hasClaim(REALM_ACCESS_CLAIM)) {
+                        mappedAuthorities.addAll(extractAuthorities(userInfo.getClaimAsMap(REALM_ACCESS_CLAIM)));
+                    }
+                } else if (authority instanceof OAuth2UserAuthority oauth2UserAuthority) {
+                    Map<String, Object> userAttributes = oauth2UserAuthority.getAttributes();
+                    if (userAttributes != null && userAttributes.containsKey(REALM_ACCESS_CLAIM)) {
+                        mappedAuthorities.addAll(extractAuthorities(userAttributes.get(REALM_ACCESS_CLAIM)));
+                    }
                 }
             }
-
             return mappedAuthorities;
         };
     }

@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -47,6 +48,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     private final EmergencyClientService emergencyClientService;
     private final FlightConformanceMapper conformanceMapper;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -73,7 +75,6 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     @Override
     @Scheduled(fixedDelay = 5000)
-    @Transactional
     public void checkActiveFlightsConformance() {
         List<Flight> activeFlights = flightRepository.findByStatus(FlightStatus.ACTIVE);
         if (activeFlights.isEmpty()) {
@@ -83,7 +84,13 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         log.debug("Running 4D conformance watchdog for {} active flight(s)", activeFlights.size());
         for (Flight flight : activeFlights) {
             try {
-                doEvaluateConformance(flight);
+                if (transactionTemplate != null) {
+                    transactionTemplate.executeWithoutResult(status -> {
+                        flightRepository.findById(flight.getId()).ifPresent(this::doEvaluateConformance);
+                    });
+                } else {
+                    doEvaluateConformance(flight);
+                }
             } catch (Exception ex) {
                 log.error("Failed to evaluate conformance for flight '{}': {}", flight.getId(), ex.getMessage(), ex);
             }
@@ -170,6 +177,11 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                 emergencyClientService.reportIncident(flight, "battery_low", "warning", msg, telemetry,
                         Map.of("batteryPercentage", battery));
             }
+        }
+
+        if (telemetry.latitude() == null || telemetry.longitude() == null || telemetry.altitude() == null) {
+            updateFlightStatusAndSave(flight, conformance);
+            return conformanceRepository.save(conformance);
         }
 
         List<List<Double>> routeCoordinates = extractRouteCoordinates(flight.getPlannedRoute());
@@ -375,7 +387,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
             double distanceToSegment;
             double fractionOnSegment;
-            if (dat < 0) {
+            boolean isBehindStart = Math.cos(theta13 - theta12) < 0.0;
+            if (isBehindStart) {
                 distanceToSegment = d13;
                 fractionOnSegment = 0.0;
             } else if (dat > d12) {

@@ -136,7 +136,7 @@ class AirspaceServiceImplTest {
         void checkPoint_outsideAllZones_returnsSafeTrue() {
             AirspaceCheckVm checkVm = new AirspaceCheckVm(10.7900, 106.7200, 50.0);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
             when(spatialCalculationService.isPointInPolygon(10.7900, 106.7200, testPolygon)).thenReturn(false);
 
             AirspaceCheckResultVm result = airspaceService.checkPoint(checkVm);
@@ -154,7 +154,7 @@ class AirspaceServiceImplTest {
         void checkPoint_insideNoFlyZone_returnsSafeFalseWithViolation() {
             AirspaceCheckVm checkVm = new AirspaceCheckVm(10.7750, 106.6950, 50.0);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
             when(spatialCalculationService.isPointInPolygon(10.7750, 106.6950, testPolygon)).thenReturn(true);
 
             AirspaceCheckResultVm result = airspaceService.checkPoint(checkVm);
@@ -174,7 +174,7 @@ class AirspaceServiceImplTest {
             AirspaceCheckVm checkVm = new AirspaceCheckVm(10.7750, 106.6950, 50.0);
             testZone.setZoneType(AirspaceZoneType.RESTRICTED);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
             when(spatialCalculationService.isPointInPolygon(10.7750, 106.6950, testPolygon)).thenReturn(true);
 
             AirspaceCheckResultVm result = airspaceService.checkPoint(checkVm);
@@ -193,7 +193,7 @@ class AirspaceServiceImplTest {
             AirspaceCheckVm checkVm = new AirspaceCheckVm(10.7750, 106.6950, 150.0);
             testZone.setZoneType(AirspaceZoneType.HUB_CORRIDOR);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
             when(spatialCalculationService.isPointInPolygon(10.7750, 106.6950, testPolygon)).thenReturn(true);
 
             AirspaceCheckResultVm result = airspaceService.checkPoint(checkVm);
@@ -220,7 +220,7 @@ class AirspaceServiceImplTest {
                     50.0, 0, 0.0);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
             when(spatialCalculationService.samplePolyline(pathVm.points(), 200.0)).thenReturn(List.of(sample1));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
             when(spatialCalculationService.isPointInPolygon(10.750, 106.650, testPolygon)).thenReturn(false);
 
             AirspaceCheckPathResultVm result = airspaceService.checkPath(pathVm);
@@ -241,7 +241,7 @@ class AirspaceServiceImplTest {
                     106.700, 70.0, 0, 350.0);
             when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
             when(spatialCalculationService.samplePolyline(pathVm.points(), 200.0)).thenReturn(List.of(conflictPt));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
             when(spatialCalculationService.isPointInPolygon(10.775, 106.700, testPolygon)).thenReturn(true);
 
             AirspaceCheckPathResultVm result = airspaceService.checkPath(pathVm);
@@ -260,6 +260,32 @@ class AirspaceServiceImplTest {
             assertThat(result.violations().getFirst().conflictPoint().alt()).isEqualTo(70.0);
             assertThat(result.violations().getFirst().reason()).contains("strictly forbidden airspace");
         }
+
+        @Test
+        @DisplayName("Should handle null altitudeCeiling safely and map zones only once across multiple sampled points")
+        void checkPath_nullCeilingAndMultipleSamples_mapsZonesOnceWithoutNpe() {
+            testZone.setZoneType(AirspaceZoneType.HUB_CORRIDOR);
+            testZone.setAltitudeCeiling(null);
+            AirspaceCheckPointVm pt1 = new AirspaceCheckPointVm(10.770, 106.690, 180.0);
+            AirspaceCheckPointVm pt2 = new AirspaceCheckPointVm(10.780, 106.710, 180.0);
+            AirspaceCheckPathVm pathVm = new AirspaceCheckPathVm(List.of(pt1, pt2), 200.0);
+
+            SpatialCalculationService.SampledPoint s1 = new SpatialCalculationService.SampledPoint(10.772, 106.695,
+                    180.0, 0, 100.0);
+            SpatialCalculationService.SampledPoint s2 = new SpatialCalculationService.SampledPoint(10.776, 106.700,
+                    180.0, 0, 300.0);
+            when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
+            when(spatialCalculationService.samplePolyline(pathVm.points(), 200.0)).thenReturn(List.of(s1, s2));
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
+            when(spatialCalculationService.isPointInPolygon(anyDouble(), anyDouble(), eq(testPolygon)))
+                    .thenReturn(true);
+
+            AirspaceCheckPathResultVm result = airspaceService.checkPath(pathVm);
+
+            assertThat(result.safe()).isTrue();
+            assertThat(result.violations()).isEmpty();
+            verify(airspaceZoneMapper, times(1)).toVmList(List.of(testZone));
+        }
     }
 
     @Nested
@@ -271,7 +297,7 @@ class AirspaceServiceImplTest {
         void getAllZones_withFilterAndPagination_returnsListVm() {
             Page<AirspaceZone> mockPage = new PageImpl<>(List.of(testZone));
             when(airspaceZoneRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(mockPage);
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
 
             AirspaceZoneListVm result = airspaceService.getAllZones(
                     "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -290,7 +316,7 @@ class AirspaceServiceImplTest {
             assertThat(result.items().getFirst().status()).isEqualTo(AirspaceZoneStatus.ACTIVE);
 
             verify(airspaceZoneRepository).findAll(any(Specification.class), any(Pageable.class));
-            verify(airspaceZoneMapper).toVm(testZone);
+            verify(airspaceZoneMapper).toVmList(List.of(testZone));
         }
 
         @Test
@@ -298,6 +324,7 @@ class AirspaceServiceImplTest {
         void getAllZones_noMatch_returnsEmptyListVm() {
             Page<AirspaceZone> emptyPage = new PageImpl<>(List.of());
             when(airspaceZoneRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
+            when(airspaceZoneMapper.toVmList(List.of())).thenReturn(List.of());
 
             AirspaceZoneListVm result = airspaceService.getAllZones(null, "warning", "active", 10, 0);
 
@@ -311,7 +338,7 @@ class AirspaceServiceImplTest {
         void getAllZones_limitLessThanOrEqualToZero_returnsAllUnpaged() {
             when(airspaceZoneRepository.findAll(any(Specification.class), any(Sort.class)))
                     .thenReturn(List.of(testZone));
-            when(airspaceZoneMapper.toVm(testZone)).thenReturn(testZoneVm);
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
 
             AirspaceZoneListVm result = airspaceService.getAllZones(null, null, null, 0, 0);
 

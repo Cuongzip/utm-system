@@ -79,15 +79,7 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
 
         decisionEngine.processEmergency(saved);
 
-        EmergencyIncidentVm vm = incidentMapper.toVm(saved);
-        messagingTemplate.convertAndSend("/topic/emergency/incidents", vm);
-        if (saved.getDroneId() != null && !saved.getDroneId().isBlank()) {
-            messagingTemplate.convertAndSend("/topic/emergency/drone/" + saved.getDroneId(), vm);
-        }
-        if (saved.getFlightId() != null && !saved.getFlightId().isBlank()) {
-            messagingTemplate.convertAndSend("/topic/emergency/flight/" + saved.getFlightId(), vm);
-        }
-        return vm;
+        return incidentMapper.toVm(saved);
     }
 
     @Override
@@ -202,7 +194,11 @@ public class EmergencyIncidentServiceImpl implements EmergencyIncidentService {
                 .map(row -> new EmergencyStatsVm.ResolutionStatVm((Boolean) row[0], (Long) row[1]))
                 .toList();
 
-        return new EmergencyStatsVm(statusCounts, typeCounts, severityCounts, droneCounts, 2.4, resolutionCounts);
+        Double rawAvgResponse = incidentRepo.calculateAvgResponseTimeSeconds(start, end);
+        double avgResponseTimeSeconds = rawAvgResponse != null ? Math.round(rawAvgResponse * 100.0) / 100.0 : 0.0;
+
+        return new EmergencyStatsVm(statusCounts, typeCounts, severityCounts, droneCounts, avgResponseTimeSeconds,
+                resolutionCounts);
     }
 
     @Override

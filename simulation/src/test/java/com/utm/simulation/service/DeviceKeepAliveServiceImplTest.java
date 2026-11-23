@@ -1,5 +1,6 @@
 package com.utm.simulation.service;
 
+import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.simulation.service.client.ConnectivityClientService;
@@ -59,11 +60,13 @@ class DeviceKeepAliveServiceImplTest {
         void whenIdNullOrBlank_throwsBadRequestException() {
             assertThatThrownBy(() -> keepAliveService.powerOn(null))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Device ID cannot be blank");
+                    .extracting(ex -> ((BadRequestException) ex).getErrorCode())
+                    .isEqualTo(MessageCode.DEVICE_REGISTRATION_NOT_FOUND);
 
             assertThatThrownBy(() -> keepAliveService.powerOn("   "))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Device ID cannot be blank");
+                    .extracting(ex -> ((BadRequestException) ex).getErrorCode())
+                    .isEqualTo(MessageCode.DEVICE_REGISTRATION_NOT_FOUND);
 
             verify(connectivityClientService, never()).sendHeartbeat(anyString());
         }
@@ -75,7 +78,8 @@ class DeviceKeepAliveServiceImplTest {
 
             assertThatThrownBy(() -> keepAliveService.powerOn(DEVICE_ID))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Failed to establish initial heartbeat");
+                    .extracting(ex -> ((BadRequestException) ex).getErrorCode())
+                    .isEqualTo(MessageCode.DEVICE_HEARTBEAT_FAILED);
 
             @SuppressWarnings("unchecked")
             Set<String> activeDevices = (Set<String>) ReflectionTestUtils.getField(keepAliveService, "activeDeviceIds");
@@ -105,7 +109,8 @@ class DeviceKeepAliveServiceImplTest {
         void whenIdNullOrBlank_throwsBadRequestException() {
             assertThatThrownBy(() -> keepAliveService.powerOff(null))
                     .isInstanceOf(BadRequestException.class)
-                    .hasMessageContaining("Device ID cannot be blank");
+                    .extracting(ex -> ((BadRequestException) ex).getErrorCode())
+                    .isEqualTo(MessageCode.DEVICE_REGISTRATION_NOT_FOUND);
         }
 
         @Test

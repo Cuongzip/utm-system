@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,4 +21,7 @@ public interface WaypointRepository extends JpaRepository<Waypoint, String> {
     Integer findMaxSequenceByMissionId(@Param("missionId") String missionId);
 
     long countByMissionId(String missionId);
+
+    @Query("SELECT w.mission.id, COUNT(w) FROM Waypoint w WHERE w.mission.id IN :missionIds GROUP BY w.mission.id")
+    List<Object[]> countByMissionIds(@Param("missionIds") Collection<String> missionIds);
 }

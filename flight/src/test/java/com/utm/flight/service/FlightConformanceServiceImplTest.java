@@ -317,4 +317,42 @@ class FlightConformanceServiceImplTest {
         verify(telemetryClientService).getLatestFlightTelemetry(FLIGHT_ID);
         verify(conformanceRepository).save(testConformance);
     }
+
+    @Test
+    @DisplayName("evaluateFlightConformance - when drone is behind segment start computes distance to start waypoint accurately")
+    void evaluateFlightConformance_whenBehindSegmentStart_computesDistanceToStartWaypoint() {
+        TelemetryBriefVm behindStartTelemetry = new TelemetryBriefVm(
+                10.7779, 106.7019, 100.0, 10.0, 225.0, 85.0, ZonedDateTime.now()
+        );
+
+        when(flightRepository.findById(FLIGHT_ID)).thenReturn(Optional.of(testFlight));
+        when(conformanceRepository.findByFlightId(FLIGHT_ID)).thenReturn(Optional.of(testConformance));
+        when(telemetryClientService.getLatestFlightTelemetry(FLIGHT_ID)).thenReturn(Optional.of(behindStartTelemetry));
+        when(conformanceRepository.save(testConformance)).thenReturn(testConformance);
+        when(conformanceMapper.toVm(testConformance)).thenReturn(testConformanceVm);
+
+        conformanceService.evaluateFlightConformance(FLIGHT_ID);
+
+        assertThat(testConformance.getCrossTrackErrorM()).isGreaterThan(100.0);
+        assertThat(testConformance.getStatus()).isEqualTo(ConformanceStatus.CONTINGENT);
+    }
+
+    @Test
+    @DisplayName("evaluateFlightConformance - when telemetry coordinates are null skips spatial calculation safely")
+    void evaluateFlightConformance_whenTelemetryCoordinatesNull_doesNotThrowNullPointerException() {
+        TelemetryBriefVm nullCoordTelemetry = new TelemetryBriefVm(
+                null, null, null, 0.0, 0.0, 85.0, ZonedDateTime.now()
+        );
+
+        when(flightRepository.findById(FLIGHT_ID)).thenReturn(Optional.of(testFlight));
+        when(conformanceRepository.findByFlightId(FLIGHT_ID)).thenReturn(Optional.of(testConformance));
+        when(telemetryClientService.getLatestFlightTelemetry(FLIGHT_ID)).thenReturn(Optional.of(nullCoordTelemetry));
+        when(conformanceRepository.save(testConformance)).thenReturn(testConformance);
+        when(conformanceMapper.toVm(testConformance)).thenReturn(testConformanceVm);
+
+        FlightConformanceVm result = conformanceService.evaluateFlightConformance(FLIGHT_ID);
+
+        assertThat(result).isNotNull();
+        verify(conformanceRepository).save(testConformance);
+    }
 }

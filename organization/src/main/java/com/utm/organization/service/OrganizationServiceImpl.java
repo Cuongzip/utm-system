@@ -129,7 +129,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
 
         if (droneClientService.hasActiveInFlightDrones(id)) {
-            throw new BadRequestException("Cannot deactivate organization with drones currently in active flight");
+            throw new BadRequestException(MessageCode.ORGANIZATION_HAS_ACTIVE_DRONES);
         }
 
         organization.setStatus(OrganizationStatus.INACTIVE);

@@ -324,6 +324,26 @@ class HubServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should throw BadRequestException when updating active hub to INACTIVE while active flights exist")
+        void updateHub_settingInactiveWithActiveFlights_throwsBadRequestException() {
+            HubPutVm deactivatePutVm = new HubPutVm(
+                    "Central Vertiport Hub D1",
+                    testLocationVm,
+                    15.0,
+                    2000.0,
+                    HubStatus.INACTIVE);
+            when(hubRepository.findById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(Optional.of(testHub));
+            when(flightClientService.hasActiveFlightsAtHub("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> hubService.updateHub("h1b2c3d4-e5f6-7890-abcd-ef1234567890", deactivatePutVm))
+                    .isInstanceOf(com.utm.commonlibrary.exception.BadRequestException.class);
+
+            verify(hubRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
         @DisplayName("Should throw NotFoundException (404) when updating non-existent hub")
         void updateHub_nonExistentId_throwsNotFoundException() {
             when(hubRepository.findById("non-existent-id")).thenReturn(Optional.empty());

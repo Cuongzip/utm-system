@@ -237,13 +237,13 @@ class DeviceRegistrationServiceImplTest {
         class GetDevicesTests {
 
                 @Test
-                @DisplayName("Should return paginated and filtered list of device registrations")
+                @DisplayName("Should return paginated and filtered list of device registrations using batch drone lookup")
                 void getDevices_withStatusAndSearch_returnsFilteredList() {
                         Page<DeviceRegistration> page = new PageImpl<>(List.of(testRegistration));
                         when(deviceRegistrationRepository.findAll(any(Specification.class), any(Pageable.class)))
                                         .thenReturn(page);
-                        when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                        .thenReturn(Optional.of(testDrone));
+                        when(droneClientService.getDronesByIds(anyCollection()))
+                                        .thenReturn(java.util.Map.of("d1b2c3d4-e5f6-7890-abcd-ef1234567890", testDrone));
                         when(mapper.toVm(testRegistration, testDrone)).thenReturn(testRegistrationVm);
 
                         DeviceRegistrationListVm result = deviceRegistrationService
@@ -256,6 +256,8 @@ class DeviceRegistrationServiceImplTest {
                         assertThat(result.items().get(0).connectionStatus()).isEqualTo(DeviceConnectionStatus.OFFLINE);
 
                         verify(deviceRegistrationRepository).findAll(any(Specification.class), any(Pageable.class));
+                        verify(droneClientService, times(1)).getDronesByIds(anyCollection());
+                        verify(droneClientService, never()).getDroneById(anyString());
                 }
 
                 @Test
@@ -263,8 +265,8 @@ class DeviceRegistrationServiceImplTest {
                 void getDevices_unpagedLimitZero_returnsAllItems() {
                         when(deviceRegistrationRepository.findAll(any(Specification.class), any(Sort.class)))
                                         .thenReturn(List.of(testRegistration));
-                        when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                        .thenReturn(Optional.of(testDrone));
+                        when(droneClientService.getDronesByIds(anyCollection()))
+                                        .thenReturn(java.util.Map.of("d1b2c3d4-e5f6-7890-abcd-ef1234567890", testDrone));
                         when(mapper.toVm(testRegistration, testDrone)).thenReturn(testRegistrationVm);
 
                         DeviceRegistrationListVm result = deviceRegistrationService.getDevices(null, null, 0, 0);
@@ -274,6 +276,7 @@ class DeviceRegistrationServiceImplTest {
                         assertThat(result.items()).hasSize(1);
 
                         verify(deviceRegistrationRepository).findAll(any(Specification.class), any(Sort.class));
+                        verify(droneClientService, times(1)).getDronesByIds(anyCollection());
                 }
         }
 
@@ -282,7 +285,7 @@ class DeviceRegistrationServiceImplTest {
         class GetOnlineDevicesTests {
 
                 @Test
-                @DisplayName("Should detect timed-out devices, prune status to OFFLINE, and return only active online devices")
+                @DisplayName("Should detect timed-out devices, prune status to OFFLINE in batch, and return only active online devices")
                 void getOnlineDevices_prunesTimedOutDevicesAndReturnsActive() {
                         DeviceRegistration staleOnlineDevice = DeviceRegistration.builder()
                                         .id("c2-stale")
@@ -308,10 +311,9 @@ class DeviceRegistrationServiceImplTest {
                                         ZonedDateTime.now(), ZonedDateTime.now());
 
                         when(deviceRegistrationRepository.findByConnectionStatus(DeviceConnectionStatus.ONLINE))
-                                        .thenReturn(List.of(staleOnlineDevice, activeOnlineDevice))
-                                        .thenReturn(List.of(activeOnlineDevice));
-                        when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                        .thenReturn(Optional.of(testDrone));
+                                        .thenReturn(List.of(staleOnlineDevice, activeOnlineDevice));
+                        when(droneClientService.getDronesByIds(anyCollection()))
+                                        .thenReturn(java.util.Map.of("d1b2c3d4-e5f6-7890-abcd-ef1234567890", testDrone));
                         when(mapper.toVm(activeOnlineDevice, testDrone)).thenReturn(activeVm);
 
                         List<DeviceRegistrationVm> result = deviceRegistrationService.getOnlineDevices();
@@ -321,7 +323,10 @@ class DeviceRegistrationServiceImplTest {
                         assertThat(result.get(0).deviceIdentifier()).isEqualTo("DRONE-MAC-ACTIVE");
 
                         assertThat(staleOnlineDevice.getConnectionStatus()).isEqualTo(DeviceConnectionStatus.OFFLINE);
-                        verify(deviceRegistrationRepository).save(staleOnlineDevice);
+                        verify(deviceRegistrationRepository).saveAll(List.of(staleOnlineDevice));
+                        verify(deviceRegistrationRepository, times(1))
+                                        .findByConnectionStatus(DeviceConnectionStatus.ONLINE);
+                        verify(droneClientService, times(1)).getDronesByIds(anyCollection());
                 }
         }
 

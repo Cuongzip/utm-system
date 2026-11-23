@@ -95,6 +95,82 @@ public interface ConflictDetectionMapper {
             String description
     );
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "primaryFlightId", source = "primaryFlightId")
+    @Mapping(target = "secondaryFlightId", source = "secondaryFlight.id")
+    @Mapping(target = "conflictType", source = "conflictType")
+    @Mapping(target = "severity", source = "severity")
+    @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
+    @Mapping(target = "hubId", source = "hubId")
+    @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
+    @Mapping(target = "detectionMethod", constant = "automated_telemetry")
+    @Mapping(target = "locationLat", source = "midLat")
+    @Mapping(target = "locationLon", source = "midLon")
+    @Mapping(target = "altitude", source = "midAlt")
+    @Mapping(target = "separationDistance", source = "distHoriz")
+    @Mapping(target = "minSeparationDistance", source = "distHoriz")
+    @Mapping(target = "verticalSeparation", source = "distVert")
+    @Mapping(target = "timeToConflictSec", source = "timeToConflict")
+    @Mapping(target = "maxSeverity", source = "severity")
+    @Mapping(target = "description", expression = "java(String.format(\"Live separation loss between flight %s and %s\", primaryFlightId, secondaryFlight != null ? secondaryFlight.flightNumber() : \"unknown\"))")
+    @Mapping(target = "resolutionStrategy", ignore = true)
+    @Mapping(target = "resolutionActions", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
+    @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    Conflict toLiveEntity(
+            String primaryFlightId,
+            FlightBriefVm secondaryFlight,
+            ConflictType conflictType,
+            ConflictSeverity severity,
+            String hubId,
+            Double midLat,
+            Double midLon,
+            Double midAlt,
+            Double distHoriz,
+            Double distVert,
+            Integer timeToConflict
+    );
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "primaryFlightId", source = "primaryFlightId")
+    @Mapping(target = "secondaryFlightId", ignore = true)
+    @Mapping(target = "conflictType", source = "conflictType")
+    @Mapping(target = "severity", source = "severity")
+    @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
+    @Mapping(target = "hubId", ignore = true)
+    @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
+    @Mapping(target = "detectionMethod", constant = "airspace_geofence_check")
+    @Mapping(target = "locationLat", source = "lat")
+    @Mapping(target = "locationLon", source = "lon")
+    @Mapping(target = "altitude", source = "alt")
+    @Mapping(target = "separationDistance", constant = "0.0")
+    @Mapping(target = "minSeparationDistance", constant = "0.0")
+    @Mapping(target = "verticalSeparation", constant = "0.0")
+    @Mapping(target = "timeToConflictSec", constant = "0")
+    @Mapping(target = "maxSeverity", source = "severity")
+    @Mapping(target = "description", source = "description")
+    @Mapping(target = "resolutionStrategy", ignore = true)
+    @Mapping(target = "resolutionActions", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
+    @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "createdOn", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedOn", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    Conflict toLiveSingleFlightConflict(
+            String primaryFlightId,
+            ConflictType conflictType,
+            ConflictSeverity severity,
+            Double lat,
+            Double lon,
+            Double alt,
+            String description
+    );
+
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "primaryFlightId", ignore = true)

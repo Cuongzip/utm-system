@@ -22,10 +22,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +38,8 @@ import java.util.List;
 public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
     private static final double EARTH_RADIUS_M = 6_371_000.0;
+    private static final int MAX_CACHED_TELEMETRY_FLIGHTS = 500;
+    private static final long TELEMETRY_CACHE_TTL_SECONDS = 30L;
     private static final List<ConflictStatus> ACTIVE_STATUSES = List.of(
             ConflictStatus.DETECTED,
             ConflictStatus.NOTIFIED,
@@ -44,6 +51,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
     private final ConflictDetectionMapper conflictDetectionMapper;
+    private final Map<String, CachedTelemetry> latestTelemetryCache = new ConcurrentHashMap<>();
 
     @Value("${utm.conflict.threshold.horizontal-m:150.0}")
     private double horizontalThresholdM;
@@ -66,6 +74,8 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             return;
         }
 
+        cacheLatestTelemetry(incomingTelemetry.flightId(), incomingTelemetry);
+
         AirspaceCheckResponseVm airspaceCheck = checkAirspaceCompliance(incomingTelemetry);
         if (airspaceCheck != null && !airspaceCheck.safe()) {
             List<Conflict> existingSingleConflicts = conflictRepository
@@ -75,22 +85,15 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     .toList();
 
             if (existingSingleConflicts.isEmpty()) {
-                Conflict singleConflict = Conflict.builder()
-                        .primaryFlightId(incomingTelemetry.flightId())
-                        .conflictType(ConflictType.AIRSPACE_BREACH)
-                        .severity(ConflictSeverity.CRITICAL)
-                        .locationLat(incomingTelemetry.latitude())
-                        .locationLon(incomingTelemetry.longitude())
-                        .altitude(incomingTelemetry.altitude())
-                        .separationDistance(0.0)
-                        .verticalSeparation(0.0)
-                        .timeToConflictSec(0)
-                        .status(ConflictStatus.DETECTED)
-                        .detectedAt(ZonedDateTime.now())
-                        .detectionMethod("airspace_geofence_check")
-                        .description(String.format("Airspace breach detected for flight %s into restricted zone",
-                                incomingTelemetry.flightId()))
-                        .build();
+                Conflict singleConflict = conflictDetectionMapper.toLiveSingleFlightConflict(
+                        incomingTelemetry.flightId(),
+                        ConflictType.AIRSPACE_BREACH,
+                        ConflictSeverity.CRITICAL,
+                        incomingTelemetry.latitude(),
+                        incomingTelemetry.longitude(),
+                        incomingTelemetry.altitude(),
+                        String.format("Airspace breach detected for flight %s into restricted zone",
+                                incomingTelemetry.flightId()));
                 singleConflict = conflictRepository.save(singleConflict);
 
                 conflictSnapshotService.recordSnapshot(
@@ -116,7 +119,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             if (otherFlight.id().equals(incomingTelemetry.flightId())) {
                 continue;
             }
-            TelemetryBriefVm otherTelemetry = fetchLatestTelemetry(otherFlight.id());
+            TelemetryBriefVm otherTelemetry = getCachedOrFetchLatestTelemetry(otherFlight.id());
             if (otherTelemetry == null || otherTelemetry.latitude() == null
                     || otherTelemetry.longitude() == null || otherTelemetry.altitude() == null) {
                 continue;
@@ -126,10 +129,12 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     incomingTelemetry.latitude(), incomingTelemetry.longitude(),
                     otherTelemetry.latitude(), otherTelemetry.longitude());
             double distVert = Math.abs(incomingTelemetry.altitude() - otherTelemetry.altitude());
-            double tcpa = calculateTcpa(incomingTelemetry, otherTelemetry);
+            CpaResult cpa = calculateCpa(incomingTelemetry, otherTelemetry);
 
             boolean isSeparationLoss = (distHoriz < horizontalThresholdM) && (distVert < verticalThresholdM);
-            boolean isPredictedLoss = (tcpa > 0.0 && tcpa < 120.0) && (distVert < verticalThresholdM)
+            boolean isPredictedLoss = (cpa.tcpa() > 0.0 && cpa.tcpa() < 120.0)
+                    && (cpa.dcpa() < horizontalThresholdM)
+                    && (distVert < verticalThresholdM)
                     && (distHoriz < 250.0);
 
             List<Conflict> activeConflicts = conflictRepository.findActiveBetweenFlights(
@@ -141,7 +146,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                 double midLat = (incomingTelemetry.latitude() + otherTelemetry.latitude()) / 2.0;
                 double midLon = (incomingTelemetry.longitude() + otherTelemetry.longitude()) / 2.0;
                 double midAlt = (incomingTelemetry.altitude() + otherTelemetry.altitude()) / 2.0;
-                int timeToConflict = Math.max(0, (int) Math.round(tcpa));
+                int timeToConflict = Math.max(0, (int) Math.round(cpa.tcpa()));
 
                 if (!activeConflicts.isEmpty()) {
                     for (Conflict existing : activeConflicts) {
@@ -155,24 +160,18 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                                 distHoriz, distVert, timeToConflict, severity);
                     }
                 } else {
-                    Conflict newConflict = Conflict.builder()
-                            .primaryFlightId(incomingTelemetry.flightId())
-                            .secondaryFlightId(otherFlight.id())
-                            .conflictType(conflictType)
-                            .severity(severity)
-                            .hubId(otherFlight.departureHubId())
-                            .locationLat(midLat)
-                            .locationLon(midLon)
-                            .altitude(midAlt)
-                            .separationDistance(distHoriz)
-                            .verticalSeparation(distVert)
-                            .timeToConflictSec(timeToConflict)
-                            .status(ConflictStatus.DETECTED)
-                            .detectedAt(ZonedDateTime.now())
-                            .detectionMethod("automated_telemetry")
-                            .description(String.format("Live separation loss between flight %s and %s",
-                                    incomingTelemetry.flightId(), otherFlight.flightNumber()))
-                            .build();
+                    Conflict newConflict = conflictDetectionMapper.toLiveEntity(
+                            incomingTelemetry.flightId(),
+                            otherFlight,
+                            conflictType,
+                            severity,
+                            otherFlight.departureHubId(),
+                            midLat,
+                            midLon,
+                            midAlt,
+                            distHoriz,
+                            distVert,
+                            timeToConflict);
                     newConflict = conflictRepository.save(newConflict);
                     conflictSnapshotService.recordSnapshot(
                             newConflict,
@@ -213,17 +212,22 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     public ConflictScanResultVm runConflictScan() {
         List<FlightBriefVm> activeFlights = fetchActiveFlights();
         if (activeFlights.isEmpty()) {
+            latestTelemetryCache.clear();
             return conflictDetectionMapper.toScanResultVm(0, 0, 0, 0, 0, ZonedDateTime.now());
         }
 
+        Set<String> activeFlightIds = new HashSet<>();
         List<FlightWithTelemetry> flightDataList = new ArrayList<>();
         for (FlightBriefVm flight : activeFlights) {
+            activeFlightIds.add(flight.id());
             TelemetryBriefVm telemetry = fetchLatestTelemetry(flight.id());
             if (telemetry != null && telemetry.latitude() != null && telemetry.longitude() != null
                     && telemetry.altitude() != null) {
+                cacheLatestTelemetry(flight.id(), telemetry);
                 flightDataList.add(new FlightWithTelemetry(flight, telemetry));
             }
         }
+        latestTelemetryCache.keySet().retainAll(activeFlightIds);
 
         int evaluatedPairs = 0;
         int newConflictsDetected = 0;
@@ -284,9 +288,11 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                             f2.telemetry().latitude(), f2.telemetry().longitude());
                     double distVert = Math.abs(f1.telemetry().altitude() - f2.telemetry().altitude());
 
-                    double tcpa = calculateTcpa(f1.telemetry(), f2.telemetry());
+                    CpaResult cpa = calculateCpa(f1.telemetry(), f2.telemetry());
                     boolean isSeparationLoss = (distHoriz < horizontalThresholdM) && (distVert < verticalThresholdM);
-                    boolean isPredictedLoss = (tcpa > 0.0 && tcpa < 120.0) && (distVert < verticalThresholdM)
+                    boolean isPredictedLoss = (cpa.tcpa() > 0.0 && cpa.tcpa() < 120.0)
+                            && (cpa.dcpa() < horizontalThresholdM)
+                            && (distVert < verticalThresholdM)
                             && (distHoriz < 250.0);
 
                     List<Conflict> activeConflicts = conflictRepository.findActiveBetweenFlights(
@@ -299,7 +305,7 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                         double midLat = (f1.telemetry().latitude() + f2.telemetry().latitude()) / 2.0;
                         double midLon = (f1.telemetry().longitude() + f2.telemetry().longitude()) / 2.0;
                         double midAlt = (f1.telemetry().altitude() + f2.telemetry().altitude()) / 2.0;
-                        int timeToConflict = Math.max(0, (int) Math.round(tcpa));
+                        int timeToConflict = Math.max(0, (int) Math.round(cpa.tcpa()));
 
                         if (!activeConflicts.isEmpty()) {
                             for (Conflict existing : activeConflicts) {
@@ -400,6 +406,33 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             log.debug("Failed to query active flights from flight service: {}", ex.getMessage());
             return Collections.emptyList();
         }
+    }
+
+    private void cacheLatestTelemetry(String flightId, TelemetryBriefVm telemetry) {
+        if (flightId == null || telemetry == null) {
+            return;
+        }
+        Instant now = Instant.now();
+        if (latestTelemetryCache.size() >= MAX_CACHED_TELEMETRY_FLIGHTS && !latestTelemetryCache.containsKey(flightId)) {
+            Instant cutoff = now.minusSeconds(TELEMETRY_CACHE_TTL_SECONDS);
+            latestTelemetryCache.entrySet().removeIf(entry -> entry.getValue().cachedAt().isBefore(cutoff));
+            if (latestTelemetryCache.size() >= MAX_CACHED_TELEMETRY_FLIGHTS) {
+                latestTelemetryCache.clear();
+            }
+        }
+        latestTelemetryCache.put(flightId, new CachedTelemetry(telemetry, now));
+    }
+
+    private TelemetryBriefVm getCachedOrFetchLatestTelemetry(String flightId) {
+        CachedTelemetry cached = latestTelemetryCache.get(flightId);
+        if (cached != null && !cached.cachedAt().isBefore(Instant.now().minusSeconds(TELEMETRY_CACHE_TTL_SECONDS))) {
+            return cached.telemetry();
+        }
+        TelemetryBriefVm fetched = fetchLatestTelemetry(flightId);
+        if (fetched != null) {
+            cacheLatestTelemetry(flightId, fetched);
+        }
+        return fetched;
     }
 
     private TelemetryBriefVm fetchLatestTelemetry(String flightId) {
@@ -503,15 +536,11 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         return EARTH_RADIUS_M * c;
     }
 
-    private double calculateTcpa(TelemetryBriefVm t1, TelemetryBriefVm t2) {
+    private CpaResult calculateCpa(TelemetryBriefVm t1, TelemetryBriefVm t2) {
         double speed1 = resolveDouble(t1.speed(), 0.0);
         double speed2 = resolveDouble(t2.speed(), 0.0);
         double heading1 = resolveDouble(t1.heading(), 0.0);
         double heading2 = resolveDouble(t2.heading(), 0.0);
-
-        if (speed1 < 0.1 && speed2 < 0.1) {
-            return 0.0;
-        }
 
         double lat1 = resolveDouble(t1.latitude(), 0.0);
         double lat2 = resolveDouble(t2.latitude(), 0.0);
@@ -521,6 +550,11 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         double latRad = Math.toRadians((lat1 + lat2) / 2.0);
         double dx = Math.toRadians(lon2 - lon1) * EARTH_RADIUS_M * Math.cos(latRad);
         double dy = Math.toRadians(lat2 - lat1) * EARTH_RADIUS_M;
+        double currentDistance = Math.hypot(dx, dy);
+
+        if (speed1 < 0.1 && speed2 < 0.1) {
+            return new CpaResult(0.0, currentDistance);
+        }
 
         double vx1 = speed1 * Math.sin(Math.toRadians(heading1));
         double vy1 = speed1 * Math.cos(Math.toRadians(heading1));
@@ -532,11 +566,15 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
         double vrelSq = dvx * dvx + dvy * dvy;
 
         if (vrelSq < 0.01) {
-            return 0.0;
+            return new CpaResult(0.0, currentDistance);
         }
 
         double tcpa = -(dx * dvx + dy * dvy) / vrelSq;
-        return tcpa > 0.0 ? tcpa : 0.0;
+        if (tcpa <= 0.0) {
+            return new CpaResult(0.0, currentDistance);
+        }
+        double dcpa = Math.hypot(dx + dvx * tcpa, dy + dvy * tcpa);
+        return new CpaResult(tcpa, dcpa);
     }
 
     private static double resolveDouble(Double value, double defaultValue) {
@@ -547,5 +585,11 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
     }
 
     private record FlightWithTelemetry(FlightBriefVm flight, TelemetryBriefVm telemetry) {
+    }
+
+    private record CachedTelemetry(TelemetryBriefVm telemetry, Instant cachedAt) {
+    }
+
+    private record CpaResult(double tcpa, double dcpa) {
     }
 }

@@ -1,6 +1,7 @@
 package com.utm.telemetry.repository;
 
 import com.utm.telemetry.model.TelemetryRecord;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,6 +14,8 @@ public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord
 
     List<TelemetryRecord> findByFlightIdOrderByCreatedOnAsc(String flightId);
 
+    List<TelemetryRecord> findByFlightIdOrderByCreatedOnAsc(String flightId, Pageable pageable);
+
     List<TelemetryRecord> findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(
             String flightId, ZonedDateTime from, ZonedDateTime to);
 
@@ -21,6 +24,8 @@ public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord
     Optional<TelemetryRecord> findTopByDroneIdOrderByCreatedOnDesc(String droneId);
 
     List<TelemetryRecord> findByDroneIdOrderByCreatedOnAsc(String droneId);
+
+    List<TelemetryRecord> findByDroneIdOrderByCreatedOnAsc(String droneId, Pageable pageable);
 
     List<TelemetryRecord> findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(
             String droneId, ZonedDateTime from, ZonedDateTime to);

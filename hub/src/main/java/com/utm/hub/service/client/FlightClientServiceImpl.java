@@ -15,6 +15,9 @@ public class FlightClientServiceImpl implements FlightClientService {
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
 
+    private static final java.util.List<String> ACTIVE_FLIGHT_STATUSES = java.util.List.of(
+            "active", "diverted", "emergency_landing");
+
     @Override
     public boolean hasActiveFlightsAtHub(String hubId) {
         if (hubId == null || hubId.isBlank()) {
@@ -22,22 +25,26 @@ public class FlightClientServiceImpl implements FlightClientService {
         }
 
         String flightUrl = serviceUrlConfig.getFlightUrl();
-        try {
-            FlightListClientVm response = restClient.get()
-                    .uri(flightUrl + "/api/v1/flights?status=active&limit=100")
-                    .retrieve()
-                    .body(FlightListClientVm.class);
+        String trimmedHubId = hubId.trim();
+        for (String status : ACTIVE_FLIGHT_STATUSES) {
+            try {
+                FlightListClientVm response = restClient.get()
+                        .uri(flightUrl + "/api/v1/flights?status={status}&limit=0", status)
+                        .retrieve()
+                        .body(FlightListClientVm.class);
 
-            if (response != null && response.items() != null) {
-                String trimmedHubId = hubId.trim();
-                return response.items().stream().anyMatch(flight ->
-                        trimmedHubId.equals(flight.departureHubId()) || trimmedHubId.equals(flight.arrivalHubId())
-                );
+                if (response != null && response.items() != null) {
+                    boolean found = response.items().stream().anyMatch(flight ->
+                            trimmedHubId.equals(flight.departureHubId()) || trimmedHubId.equals(flight.arrivalHubId())
+                    );
+                    if (found) {
+                        return true;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to check {} flights for hub {} at {}: {}", status, hubId, flightUrl, e.getMessage());
             }
-            return false;
-        } catch (Exception e) {
-            log.warn("Failed to check active flights for hub {} at {}: {}", hubId, flightUrl, e.getMessage());
-            return false;
         }
+        return false;
     }
 }

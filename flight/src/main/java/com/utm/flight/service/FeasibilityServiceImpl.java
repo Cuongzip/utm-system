@@ -157,7 +157,7 @@ public class FeasibilityServiceImpl implements FeasibilityService {
             return FeasibilityEvaluationListVm.of(vms, all.size());
         }
 
-        int pageIndex = offset / limit;
+        int pageIndex = Math.max(0, offset) / limit;
         PageRequest pageRequest = PageRequest.of(pageIndex, limit, Sort.by(Sort.Direction.DESC, "createdOn"));
         Page<FeasibilityEvaluation> page = evaluationRepository.findAll(spec, pageRequest);
 

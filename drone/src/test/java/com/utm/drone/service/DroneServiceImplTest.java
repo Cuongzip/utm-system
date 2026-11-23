@@ -257,18 +257,12 @@ class DroneServiceImplTest {
         @DisplayName("createDrone creates drone and returns enriched ViewModel when input is valid")
         void createDrone_validInput_createsAndReturnsEnrichedDrone() {
                 when(droneRepository.existsByRegistrationNumber("VN-UAV-001")).thenReturn(false);
-                when(organizationClientService.checkOrganizationExists("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(true);
-                when(hubClientService.checkHubExists("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
-                when(droneMapper.toEntity(samplePostVm)).thenReturn(sampleDrone);
-                when(droneRepository.saveAndFlush(sampleDrone)).thenReturn(sampleDrone);
-
-                when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(Optional.of(sampleDrone));
                 when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(sampleOwner));
                 when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(sampleHub));
+                when(droneMapper.toEntity(samplePostVm)).thenReturn(sampleDrone);
+                when(droneRepository.saveAndFlush(sampleDrone)).thenReturn(sampleDrone);
                 when(droneMapper.toVm(sampleDrone, sampleOwner, sampleHub, null)).thenReturn(sampleDroneVm);
 
                 DroneVm result = droneService.createDrone(samplePostVm);
@@ -278,6 +272,7 @@ class DroneServiceImplTest {
                 assertThat(result.registrationNumber()).isEqualTo("VN-UAV-001");
                 assertThat(result.status()).isEqualTo(DroneStatus.AVAILABLE);
                 verify(droneRepository).saveAndFlush(sampleDrone);
+                verify(droneRepository, never()).findById(anyString());
         }
 
         @Test
@@ -293,9 +288,10 @@ class DroneServiceImplTest {
                                 2.7);
 
                 when(droneRepository.existsByRegistrationNumber(anyString())).thenReturn(false);
-                when(organizationClientService.checkOrganizationExists("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(true);
-                when(hubClientService.checkHubExists("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
+                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleOwner));
+                when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleHub));
 
                 Drone droneToSave = Drone.builder()
                                 .id("d1b2c3d4-e5f6-7890-abcd-ef1234567890")
@@ -310,13 +306,6 @@ class DroneServiceImplTest {
                 when(droneMapper.toEntity(postVmWithoutRegNumber)).thenReturn(droneToSave);
                 when(droneRepository.saveAndFlush(any(Drone.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
-
-                when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(Optional.of(droneToSave));
-                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(Optional.of(sampleOwner));
-                when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(Optional.of(sampleHub));
                 when(droneMapper.toVm(eq(droneToSave), eq(sampleOwner), eq(sampleHub), isNull()))
                                 .thenAnswer(inv -> new DroneVm(
                                                 droneToSave.getId(),
@@ -362,8 +351,8 @@ class DroneServiceImplTest {
         @DisplayName("createDrone throws NotFoundException when owner organization does not exist")
         void createDrone_nonExistentOwner_throwsNotFoundException() {
                 when(droneRepository.existsByRegistrationNumber("VN-UAV-001")).thenReturn(false);
-                when(organizationClientService.checkOrganizationExists("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(false);
+                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
                                 .isInstanceOf(NotFoundException.class)
@@ -378,9 +367,10 @@ class DroneServiceImplTest {
         @DisplayName("createDrone throws NotFoundException when home hub does not exist")
         void createDrone_nonExistentHomeHub_throwsNotFoundException() {
                 when(droneRepository.existsByRegistrationNumber("VN-UAV-001")).thenReturn(false);
-                when(organizationClientService.checkOrganizationExists("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(true);
-                when(hubClientService.checkHubExists("h1b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(false);
+                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleOwner));
+                when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
                                 .isInstanceOf(NotFoundException.class)
@@ -394,16 +384,18 @@ class DroneServiceImplTest {
         @Test
         @DisplayName("updateDrone updates and returns enriched ViewModel when drone is available")
         void updateDrone_validInput_updatesAndReturnsEnrichedDrone() {
+                HubBriefVm newHub = new HubBriefVm(
+                                "h2b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                "HUB-SGN-02",
+                                "South Vertiport Hub D7");
                 when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(sampleDrone));
-                when(hubClientService.checkHubExists("h2b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(true);
+                when(hubClientService.getHubById("h2b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(newHub));
                 when(droneRepository.saveAndFlush(sampleDrone)).thenReturn(sampleDrone);
-
                 when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(sampleOwner));
-                when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                .thenReturn(Optional.of(sampleHub));
-                when(droneMapper.toVm(sampleDrone, sampleOwner, sampleHub, null)).thenReturn(sampleDroneVm);
+                when(droneMapper.toVm(sampleDrone, sampleOwner, newHub, null)).thenReturn(sampleDroneVm);
 
                 DroneVm result = droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890", samplePutVm);
 
@@ -495,11 +487,34 @@ class DroneServiceImplTest {
         }
 
         @Test
+        @DisplayName("updateDrone throws BadRequestException when in-flight drone attempts to change to offline")
+        void updateDrone_inFlightDroneChangingToOffline_throwsBadRequestException() {
+                sampleDrone.setStatus(DroneStatus.IN_FLIGHT);
+                when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleDrone));
+
+                DronePutVm changingStatusVm = new DronePutVm(
+                                sampleDrone.getHomeHubId(),
+                                null,
+                                sampleDrone.getMaxPayload(),
+                                DroneStatus.OFFLINE);
+
+                assertThatThrownBy(() -> droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                changingStatusVm))
+                                .isInstanceOf(BadRequestException.class)
+                                .hasMessage("Cannot update flight parameters of a drone currently in flight")
+                                .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
+                                .isEqualTo("VN-UAV-001");
+
+                verify(droneRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
         @DisplayName("updateDrone throws NotFoundException when new home hub does not exist")
         void updateDrone_nonExistentNewHomeHub_throwsNotFoundException() {
                 when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(sampleDrone));
-                when(hubClientService.checkHubExists("h2b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(false);
+                when(hubClientService.getHubById("h2b2c3d4-e5f6-7890-abcd-ef1234567890")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> droneService.updateDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890", samplePutVm))
                                 .isInstanceOf(NotFoundException.class)

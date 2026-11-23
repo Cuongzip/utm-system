@@ -239,6 +239,7 @@ class WaypointServiceImplTest {
                 waypointService.deleteWaypoint(MISSION_ID, WAYPOINT_ID_1);
 
                 verify(waypointRepository).delete(waypoint1);
+                verify(waypointRepository).flush();
                 assertThat(waypoint2.getSequence()).isEqualTo(1);
                 verify(waypointRepository).saveAll(List.of(waypoint2));
         }
@@ -325,6 +326,23 @@ class WaypointServiceImplTest {
 
                 assertThatThrownBy(() -> waypointService.reorderWaypoints(MISSION_ID, reorderVm))
                                 .isInstanceOf(BadRequestException.class);
+        }
+
+        @Test
+        @DisplayName("reorderWaypoints - when sequence is outside 1..N throws BadRequestException")
+        void reorderWaypoints_whenSequenceOutOfRange_shouldThrowBadRequestException() {
+                WaypointReorderVm reorderVm = new WaypointReorderVm(List.of(
+                                new WaypointReorderItemVm(WAYPOINT_ID_1, 1),
+                                new WaypointReorderItemVm(WAYPOINT_ID_2, 99)));
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID))
+                                .thenReturn(List.of(waypoint1, waypoint2));
+
+                assertThatThrownBy(() -> waypointService.reorderWaypoints(MISSION_ID, reorderVm))
+                                .isInstanceOf(BadRequestException.class);
+
+                verify(waypointRepository, never()).saveAll(any());
         }
 
         private WaypointVm createWaypointVm(Waypoint waypoint, String warning) {

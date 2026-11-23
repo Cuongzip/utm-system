@@ -1,6 +1,7 @@
 package com.utm.emergency.service.client;
 
 import com.utm.emergency.config.ServiceUrlConfig;
+import com.utm.emergency.viewmodel.client.AlertPostVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;

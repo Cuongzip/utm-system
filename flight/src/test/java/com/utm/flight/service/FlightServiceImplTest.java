@@ -1,5 +1,6 @@
 package com.utm.flight.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -62,6 +64,9 @@ class FlightServiceImplTest {
 
     @Mock
     private HubClientService hubClientService;
+
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     private FlightServiceImpl flightService;
@@ -460,6 +465,25 @@ class FlightServiceImplTest {
 
             assertThat(testFlight.getStatus()).isEqualTo(FlightStatus.SCHEDULED);
             assertThat(testFlight.getAuthorizationStatus()).isEqualTo(FlightAuthorizationStatus.PENDING);
+            verify(flightRepository).saveAndFlush(testFlight);
+        }
+
+        @Test
+        @DisplayName("Should rebuild plannedRoute when waypoints are updated without explicit plannedRoute")
+        void updateFlight_withWaypointsWithoutPlannedRoute_rebuildsPlannedRoute() {
+            when(flightRepository.findById("flight-123")).thenReturn(Optional.of(testFlight));
+            when(flightRepository.saveAndFlush(any(Flight.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(flightMapper.toVm(testFlight)).thenReturn(createTestFlightVm(testFlight));
+
+            List<com.utm.flight.viewmodel.flight.FlightWaypointVm> updatedWaypoints = List.of(
+                    new com.utm.flight.viewmodel.flight.FlightWaypointVm(1, "WP-1", 10.77, 106.70, 60.0, null, null),
+                    new com.utm.flight.viewmodel.flight.FlightWaypointVm(2, "WP-2", 10.78, 106.71, 70.0, null, null));
+            FlightPutVm putVm = new FlightPutVm(null, null, null, null, null, null, null, null, null, null,
+                    null, null, updatedWaypoints);
+
+            flightService.updateFlight("flight-123", putVm);
+
+            assertThat(testFlight.getPlannedRoute()).contains("LineString", "106.7", "10.77", "106.71", "10.78");
             verify(flightRepository).saveAndFlush(testFlight);
         }
 

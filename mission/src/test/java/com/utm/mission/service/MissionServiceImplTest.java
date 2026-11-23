@@ -113,12 +113,10 @@ class MissionServiceImplTest {
                 null
         );
 
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
-        when(missionMapper.toEntity(postVm)).thenReturn(testMission);
-        when(missionRepository.save(testMission)).thenReturn(testMission);
         when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
         when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
+        when(missionMapper.toEntity(postVm)).thenReturn(testMission);
+        when(missionRepository.save(testMission)).thenReturn(testMission);
 
         MissionVm expectedVm = createMissionVm(testMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
         when(missionMapper.toVm(eq(testMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
@@ -164,12 +162,10 @@ class MissionServiceImplTest {
                 .waypoints(new ArrayList<>())
                 .build();
 
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
-        when(missionMapper.toEntity(postVm)).thenReturn(scheduledMission);
-        when(missionRepository.save(scheduledMission)).thenReturn(scheduledMission);
         when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
         when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
+        when(missionMapper.toEntity(postVm)).thenReturn(scheduledMission);
+        when(missionRepository.save(scheduledMission)).thenReturn(scheduledMission);
 
         MissionVm expectedVm = createMissionVm(scheduledMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
         when(missionMapper.toVm(eq(scheduledMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
@@ -195,13 +191,11 @@ class MissionServiceImplTest {
                 null
         );
 
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
         when(missionRepository.existsByCode("MSN-261107-MANU")).thenReturn(false);
         when(missionMapper.toEntity(postVm)).thenReturn(testMission);
         when(missionRepository.save(testMission)).thenReturn(testMission);
-        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
-        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
 
         MissionVm expectedVm = createMissionVm(testMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
         when(missionMapper.toVm(eq(testMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
@@ -227,8 +221,8 @@ class MissionServiceImplTest {
                 null
         );
 
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
         when(missionRepository.existsByCode("MSN-261107-DUPL")).thenReturn(true);
 
         assertThatThrownBy(() -> missionService.createMission(postVm))
@@ -243,7 +237,7 @@ class MissionServiceImplTest {
         MissionPostVm postVm = new MissionPostVm(
                 null, "Test Mission", "Desc", "non-existent-dep", ARR_HUB_ID, MissionScheduleType.IMMEDIATE, null
         );
-        when(hubClientService.checkHubExists("non-existent-dep")).thenReturn(false);
+        when(hubClientService.getHubById("non-existent-dep")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> missionService.createMission(postVm))
                 .isInstanceOf(NotFoundException.class);
@@ -257,8 +251,8 @@ class MissionServiceImplTest {
         MissionPostVm postVm = new MissionPostVm(
                 null, "Test Mission", "Desc", DEP_HUB_ID, "non-existent-arr", MissionScheduleType.IMMEDIATE, null
         );
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists("non-existent-arr")).thenReturn(false);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById("non-existent-arr")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> missionService.createMission(postVm))
                 .isInstanceOf(NotFoundException.class);
@@ -272,8 +266,8 @@ class MissionServiceImplTest {
         MissionPostVm postVm = new MissionPostVm(
                 null, "Test Mission", "Desc", DEP_HUB_ID, ARR_HUB_ID, MissionScheduleType.SCHEDULED, null
         );
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
 
         assertThatThrownBy(() -> missionService.createMission(postVm))
                 .isInstanceOf(BadRequestException.class);
@@ -287,8 +281,8 @@ class MissionServiceImplTest {
         MissionPostVm postVm = new MissionPostVm(
                 null, "Test Mission", "Desc", DEP_HUB_ID, ARR_HUB_ID, MissionScheduleType.SCHEDULED, ZonedDateTime.now().minusHours(2)
         );
-        when(hubClientService.checkHubExists(DEP_HUB_ID)).thenReturn(true);
-        when(hubClientService.checkHubExists(ARR_HUB_ID)).thenReturn(true);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
 
         assertThatThrownBy(() -> missionService.createMission(postVm))
                 .isInstanceOf(BadRequestException.class);
@@ -303,7 +297,8 @@ class MissionServiceImplTest {
         when(missionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(hubClientService.getHubsByIds(Set.of(DEP_HUB_ID, ARR_HUB_ID)))
                 .thenReturn(Map.of(DEP_HUB_ID, departureHubVm, ARR_HUB_ID, arrivalHubVm));
-        when(waypointRepository.countByMissionId(MISSION_ID)).thenReturn(3L);
+        when(waypointRepository.countByMissionIds(List.of(MISSION_ID)))
+                .thenReturn(List.<Object[]>of(new Object[] { MISSION_ID, 3L }));
 
         MissionVm vm = createMissionVm(testMission, 3, null, null, departureHubVm, arrivalHubVm);
         when(missionMapper.toVm(eq(testMission), eq(3), eq(null), eq(null), eq(departureHubVm), eq(arrivalHubVm)))
@@ -316,6 +311,8 @@ class MissionServiceImplTest {
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).waypointCount()).isEqualTo(3);
         assertThat(result.items().get(0).departureHub().id()).isEqualTo(DEP_HUB_ID);
+        verify(waypointRepository).countByMissionIds(List.of(MISSION_ID));
+        verify(waypointRepository, never()).countByMissionId(any());
     }
 
     @Test
@@ -523,7 +520,7 @@ class MissionServiceImplTest {
         String copyId = "copy-id-uuid";
         Mission copyMission = Mission.builder()
                 .id(copyId)
-                .name("Medical Supply Transport (Bản sao)")
+                .name("Medical Supply Transport (Copy)")
                 .departureHubId(DEP_HUB_ID)
                 .arrivalHubId(ARR_HUB_ID)
                 .scheduleType(MissionScheduleType.IMMEDIATE)
@@ -555,7 +552,7 @@ class MissionServiceImplTest {
         MissionVm result = missionService.duplicateMission(MISSION_ID);
 
         assertThat(result).isNotNull();
-        assertThat(result.name()).contains("(Bản sao)");
+        assertThat(result.name()).contains("(Copy)");
         verify(missionRepository, times(2)).save(copyMission);
     }
 

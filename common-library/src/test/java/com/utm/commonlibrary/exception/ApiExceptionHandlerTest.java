@@ -226,6 +226,34 @@ class ApiExceptionHandlerTest {
             assertThat(body.detail()).doesNotContain("SELECT");
             assertThat(body.params()).isEmpty();
         }
+
+        @Test
+        @DisplayName("IllegalArgumentException returns 400 Bad Request with INVALID_ARGUMENT")
+        void handleIllegalArgumentException_returnsBadRequest() {
+            ResponseEntity<ErrorVm> response = handler.handleIllegalArgumentException(
+                    new IllegalArgumentException("Unknown status value"), webRequest);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            ErrorVm body = response.getBody();
+            assertThat(body).isNotNull();
+            assertThat(body.errorCode()).isEqualTo("INVALID_ARGUMENT");
+            assertThat(body.detail()).isEqualTo("Unknown status value");
+        }
+
+        @Test
+        @DisplayName("HttpMessageNotReadableException returns 400 Bad Request with MALFORMED_REQUEST")
+        void handleHttpMessageNotReadable_returnsBadRequest() {
+            org.springframework.http.converter.HttpMessageNotReadableException ex =
+                    new org.springframework.http.converter.HttpMessageNotReadableException(
+                            "Invalid JSON", (org.springframework.http.HttpInputMessage) null);
+
+            ResponseEntity<ErrorVm> response = handler.handleHttpMessageNotReadable(ex, webRequest);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            ErrorVm body = response.getBody();
+            assertThat(body).isNotNull();
+            assertThat(body.errorCode()).isEqualTo("MALFORMED_REQUEST");
+        }
     }
 
     @Nested

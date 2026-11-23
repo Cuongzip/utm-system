@@ -17,6 +17,7 @@ import com.utm.emergency.repository.EmergencyConfigRepository;
 import com.utm.emergency.repository.EmergencyIncidentRepository;
 import com.utm.emergency.repository.EmergencyProtocolRepository;
 import com.utm.emergency.service.client.AlertClientService;
+import com.utm.emergency.viewmodel.client.AlertPostVm;
 import com.utm.emergency.viewmodel.config.OperationModeVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentTimelineEventVm;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -54,11 +56,13 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     private final AlertClientService alertClient;
     private final SimpMessagingTemplate messagingTemplate;
     private final ResponseExecutorService responseExecutorService;
+    private final TransactionTemplate transactionTemplate;
 
-    private OperationMode mode = OperationMode.supervised;
+    private volatile OperationMode mode = OperationMode.supervised;
     private volatile List<EmergencyProtocol> cachedProtocols = new ArrayList<>();
     private final Map<String, PendingItem> pendingConfirmations = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4,
+            Thread.ofVirtual().factory());
 
     public record PendingItem(
             EmergencyIncident incident,
@@ -141,23 +145,33 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
     @Transactional
     public EmergencyIncidentVm confirmAction(String incidentId, boolean approved, String userId) {
         PendingItem item = pendingConfirmations.remove(incidentId);
-        if (item == null) {
-            throw new NotFoundException(MessageCode.PENDING_CONFIRMATION_NOT_FOUND, "id", incidentId);
+        EmergencyIncident incident;
+        EmergencyProtocol protocol;
+
+        if (item != null) {
+            if (item.timerFuture() != null) {
+                item.timerFuture().cancel(true);
+            }
+            incident = incidentRepo.findById(incidentId).orElse(item.incident());
+            protocol = item.protocol();
+        } else {
+            incident = incidentRepo.findById(incidentId)
+                    .filter(existing -> existing.getStatus() == IncidentStatus.pending_confirmation)
+                    .orElseThrow(() -> new NotFoundException(MessageCode.PENDING_CONFIRMATION_NOT_FOUND, "id",
+                            incidentId));
+            protocol = findMatchingProtocol(incident.getEmergencyType(), incident.getSeverity());
         }
 
-        if (item.timerFuture() != null) {
-            item.timerFuture().cancel(true);
-        }
-
-        EmergencyIncident incident = item.incident();
         incident.setConfirmedBy(userId != null ? userId : "operator");
         incident.setConfirmedAt(ZonedDateTime.now());
 
         if (approved) {
-            log.info("Action {} confirmed by user {} for incident {}", incident.getResponseAction(), userId,
-                    incidentId);
-            responseExecutorService.executeResponse(incident, item.protocol().getResponseAction(),
-                    item.protocol().getFallbackAction());
+            var responseAction = protocol != null ? protocol.getResponseAction()
+                    : (incident.getResponseAction() != null ? incident.getResponseAction()
+                            : com.utm.emergency.model.enumeration.ResponseAction.LAND);
+            var fallbackAction = protocol != null ? protocol.getFallbackAction() : null;
+            log.info("Action {} confirmed by user {} for incident {}", responseAction, userId, incidentId);
+            responseExecutorService.executeResponse(incident, responseAction, fallbackAction);
         } else {
             log.info("Action rejected by user {} for incident {}", userId, incidentId);
             incident.setStatus(IncidentStatus.resolved);
@@ -205,7 +219,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
 
         if (!requiresConfirm) {
             incident.setWasAutoExecuted(true);
-            alertClient.publishAlert(new AlertClientService.AlertPostVm(
+            alertClient.publishAlert(new AlertPostVm(
                     incident.getDroneId(),
                     incident.getFlightId(),
                     incident.getEmergencyType().name(),
@@ -239,7 +253,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                 timeoutAt));
         broadcastIncident(incident);
 
-        alertClient.publishAlert(new AlertClientService.AlertPostVm(
+        alertClient.publishAlert(new AlertPostVm(
                 incident.getDroneId(),
                 incident.getFlightId(),
                 incident.getEmergencyType().name(),
@@ -261,8 +275,15 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
         log.info("Incident {} queued for confirmation (timeout: {}s)", incident.getId(), timeoutSec);
     }
 
-    @Transactional
     public void handleTimeout(String incidentId) {
+        if (transactionTemplate != null) {
+            transactionTemplate.executeWithoutResult(status -> handleTimeoutInternal(incidentId));
+        } else {
+            handleTimeoutInternal(incidentId);
+        }
+    }
+
+    private void handleTimeoutInternal(String incidentId) {
         PendingItem item = pendingConfirmations.remove(incidentId);
         if (item == null)
             return;

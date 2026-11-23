@@ -10,10 +10,13 @@ import com.utm.telemetry.viewmodel.telemetry.TelemetryRecordVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -23,6 +26,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class TelemetryServiceImpl implements TelemetryService {
+
+    private static final int MAX_UNBOUNDED_TRACK_RECORDS = 5000;
 
     private final TelemetryRecordRepository telemetryRecordRepository;
     private final TelemetryMapper telemetryMapper;
@@ -39,8 +44,21 @@ public class TelemetryServiceImpl implements TelemetryService {
         TelemetryRecord saved = telemetryRecordRepository.saveAndFlush(record);
         TelemetryRecordVm vm = telemetryMapper.toVm(saved);
 
-        broadcastTelemetry(vm);
-        publishTelemetryToKafka(vm);
+        Runnable emitSideEffects = () -> {
+            broadcastTelemetry(vm);
+            publishTelemetryToKafka(vm);
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    emitSideEffects.run();
+                }
+            });
+        } else {
+            emitSideEffects.run();
+        }
 
         return vm;
     }
@@ -94,12 +112,11 @@ public class TelemetryServiceImpl implements TelemetryService {
         if (from != null && to != null) {
             records = telemetryRecordRepository.findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(flightId, from, to);
         } else {
-            records = telemetryRecordRepository.findByFlightIdOrderByCreatedOnAsc(flightId);
+            records = telemetryRecordRepository.findByFlightIdOrderByCreatedOnAsc(
+                    flightId, PageRequest.of(0, MAX_UNBOUNDED_TRACK_RECORDS));
         }
 
-        return records.stream()
-                .map(telemetryMapper::toVm)
-                .toList();
+        return telemetryMapper.toVmList(records);
     }
 
     @Override
@@ -115,12 +132,11 @@ public class TelemetryServiceImpl implements TelemetryService {
         if (from != null && to != null) {
             records = telemetryRecordRepository.findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(droneId, from, to);
         } else {
-            records = telemetryRecordRepository.findByDroneIdOrderByCreatedOnAsc(droneId);
+            records = telemetryRecordRepository.findByDroneIdOrderByCreatedOnAsc(
+                    droneId, PageRequest.of(0, MAX_UNBOUNDED_TRACK_RECORDS));
         }
 
-        return records.stream()
-                .map(telemetryMapper::toVm)
-                .toList();
+        return telemetryMapper.toVmList(records);
     }
 }
 

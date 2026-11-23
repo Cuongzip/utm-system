@@ -92,13 +92,12 @@ public class WaypointServiceImpl implements WaypointService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.WAYPOINT_NOT_FOUND, "id", waypointId));
 
         waypointRepository.delete(waypoint);
+        waypointRepository.flush();
 
         List<Waypoint> remaining = waypointRepository.findByMissionIdOrderBySequenceAsc(missionId);
         int seq = 1;
         for (Waypoint w : remaining) {
-            if (!w.getId().equals(waypointId)) {
-                w.setSequence(seq++);
-            }
+            w.setSequence(seq++);
         }
         waypointRepository.saveAll(remaining);
     }
@@ -116,9 +115,13 @@ public class WaypointServiceImpl implements WaypointService {
             throw new BadRequestException(MessageCode.WAYPOINT_REORDER_INVALID);
         }
 
+        int total = existingWaypoints.size();
         Set<Integer> assignedSequences = new HashSet<>();
         for (WaypointReorderItemVm item : reorderVm.order()) {
             if (!waypointMap.containsKey(item.waypointId())) {
+                throw new BadRequestException(MessageCode.WAYPOINT_REORDER_INVALID);
+            }
+            if (item.sequence() == null || item.sequence() < 1 || item.sequence() > total) {
                 throw new BadRequestException(MessageCode.WAYPOINT_REORDER_INVALID);
             }
             if (!assignedSequences.add(item.sequence())) {

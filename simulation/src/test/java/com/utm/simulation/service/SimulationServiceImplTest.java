@@ -1,5 +1,6 @@
 package com.utm.simulation.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -79,6 +81,9 @@ class SimulationServiceImplTest {
 
     @Mock
     private FlightClientService flightClientService;
+
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     private SimulationServiceImpl simulationService;
@@ -692,7 +697,7 @@ class SimulationServiceImplTest {
     class InjectScenario {
 
         @Test
-        @DisplayName("whenRunning_injectsScenarioAndRecordsEvent")
+        @DisplayName("whenRunning_injectsScenarioAndRecordsEventWithSerializedConfig")
         void whenRunning_injectsScenarioAndRecordsEvent() {
             testSession.setStatus(SimulationStatus.RUNNING);
             InjectScenarioVm injectVm = new InjectScenarioVm(EmergencyScenarioType.BATTERY_DRAIN,
@@ -701,7 +706,7 @@ class SimulationServiceImplTest {
             when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(testSession));
             when(sessionRepository.save(testSession)).thenReturn(testSession);
             when(simulationMapper.toEventEntity(eq(SESSION_ID), eq("SCENARIO_INJECTED"), eq("battery_drain"),
-                    anyString(), eq("CRITICAL"), isNull()))
+                    anyString(), eq("CRITICAL"), eq("{\"dischargeRate\":5.0}")))
                     .thenReturn(testEvent);
             when(eventRepository.save(testEvent)).thenReturn(testEvent);
             when(simulationMapper.toVm(testEvent)).thenReturn(testEventVm);
@@ -840,7 +845,7 @@ class SimulationServiceImplTest {
         @DisplayName("whenCalled_returnsOrderedSessionEvents")
         void whenCalled_returnsOrderedSessionEvents() {
             when(eventRepository.findBySessionIdOrderByCreatedOnAsc(SESSION_ID)).thenReturn(List.of(testEvent));
-            when(simulationMapper.toVm(testEvent)).thenReturn(testEventVm);
+            when(simulationMapper.toEventVmList(List.of(testEvent))).thenReturn(List.of(testEventVm));
 
             List<SimulationEventVm> events = simulationService.getSessionEvents(SESSION_ID);
 
@@ -848,6 +853,20 @@ class SimulationServiceImplTest {
             assertThat(events.getFirst().id()).isEqualTo(EVENT_ID);
             assertThat(events.getFirst().scenario()).isEqualTo("battery_drain");
             verify(eventRepository).findBySessionIdOrderByCreatedOnAsc(SESSION_ID);
+            verify(simulationMapper).toEventVmList(List.of(testEvent));
         }
+    }
+
+    @Test
+    @DisplayName("recoverOrphanedSessions marks leftover RUNNING and PAUSED sessions as STOPPED")
+    void recoverOrphanedSessions_marksLeftoverActiveSessionsStopped() {
+        testSession.setStatus(SimulationStatus.RUNNING);
+        when(sessionRepository.findByStatusIn(List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED)))
+                .thenReturn(List.of(testSession));
+
+        simulationService.recoverOrphanedSessions();
+
+        assertThat(testSession.getStatus()).isEqualTo(SimulationStatus.STOPPED);
+        verify(sessionRepository).saveAll(List.of(testSession));
     }
 }

@@ -21,7 +21,7 @@ public class HubClientServiceImpl implements HubClientService {
     @Override
     public boolean checkHubExists(String hubId) {
         if (hubId == null || hubId.isBlank()) {
-            return true;
+            return false;
         }
 
         String hubUrl = serviceUrlConfig.getHubUrl();

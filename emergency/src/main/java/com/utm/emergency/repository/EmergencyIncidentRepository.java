@@ -48,4 +48,10 @@ public interface EmergencyIncidentRepository
                      "AND i.detectedAt >= :from AND i.detectedAt <= :to " +
                      "GROUP BY i.actionSuccess")
        List<Object[]> countByResolutionGrouped(@Param("from") ZonedDateTime from, @Param("to") ZonedDateTime to);
+
+       @Query(value = "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (action_started_at - detected_at))), 0.0) " +
+                     "FROM emergency_incidents " +
+                     "WHERE action_started_at IS NOT NULL AND detected_at >= :from AND detected_at <= :to",
+                     nativeQuery = true)
+       Double calculateAvgResponseTimeSeconds(@Param("from") ZonedDateTime from, @Param("to") ZonedDateTime to);
 }

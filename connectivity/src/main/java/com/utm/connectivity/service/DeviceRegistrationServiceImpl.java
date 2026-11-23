@@ -32,7 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -99,22 +102,16 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
         if (limit <= 0) {
             List<DeviceRegistration> all = deviceRegistrationRepository.findAll(spec,
                     Sort.by(Sort.Direction.DESC, "createdOn"));
-            List<DeviceRegistrationVm> items = all.stream().map(reg -> {
-                Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
-                return mapper.toVm(reg, droneOpt.orElse(null));
-            }).toList();
+            List<DeviceRegistrationVm> items = enrichWithDrones(all);
             return DeviceRegistrationListVm.of(items, items.size());
         }
 
         int pageSize = limit;
-        int pageNumber = offset > 0 ? (offset / pageSize) : 0;
+        int pageNumber = Math.max(0, offset) / pageSize;
         Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdOn"));
 
         Page<DeviceRegistration> page = deviceRegistrationRepository.findAll(spec, pageable);
-        List<DeviceRegistrationVm> items = page.getContent().stream().map(reg -> {
-            Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
-            return mapper.toVm(reg, droneOpt.orElse(null));
-        }).toList();
+        List<DeviceRegistrationVm> items = enrichWithDrones(page.getContent());
 
         return DeviceRegistrationListVm.of(items, page.getTotalElements());
     }
@@ -126,20 +123,35 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
 
         List<DeviceRegistration> allOnline = deviceRegistrationRepository
                 .findByConnectionStatus(DeviceConnectionStatus.ONLINE);
+        List<DeviceRegistration> expired = new ArrayList<>();
+        List<DeviceRegistration> stillOnline = new ArrayList<>();
+
         for (DeviceRegistration dev : allOnline) {
             if (dev.getLastSeenAt() == null || dev.getLastSeenAt().isBefore(cutoff)) {
                 dev.setConnectionStatus(DeviceConnectionStatus.OFFLINE);
-                deviceRegistrationRepository.save(dev);
+                expired.add(dev);
+            } else {
+                stillOnline.add(dev);
             }
         }
+        if (!expired.isEmpty()) {
+            deviceRegistrationRepository.saveAll(expired);
+        }
 
-        List<DeviceRegistration> currentOnline = deviceRegistrationRepository
-                .findByConnectionStatus(DeviceConnectionStatus.ONLINE);
-        return currentOnline.stream()
-                .map(reg -> {
-                    Optional<DroneBriefVm> droneOpt = droneClientService.getDroneById(reg.getDroneId());
-                    return mapper.toVm(reg, droneOpt.orElse(null));
-                })
+        return enrichWithDrones(stillOnline);
+    }
+
+    private List<DeviceRegistrationVm> enrichWithDrones(List<DeviceRegistration> registrations) {
+        if (registrations.isEmpty()) {
+            return List.of();
+        }
+        Set<String> droneIds = registrations.stream()
+                .map(DeviceRegistration::getDroneId)
+                .filter(id -> id != null && !id.isBlank())
+                .collect(Collectors.toSet());
+        Map<String, DroneBriefVm> droneMap = droneClientService.getDronesByIds(droneIds);
+        return registrations.stream()
+                .map(reg -> mapper.toVm(reg, droneMap.get(reg.getDroneId())))
                 .toList();
     }
 

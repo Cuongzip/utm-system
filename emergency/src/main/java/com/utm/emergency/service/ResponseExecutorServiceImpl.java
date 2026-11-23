@@ -47,7 +47,9 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
         if (incident.getDetectionData() != null) {
             try {
                 var json = incidentMapper.stringToJsonNode(incident.getDetectionData());
-                if (json != null && json.has("batteryPercent")) {
+                if (json != null && json.has("batteryPercentage")) {
+                    battery = json.get("batteryPercentage").asDouble();
+                } else if (json != null && json.has("batteryPercent")) {
                     battery = json.get("batteryPercent").asDouble();
                 } else if (json != null && json.has("batteryLevel")) {
                     battery = json.get("batteryLevel").asDouble();
@@ -145,7 +147,9 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
         incidentRepo.save(incident);
         broadcastIncident(incident);
 
-        boolean dispatched = droneClient.sendEmergencyCommand(incident.getDroneId(), actionToExecute.name(), incident.getFlightId(), incident.getId());
+        boolean dispatched = actionToExecute == ResponseAction.NONE
+                || droneClient.sendEmergencyCommand(incident.getDroneId(), actionToExecute.name(), incident.getFlightId(),
+                        incident.getId());
 
         recordEmergencyBlackbox(incident, actionToExecute);
 

@@ -107,6 +107,12 @@ public class HubServiceImpl implements HubService {
         Hub hub = hubRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", id));
 
+        if (hubPutVm.status() == HubStatus.INACTIVE && hub.getStatus() != HubStatus.INACTIVE) {
+            if (flightClientService.hasActiveFlightsAtHub(id)) {
+                throw new BadRequestException(MessageCode.HUB_HAS_ACTIVE_FLIGHTS);
+            }
+        }
+
         hubMapper.updateEntityFromPutVm(hub, hubPutVm);
 
         Hub updatedHub = hubRepository.saveAndFlush(hub);
@@ -121,7 +127,7 @@ public class HubServiceImpl implements HubService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", id));
 
         if (flightClientService.hasActiveFlightsAtHub(id)) {
-            throw new BadRequestException("Cannot deactivate hub with flights currently active");
+            throw new BadRequestException(MessageCode.HUB_HAS_ACTIVE_FLIGHTS);
         }
 
         hub.setStatus(HubStatus.INACTIVE);

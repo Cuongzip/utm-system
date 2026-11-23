@@ -164,13 +164,16 @@ class MissionExecutionServiceImplTest {
         void executeMission_whenDroneIsIdle_shouldProceedSuccessfully() {
                 MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
                 DroneBriefVm idleDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "idle", "hub-1");
+                FlightBriefVm flightVm = new FlightBriefVm("fl-idle-uuid", "FL-IDLE-01", DRONE_ID, PILOT_ID, "planned",
+                                "pending");
 
                 when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
                 when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
                 when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(idleDrone));
                 when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
                 when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
-                when(flightClientService.createFlight(any(FlightCreateRequestVm.class))).thenReturn(Optional.empty());
+                when(flightClientService.createFlight(any(FlightCreateRequestVm.class)))
+                                .thenReturn(Optional.of(flightVm));
                 when(missionExecutionMapper.toVm(executionEntity)).thenReturn(executionVm);
 
                 MissionExecutionResultVm result = missionExecutionService.executeMission(MISSION_ID, postVm);
@@ -180,6 +183,26 @@ class MissionExecutionServiceImplTest {
                 assertThat(result.flight().droneId()).isEqualTo(DRONE_ID);
                 assertThat(result.flight().status()).isEqualTo("planned");
                 assertThat(draftMission.getStatus()).isEqualTo(MissionStatus.EXECUTING);
+        }
+
+        @Test
+        @DisplayName("executeMission - when flight service fails to create flight throws BadRequestException without setting EXECUTING")
+        void executeMission_whenFlightCreationFails_shouldThrowBadRequestException() {
+                MissionExecutePostVm postVm = new MissionExecutePostVm(DRONE_ID, PILOT_ID);
+                DroneBriefVm idleDrone = new DroneBriefVm(DRONE_ID, "VN-D001", "idle", "hub-1");
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
+                when(droneClientService.getDroneById(DRONE_ID)).thenReturn(Optional.of(idleDrone));
+                when(missionExecutionMapper.toEntity(postVm, MISSION_ID, 2)).thenReturn(executionEntity);
+                when(missionExecutionRepository.saveAndFlush(executionEntity)).thenReturn(executionEntity);
+                when(flightClientService.createFlight(any(FlightCreateRequestVm.class))).thenReturn(Optional.empty());
+
+                assertThatThrownBy(() -> missionExecutionService.executeMission(MISSION_ID, postVm))
+                                .isInstanceOf(BadRequestException.class);
+
+                assertThat(draftMission.getStatus()).isEqualTo(MissionStatus.DRAFT);
+                verify(missionRepository, never()).saveAndFlush(any());
         }
 
         @Test

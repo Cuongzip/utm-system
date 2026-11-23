@@ -8,7 +8,6 @@ public final class MessageCode {
     public static final String FLIGHT_NOT_FOUND = "FLIGHT_NOT_FOUND";
     public static final String ACCESS_DENIED = "ACCESS_DENIED";
     public static final String NAME_ALREADY_EXISTED = "NAME_ALREADY_EXISTED";
-    public static final String NAME_ALREADY_EXITED = "NAME_ALREADY_EXISTED";
     public static final String REGISTRATION_NUMBER_ALREADY_EXISTED = "REGISTRATION_NUMBER_ALREADY_EXISTED";
     public static final String ORGANIZATION_REGISTRATION_NUMBER_ALREADY_EXISTED = "ORGANIZATION_REGISTRATION_NUMBER_ALREADY_EXISTED";
     public static final String HUB_CODE_ALREADY_EXISTED = "HUB_CODE_ALREADY_EXISTED";
@@ -55,6 +54,11 @@ public final class MessageCode {
     public static final String PENDING_CONFIRMATION_NOT_FOUND = "PENDING_CONFIRMATION_NOT_FOUND";
     public static final String COMMAND_NOT_FOUND = "COMMAND_NOT_FOUND";
     public static final String CANNOT_CANCEL_EXECUTING_COMMAND = "CANNOT_CANCEL_EXECUTING_COMMAND";
+    public static final String ORGANIZATION_HAS_ACTIVE_DRONES = "ORGANIZATION_HAS_ACTIVE_DRONES";
+    public static final String HUB_HAS_ACTIVE_FLIGHTS = "HUB_HAS_ACTIVE_FLIGHTS";
+    public static final String FLIGHT_CREATION_FAILED = "FLIGHT_CREATION_FAILED";
+    public static final String DEVICE_HEARTBEAT_FAILED = "DEVICE_HEARTBEAT_FAILED";
+    public static final String ALERT_ALREADY_RESOLVED = "ALERT_ALREADY_RESOLVED";
 
     private MessageCode() {
     }

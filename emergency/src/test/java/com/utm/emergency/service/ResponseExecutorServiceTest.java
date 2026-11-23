@@ -12,6 +12,8 @@ import com.utm.emergency.repository.EmergencyIncidentRepository;
 import com.utm.emergency.service.client.DroneClientService;
 import com.utm.emergency.service.client.FlightClientService;
 import com.utm.emergency.service.client.HubClientService;
+import com.utm.emergency.viewmodel.client.FlightSummaryVm;
+import com.utm.emergency.viewmodel.client.HubLocationVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -115,10 +117,10 @@ class ResponseExecutorServiceTest {
                                         .build();
 
                         when(flightClient.getFlightById("fl-1")).thenReturn(Optional.of(
-                                        new FlightClientService.FlightSummaryVm("fl-1", "FL-100", "dr-1", "hub-1",
+                                        new FlightSummaryVm("fl-1", "FL-100", "dr-1", "hub-1",
                                                         "hub-2", "active")));
                         when(hubClient.getHubById("hub-1")).thenReturn(Optional.of(
-                                        new HubClientService.HubLocationVm("hub-1", "SGN", "Saigon Hub", null, null,
+                                        new HubLocationVm("hub-1", "SGN", "Saigon Hub", null, null,
                                                         "active")));
 
                         var result = responseExecutorService.validateAction(incident, ResponseAction.RTH);
@@ -142,10 +144,10 @@ class ResponseExecutorServiceTest {
                                         .thenReturn(OBJECT_MAPPER.readTree("{\"batteryPercent\": 12.0}"));
 
                         when(flightClient.getFlightById("fl-2")).thenReturn(Optional.of(
-                                        new FlightClientService.FlightSummaryVm("fl-2", "FL-200", "dr-2", "hub-ath",
+                                        new FlightSummaryVm("fl-2", "FL-200", "dr-2", "hub-ath",
                                                         "hub-skg", "active")));
                         when(hubClient.getHubById("hub-ath")).thenReturn(Optional.of(
-                                        new HubClientService.HubLocationVm("hub-ath", "ATH", "Athens Hub", 40.64, 22.94,
+                                        new HubLocationVm("hub-ath", "ATH", "Athens Hub", 40.64, 22.94,
                                                         "active")));
 
                         var result = responseExecutorService.validateAction(incident, ResponseAction.RTH);
@@ -153,6 +155,32 @@ class ResponseExecutorServiceTest {
                         assertThat(result.safe()).isFalse();
                         assertThat(result.recommendedAction()).isEqualTo(ResponseAction.LAND);
                         assertThat(result.reason()).contains("Insufficient battery for RTH");
+                }
+
+                @Test
+                @DisplayName("validateAction for RTH reads batteryPercentage key and rejects low battery")
+                void validateAction_rth_whenBatteryPercentageKeyIsLow_fails() throws Exception {
+                        EmergencyIncident incident = EmergencyIncident.builder()
+                                        .flightId("fl-2b")
+                                        .latitude(10.762622)
+                                        .longitude(106.660172)
+                                        .detectionData("{\"batteryPercentage\": 5.0}")
+                                        .build();
+
+                        when(incidentMapper.stringToJsonNode("{\"batteryPercentage\": 5.0}"))
+                                        .thenReturn(OBJECT_MAPPER.readTree("{\"batteryPercentage\": 5.0}"));
+                        when(flightClient.getFlightById("fl-2b")).thenReturn(Optional.of(
+                                        new FlightSummaryVm("fl-2b", "FL-201", "dr-2b", "hub-d1",
+                                                        "hub-d7", "active")));
+                        when(hubClient.getHubById("hub-d1")).thenReturn(Optional.of(
+                                        new HubLocationVm("hub-d1", "HUB1", "District 1 Hub",
+                                                        10.770000, 106.670000, "active")));
+
+                        var result = responseExecutorService.validateAction(incident, ResponseAction.RTH);
+
+                        assertThat(result.safe()).isFalse();
+                        assertThat(result.recommendedAction()).isEqualTo(ResponseAction.LAND);
+                        assertThat(result.reason()).contains("have 5%");
                 }
 
                 @Test
@@ -169,10 +197,10 @@ class ResponseExecutorServiceTest {
                                         .thenReturn(OBJECT_MAPPER.readTree("{\"batteryPercent\": 85.0}"));
 
                         when(flightClient.getFlightById("fl-3")).thenReturn(Optional.of(
-                                        new FlightClientService.FlightSummaryVm("fl-3", "FL-300", "dr-3", "hub-d1",
+                                        new FlightSummaryVm("fl-3", "FL-300", "dr-3", "hub-d1",
                                                         "hub-d7", "active")));
                         when(hubClient.getHubById("hub-d1")).thenReturn(Optional.of(
-                                        new HubClientService.HubLocationVm("hub-d1", "HUB1", "District 1 Hub",
+                                        new HubLocationVm("hub-d1", "HUB1", "District 1 Hub",
                                                         10.770000, 106.670000, "active")));
 
                         var result = responseExecutorService.validateAction(incident, ResponseAction.RTH);
@@ -194,7 +222,7 @@ class ResponseExecutorServiceTest {
                                         .thenReturn(OBJECT_MAPPER.readTree("{\"batteryPercent\": 50.0}"));
 
                         when(hubClient.getActiveHubs()).thenReturn(List.of(
-                                        new HubClientService.HubLocationVm("hub-safe", "SAFE", "Safe Hub", 10.765000,
+                                        new HubLocationVm("hub-safe", "SAFE", "Safe Hub", 10.765000,
                                                         106.662000, "active")));
 
                         var result = responseExecutorService.validateAction(incident, ResponseAction.DIVERT);
@@ -305,6 +333,32 @@ class ResponseExecutorServiceTest {
                         assertThat(incident.getActionError()).contains("Failed to dispatch failsafe command");
 
                         verify(incidentRepo, times(2)).save(incident);
+                }
+
+                @Test
+                @DisplayName("executeResponse skips drone command dispatch when resolved action is NONE")
+                void executeResponse_whenActionIsNone_skipsDroneCommandDispatch() {
+                        EmergencyIncident incident = EmergencyIncident.builder()
+                                        .id("inc-exec-none")
+                                        .droneId("drone-400")
+                                        .flightId("flight-400")
+                                        .status(IncidentStatus.active)
+                                        .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
+                                        .build();
+
+                        BlackboxEntry entry = new BlackboxEntry();
+                        when(blackboxMapper.toEmergencyEntity(incident, ResponseAction.NONE)).thenReturn(entry);
+                        when(blackboxRepo.save(entry)).thenReturn(entry);
+
+                        responseExecutorService.executeResponse(incident, ResponseAction.NONE, null);
+
+                        assertThat(incident.getResponseAction()).isEqualTo(ResponseAction.NONE);
+                        assertThat(incident.getActionSuccess()).isTrue();
+                        verify(droneClient, org.mockito.Mockito.never()).sendEmergencyCommand(
+                                        org.mockito.ArgumentMatchers.any(),
+                                        org.mockito.ArgumentMatchers.any(),
+                                        org.mockito.ArgumentMatchers.any(),
+                                        org.mockito.ArgumentMatchers.any());
                 }
         }
 }

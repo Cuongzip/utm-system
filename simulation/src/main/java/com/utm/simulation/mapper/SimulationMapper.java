@@ -27,6 +27,8 @@ public interface SimulationMapper {
     @Mapping(target = "type", source = "eventType")
     SimulationEventVm toVm(SimulationEvent event);
 
+    java.util.List<SimulationEventVm> toEventVmList(java.util.List<SimulationEvent> events);
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "flightId", source = "flightId")
     @Mapping(target = "droneId", ignore = true)

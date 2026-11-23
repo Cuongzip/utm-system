@@ -46,12 +46,11 @@ import java.util.Objects;
 @Slf4j
 public class FlightServiceImpl implements FlightService {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     private final FlightRepository flightRepository;
     private final FlightMapper flightMapper;
     private final DroneClientService droneClientService;
     private final HubClientService hubClientService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,7 +64,7 @@ public class FlightServiceImpl implements FlightService {
             return FlightListVm.of(flightMapper.toVmList(all), all.size());
         }
 
-        int pageIndex = offset / limit;
+        int pageIndex = Math.max(0, offset) / limit;
         PageRequest pageRequest = PageRequest.of(pageIndex, limit, Sort.by(Sort.Direction.DESC, "createdOn"));
         Page<Flight> page = flightRepository.findAll(spec, pageRequest);
         return FlightListVm.of(flightMapper.toVmList(page.getContent()), page.getTotalElements());
@@ -210,6 +209,14 @@ public class FlightServiceImpl implements FlightService {
 
         if (flightPutVm.plannedRoute() != null) {
             flight.setPlannedRoute(serializeGeoJson(flightPutVm.plannedRoute()));
+        } else if (flightPutVm.waypoints() != null && flightPutVm.waypoints().size() >= 2) {
+            List<List<Double>> wpCoords = flightPutVm.waypoints().stream()
+                    .filter(wp -> wp.longitude() != null && wp.latitude() != null)
+                    .map(wp -> List.of(wp.longitude(), wp.latitude(), Objects.requireNonNullElse(wp.altitude(), 0.0)))
+                    .toList();
+            if (wpCoords.size() >= 2) {
+                flight.setPlannedRoute(serializeGeoJson(GeoJsonLineStringVm.of(wpCoords)));
+            }
         }
 
         if (flightPutVm.actualRoute() != null) {
@@ -381,7 +388,7 @@ public class FlightServiceImpl implements FlightService {
             return "{\"type\":\"LineString\",\"coordinates\":[]}";
         }
         try {
-            return OBJECT_MAPPER.writeValueAsString(lineStringVm);
+            return objectMapper.writeValueAsString(lineStringVm);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to serialize plannedRoute GeoJSON LineString", e);
         }

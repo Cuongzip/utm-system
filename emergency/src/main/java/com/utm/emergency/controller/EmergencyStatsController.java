@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +26,7 @@ public class EmergencyStatsController {
     private final EmergencyIncidentService incidentService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Aggregate emergency incidents safety statistics")
     public ResponseEntity<EmergencyStatsVm> getStats(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime from,
@@ -33,6 +35,7 @@ public class EmergencyStatsController {
     }
 
     @GetMapping("/trends")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get time-series trends of emergency incidents")
     public ResponseEntity<List<EmergencyTrendVm>> getTrends(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime from,
