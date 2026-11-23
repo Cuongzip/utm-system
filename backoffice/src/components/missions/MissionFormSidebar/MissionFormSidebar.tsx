@@ -2,7 +2,13 @@
 
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
-import type { Waypoint, Drone, Hub, MissionFormPayload } from "@/types";
+import {
+    DEFAULT_DRONE_STATUS,
+    type Waypoint,
+    type Drone,
+    type Hub,
+    type MissionFormPayload,
+} from "@/types";
 import { MissionDetailsTab } from "./MissionDetailsTab";
 import { MissionWaypointsTab } from "./MissionWaypointsTab";
 import { MissionScheduleTab } from "./MissionScheduleTab";
@@ -17,8 +23,8 @@ export interface MissionFormSidebarProps {
     onDroneIdChange: (val: string) => void;
     drones: Drone[];
     hubs: Hub[];
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
     waypoints: Waypoint[];
     selectedWaypoint: Waypoint | null;
     onSelectWaypoint: (wp: Waypoint | null) => void;
@@ -27,11 +33,10 @@ export interface MissionFormSidebarProps {
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     activeTab: "details" | "waypoints" | "schedule";
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
-    isEdit?: boolean;
-    isReadOnly?: boolean;
-    className?: string;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    isEdit: boolean;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function MissionFormSidebar({
@@ -53,7 +58,6 @@ export function MissionFormSidebar({
     onTabChange,
     isEdit = false,
     isReadOnly = false,
-    className = "",
     fieldErrors = {},
     onClearFieldError,
 }: MissionFormSidebarProps) {
@@ -65,7 +69,7 @@ export function MissionFormSidebar({
         { value: "", label: "No drone assigned" },
         ...drones.map((d) => ({
             value: d.id,
-            label: `${d.model || d.registrationNumber || d.id} (${d.status || "available"})`,
+            label: `${d.model || d.registrationNumber || d.id} (${d.status ?? DEFAULT_DRONE_STATUS})`,
         })),
     ];
 
@@ -82,7 +86,7 @@ export function MissionFormSidebar({
     const totalPoints = waypoints.length + (departureHub ? 1 : 0) + (arrivalHub ? 1 : 0);
 
     return (
-        <ChamferCard size="lg" className={cn("w-full h-full min-h-0", className)}>
+        <ChamferCard size="lg" className="w-full h-full min-h-0">
             <div className="flex flex-col h-full min-h-0 bg-[var(--color-surface-panel)] select-none overflow-hidden">
                 <div className="grid grid-cols-3 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs shrink-0">
                     <button
@@ -169,20 +173,8 @@ export function MissionFormSidebar({
                             onUpdateWaypoint={onUpdateWaypoint}
                             onDeleteWaypoint={onDeleteWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
-                            departureHub={
-                                departureHub !== undefined
-                                    ? departureHub
-                                    : hubs.find((h) => h.id === formData.departureHubId) || null
-                            }
-                            arrivalHub={
-                                arrivalHub !== undefined
-                                    ? arrivalHub
-                                    : hubs.find(
-                                          (h) =>
-                                              h.id ===
-                                              (formData.arrivalHubId || formData.departureHubId)
-                                      ) || null
-                            }
+                            departureHub={departureHub}
+                            arrivalHub={arrivalHub}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}

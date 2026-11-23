@@ -8,25 +8,25 @@ import { PinnedHubWaypointItem } from "./WaypointList/PinnedHubWaypointItem";
 import { WaypointListItem } from "./WaypointList/WaypointListItem";
 
 export interface WaypointRouteTabProps<T extends WaypointItem> {
-    title?: string;
+    title: string;
     waypoints: T[];
     selectedWaypoint: T | null;
     onSelectWaypoint: (wp: T | null) => void;
     onUpdateWaypoint: (wp: T) => void;
     onDeleteWaypoint: (wpId: string) => void;
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
-    defaultAltitude?: number;
-    isReadOnly?: boolean;
-    generalError?: string;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
+    defaultAltitude: number;
+    isReadOnly: boolean;
+    generalError: string | undefined;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function WaypointRouteTab<T extends WaypointItem>({
-    title = "Flight Route Checkpoints",
-    waypoints = [],
+    title,
+    waypoints,
     selectedWaypoint,
     onSelectWaypoint,
     onUpdateWaypoint,
@@ -34,10 +34,10 @@ export function WaypointRouteTab<T extends WaypointItem>({
     onMoveWaypointOrder,
     departureHub,
     arrivalHub,
-    defaultAltitude = 50,
-    isReadOnly = false,
+    defaultAltitude,
+    isReadOnly,
     generalError,
-    fieldErrors = {},
+    fieldErrors,
     onClearFieldError,
 }: WaypointRouteTabProps<T>) {
     const selectedIdx = selectedWaypoint
@@ -67,9 +67,7 @@ export function WaypointRouteTab<T extends WaypointItem>({
                     defaultAltitude={defaultAltitude}
                     isReadOnly={isReadOnly}
                     fieldErrors={fieldErrors}
-                    waypointIndex={
-                        selectedIdx >= 0 ? (departureHub ? 1 : 0) + selectedIdx : undefined
-                    }
+                    waypointIndex={selectedIdx >= 0 ? (departureHub ? 1 : 0) + selectedIdx : -1}
                     onClearFieldError={onClearFieldError}
                 />
             ) : (

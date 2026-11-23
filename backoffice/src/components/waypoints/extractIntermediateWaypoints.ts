@@ -1,4 +1,4 @@
-import type { Hub } from "@/types";
+import { WAYPOINT_ACTION_TYPE, type Hub } from "@/types";
 
 export interface WaypointLocationLike {
     name?: string | null;
@@ -17,7 +17,7 @@ export function extractIntermediateWaypoints<T extends WaypointLocationLike>(
 
     const isDeparturePoint = (wp: T): boolean => {
         const actionType = (wp.actions as { type?: string } | undefined)?.type;
-        if (actionType === "takeoff") return true;
+        if (actionType === WAYPOINT_ACTION_TYPE.TAKEOFF) return true;
         if (wp.name && (wp.name.startsWith("Departure:") || wp.name.startsWith("Dep:")))
             return true;
         if (
@@ -37,7 +37,7 @@ export function extractIntermediateWaypoints<T extends WaypointLocationLike>(
 
     const isArrivalPoint = (wp: T): boolean => {
         const actionType = (wp.actions as { type?: string } | undefined)?.type;
-        if (actionType === "land") return true;
+        if (actionType === WAYPOINT_ACTION_TYPE.LAND) return true;
         if (wp.name && (wp.name.startsWith("Arrival:") || wp.name.startsWith("Arr:"))) return true;
         if (
             arrivalHub?.location?.latitude !== undefined &&

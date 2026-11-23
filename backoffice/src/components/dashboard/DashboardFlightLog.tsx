@@ -9,7 +9,7 @@ import { DEFAULT_FLIGHT_STATUS, type Flight, type FlightStatus } from "@/types";
 
 export interface DashboardFlightLogProps {
     flights: Flight[];
-    isLoading?: boolean;
+    isLoading: boolean;
 }
 
 export function DashboardFlightLog({ flights = [], isLoading = false }: DashboardFlightLogProps) {

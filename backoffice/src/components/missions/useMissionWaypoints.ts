@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import type { Waypoint, Hub } from "@/types";
+import { WAYPOINT_ACTION_TYPE, type Waypoint, type Hub } from "@/types";
 import { useWaypointManager } from "@/hooks/useWaypointManager";
 import { extractIntermediateWaypoints } from "@/components/waypoints";
-import { calculateMissionDistance } from "./missionUtils";
 
 export interface UseMissionWaypointsOptions {
     initialWaypoints?: Waypoint[];
@@ -47,11 +46,6 @@ export function useMissionWaypoints({
 
     const [defaultAltitude, setDefaultAltitude] = useState(initialAltitude);
 
-    const totalDistanceM = useMemo(
-        () => calculateMissionDistance(waypoints, departureHub, arrivalHub),
-        [waypoints, departureHub, arrivalHub]
-    );
-
     const handleSelectWaypoint = useCallback(
         (wp: Waypoint | null) => {
             setSelectedWaypointId(wp ? String(wp.id || wp.tempId) : null);
@@ -70,7 +64,7 @@ export function useMissionWaypoints({
                 latitude: lat,
                 longitude: lng,
                 altitude: altitude ?? defaultAltitude,
-                actions: { type: "fly_through" },
+                actions: { type: WAYPOINT_ACTION_TYPE.FLY_THROUGH },
             };
             setWaypoints((prev) => [...prev, newWp]);
             onClearWaypointErrors?.();
@@ -136,7 +130,6 @@ export function useMissionWaypoints({
         selectedWaypoint,
         defaultAltitude,
         setDefaultAltitude,
-        totalDistanceM,
         handleAddWaypoint,
         handleUpdateWaypoint,
         handleDeleteWaypoint,

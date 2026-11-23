@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { Hub, ProfilePoint } from "@/types";
-import { calculateDistance, formatDistance } from "@/utils";
+import { calculateDistance, formatAltitude, formatDistance } from "@/utils";
+import { isDuplicateCoord } from "@/utils/geo";
 
 export interface BaseAltitudeWaypoint {
     id?: string;
@@ -15,23 +16,21 @@ export interface BaseAltitudeWaypoint {
 }
 
 export interface AltitudeProfileProps<T extends BaseAltitudeWaypoint = BaseAltitudeWaypoint> {
-    waypoints?: T[];
-    selectedWaypointId?: string | null;
-    onWaypointClick?: (waypoint: T) => void;
-    onPointClick?: (point: ProfilePoint) => void;
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
-    className?: string;
+    waypoints: T[];
+    selectedWaypointId: string | null;
+    onWaypointClick: (waypoint: T) => void;
+    onPointClick: (point: ProfilePoint) => void;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
 }
 
 export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWaypoint>({
-    waypoints = [],
+    waypoints,
     selectedWaypointId,
     onWaypointClick,
     onPointClick,
     departureHub,
     arrivalHub,
-    className = "",
 }: AltitudeProfileProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(600);
@@ -79,15 +78,13 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         }
 
         sorted.forEach((wp, idx) => {
-            const lat = wp.latitude ?? 0;
-            const lng = wp.longitude ?? 0;
+            if (wp.latitude === undefined || wp.longitude === undefined) return;
+            const lat = wp.latitude;
+            const lng = wp.longitude;
             const alt = wp.altitude ?? 50;
 
             const last = pts[pts.length - 1];
-            const isDup =
-                last &&
-                Math.abs(last.latitude - lat) < 0.0001 &&
-                Math.abs(last.longitude - lng) < 0.0001;
+            const isDup = last && isDuplicateCoord(last, { latitude: lat, longitude: lng });
 
             if (!isDup) {
                 pts.push({
@@ -105,10 +102,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
             const arrLat = arrivalHub.location!.latitude;
             const arrLng = arrivalHub.location!.longitude;
             const last = pts[pts.length - 1];
-            const isDup =
-                last &&
-                Math.abs(last.latitude - arrLat) < 0.0001 &&
-                Math.abs(last.longitude - arrLng) < 0.0001;
+            const isDup = last && isDuplicateCoord(last, { latitude: arrLat, longitude: arrLng });
 
             if (!isDup) {
                 pts.push({
@@ -164,7 +158,8 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
     };
 
     const getY = (alt: number) => {
-        const range = maxAlt - minAlt || 1;
+        const diff = maxAlt - minAlt;
+        const range = diff === 0 ? 1 : diff;
         const ratio = (alt - minAlt) / range;
         return chartPadding.top + innerH * (1 - ratio);
     };
@@ -192,7 +187,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         return (
             <div
                 ref={containerRef}
-                className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] select-none font-mono shrink-0 w-full ${className}`}
+                className="bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] select-none font-mono shrink-0 w-full"
             >
                 <span className="font-bold tracking-wider text-[var(--color-text-secondary)]">
                     ALTITUDE PROFILE
@@ -205,7 +200,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
     return (
         <div
             ref={containerRef}
-            className={`bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2 select-none relative shrink-0 w-full ${className}`}
+            className="bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2 select-none relative shrink-0 w-full"
         >
             <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-text-secondary)] mb-1">
                 <span className="font-bold tracking-wider text-[var(--color-text-primary)]">
@@ -220,7 +215,9 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                     </span>
                     <span>
                         CEILING:{" "}
-                        <strong className="text-[var(--color-text-primary)]">{maxAlt}m</strong>
+                        <strong className="text-[var(--color-text-primary)]">
+                            {formatAltitude(maxAlt)}
+                        </strong>
                     </span>
                 </div>
             </div>
@@ -260,7 +257,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                     textAnchor="end"
                                     className="text-[10px] fill-[var(--color-text-muted)] font-mono"
                                 >
-                                    {alt}m
+                                    {formatAltitude(alt)}
                                 </text>
                             </g>
                         );
@@ -300,9 +297,9 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                 className="cursor-pointer group"
                                 onClick={() => {
                                     if (seg.point.waypoint) {
-                                        onWaypointClick?.(seg.point.waypoint as T);
+                                        onWaypointClick(seg.point.waypoint as T);
                                     }
-                                    onPointClick?.(seg.point);
+                                    onPointClick(seg.point);
                                 }}
                             >
                                 <title>
@@ -310,7 +307,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                         ? `Departure Vertiport: ${departureHub?.name || "DEP"} (Click to navigate)`
                                         : seg.point.isArrival
                                           ? `Arrival Vertiport: ${arrivalHub?.name || "ARR"} (Click to navigate)`
-                                          : `Waypoint ${seg.point.label} (${seg.point.altitude}m) (Click to navigate)`}
+                                          : `Waypoint ${seg.point.label} (${formatAltitude(seg.point.altitude)}) (Click to navigate)`}
                                 </title>
                                 <circle
                                     cx={x}

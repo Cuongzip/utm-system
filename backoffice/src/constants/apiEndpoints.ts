@@ -43,7 +43,6 @@ export const API_ENDPOINTS = {
         BASE: "/api/api/v1/missions",
         BY_ID: (id: string) => `/api/api/v1/missions/${id}`,
         EXECUTE: (id: string) => `/api/api/v1/missions/${id}/execute`,
-        CANDIDATE_DRONES: (id: string) => `/api/api/v1/missions/${id}/candidate-drones`,
         DUPLICATE: (id: string) => `/api/api/v1/missions/${id}/duplicate`,
         WAYPOINTS: (missionId: string) => `/api/api/v1/missions/${missionId}/waypoints`,
         WAYPOINT_BY_ID: (missionId: string, waypointId: string) =>
@@ -64,7 +63,6 @@ export const API_ENDPOINTS = {
         TIME_SCALE: (id: string) => `/api/api/v1/simulation/sessions/${id}/time-scale`,
         INJECT_SCENARIO: (id: string) => `/api/api/v1/simulation/sessions/${id}/inject-scenario`,
         CLEAR_SCENARIO: (id: string) => `/api/api/v1/simulation/sessions/${id}/clear-scenario`,
-        SCENARIOS: "/api/api/v1/simulation/scenarios",
         EVENTS: (id: string) => `/api/api/v1/simulation/sessions/${id}/events`,
         DEVICE_POWER_ON: (id: string) => `/api/api/v1/simulation/devices/${id}/power-on`,
         DEVICE_POWER_OFF: (id: string) => `/api/api/v1/simulation/devices/${id}/power-off`,
@@ -74,12 +72,9 @@ export const API_ENDPOINTS = {
         TRENDS: "/api/api/v1/emergency/stats/trends",
         ACTIVE_INCIDENTS: "/api/api/v1/emergency/incidents/active",
         INCIDENTS: "/api/api/v1/emergency/incidents",
-        INCIDENT_BY_ID: (id: string) => `/api/api/v1/emergency/incidents/${id}`,
         CONFIRM_INCIDENT: (id: string) => `/api/api/v1/emergency/incidents/${id}/confirm`,
-        ROOT_CAUSE: (id: string) => `/api/api/v1/emergency/incidents/${id}/root-cause`,
         CONFIG: "/api/api/v1/emergency/config",
         SET_MODE: "/api/api/v1/emergency/config/mode",
         PROTOCOLS: "/api/api/v1/emergency/protocols",
-        PROTOCOL_BY_ID: (id: string) => `/api/api/v1/emergency/protocols/${id}`,
     },
 } as const;

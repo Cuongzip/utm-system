@@ -9,6 +9,8 @@ import { airspaceService } from "@/services/airspaceService";
 import { connectivityService } from "@/services/connectivityService";
 import { emergencyService } from "@/services/emergencyService";
 import { conflictService } from "@/services/conflictService";
+import { missionService } from "@/services/missionService";
+import { simulationService } from "@/services/simulationService";
 import { apiClient } from "@/services/apiClient";
 import {
     INCIDENT_STATUS,
@@ -20,10 +22,8 @@ import {
 export const QUERY_KEYS = {
     hubs: ["hubs"] as const,
     hubsAll: ["hubs", "all"] as const,
-    hubDetail: (id: string) => ["hubs", "detail", id] as const,
     drones: ["drones"] as const,
     dronesAll: ["drones", "all"] as const,
-    droneDetail: (id: string) => ["drones", "detail", id] as const,
     droneCommands: (droneId: string) => ["drones", droneId, "commands"] as const,
     flights: ["flights"] as const,
     flightsAll: ["flights", "all"] as const,
@@ -38,7 +38,6 @@ export const QUERY_KEYS = {
     alertsActive: ["alerts", "active"] as const,
     simulation: ["simulation"] as const,
     simulationDetail: (id: string) => ["simulation", "detail", id] as const,
-    simulationScenarios: ["simulation", "scenarios"] as const,
     simulationEvents: (id: string) => ["simulation", "events", id] as const,
     conflicts: ["conflicts"] as const,
     conflictsActive: ["conflicts", "active"] as const,
@@ -107,6 +106,39 @@ export function useAirspaceAll() {
     });
 }
 
+export function useAirspaceDetail(zoneId: string) {
+    return useQuery({
+        queryKey: QUERY_KEYS.airspaceDetail(zoneId),
+        queryFn: () => airspaceService.getZoneById(zoneId),
+        enabled: Boolean(zoneId),
+    });
+}
+
+export function useFlightDetail(flightId: string) {
+    return useQuery({
+        queryKey: QUERY_KEYS.flightDetail(flightId),
+        queryFn: () => flightService.getById(flightId),
+        enabled: Boolean(flightId),
+    });
+}
+
+export function useMissionDetail(missionId: string) {
+    return useQuery({
+        queryKey: QUERY_KEYS.missionDetail(missionId),
+        queryFn: () => missionService.getById(missionId),
+        enabled: Boolean(missionId),
+    });
+}
+
+export function useSimulationEvents(sessionId: string, enabled = true) {
+    return useQuery({
+        queryKey: QUERY_KEYS.simulationEvents(sessionId),
+        queryFn: () => simulationService.getEvents(sessionId),
+        enabled: Boolean(sessionId) && enabled,
+        refetchInterval: enabled ? 2000 : false,
+    });
+}
+
 export function useConnectivityDevices() {
     return useQuery({
         queryKey: QUERY_KEYS.connectivityDevices,
@@ -129,10 +161,10 @@ export function useConnectivityOnlineDevices() {
     });
 }
 
-export function useEmergencyStats(from?: string, to?: string) {
+export function useEmergencyStats() {
     return useQuery({
-        queryKey: [...QUERY_KEYS.emergencyStats, from, to],
-        queryFn: () => emergencyService.getStats(from && to ? { from, to } : undefined),
+        queryKey: QUERY_KEYS.emergencyStats,
+        queryFn: () => emergencyService.getStats(),
         refetchInterval: 5000,
     });
 }
@@ -153,19 +185,19 @@ export function useEmergencyConfig() {
     });
 }
 
-export function useEmergencyProtocols(active?: boolean, enabled = true) {
+export function useEmergencyProtocols(enabled = true) {
     return useQuery({
-        queryKey: [...QUERY_KEYS.emergencyProtocols, active],
-        queryFn: () => emergencyService.getProtocols(active),
+        queryKey: QUERY_KEYS.emergencyProtocols,
+        queryFn: () => emergencyService.getProtocols(),
         staleTime: 1000 * 60,
         enabled,
     });
 }
 
-export function useEmergencyTrends(from?: string, to?: string, interval?: string, enabled = true) {
+export function useEmergencyTrends(enabled = true) {
     return useQuery({
-        queryKey: [...QUERY_KEYS.emergencyTrends, from, to, interval],
-        queryFn: () => emergencyService.getTrends({ from, to, interval }),
+        queryKey: QUERY_KEYS.emergencyTrends,
+        queryFn: () => emergencyService.getTrends(),
         staleTime: 1000 * 60,
         enabled,
     });

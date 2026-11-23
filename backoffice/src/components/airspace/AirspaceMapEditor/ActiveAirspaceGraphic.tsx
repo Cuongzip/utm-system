@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useCesium } from "@/components/map";
+import { useCesium, getCesium } from "@/components/map";
 import { MAP_TOKENS } from "@/components/map/mapTokens";
 import type { AirspaceZoneType } from "@/types";
 import { GeometryMode, GeoPoint, generateCircleCoordinates } from "../useAirspaceGeometry";
-import { getCesium } from "./cesiumLoader";
 
 const TYPE_COLOR_MAP: Record<string, string> = {
     no_fly_zone: MAP_TOKENS.colors.airspace.no_fly_zone,
@@ -158,6 +157,13 @@ export function ActiveAirspaceGraphic({
 
         return () => {
             cancelled = true;
+            if (viewer && !viewer.isDestroyed()) {
+                entityIdsRef.current.forEach((id) => {
+                    const entity = viewer.entities.getById(id);
+                    if (entity) viewer.entities.remove(entity);
+                });
+            }
+            entityIdsRef.current = [];
         };
     }, [
         viewer,

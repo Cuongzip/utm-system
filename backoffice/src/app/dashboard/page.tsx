@@ -15,6 +15,7 @@ import {
     useHubsAll,
     useDronesAll,
     useActiveAlerts,
+    useConflictsActive,
     useAirspaceAll,
     useLiveTelemetry,
     useConnectivityDevices,
@@ -33,7 +34,8 @@ export default function DashboardPage() {
         isLoading: isLoadingDrones,
         isError: isErrorDrones,
     } = useDronesAll();
-    const { data: alerts = [], isError: isErrorAlerts } = useActiveAlerts();
+    const { isError: isErrorAlerts } = useActiveAlerts();
+    const { data: activeConflicts = [] } = useConflictsActive();
     const { data: zones = [], isError: isErrorZones } = useAirspaceAll();
     const { data: devices = [] } = useConnectivityDevices();
 
@@ -76,7 +78,7 @@ export default function DashboardPage() {
                 hubsCount={onlineHubsCount}
                 totalHubsCount={hubs.length}
                 fleetCount={drones.length}
-                conflictsCount={alerts.length}
+                conflictsCount={activeConflicts.length}
                 activeTelemetryCount={activeTelemetryCount}
                 isLoading={isLoadingFlights || isLoadingHubs}
             />
@@ -97,7 +99,7 @@ export default function DashboardPage() {
                     hubsOnline={onlineHubsCount}
                     totalHubs={hubs.length}
                     fleetSize={drones.length}
-                    conflictsCount={alerts.length}
+                    conflictsCount={activeConflicts.length}
                     connectedDevicesCount={devices.length}
                     apiStatus={apiStatus}
                     isSocketConnected={isSocketConnected}

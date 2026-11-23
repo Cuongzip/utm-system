@@ -3,13 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import {
-    ChamferButton,
-    PageHeader,
-    AlertBanner,
-    TableFilterBar,
-    type SelectOption,
-} from "@/components/ui";
+import { ChamferButton, PageHeader, TableFilterBar, type SelectOption } from "@/components/ui";
 import { HubsTable, AddHubModal, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
 import { useCrudList, QUERY_KEYS } from "@/hooks";
@@ -27,8 +21,6 @@ export default function HubsPage() {
     const {
         items: hubs,
         loading,
-        error,
-        setError,
         isModalOpen,
         itemToEdit: selectedHub,
         openCreateModal,
@@ -94,8 +86,6 @@ export default function HubsPage() {
                     <span>Add Hub</span>
                 </ChamferButton>
             </PageHeader>
-
-            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
 
             <TableFilterBar
                 searchQuery={searchQuery}

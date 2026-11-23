@@ -1,9 +1,16 @@
 import { calculatePathDistance, isDuplicateCoord } from "@/utils/geo";
-import type { Drone, Hub, ProfilePoint, Waypoint } from "@/types";
+import {
+    FEASIBILITY_VERDICT,
+    type Drone,
+    type FeasibilityVerdict,
+    type Hub,
+    type ProfilePoint,
+    type Waypoint,
+} from "@/types";
 import { buildMissionRoutePoints } from "@/components/missions/missionUtils";
 import type { FlightWaypoint } from "./useFlightRoute";
 
-export function buildFlightRoutePoints(
+function buildFlightRoutePoints(
     waypoints: FlightWaypoint[] = [],
     departureHub?: Hub | null,
     arrivalHub?: Hub | null,
@@ -115,18 +122,16 @@ export interface RouteFeasibilityEstimate {
     requiredWh: number;
     usableWh: number;
     marginPct: number;
-    verdict: "go" | "marginal" | "no_go";
+    verdict: FeasibilityVerdict;
     estimatedDurationMin: number;
 }
 
 export function estimateRouteFeasibility(
     distanceM: number,
-    drone?: Drone | null,
-    payloadKg = 0
+    drone?: Drone | null
 ): RouteFeasibilityEstimate {
     const batteryCapacityWh =
         drone?.batteryCapacityWh && drone.batteryCapacityWh > 0 ? drone.batteryCapacityWh : 500;
-    const maxPayloadKg = drone?.maxPayload && drone.maxPayload > 0 ? drone.maxPayload : 5.0;
     const usableWh = batteryCapacityWh * 0.95 * 0.8;
 
     const cruisePowerW = 250;
@@ -134,21 +139,20 @@ export function estimateRouteFeasibility(
     const cruiseSpeedMs = 15;
     const hoverTimeS = 60;
 
-    const payloadFactor = 1.0 + 0.15 * Math.min(1.0, payloadKg / maxPayloadKg);
     const cruiseTimeHours = distanceM / cruiseSpeedMs / 3600;
-    const cruiseWh = cruisePowerW * cruiseTimeHours * payloadFactor;
-    const hoverTimeHours = (hoverTimeS / 3600) * payloadFactor;
+    const cruiseWh = cruisePowerW * cruiseTimeHours;
+    const hoverTimeHours = hoverTimeS / 3600;
     const hoverWh = hoverPowerW * hoverTimeHours;
     const climbWh = (cruiseWh + hoverWh) * 0.05;
     const requiredWh = cruiseWh + hoverWh + climbWh;
 
     const marginPct = usableWh > 0 ? ((usableWh - requiredWh) / usableWh) * 100 : -100;
 
-    let verdict: "go" | "marginal" | "no_go" = "go";
-    if (marginPct < 0 || payloadKg > maxPayloadKg) {
-        verdict = "no_go";
+    let verdict: FeasibilityVerdict = FEASIBILITY_VERDICT.GO;
+    if (marginPct < 0) {
+        verdict = FEASIBILITY_VERDICT.NO_GO;
     } else if (marginPct < 20) {
-        verdict = "marginal";
+        verdict = FEASIBILITY_VERDICT.MARGINAL;
     }
 
     const estimatedDurationMin = Math.max(

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
 import { missionService } from "@/services/missionService";
 import { createMissionWaypoints, MissionEditor, type MissionSaveData } from "@/components/missions";
+import { showApiError } from "@/utils";
 import type { CreateMissionPayload } from "@/types";
 
 export default function NewMissionPage() {
@@ -30,8 +31,8 @@ export default function NewMissionPage() {
                         droneId,
                         pilotId: "operator",
                     });
-                } catch {
-                    // Non-fatal if mission execution schedule fails
+                } catch (err) {
+                    showApiError(err, "Mission created, but failed to schedule execution");
                 }
             }
 

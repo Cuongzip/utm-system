@@ -21,11 +21,11 @@ import { AirspaceFormSidebar } from "./AirspaceFormSidebar";
 export interface AirspaceEditorProps {
     mode: "create" | "edit";
     initialData?: AirspaceZone | null;
-    hubs?: Hub[];
-    existingZones?: AirspaceZone[];
+    hubs: Hub[];
+    existingZones: AirspaceZone[];
     onSave: (payload: CreateAirspaceZonePayload | UpdateAirspaceZonePayload) => Promise<void>;
     onDelete?: () => Promise<void>;
-    loading?: boolean;
+    loading: boolean;
 }
 
 export function AirspaceEditor({
@@ -81,7 +81,9 @@ export function AirspaceEditor({
         setFieldErrors({});
 
         const payload = {
-            ...(mode === "create" ? { code: formData.code?.toUpperCase() } : {}),
+            ...(mode === "create" && formData.code?.trim()
+                ? { code: formData.code.trim().toUpperCase() }
+                : {}),
             name: (formData.name ?? "").trim(),
             zoneType: formData.zoneType,
             status: formData.status,
@@ -239,7 +241,6 @@ export function AirspaceEditor({
                         onTabChange={setActiveSidebarTab}
                         fieldErrors={fieldErrors}
                         onClearFieldError={clearFieldError}
-                        className="h-full"
                     />
                 }
             />
@@ -249,7 +250,6 @@ export function AirspaceEditor({
                 title="Delete Airspace Zone"
                 description={`Are you sure you want to delete zone "${formData.name}"? This action will deactivate and remove this airspace sector.`}
                 confirmText="Delete Zone"
-                variant="danger"
                 loading={isDeleting}
                 onConfirm={handleDelete}
                 onClose={() => setShowDeleteConfirm(false)}

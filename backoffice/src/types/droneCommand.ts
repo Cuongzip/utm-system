@@ -5,15 +5,15 @@ import type {
     getCommandsQueryParams,
 } from "@/generated/drone";
 
-export type CommandTypeGenerated = NonNullable<zod.infer<typeof sendCommandBody>["commandType"]>;
-export type CommandStatusGenerated = NonNullable<
+type CommandTypeGenerated = NonNullable<zod.infer<typeof sendCommandBody>["commandType"]>;
+type CommandStatusGenerated = NonNullable<
     NonNullable<zod.infer<typeof getCommandsQueryParams>["status"]>
 >;
 
 export type CommandType = CommandTypeGenerated | Uppercase<CommandTypeGenerated>;
-export type CommandStatus = CommandStatusGenerated | Uppercase<CommandStatusGenerated>;
+type CommandStatus = CommandStatusGenerated | Uppercase<CommandStatusGenerated>;
 
-export const COMMAND_STATUS = {
+const COMMAND_STATUS = {
     PENDING: "pending",
     SENT: "sent",
     ACKNOWLEDGED: "acknowledged",
@@ -41,7 +41,7 @@ export type SendCommandPayload = Omit<zod.infer<typeof sendCommandBody>, "comman
     commandType: CommandType;
 };
 
-export type DroneCommandGenerated = NonNullable<
+type DroneCommandGenerated = NonNullable<
     NonNullable<zod.infer<typeof getCommandsResponse>["items"]>[number]
 >;
 

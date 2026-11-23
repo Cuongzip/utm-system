@@ -15,12 +15,11 @@ import {
     AlertOctagon,
     PlayCircle,
     Siren,
-    Settings,
 } from "lucide-react";
 
 import { AuthenticationInfo } from "./AuthenticationInfo";
 
-export type SidebarTabId =
+type SidebarTabId =
     | "dashboard"
     | "control-center"
     | "connectivity"
@@ -31,8 +30,7 @@ export type SidebarTabId =
     | "airspace"
     | "conflicts"
     | "simulation"
-    | "emergency"
-    | "settings";
+    | "emergency";
 
 interface NavItem {
     id: SidebarTabId;
@@ -58,7 +56,6 @@ const NAV_ITEMS: NavItem[] = [
     { id: "conflicts", label: "Conflicts", href: "/dashboard/conflicts", icon: AlertOctagon },
     { id: "simulation", label: "Simulation", href: "/dashboard/simulation", icon: PlayCircle },
     { id: "emergency", label: "Emergency", href: "/dashboard/emergency", icon: Siren },
-    { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar() {

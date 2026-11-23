@@ -8,10 +8,9 @@ export interface TooltipProps {
     content: React.ReactNode;
     children: React.ReactNode;
     side?: "top" | "bottom" | "left" | "right";
-    className?: string;
 }
 
-export function Tooltip({ content, children, side = "top", className }: TooltipProps) {
+export function Tooltip({ content, children, side = "top" }: TooltipProps) {
     if (!content) return <>{children}</>;
 
     return (
@@ -26,8 +25,7 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
                         className={cn(
                             "z-[9999] overflow-hidden rounded bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-100 shadow-md",
                             "data-[state=delayed-open]:data-[side=top]:animate-in data-[state=delayed-open]:data-[side=top]:fade-in-0 data-[state=delayed-open]:data-[side=top]:zoom-in-95",
-                            "data-[state=delayed-open]:data-[side=bottom]:animate-in data-[state=delayed-open]:data-[side=bottom]:fade-in-0 data-[state=delayed-open]:data-[side=bottom]:zoom-in-95",
-                            className
+                            "data-[state=delayed-open]:data-[side=bottom]:animate-in data-[state=delayed-open]:data-[side=bottom]:fade-in-0 data-[state=delayed-open]:data-[side=bottom]:zoom-in-95"
                         )}
                     >
                         {content}

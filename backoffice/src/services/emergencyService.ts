@@ -14,18 +14,12 @@ import type {
 } from "@/types";
 
 export const emergencyService = {
-    getStats: async (params?: { from?: string; to?: string }): Promise<EmergencyStatsVm> => {
-        const url = buildUrl(API_ENDPOINTS.EMERGENCY.STATS, params as Record<string, unknown>);
-        return apiClient<EmergencyStatsVm>(url);
+    getStats: async (): Promise<EmergencyStatsVm> => {
+        return apiClient<EmergencyStatsVm>(API_ENDPOINTS.EMERGENCY.STATS);
     },
 
-    getTrends: async (params?: {
-        from?: string;
-        to?: string;
-        interval?: string;
-    }): Promise<EmergencyTrendVm[]> => {
-        const url = buildUrl(API_ENDPOINTS.EMERGENCY.TRENDS, params as Record<string, unknown>);
-        const res = await apiClient<EmergencyTrendVm[]>(url);
+    getTrends: async (): Promise<EmergencyTrendVm[]> => {
+        const res = await apiClient<EmergencyTrendVm[]>(API_ENDPOINTS.EMERGENCY.TRENDS);
         return Array.isArray(res) ? res : [];
     },
 
@@ -39,10 +33,6 @@ export const emergencyService = {
     getIncidents: async (params?: IncidentQueryParams): Promise<IncidentPageVm> => {
         const url = buildUrl(API_ENDPOINTS.EMERGENCY.INCIDENTS, params as Record<string, unknown>);
         return apiClient<IncidentPageVm>(url);
-    },
-
-    getIncidentById: async (id: string): Promise<EmergencyIncidentVm> => {
-        return apiClient<EmergencyIncidentVm>(API_ENDPOINTS.EMERGENCY.INCIDENT_BY_ID(id));
     },
 
     confirmIncident: async (
@@ -66,12 +56,8 @@ export const emergencyService = {
         });
     },
 
-    getProtocols: async (active?: boolean): Promise<EmergencyProtocolVm[]> => {
-        const url = buildUrl(
-            API_ENDPOINTS.EMERGENCY.PROTOCOLS,
-            active !== undefined ? { active } : undefined
-        );
-        const res = await apiClient<EmergencyProtocolVm[]>(url);
+    getProtocols: async (): Promise<EmergencyProtocolVm[]> => {
+        const res = await apiClient<EmergencyProtocolVm[]>(API_ENDPOINTS.EMERGENCY.PROTOCOLS);
         return Array.isArray(res) ? res : [];
     },
 };

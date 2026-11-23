@@ -12,10 +12,10 @@ import type { Hub } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 
 export interface FlightRouteRendererProps {
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
     waypoints: FlightWaypoint[];
-    selectedWaypointId?: string | null;
+    selectedWaypointId: string | null;
     cruisingAltitude: number;
 }
 

@@ -20,7 +20,7 @@ import { CONFLICT_SEVERITIES, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@
 
 export interface ResolvedConflictsTableProps {
     conflicts: Conflict[];
-    isLoading?: boolean;
+    isLoading: boolean;
 }
 
 const SEVERITY_OPTIONS = createStatusOptions(CONFLICT_SEVERITIES, undefined, "All Severities");

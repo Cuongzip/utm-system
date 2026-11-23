@@ -18,18 +18,18 @@ import { FlightCameraController } from "./FlightCameraController";
 import { FlightRouteRenderer } from "./FlightRouteRenderer";
 
 export interface FlightMapEditorProps {
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
     waypoints: FlightWaypoint[];
-    cruisingAltitude?: number;
+    cruisingAltitude: number;
     onCruisingAltitudeChange: (alt: number) => void;
-    selectedWaypointId?: string | null;
+    selectedWaypointId: string | null;
     onAddWaypoint: (lat: number, lng: number, altitude: number) => void;
     onMoveWaypoint: (id: string, lat: number, lng: number) => void;
     onSelectWaypoint: (waypoint: FlightWaypoint | null) => void;
     onUndoWaypoint: () => void;
     onClearWaypoints: () => void;
-    isReadOnly?: boolean;
+    isReadOnly: boolean;
     className?: string;
 }
 
@@ -230,7 +230,7 @@ export function FlightMapEditor({
 
             <FlightCameraController targetLocation={flyToTarget} routePoints={allRoutePoints} />
 
-            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} autoFitBounds={false} />}
+            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} />}
         </TacticalMapContainer>
     );
 }

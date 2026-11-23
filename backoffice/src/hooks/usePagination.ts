@@ -8,11 +8,10 @@ export interface UsePaginationOptions {
 
 export function usePagination<T>(items: T[] = [], options?: UsePaginationOptions) {
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(options?.defaultPageSize || 10);
+    const pageSize = options?.defaultPageSize ?? 10;
 
     const safeItems = items ?? [];
 
-    // Reset to page 1 whenever the underlying list changes (search, filter, refetch)
     useEffect(() => {
         setCurrentPage(1);
     }, [items]);
@@ -28,11 +27,9 @@ export function usePagination<T>(items: T[] = [], options?: UsePaginationOptions
 
     return {
         currentPage: safeCurrentPage,
-        pageSize,
         totalPages,
         totalItems,
         paginatedItems,
         setCurrentPage,
-        setPageSize,
     };
 }

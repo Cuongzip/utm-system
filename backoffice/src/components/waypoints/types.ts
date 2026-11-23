@@ -1,10 +1,5 @@
 import type { SelectOption } from "@/components/ui";
-import {
-    WAYPOINT_ACTION_TYPES,
-    WAYPOINT_ACTION_LABELS,
-    DEFAULT_WAYPOINT_ACTION,
-    type WaypointActionType,
-} from "@/types";
+import { WAYPOINT_ACTION_TYPES, WAYPOINT_ACTION_LABELS, DEFAULT_WAYPOINT_ACTION } from "@/types";
 
 export interface WaypointItem {
     id?: string;
@@ -29,9 +24,4 @@ export function parseOptionalNumber(val: string): number | undefined {
     return Number.isNaN(num) ? undefined : num;
 }
 
-export {
-    WAYPOINT_ACTION_TYPES,
-    WAYPOINT_ACTION_LABELS,
-    DEFAULT_WAYPOINT_ACTION,
-    type WaypointActionType,
-};
+export { DEFAULT_WAYPOINT_ACTION };

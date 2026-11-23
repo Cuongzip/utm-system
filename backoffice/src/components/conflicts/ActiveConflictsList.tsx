@@ -11,7 +11,7 @@ export interface ActiveConflictsListProps {
     conflicts: Conflict[];
     onAcknowledge: (conflictId: string) => void;
     onResolve: (conflict: Conflict) => void;
-    isAcknowledging?: boolean;
+    isAcknowledging: boolean;
 }
 
 export function ActiveConflictsList({

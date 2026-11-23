@@ -10,10 +10,7 @@ export interface ResponseProtocolsModalProps {
 }
 
 export function ResponseProtocolsModal({ isOpen, onClose }: ResponseProtocolsModalProps) {
-    const { data: protocolsData, isLoading: protocolsLoading } = useEmergencyProtocols(
-        undefined,
-        isOpen
-    );
+    const { data: protocolsData, isLoading: protocolsLoading } = useEmergencyProtocols(isOpen);
 
     if (!isOpen) return null;
 
@@ -60,7 +57,7 @@ export function ResponseProtocolsModal({ isOpen, onClose }: ResponseProtocolsMod
                                 </div>
                             </div>
                             <StatusBadge
-                                status={protocol.isActive ? "success" : "neutral"}
+                                status={protocol.isActive ? "success" : "inactive"}
                                 label={protocol.isActive ? "ACTIVE" : "DISABLED"}
                                 dotShape="circle"
                             />

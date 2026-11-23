@@ -19,7 +19,7 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import { formatNullable } from "@/utils";
+import { formatNullable, formatHubName } from "@/utils";
 import {
     type AirspaceZone,
     DEFAULT_AIRSPACE_ZONE_STATUS,
@@ -28,11 +28,11 @@ import {
 
 interface AirspaceTableProps {
     zones: AirspaceZone[];
-    loading?: boolean;
+    loading: boolean;
     selectedZoneId?: string | null;
     onSelectZone: (zone: AirspaceZone) => void;
     onDeleteZone: (id: string) => void;
-    hubMap?: Map<string, string>;
+    hubMap: Map<string, string>;
 }
 
 export function AirspaceTable({
@@ -93,10 +93,7 @@ export function AirspaceTable({
                         ) : (
                             paginatedItems.map((zone) => {
                                 const isSelected = selectedZoneId === zone.id;
-                                const hubName = formatNullable(
-                                    zone.hubId,
-                                    (id) => hubMap.get(id) ?? id
-                                );
+                                const hubName = formatHubName(null, zone.hubId, hubMap);
                                 const zoneName = zone.name || "Unnamed Sector";
 
                                 return (
@@ -168,7 +165,6 @@ export function AirspaceTable({
                     </span>
                 }
                 confirmText="Delete Sector"
-                variant="danger"
             />
         </div>
     );

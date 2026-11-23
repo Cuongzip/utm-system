@@ -17,7 +17,7 @@ export const OFFLINE_DEVICE_STATUS: DeviceConnectionStatus = "offline";
 
 export type DeviceRegistrationPayload = zod.infer<typeof registerDeviceBody>;
 
-export type DeviceRegistrationGenerated = NonNullable<zod.infer<typeof getDeviceByIdResponse>>;
+type DeviceRegistrationGenerated = NonNullable<zod.infer<typeof getDeviceByIdResponse>>;
 export type DeviceRegistration = DeviceRegistrationGenerated & {
     id: string;
 };

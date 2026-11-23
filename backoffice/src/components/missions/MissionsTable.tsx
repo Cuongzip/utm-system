@@ -24,13 +24,13 @@ import { formatDate, formatNullable, formatHubName, formatMissionSchedule } from
 
 export interface MissionsTableProps {
     missions: Mission[];
-    loading?: boolean;
+    loading: boolean;
     onSelectMission: (mission: Mission) => void;
     onExecuteMission: (mission: Mission) => void;
     onDuplicateMission: (mission: Mission) => void;
     onDeleteMission: (mission: Mission) => void;
     onNewMission: () => void;
-    hubMap?: Map<string, string>;
+    hubMap: Map<string, string>;
 }
 
 export function MissionsTable({
@@ -216,7 +216,6 @@ export function MissionsTable({
                 title="Delete Mission"
                 description={`Are you sure you want to delete mission "${missionToDelete?.name}"? All associated waypoints will be removed.`}
                 confirmText="Delete Mission"
-                variant="danger"
                 onConfirm={() => {
                     if (missionToDelete) {
                         onDeleteMission(missionToDelete);

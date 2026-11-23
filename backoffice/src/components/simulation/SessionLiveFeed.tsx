@@ -14,12 +14,15 @@ import {
     TableCell,
 } from "@/components/ui";
 import { useTelemetryStream } from "@/hooks/useStomp";
-import { useQuery } from "@tanstack/react-query";
-import { simulationService } from "@/services/simulationService";
-import { QUERY_KEYS } from "@/hooks";
+import { useSimulationEvents } from "@/hooks";
 import { toast } from "sonner";
-import { formatTime, formatCoordinate, formatAltitude } from "@/utils";
-import { SIMULATION_STATUS, type SimulationSession, type TelemetryRecord } from "@/types";
+import { formatTime, formatCoordinates, formatAltitude } from "@/utils";
+import {
+    SIMULATION_STATUS,
+    SIMULATION_SCENARIO,
+    type SimulationSession,
+    type TelemetryRecord,
+} from "@/types";
 
 export interface SessionLiveFeedProps {
     session: SimulationSession;
@@ -34,7 +37,8 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
 
     const normStatus = String(session.status || "").toLowerCase();
     const isRunning = normStatus === SIMULATION_STATUS.RUNNING;
-    const isC2Lost = String(session.activeScenario || "").toLowerCase() === "c2_lost";
+    const isC2Lost =
+        String(session.activeScenario || "").toLowerCase() === SIMULATION_SCENARIO.C2_LOST;
 
     const handleIncomingRecord = useCallback(
         (rec: TelemetryRecord) => {
@@ -88,12 +92,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
         session.droneId,
     ]);
 
-    const { data: events = [] } = useQuery({
-        queryKey: QUERY_KEYS.simulationEvents(session.id),
-        queryFn: () => simulationService.getEvents(session.id),
-        enabled: Boolean(session.id),
-        refetchInterval: isRunning ? 2000 : false,
-    });
+    const { data: events = [] } = useSimulationEvents(session.id, isRunning);
 
     const handleCopy = (text: string, fieldName: string) => {
         if (!text) return;
@@ -107,10 +106,11 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
         normStatus === SIMULATION_STATUS.COMPLETED ||
         (session.progress != null && session.progress >= 100);
 
-    const latLonText =
-        session.currentLat != null && session.currentLon != null
-            ? `${session.currentLat.toFixed(6)}, ${session.currentLon.toFixed(6)}`
-            : "Awaiting GNSS fix";
+    const latLonText = formatCoordinates(
+        { latitude: session.currentLat, longitude: session.currentLon },
+        6,
+        "Awaiting GNSS fix"
+    );
 
     return (
         <div className="flex flex-col gap-3 w-full">
@@ -200,8 +200,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                 </TableHeader>
                                 <TableBody className="divide-y divide-slate-100 font-mono text-xs">
                                     {records.map((rec, index) => {
-                                        const lat = formatCoordinate(rec.latitude, 6);
-                                        const lon = formatCoordinate(rec.longitude, 6);
+                                        const coords = formatCoordinates(rec, 6);
                                         const alt = formatAltitude(rec.altitude);
                                         const spd =
                                             rec.speed != null ? `${rec.speed.toFixed(1)} m/s` : "—";
@@ -226,7 +225,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="font-medium text-slate-800 whitespace-nowrap">
-                                                    {lat}, {lon}
+                                                    {coords}
                                                 </TableCell>
                                                 <TableCell className="text-slate-700 whitespace-nowrap">
                                                     {alt}

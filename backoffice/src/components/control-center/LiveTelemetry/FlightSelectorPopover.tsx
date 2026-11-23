@@ -15,14 +15,14 @@ import { type Flight, type TelemetryRecord, DEFAULT_FLIGHT_STATUS } from "@/type
 export interface FlightSelectorPopoverProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    flight?: Flight | null;
-    flights?: Flight[];
-    selectedFlightId?: string | null;
-    onSelectFlight?: (flightId: string) => void;
-    telemetryMap?: Record<string, TelemetryRecord>;
-    hasAlert?: boolean;
-    serialNumber?: string;
-    uavId?: string;
+    flight: Flight | null;
+    flights: Flight[];
+    selectedFlightId: string | null;
+    onSelectFlight: (flightId: string) => void;
+    telemetryMap: Record<string, TelemetryRecord>;
+    hasAlert: boolean;
+    serialNumber: string;
+    uavId: string;
 }
 
 export function FlightSelectorPopover({
@@ -100,7 +100,7 @@ export function FlightSelectorPopover({
                                         key={item.id}
                                         type="button"
                                         onClick={() => {
-                                            onSelectFlight?.(item.id);
+                                            onSelectFlight(item.id);
                                             onOpenChange(false);
                                         }}
                                         className={cn(

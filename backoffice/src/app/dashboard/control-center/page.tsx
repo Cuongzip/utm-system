@@ -97,8 +97,8 @@ export default function ControlCenterPage() {
 
     const { telemetryMap } = useLiveTelemetry(flights);
 
-    const selectedFlight = flights.find((f) => f.id === selectedFlightId);
-    const selectedTelemetry = selectedFlightId ? telemetryMap[selectedFlightId] : null;
+    const selectedFlight = flights.find((f) => f.id === selectedFlightId) ?? null;
+    const selectedTelemetry = selectedFlightId ? (telemetryMap[selectedFlightId] ?? null) : null;
 
     return (
         <div className="p-8 space-y-6">
@@ -125,9 +125,6 @@ export default function ControlCenterPage() {
                             flights={flights}
                             selectedFlightId={selectedFlightId}
                             hubs={hubs}
-                            autoFitBounds={false}
-                            focusOnSelected={true}
-                            showEndpoints={false}
                         />
                         <LiveTelemetryLayer
                             flights={flights}

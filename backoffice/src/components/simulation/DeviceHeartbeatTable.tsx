@@ -21,7 +21,7 @@ import { formatRelativeTime, formatDateTime } from "@/utils";
 
 interface DeviceHeartbeatTableProps {
     devices: DeviceRegistration[];
-    loading?: boolean;
+    loading: boolean;
     onPowerOnDevice: (id: string) => Promise<void> | void;
     onPowerOffDevice: (id: string) => Promise<void> | void;
 }

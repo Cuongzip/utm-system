@@ -87,7 +87,7 @@ export function TopAlertBanner() {
                         href={activeAlert.actionUrl}
                         className="px-3.5 py-1 text-xs font-medium text-slate-800 bg-white/90 hover:bg-white rounded border border-slate-300/80 shadow-sm transition-all hover:border-slate-400"
                     >
-                        View Details
+                        {activeAlert.actionLabel}
                     </Link>
 
                     <button

@@ -8,7 +8,7 @@ export interface TelemetryGaugeProps {
     unit?: string;
     offset: number;
     strokeColor: string;
-    hasData?: boolean;
+    hasData: boolean;
     valueClassName?: string;
 }
 

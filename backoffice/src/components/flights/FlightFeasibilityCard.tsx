@@ -3,21 +3,20 @@
 import { useMemo } from "react";
 import { Zap, Info } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
-import type { Drone } from "@/types";
+import { formatDistance } from "@/utils";
+import { FEASIBILITY_VERDICT, type Drone } from "@/types";
 import { estimateRouteFeasibility } from "./flightUtils";
 
 export interface FlightFeasibilityCardProps {
     initialOverride?: string;
-    distanceM?: number;
-    drone?: Drone | null;
-    className?: string;
+    distanceM: number;
+    drone: Drone | null;
 }
 
 export function FlightFeasibilityCard({
     initialOverride,
     distanceM = 0,
     drone = null,
-    className = "",
 }: FlightFeasibilityCardProps) {
     const { requiredWh, usableWh, marginPct, verdict, estimatedDurationMin } = useMemo(() => {
         return estimateRouteFeasibility(distanceM, drone);
@@ -25,7 +24,7 @@ export function FlightFeasibilityCard({
 
     if (distanceM <= 0) {
         return (
-            <div className={`pt-2 ${className}`}>
+            <div className="pt-2">
                 <div className="p-3 border border-dashed border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-card)]/50 text-xs">
                     <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
                         <Info className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
@@ -41,7 +40,7 @@ export function FlightFeasibilityCard({
     const energyPct = usableWh > 0 ? Math.min(100, Math.round((requiredWh / usableWh) * 100)) : 100;
 
     return (
-        <div className={`pt-2 space-y-2 ${className}`}>
+        <div className="pt-2 space-y-2">
             <div className="p-3 border border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-card)]/70 text-xs space-y-2.5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-semibold text-[var(--color-text-primary)]">
@@ -51,9 +50,9 @@ export function FlightFeasibilityCard({
                     <StatusBadge
                         status={verdict}
                         label={
-                            verdict === "go"
+                            verdict === FEASIBILITY_VERDICT.GO
                                 ? "FEASIBLE"
-                                : verdict === "marginal"
+                                : verdict === FEASIBILITY_VERDICT.MARGINAL
                                   ? "MARGINAL"
                                   : "NO GO"
                         }
@@ -66,7 +65,7 @@ export function FlightFeasibilityCard({
                             Distance
                         </span>
                         <span className="font-bold text-[var(--color-text-primary)]">
-                            {(distanceM / 1000).toFixed(2)} km
+                            {formatDistance(distanceM, 2)}
                         </span>
                     </div>
                     <div>

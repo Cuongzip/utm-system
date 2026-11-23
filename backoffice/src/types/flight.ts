@@ -5,11 +5,7 @@ import {
     getFlightByIdResponse,
     getFlightsResponse,
     getFlightsQueryParams,
-    checkFeasibilityBody,
     checkFeasibilityResponse,
-    overrideFeasibilityBody,
-    getHistoryQueryParams,
-    getHistoryResponse,
 } from "@/generated/flight";
 
 export interface FlightWaypoint {
@@ -37,8 +33,6 @@ export type FlightAuthorizationStatus = NonNullable<
 >;
 
 export const FLIGHT_STATUSES = getFlightByIdResponse.shape.status.unwrap().options;
-export const FLIGHT_AUTHORIZATION_STATUSES =
-    getFlightByIdResponse.shape.authorizationStatus.unwrap().options;
 
 export const FLIGHT_STATUS = {
     PLANNED: "planned",
@@ -115,10 +109,13 @@ export type FlightListResponse = Omit<
     items?: Flight[];
 };
 
-export type CheckFeasibilityPayload = zod.infer<typeof checkFeasibilityBody>;
-export type FeasibilityResult = NonNullable<zod.infer<typeof checkFeasibilityResponse>>;
+type FeasibilityResult = NonNullable<zod.infer<typeof checkFeasibilityResponse>>;
 export type FeasibilityVerdict = NonNullable<FeasibilityResult["verdict"]>;
-export type OverrideFeasibilityPayload = zod.infer<typeof overrideFeasibilityBody>;
-export type FeasibilityHistoryParams = zod.infer<typeof getHistoryQueryParams>;
-export type FeasibilityHistoryResponse = NonNullable<zod.infer<typeof getHistoryResponse>>;
-export type FeasibilityHistoryItem = NonNullable<FeasibilityHistoryResponse["items"]>[number];
+
+export const FEASIBILITY_VERDICTS = createFlightBody.shape.feasibilityVerdict.unwrap().options;
+
+export const FEASIBILITY_VERDICT = {
+    GO: "go",
+    MARGINAL: "marginal",
+    NO_GO: "no_go",
+} as const satisfies Record<string, FeasibilityVerdict>;

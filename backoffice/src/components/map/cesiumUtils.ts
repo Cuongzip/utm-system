@@ -11,7 +11,6 @@ export interface FitCameraOptions {
     animate?: boolean;
     duration?: number;
     minHeight?: number;
-    maxHeight?: number;
     paddingMultiplier?: number;
 }
 
@@ -52,7 +51,7 @@ export function fitCameraToBounds(
     const maxSpanMeters = Math.max(latSpanMeters, lngSpanMeters);
 
     const minHeight = options.minHeight ?? 1500;
-    const maxHeight = options.maxHeight ?? 35000;
+    const maxHeight = 35000;
     const paddingMult = options.paddingMultiplier ?? 1.5;
 
     let targetHeight: number;

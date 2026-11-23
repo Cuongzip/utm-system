@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { SplitMapLayout, ChamferButton, StatusBadge } from "@/components/ui";
-import { extractIntermediateWaypoints } from "@/components/waypoints";
 import {
     MissionMapEditor,
     MissionFormSidebar,
@@ -29,6 +28,7 @@ import {
     DEFAULT_MISSION_STATUS,
     MISSION_STATUS,
     MISSION_SCHEDULE_TYPE,
+    WAYPOINT_ACTION_TYPE,
 } from "@/types";
 
 export interface MissionSaveData {
@@ -41,10 +41,10 @@ export interface MissionSaveData {
 export interface MissionEditorProps {
     mode: "create" | "edit";
     initialData?: Mission | null;
-    hubs?: Hub[];
-    drones?: Drone[];
+    hubs: Hub[];
+    drones: Drone[];
     onSave: (data: MissionSaveData) => Promise<void>;
-    loading?: boolean;
+    loading: boolean;
 }
 
 export function MissionEditor({
@@ -120,7 +120,6 @@ export function MissionEditor({
 
     const {
         waypoints,
-        setWaypoints,
         selectedWaypointId,
         setSelectedWaypointId,
         selectedWaypoint,
@@ -143,38 +142,6 @@ export function MissionEditor({
         arrivalHub: selectedArrivalHub,
         onClearWaypointErrors,
     });
-
-    useEffect(() => {
-        if (initialData) {
-            const loadedWaypoints: Waypoint[] = (initialData.waypoints || []).map((wp, idx) => ({
-                ...wp,
-                sequence: wp.sequence ?? idx + 1,
-                tempId: wp.id || `wp-init-${idx}`,
-                name: wp.name || "",
-                latitude: wp.latitude ?? 0,
-                longitude: wp.longitude ?? 0,
-                altitude: wp.altitude ?? defaultAltitude,
-                actions:
-                    wp.actions &&
-                    typeof wp.actions === "object" &&
-                    Object.keys(wp.actions).length > 0
-                        ? wp.actions
-                        : undefined,
-                conditions:
-                    wp.conditions &&
-                    typeof wp.conditions === "object" &&
-                    Object.keys(wp.conditions).length > 0
-                        ? wp.conditions
-                        : undefined,
-            }));
-            const intermediate = extractIntermediateWaypoints(
-                loadedWaypoints,
-                selectedDepartureHub,
-                selectedArrivalHub
-            );
-            setWaypoints(intermediate);
-        }
-    }, [initialData, defaultAltitude, selectedDepartureHub, selectedArrivalHub, setWaypoints]);
 
     const handleSave = async () => {
         if (isReadOnly) return;
@@ -216,7 +183,7 @@ export function MissionEditor({
                           latitude: selectedDepartureHub.location.latitude,
                           longitude: selectedDepartureHub.location.longitude,
                           altitude: selectedDepartureHub.altitudeMsl ?? 0,
-                          actions: { type: "takeoff" },
+                          actions: { type: WAYPOINT_ACTION_TYPE.TAKEOFF },
                       },
                   ]
                 : []),
@@ -230,7 +197,7 @@ export function MissionEditor({
                           latitude: selectedArrivalHub.location.latitude,
                           longitude: selectedArrivalHub.location.longitude,
                           altitude: selectedArrivalHub.altitudeMsl ?? 0,
-                          actions: { type: "land" },
+                          actions: { type: WAYPOINT_ACTION_TYPE.LAND },
                       },
                   ]
                 : []),

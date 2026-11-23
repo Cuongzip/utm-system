@@ -8,12 +8,11 @@ import { Calendar } from "./Calendar";
 import { cn } from "@/lib";
 
 export interface DateTimePickerProps {
-    value?: string;
-    onChange?: (value: string) => void;
+    value: string;
+    onChange: (value: string) => void;
     placeholder?: string;
     disabled?: boolean;
     error?: boolean;
-    className?: string;
 }
 
 export function DateTimePicker({
@@ -22,7 +21,6 @@ export function DateTimePicker({
     placeholder = "Select date & time...",
     disabled = false,
     error = false,
-    className,
 }: DateTimePickerProps) {
     const [open, setOpen] = useState(false);
 
@@ -119,8 +117,7 @@ export function DateTimePicker({
                     className={cn(
                         "flex h-[38px] w-full items-center justify-between rounded-[6px] border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-800 shadow-2xs transition-colors hover:border-slate-400 focus:border-slate-700 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-left font-mono",
                         error && "border-red-400 bg-red-50 text-red-900 focus:border-red-500",
-                        !displayText && "text-slate-400 font-sans",
-                        className
+                        !displayText && "text-slate-400 font-sans"
                     )}
                 >
                     <div className="flex items-center gap-2 overflow-hidden truncate">

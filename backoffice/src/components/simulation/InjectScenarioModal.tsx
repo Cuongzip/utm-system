@@ -7,14 +7,15 @@ import { simulationService } from "@/services/simulationService";
 import { CHAOS_SCENARIOS } from "./SessionChaosPanel";
 import { QUERY_KEYS } from "@/hooks";
 import { toast } from "sonner";
-import type { InjectScenarioPayload } from "@/types";
+import { validateSchema } from "@/utils";
+import { injectScenarioBody } from "@/generated/simulation";
+import { SIMULATION_SCENARIO, type InjectScenarioPayload, type InjectScenarioType } from "@/types";
 
 export interface InjectScenarioModalProps {
     isOpen: boolean;
     onClose: () => void;
     sessionId: string;
     onSuccess: () => void;
-    initialScenario?: string;
 }
 
 export function InjectScenarioModal({
@@ -22,20 +23,19 @@ export function InjectScenarioModal({
     onClose,
     sessionId,
     onSuccess,
-    initialScenario = "gps_failure",
 }: InjectScenarioModalProps) {
     const queryClient = useQueryClient();
-    const [scenario, setScenario] = useState<string>(initialScenario);
+    const [scenario, setScenario] = useState<InjectScenarioType>(SIMULATION_SCENARIO.GPS_FAILURE);
     const [durationSeconds, setDurationSeconds] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
-            setScenario(initialScenario || "gps_failure");
+            setScenario(SIMULATION_SCENARIO.GPS_FAILURE);
             setDurationSeconds("");
             setError(null);
         }
-    }, [isOpen, initialScenario]);
+    }, [isOpen]);
 
     const injectMutation = useMutation({
         mutationFn: (payload: InjectScenarioPayload) =>
@@ -53,19 +53,19 @@ export function InjectScenarioModal({
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!scenario) {
-            setError("Please select a scenario to inject");
+
+        const dur = Number(durationSeconds);
+        const validation = validateSchema<InjectScenarioPayload>(injectScenarioBody, {
+            scenario,
+            config:
+                durationSeconds && !isNaN(dur) && dur > 0 ? { durationSeconds: dur } : undefined,
+        });
+        if (!validation.success) {
+            setError(validation.errors.scenario || "Please select a scenario to inject");
             return;
         }
 
-        const dur = Number(durationSeconds);
-        const payload: InjectScenarioPayload = {
-            scenario: scenario as InjectScenarioPayload["scenario"],
-            config:
-                durationSeconds && !isNaN(dur) && dur > 0 ? { durationSeconds: dur } : undefined,
-        };
-
-        injectMutation.mutate(payload);
+        injectMutation.mutate(validation.data);
     };
 
     return (
@@ -77,7 +77,6 @@ export function InjectScenarioModal({
             loading={injectMutation.isPending}
             submitText="Inject Scenario"
             loadingText="Injecting..."
-            submitVariant="dark"
             maxWidth="480px"
         >
             <div className="form-group">
@@ -87,7 +86,7 @@ export function InjectScenarioModal({
                 <CustomSelect
                     value={scenario}
                     onValueChange={(val: string) => {
-                        setScenario(val);
+                        setScenario(val as InjectScenarioType);
                         setError(null);
                     }}
                     options={CHAOS_SCENARIOS.map((s) => ({

@@ -3,6 +3,7 @@ import {
     updateHubBody,
     type createHubBody,
     type getHubByIdResponse,
+    type getHubsResponse,
     type getHubsQueryParams,
 } from "@/generated/hub";
 
@@ -18,7 +19,7 @@ export type Hub = NonNullable<zod.infer<typeof getHubByIdResponse>> & {
     id: string;
 };
 
-export type HubListResponse = {
+export type HubListResponse = Omit<NonNullable<zod.infer<typeof getHubsResponse>>, "items"> & {
     items?: Hub[];
     total?: number;
 };

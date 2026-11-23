@@ -96,5 +96,3 @@ export function useWaypointManager<T extends BaseWaypointItem>({
         matchesId,
     };
 }
-
-export default useWaypointManager;

@@ -8,15 +8,13 @@ import {
     getConfigResponse,
     setModeBody,
     getProtocolsResponseItem,
-    createIncidentBody,
     confirmIncidentBody,
 } from "@/generated/emergency";
 
-export const INCIDENT_STATUSES = getIncidentResponse.shape.status.unwrap().options;
-export const EMERGENCY_SEVERITIES = getIncidentResponse.shape.severity.unwrap().options;
-export const RESPONSE_ACTIONS = getIncidentResponse.shape.responseAction.unwrap().options;
-export const OPERATION_MODES = setModeBody.shape.mode.options;
-export const EMERGENCY_TYPES = createIncidentBody.shape.emergencyType.options;
+const INCIDENT_STATUSES = getIncidentResponse.shape.status.unwrap().options;
+const EMERGENCY_SEVERITIES = getIncidentResponse.shape.severity.unwrap().options;
+const RESPONSE_ACTIONS = getIncidentResponse.shape.responseAction.unwrap().options;
+const OPERATION_MODES = setModeBody.shape.mode.options;
 
 export const INCIDENT_STATUS = {
     ACTIVE: "active",
@@ -63,10 +61,9 @@ export type IncidentStatus = NonNullable<zod.infer<typeof getIncidentResponse>["
 export type ResponseAction = NonNullable<zod.infer<typeof getIncidentResponse>["responseAction"]>;
 export type OperationMode = NonNullable<zod.infer<typeof setModeBody>["mode"]>;
 
-export type CreateIncidentPayload = zod.infer<typeof createIncidentBody>;
 export type ConfirmIncidentPayload = zod.infer<typeof confirmIncidentBody>;
 
-export type EmergencyIncidentGenerated = NonNullable<zod.infer<typeof getIncidentResponse>>;
+type EmergencyIncidentGenerated = NonNullable<zod.infer<typeof getIncidentResponse>>;
 
 export type EmergencyIncidentVm = EmergencyIncidentGenerated & {
     id: string;
@@ -80,9 +77,9 @@ export type IncidentPageVm = Omit<NonNullable<zod.infer<typeof getIncidentsRespo
     data: EmergencyIncidentVm[];
 };
 
-export type EmergencyStatsVmGenerated = NonNullable<zod.infer<typeof getStatsResponse>>;
+type EmergencyStatsVmGenerated = NonNullable<zod.infer<typeof getStatsResponse>>;
 
-export type StatusCountVm = Omit<
+type StatusCountVm = Omit<
     NonNullable<EmergencyStatsVmGenerated["byStatus"]>[number],
     "status" | "count"
 > & {
@@ -90,7 +87,7 @@ export type StatusCountVm = Omit<
     count: number;
 };
 
-export type TypeCountVm = Omit<
+type TypeCountVm = Omit<
     NonNullable<EmergencyStatsVmGenerated["byType"]>[number],
     "type" | "count"
 > & {
@@ -98,7 +95,7 @@ export type TypeCountVm = Omit<
     count: number;
 };
 
-export type SeverityCountVm = Omit<
+type SeverityCountVm = Omit<
     NonNullable<EmergencyStatsVmGenerated["bySeverity"]>[number],
     "severity" | "count"
 > & {
@@ -106,7 +103,7 @@ export type SeverityCountVm = Omit<
     count: number;
 };
 
-export type DroneCountVm = Omit<
+type DroneCountVm = Omit<
     NonNullable<EmergencyStatsVmGenerated["byDrone"]>[number],
     "droneId" | "count"
 > & {
@@ -114,7 +111,7 @@ export type DroneCountVm = Omit<
     count: number;
 };
 
-export type ResolutionStatVm = Omit<
+type ResolutionStatVm = Omit<
     NonNullable<EmergencyStatsVmGenerated["resolutionStats"]>[number],
     "count"
 > & {

@@ -11,12 +11,7 @@ export interface TrendAnalysisModalProps {
 
 export function TrendAnalysisModal({ isOpen, onClose }: TrendAnalysisModalProps) {
     const { data: statsData, isLoading: statsLoading } = useEmergencyStats();
-    const { data: trendsData, isLoading: trendsLoading } = useEmergencyTrends(
-        undefined,
-        undefined,
-        undefined,
-        isOpen
-    );
+    const { data: trendsData, isLoading: trendsLoading } = useEmergencyTrends(isOpen);
 
     if (!isOpen) return null;
 

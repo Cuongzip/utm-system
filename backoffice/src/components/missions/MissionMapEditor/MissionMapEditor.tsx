@@ -18,18 +18,18 @@ import { MissionCameraController } from "./MissionCameraController";
 
 export interface MissionMapEditorProps {
     waypoints: Waypoint[];
-    selectedWaypointId?: string | null;
-    defaultAltitude?: number;
+    selectedWaypointId: string | null;
+    defaultAltitude: number;
     onDefaultAltitudeChange: (alt: number) => void;
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
     onAddWaypoint: (lat: number, lng: number, altitude: number) => void;
     onMoveWaypoint: (wpId: string, lat: number, lng: number) => void;
     onSelectWaypoint: (waypoint: Waypoint | null) => void;
     onUndoWaypoint: () => void;
     onClearWaypoints: () => void;
     onGenerateHubToHub: () => void;
-    isReadOnly?: boolean;
+    isReadOnly: boolean;
     className?: string;
 }
 
@@ -243,7 +243,6 @@ export function MissionMapEditor({
                 selectedWaypointId={selectedWaypointId}
                 departureHub={departureHub}
                 arrivalHub={arrivalHub}
-                autoFitBounds={false}
             />
 
             <MissionInteractionController
@@ -261,7 +260,7 @@ export function MissionMapEditor({
                 missionPoints={allMissionPoints}
             />
 
-            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} autoFitBounds={false} />}
+            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} />}
         </TacticalMapContainer>
     );
 }

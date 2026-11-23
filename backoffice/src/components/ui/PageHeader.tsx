@@ -1,18 +1,16 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/lib";
 
 export interface PageHeaderProps {
     title: string | React.ReactNode;
     badges?: React.ReactNode;
     children?: React.ReactNode;
-    className?: string;
 }
 
-export function PageHeader({ title, badges, children, className }: PageHeaderProps) {
+export function PageHeader({ title, badges, children }: PageHeaderProps) {
     return (
-        <div className={cn("flex items-center justify-between w-full", className)}>
+        <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
                 <h1 className="text-[24px] font-bold text-[#0f172a] tracking-[-0.6px] leading-[32px]">
                     {title}

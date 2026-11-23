@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Modal, CustomSelect, FormInput } from "@/components/ui";
+import { validateSchema } from "@/utils";
+import { resolveConflictBody } from "@/generated/conflict";
 import {
     RESOLUTION_STRATEGIES,
     RESOLUTION_STRATEGY,
@@ -16,7 +18,7 @@ export interface ResolveConflictModalProps {
     conflict: Conflict | null;
     onClose: () => void;
     onResolve: (id: string, payload: ResolveConflictPayload) => Promise<void> | void;
-    isSubmitting?: boolean;
+    isSubmitting: boolean;
 }
 
 const STRATEGY_OPTIONS = RESOLUTION_STRATEGIES.map((strategy) => ({
@@ -70,10 +72,13 @@ export function ResolveConflictModal({
             actions.targetSpeed = Number(targetSpeed);
         }
 
-        await onResolve(conflict.id, {
+        const validation = validateSchema<ResolveConflictPayload>(resolveConflictBody, {
             strategy,
             actions,
         });
+        if (!validation.success) return;
+
+        await onResolve(conflict.id, validation.data);
     };
 
     const conflictTitle = conflict.conflictType

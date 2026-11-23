@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
-import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
+import { useHubsAll, useDronesAll, useMissionDetail, QUERY_KEYS } from "@/hooks";
 import { missionService } from "@/services/missionService";
 import { syncMissionWaypoints, MissionEditor, type MissionSaveData } from "@/components/missions";
 import { EmptyState } from "@/components/ui";
@@ -23,11 +23,7 @@ export default function EditMissionPage() {
         data: mission,
         isLoading: missionLoading,
         error: missionError,
-    } = useQuery({
-        queryKey: QUERY_KEYS.missionDetail(missionId),
-        queryFn: () => missionService.getById(missionId),
-        enabled: Boolean(missionId),
-    });
+    } = useMissionDetail(missionId);
 
     const updateMutation = useMutation({
         mutationFn: async ({ payload, waypoints, defaultAltitude }: MissionSaveData) => {
@@ -41,7 +37,6 @@ export default function EditMissionPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missionDetail(missionId) });
             toast.success("Mission updated successfully");
             router.push("/dashboard/missions");
         },

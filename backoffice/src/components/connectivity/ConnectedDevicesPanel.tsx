@@ -18,10 +18,10 @@ import { OFFLINE_DEVICE_STATUS, type DeviceRegistration } from "@/types";
 import { formatDateTime, formatRelativeTime } from "@/utils";
 
 export interface ConnectedDevicesPanelProps {
-    status?: string;
-    devices?: DeviceRegistration[];
-    registeredCount?: number;
-    loading?: boolean;
+    status: string;
+    devices: DeviceRegistration[];
+    registeredCount: number;
+    loading: boolean;
     onHeartbeat: (id: string) => void;
     onRevoke: (id: string) => void;
     onTroubleshootGateway: () => void;

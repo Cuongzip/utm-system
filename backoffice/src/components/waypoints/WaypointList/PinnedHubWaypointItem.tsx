@@ -2,6 +2,7 @@
 
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import type { Hub } from "@/types";
+import { formatAltitude, formatCoordinates } from "@/utils";
 
 export interface PinnedHubWaypointItemProps {
     type: "departure" | "arrival";
@@ -14,7 +15,7 @@ export function PinnedHubWaypointItem({ type, hub, sequence }: PinnedHubWaypoint
     const lat = hub.location?.latitude;
     const lng = hub.location?.longitude;
     const coordStr =
-        lat !== undefined && lng !== undefined ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : null;
+        lat !== undefined && lng !== undefined ? formatCoordinates(hub.location) : null;
 
     return (
         <div className="p-3 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] flex items-center justify-between">
@@ -30,7 +31,8 @@ export function PinnedHubWaypointItem({ type, hub, sequence }: PinnedHubWaypoint
                             (isDeparture ? "Departure Vertiport" : "Arrival Vertiport")}
                     </span>
                     <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5">
-                        Alt: {hub.altitudeMsl ?? 0}m{coordStr ? ` • ${coordStr}` : ""}
+                        Alt: {formatAltitude(hub.altitudeMsl ?? 0)}
+                        {coordStr ? ` • ${coordStr}` : ""}
                     </span>
                 </div>
             </div>

@@ -24,10 +24,6 @@ export const droneService = {
         return res.items ?? [];
     },
 
-    getById: async (id: string): Promise<Drone> => {
-        return apiClient<Drone>(API_ENDPOINTS.DRONES.BY_ID(id));
-    },
-
     createDrone: async (payload: CreateDronePayload): Promise<Drone> => {
         return apiClient<Drone>(API_ENDPOINTS.DRONES.BASE, {
             method: "POST",

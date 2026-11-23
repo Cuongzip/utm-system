@@ -3,8 +3,7 @@
 import React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
-import { ChamferCard, ChamferButton, type ChamferButtonVariant } from "@/components/ui";
-import { cn } from "@/lib";
+import { ChamferCard, ChamferButton } from "@/components/ui";
 
 export interface ModalProps {
     isOpen: boolean;
@@ -12,14 +11,12 @@ export interface ModalProps {
     title: React.ReactNode;
     icon?: React.ReactNode;
     maxWidth?: string | number;
-    className?: string;
     children: React.ReactNode;
 
     onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void;
     loading?: boolean;
     submitText?: string;
     loadingText?: string;
-    submitVariant?: ChamferButtonVariant;
     footer?: React.ReactNode;
 }
 
@@ -29,13 +26,11 @@ export function Modal({
     title,
     icon,
     maxWidth = "480px",
-    className,
     children,
     onSubmit,
     loading = false,
     submitText = "Submit",
     loadingText = "Saving...",
-    submitVariant = "dark",
     footer,
 }: ModalProps) {
     const styleMaxWidth = typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth;
@@ -47,7 +42,7 @@ export function Modal({
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                     <DialogPrimitive.Content asChild aria-describedby={undefined}>
                         <div
-                            className={cn("w-full drop-shadow-2xl pointer-events-auto", className)}
+                            className="w-full drop-shadow-2xl pointer-events-auto"
                             style={{ maxWidth: styleMaxWidth }}
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -98,7 +93,7 @@ export function Modal({
                                                     Cancel
                                                 </ChamferButton>
                                                 <ChamferButton
-                                                    variant={submitVariant}
+                                                    variant="dark"
                                                     size="sm"
                                                     clip="sm"
                                                     type="submit"

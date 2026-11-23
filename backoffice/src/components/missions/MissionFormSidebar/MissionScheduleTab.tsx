@@ -15,9 +15,9 @@ export interface MissionScheduleTabProps {
         field: K,
         value: MissionFormPayload[K]
     ) => void;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function MissionScheduleTab({
@@ -111,7 +111,7 @@ export function MissionScheduleTab({
                             disabled={isReadOnly}
                             onChange={(val) => {
                                 onFormChange("scheduledAt", val);
-                                onClearFieldError?.("scheduledAt");
+                                onClearFieldError("scheduledAt");
                             }}
                             error={Boolean(fieldErrors.scheduledAt)}
                             placeholder="Select departure date & time"

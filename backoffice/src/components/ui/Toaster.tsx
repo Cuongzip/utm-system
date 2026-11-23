@@ -3,22 +3,14 @@
 import { Toaster as SonnerToaster } from "sonner";
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from "lucide-react";
 
-export interface ToasterProps {
-    position?:
-        "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center" | "bottom-center";
-    duration?: number;
-    className?: string;
-}
-
-export function Toaster({ position = "top-right", duration = 3200, className }: ToasterProps) {
+export function Toaster() {
     return (
         <SonnerToaster
-            position={position}
-            duration={duration}
+            position="top-right"
+            duration={4000}
             closeButton
             richColors={false}
             offset={20}
-            className={className}
             icons={{
                 success: <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />,
                 error: <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />,

@@ -3,14 +3,15 @@
 import { BatteryCharging, Gauge, Compass, Navigation } from "lucide-react";
 import { MetricCard } from "@/components/ui";
 import { formatAltitude, formatDistance, formatSpeed } from "@/utils";
-import type { SimulationSession } from "@/types";
+import { SIMULATION_SCENARIO, type SimulationSession } from "@/types";
 
 export interface SessionTelemetryCardsProps {
     session: SimulationSession;
 }
 
 export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
-    const isC2Lost = String(session.activeScenario || "").toLowerCase() === "c2_lost";
+    const isC2Lost =
+        String(session.activeScenario || "").toLowerCase() === SIMULATION_SCENARIO.C2_LOST;
     const battery = session.currentBattery ?? 100;
     const speed = session.speed ?? 0;
     const alt = session.currentAlt ?? 0;

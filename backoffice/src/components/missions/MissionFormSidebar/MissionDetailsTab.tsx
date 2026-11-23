@@ -15,10 +15,10 @@ export interface MissionDetailsTabProps {
     droneOptions: SelectOption[];
     hubOptions: SelectOption[];
     arrivalHubOptions: SelectOption[];
-    isEdit?: boolean;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    isEdit: boolean;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function MissionDetailsTab({
@@ -46,7 +46,7 @@ export function MissionDetailsTab({
                 value={formData.code ?? ""}
                 onChange={(e) => {
                     onFormChange("code", e.target.value);
-                    onClearFieldError?.("code");
+                    onClearFieldError("code");
                 }}
                 error={fieldErrors.code}
             />
@@ -60,40 +60,10 @@ export function MissionDetailsTab({
                 disabled={isReadOnly}
                 onChange={(e) => {
                     onFormChange("name", e.target.value);
-                    onClearFieldError?.("name");
+                    onClearFieldError("name");
                 }}
                 error={fieldErrors.name}
             />
-
-            <div className="form-group">
-                <label className="form-label" htmlFor="payloadWeight">
-                    Payload Weight (kg)
-                </label>
-                <div className="relative">
-                    <input
-                        id="payloadWeight"
-                        type="number"
-                        min="0"
-                        max="50"
-                        step="0.1"
-                        placeholder="0.0"
-                        value={formData.payloadWeightKg ?? 0}
-                        disabled={isReadOnly}
-                        onChange={(e) => {
-                            const val = parseFloat(e.target.value);
-                            onFormChange("payloadWeightKg", isNaN(val) ? 0 : val);
-                            onClearFieldError?.("payloadWeightKg");
-                        }}
-                        className="form-input pr-12"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">
-                        kg
-                    </span>
-                </div>
-                {fieldErrors.payloadWeightKg && (
-                    <span className="form-error-msg">{fieldErrors.payloadWeightKg}</span>
-                )}
-            </div>
 
             <div className="form-group">
                 <label className="form-label" htmlFor="missionDesc">
@@ -132,7 +102,7 @@ export function MissionDetailsTab({
                     disabled={isReadOnly}
                     onValueChange={(val) => {
                         onFormChange("departureHubId", val);
-                        onClearFieldError?.("departureHubId");
+                        onClearFieldError("departureHubId");
                     }}
                     options={hubOptions}
                     placeholder="Select departure hub"
@@ -150,7 +120,7 @@ export function MissionDetailsTab({
                     disabled={isReadOnly}
                     onValueChange={(val) => {
                         onFormChange("arrivalHubId", val);
-                        onClearFieldError?.("arrivalHubId");
+                        onClearFieldError("arrivalHubId");
                     }}
                     options={arrivalHubOptions}
                     placeholder="Same as departure"

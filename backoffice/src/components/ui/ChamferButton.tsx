@@ -5,7 +5,7 @@ import { cn } from "@/lib";
 
 export type ChamferButtonVariant = "dark" | "outline" | "danger";
 export type ChamferButtonSize = "xs" | "sm" | "md";
-export type ChamferButtonClip = "xs" | "sm" | "md";
+export type ChamferButtonClip = "xs" | "sm";
 
 export interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ChamferButtonVariant;
@@ -17,7 +17,6 @@ export interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButto
 const CLIP_CLASSES: Record<ChamferButtonClip, string> = {
     xs: "chamfer-xs",
     sm: "chamfer-sm",
-    md: "chamfer-md",
 };
 
 const SIZE_CLASSES: Record<ChamferButtonSize, string> = {

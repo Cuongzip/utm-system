@@ -87,7 +87,6 @@ export function ActiveIncidentsList({
                             const Icon = getIncidentIcon(incident);
                             const isAwaiting =
                                 incident.status === INCIDENT_STATUS.PENDING_CONFIRMATION;
-                            const isResolved = incident.status === INCIDENT_STATUS.RESOLVED;
 
                             const flight = incident.flightId
                                 ? flightMap.get(incident.flightId)

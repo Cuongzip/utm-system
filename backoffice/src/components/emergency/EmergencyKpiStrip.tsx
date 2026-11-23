@@ -8,7 +8,7 @@ export interface EmergencyKpiMetrics {
     pendingCount: number;
     resolvedCount: number;
     avgResponseTime: number;
-    isLoading?: boolean;
+    isLoading: boolean;
 }
 
 export function EmergencyKpiStrip({

@@ -12,21 +12,21 @@ export interface WaypointEditorProps<T extends WaypointItem> {
     waypoint: T;
     onUpdate: (wp: T) => void;
     onClose: () => void;
-    defaultAltitude?: number;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
-    waypointIndex?: number;
-    onClearFieldError?: (field: string) => void;
+    defaultAltitude: number;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    waypointIndex: number;
+    onClearFieldError: (field: string) => void;
 }
 
 export function WaypointEditor<T extends WaypointItem>({
     waypoint,
     onUpdate,
     onClose,
-    defaultAltitude = 50,
-    isReadOnly = false,
-    fieldErrors = {},
-    waypointIndex = -1,
+    defaultAltitude,
+    isReadOnly,
+    fieldErrors,
+    waypointIndex,
     onClearFieldError,
 }: WaypointEditorProps<T>) {
     const [activeSubTab, setActiveSubTab] = useState<"position" | "actions" | "conditions">(

@@ -4,9 +4,9 @@ import { PieChart } from "lucide-react";
 import { ChamferCard, EmptyState } from "@/components/ui";
 
 export interface TelemetryDistributionProps {
-    frequencyBand?: string;
-    hasFeeds?: boolean;
-    byMode?: Record<string, number>;
+    frequencyBand: string;
+    hasFeeds: boolean;
+    byMode: Record<string, number>;
 }
 
 const TELEMETRY_DISTRIBUTION_MODES = [

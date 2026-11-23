@@ -5,7 +5,7 @@ export type StompServiceName = "telemetry" | "alert" | "emergency";
 const serviceClients = new Map<StompServiceName, Client>();
 const serviceConnectionListeners = new Map<StompServiceName, Set<(connected: boolean) => void>>();
 
-export function getServiceBrokerUrl(service: StompServiceName): string {
+function getServiceBrokerUrl(service: StompServiceName): string {
     if (process.env.NEXT_PUBLIC_WS_URL) {
         if (service === "telemetry") {
             return process.env.NEXT_PUBLIC_WS_URL;
@@ -24,10 +24,6 @@ export function getServiceBrokerUrl(service: StompServiceName): string {
         return `${protocol}//${host}:8081/${service}/ws`;
     }
     return `ws://localhost:8081/${service}/ws`;
-}
-
-export function getDefaultBrokerUrl(): string {
-    return getServiceBrokerUrl("telemetry");
 }
 
 function getServiceListeners(service: StompServiceName): Set<(connected: boolean) => void> {
@@ -145,46 +141,4 @@ export function onServiceStompConnectionChange(
     return () => {
         listeners.delete(callback);
     };
-}
-
-export function getStompClient(brokerUrl?: string): Client {
-    const client = getServiceClient("telemetry");
-    if (brokerUrl && client.brokerURL !== brokerUrl) {
-        client.brokerURL = brokerUrl;
-    }
-    return client;
-}
-
-export function connectStomp(token?: string): void {
-    connectServiceStomp("telemetry", token);
-}
-
-export function disconnectStomp(): void {
-    disconnectServiceStomp("telemetry");
-}
-
-export function subscribeStomp<T = unknown>(
-    destination: string,
-    callback: (data: T, message: IMessage) => void
-): () => void {
-    return subscribeServiceStomp<T>("telemetry", destination, callback);
-}
-
-export function publishStomp(
-    destination: string,
-    body: unknown,
-    headers: Record<string, string> = {}
-): void {
-    const client = getServiceClient("telemetry");
-    if (client.connected) {
-        client.publish({
-            destination,
-            body: typeof body === "string" ? body : JSON.stringify(body),
-            headers,
-        });
-    }
-}
-
-export function onStompConnectionChange(callback: (connected: boolean) => void): () => void {
-    return onServiceStompConnectionChange("telemetry", callback);
 }

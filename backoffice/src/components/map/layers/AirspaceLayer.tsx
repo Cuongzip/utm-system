@@ -2,14 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
+import { getCesium } from "../cesiumLoader";
 import type { AirspaceZone } from "@/types";
 import { MAP_TOKENS } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
-import { fitCameraToBounds } from "../cesiumUtils";
 
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
-    autoFitBounds?: boolean;
 }
 
 const TYPE_COLOR_MAP: Record<string, string> = {
@@ -19,10 +18,9 @@ const TYPE_COLOR_MAP: Record<string, string> = {
     warning: MAP_TOKENS.colors.airspace.warning,
 };
 
-export function AirspaceLayer({ zones = [], autoFitBounds = true }: AirspaceLayerProps) {
+export function AirspaceLayer({ zones = [] }: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
-    const hasAutoFittedRef = useRef(false);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -30,7 +28,7 @@ export function AirspaceLayer({ zones = [], autoFitBounds = true }: AirspaceLaye
         let cancelled = false;
 
         async function renderZones() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (cancelled || !viewer || viewer.isDestroyed()) return;
 
             entityIdsRef.current.forEach((id) => {
@@ -112,29 +110,6 @@ export function AirspaceLayer({ zones = [], autoFitBounds = true }: AirspaceLaye
 
             entityIdsRef.current = newEntityIds;
 
-            if (autoFitBounds && !hasAutoFittedRef.current && zones.length > 0) {
-                hasAutoFittedRef.current = true;
-                const points = zones.flatMap(
-                    (z) =>
-                        z.geometry?.coordinates?.[0]
-                            ?.filter(
-                                (p) =>
-                                    Array.isArray(p) &&
-                                    p.length >= 2 &&
-                                    !isNaN(p[0]) &&
-                                    !isNaN(p[1])
-                            )
-                            .map((p) => ({ lng: p[0], lat: p[1] })) ?? []
-                );
-
-                fitCameraToBounds(viewer, points, {
-                    animate: true,
-                    duration: 1.0,
-                    minHeight: 2000,
-                    paddingMultiplier: 1.4,
-                });
-            }
-
             viewer.scene.requestRender();
         }
 
@@ -151,7 +126,7 @@ export function AirspaceLayer({ zones = [], autoFitBounds = true }: AirspaceLaye
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, zones, autoFitBounds]);
+    }, [viewer, isLoaded, zones]);
 
     return null;
 }

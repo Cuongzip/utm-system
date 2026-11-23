@@ -2,12 +2,12 @@
 
 import { AlertCircle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib";
+import { formatAltitude, formatCoordinates } from "@/utils";
 import type { WaypointItem } from "../types";
 
 export interface WaypointListItemProps<T extends WaypointItem> {
     waypoint: T;
     displaySequence: number;
-    isSelected?: boolean;
     hasError?: boolean;
     isFirst: boolean;
     isLast: boolean;
@@ -21,7 +21,6 @@ export interface WaypointListItemProps<T extends WaypointItem> {
 export function WaypointListItem<T extends WaypointItem>({
     waypoint,
     displaySequence,
-    isSelected = false,
     hasError = false,
     isFirst,
     isLast,
@@ -38,9 +37,7 @@ export function WaypointListItem<T extends WaypointItem>({
                 "p-3 rounded-md border transition-all cursor-pointer flex items-center justify-between",
                 hasError
                     ? "border-red-300 bg-red-50/40 hover:border-red-400 dark:border-red-800 dark:bg-red-950/20"
-                    : isSelected
-                      ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)]"
-                      : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)] hover:shadow-2xs"
+                    : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)] hover:shadow-2xs"
             )}
         >
             <div className="flex items-center gap-2.5">
@@ -65,8 +62,8 @@ export function WaypointListItem<T extends WaypointItem>({
                         )}
                     </div>
                     <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5">
-                        Alt: {waypoint.altitude ?? 50}m • {waypoint.latitude?.toFixed(4)},{" "}
-                        {waypoint.longitude?.toFixed(4)}
+                        Alt: {formatAltitude(waypoint.altitude ?? 50)} •{" "}
+                        {formatCoordinates(waypoint)}
                     </span>
                 </div>
             </div>

@@ -8,9 +8,3 @@ export interface CesiumContextValue {
     viewer: Viewer | null;
     isLoaded: boolean;
 }
-
-export interface MapCoordinates {
-    lng: number;
-    lat: number;
-    height?: number;
-}

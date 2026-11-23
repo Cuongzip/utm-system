@@ -9,8 +9,8 @@ export interface FlightScheduleTabProps {
     scheduledArrival: string;
     onScheduledArrivalChange: (val: string) => void;
     durationMinutes: number | null;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
 }
 
 export function FlightScheduleTab({

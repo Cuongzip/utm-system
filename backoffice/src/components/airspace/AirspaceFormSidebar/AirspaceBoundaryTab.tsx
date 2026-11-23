@@ -17,7 +17,7 @@ export interface AirspaceBoundaryTabProps {
     polygonPoints: GeoPoint[];
     onRemovePolygonPoint: (index: number) => void;
     onClearPolygonPoints: () => void;
-    fieldErrors?: Record<string, string>;
+    fieldErrors: Record<string, string>;
 }
 
 export function AirspaceBoundaryTab({
@@ -83,7 +83,7 @@ export function AirspaceBoundaryTab({
                         className={cn(
                             "flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded transition-colors cursor-pointer",
                             geometryMode === GEOMETRY_MODE.RADIUS
-                                ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                ? "bg-slate-800 text-white shadow-2xs"
                                 : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                         )}
                     >
@@ -97,7 +97,7 @@ export function AirspaceBoundaryTab({
                         className={cn(
                             "flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded transition-colors cursor-pointer",
                             geometryMode === GEOMETRY_MODE.POLYGON
-                                ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                ? "bg-slate-800 text-white shadow-2xs"
                                 : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                         )}
                     >

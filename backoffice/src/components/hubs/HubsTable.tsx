@@ -24,8 +24,8 @@ import { type Hub, ACTIVE_HUB_STATUS } from "@/types";
 
 interface HubsTableProps {
     hubs: Hub[];
-    loading?: boolean;
-    selectedHubId?: string | null;
+    loading: boolean;
+    selectedHubId: string | null;
     onSelectHub: (hub: Hub) => void;
     onEditHub: (hub: Hub) => void;
     onDeleteHub: (id: string) => void;
@@ -161,7 +161,6 @@ export function HubsTable({
                     </span>
                 }
                 confirmText="Delete Hub"
-                variant="danger"
             />
         </div>
     );

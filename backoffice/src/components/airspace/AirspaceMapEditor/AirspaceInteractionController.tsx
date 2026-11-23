@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useCesium } from "@/components/map";
+import { useCesium, getCesium } from "@/components/map";
 import type { GeometryMode } from "../useAirspaceGeometry";
-import { getCesium } from "./cesiumLoader";
 
 export interface AirspaceInteractionControllerProps {
     geometryMode: GeometryMode;

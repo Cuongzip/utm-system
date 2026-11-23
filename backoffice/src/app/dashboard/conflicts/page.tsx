@@ -133,10 +133,8 @@ export default function ConflictsPage() {
                         </div>
                     }
                 >
-                    {showLiveTraffic && (
-                        <FlightsLayer flights={flights} activeOnly autoFitBounds={false} />
-                    )}
-                    {showAirspace && <AirspaceLayer zones={airspaces} autoFitBounds={false} />}
+                    {showLiveTraffic && <FlightsLayer flights={flights} activeOnly />}
+                    {showAirspace && <AirspaceLayer zones={airspaces} />}
                 </TacticalMapContainer>
             </div>
 

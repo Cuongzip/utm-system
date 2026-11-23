@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
+import { getCesium } from "../cesiumLoader";
 import type { Flight, TelemetryRecord } from "@/types";
 import { getDroneIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
+import { fitCameraToBounds } from "../cesiumUtils";
 import { formatSpeed } from "@/utils";
 
 export interface LiveTelemetryLayerProps {
@@ -30,7 +32,7 @@ export function LiveTelemetryLayer({
         let cancelled = false;
 
         async function renderTelemetry() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
             entityIdsRef.current.forEach((id) => {
@@ -120,24 +122,7 @@ export function LiveTelemetryLayer({
                 }
             } else if (allPoints.length > 0 && !lastCameraFocusRef.current) {
                 lastCameraFocusRef.current = "bounds_fit";
-                let minLat = 90,
-                    maxLat = -90,
-                    minLng = 180,
-                    maxLng = -180;
-                allPoints.forEach((p) => {
-                    if (p.lat < minLat) minLat = p.lat;
-                    if (p.lat > maxLat) maxLat = p.lat;
-                    if (p.lng < minLng) minLng = p.lng;
-                    if (p.lng > maxLng) maxLng = p.lng;
-                });
-                viewer.camera.setView({
-                    destination: Cesium.Rectangle.fromDegrees(
-                        minLng - 0.05,
-                        minLat - 0.05,
-                        maxLng + 0.05,
-                        maxLat + 0.05
-                    ),
-                });
+                fitCameraToBounds(viewer, allPoints, { animate: false });
             }
 
             viewer.scene.requestRender();

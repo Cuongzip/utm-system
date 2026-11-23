@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Eye, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import {
     TacticalMapContainer,
     FlightsLayer,
@@ -17,12 +17,12 @@ import { toast } from "sonner";
 
 export interface DashboardTacticalMapProps {
     flights: Flight[];
-    activeFlights?: Flight[];
+    activeFlights: Flight[];
     hubs: Hub[];
     airspaceZones: AirspaceZone[];
-    telemetryMap?: Record<string, TelemetryRecord>;
-    activeTelemetryCount?: number;
-    isSocketConnected?: boolean;
+    telemetryMap: Record<string, TelemetryRecord>;
+    activeTelemetryCount: number;
+    isSocketConnected: boolean;
 }
 
 function PerspectiveResetHandler({ hubs, trigger }: { hubs: Hub[]; trigger: number }) {
@@ -63,17 +63,7 @@ export function DashboardTacticalMap({
     const [filterTraffic, setFilterTraffic] = useState(true);
     const [filterAirspace, setFilterAirspace] = useState(true);
     const [filterHubs, setFilterHubs] = useState(true);
-    const [showForesight, setShowForesight] = useState(false);
     const [resetTrigger, setResetTrigger] = useState(0);
-
-    const handleForesight = () => {
-        setShowForesight((prev) => !prev);
-        toast.info(
-            !showForesight
-                ? "Trajectory foresight projection enabled"
-                : "Trajectory foresight hidden"
-        );
-    };
 
     const handleReset = () => {
         setResetTrigger((prev) => prev + 1);
@@ -97,7 +87,7 @@ export function DashboardTacticalMap({
                             className={cn(
                                 "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded",
                                 filterTraffic
-                                    ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                    ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
@@ -109,7 +99,7 @@ export function DashboardTacticalMap({
                             className={cn(
                                 "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded",
                                 filterAirspace
-                                    ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                    ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
@@ -121,7 +111,7 @@ export function DashboardTacticalMap({
                             className={cn(
                                 "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded",
                                 filterHubs
-                                    ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                    ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
@@ -133,19 +123,6 @@ export function DashboardTacticalMap({
             overlay={
                 <>
                     <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 p-1 rounded-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-md text-xs font-mono">
-                        <button
-                            type="button"
-                            onClick={handleForesight}
-                            className={cn(
-                                "flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors cursor-pointer",
-                                showForesight
-                                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                                    : "text-slate-200 hover:text-white hover:bg-slate-800"
-                            )}
-                        >
-                            <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>FORESIGHT</span>
-                        </button>
                         <button
                             type="button"
                             onClick={handleReset}
@@ -176,7 +153,7 @@ export function DashboardTacticalMap({
         >
             {filterTraffic && (
                 <>
-                    <FlightsLayer flights={flights} autoFitBounds={false} />
+                    <FlightsLayer flights={flights} />
                     <LiveTelemetryLayer
                         flights={activeFlights.length > 0 ? activeFlights : flights}
                         telemetryMap={telemetryMap}
@@ -184,7 +161,7 @@ export function DashboardTacticalMap({
                 </>
             )}
             {filterHubs && <HubsLayer hubs={hubs} autoFitBounds={false} />}
-            {filterAirspace && <AirspaceLayer zones={airspaceZones} autoFitBounds={false} />}
+            {filterAirspace && <AirspaceLayer zones={airspaceZones} />}
             <PerspectiveResetHandler hubs={hubs} trigger={resetTrigger} />
         </TacticalMapContainer>
     );

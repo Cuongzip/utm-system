@@ -13,8 +13,8 @@ export interface AirspaceFormSidebarProps {
         field: K,
         value: AirspaceZoneFormPayload[K]
     ) => void;
-    isEdit?: boolean;
-    hubs?: Hub[];
+    isEdit: boolean;
+    hubs: Hub[];
 
     // Geometry
     geometryMode: GeometryMode;
@@ -29,9 +29,8 @@ export interface AirspaceFormSidebarProps {
 
     activeTab: "details" | "geometry";
     onTabChange: (tab: "details" | "geometry") => void;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
-    className?: string;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function AirspaceFormSidebar({
@@ -52,7 +51,6 @@ export function AirspaceFormSidebar({
     onTabChange,
     fieldErrors = {},
     onClearFieldError,
-    className = "",
 }: AirspaceFormSidebarProps) {
     const hasGeometryError = Boolean(fieldErrors.geometry || fieldErrors["geometry.coordinates"]);
 
@@ -65,7 +63,7 @@ export function AirspaceFormSidebar({
     );
 
     return (
-        <ChamferCard size="lg" className={cn("w-full h-full min-h-0", className)}>
+        <ChamferCard size="lg" className="w-full h-full min-h-0">
             <div className="flex flex-col h-full min-h-0 bg-[var(--color-surface-panel)] select-none overflow-hidden">
                 <div className="grid grid-cols-2 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs shrink-0">
                     <button

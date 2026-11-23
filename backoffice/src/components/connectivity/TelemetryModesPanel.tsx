@@ -4,7 +4,7 @@ import { Radio, Gauge, Zap, AlertTriangle, type LucideIcon } from "lucide-react"
 import { ChamferCard } from "@/components/ui";
 
 export interface TelemetryModesPanelProps {
-    counts?: Record<string, number>;
+    counts: Record<string, number>;
 }
 
 interface TelemetryModeDefinition {

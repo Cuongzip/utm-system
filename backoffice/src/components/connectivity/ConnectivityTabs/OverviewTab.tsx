@@ -10,7 +10,7 @@ export interface OverviewTabProps {
     offlineCount: number;
     onlineDevices: DeviceRegistration[];
     totalDevicesCount: number;
-    loading?: boolean;
+    loading: boolean;
     onHeartbeat: (id: string) => void;
     onRevoke: (id: string) => void;
     onTroubleshootGateway: () => void;

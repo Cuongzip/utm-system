@@ -17,10 +17,10 @@ export interface DashboardDiagnosticsProps {
     totalHubs: number;
     fleetSize: number;
     conflictsCount: number;
-    apiStatus?: ApiHealthStatus;
-    isSocketConnected?: boolean;
-    activeTelemetryCount?: number;
-    connectedDevicesCount?: number;
+    apiStatus: ApiHealthStatus;
+    isSocketConnected: boolean;
+    activeTelemetryCount: number;
+    connectedDevicesCount: number;
 }
 
 interface HealthConfig {

@@ -7,7 +7,7 @@ import { useActiveAlerts, QUERY_KEYS } from "@/hooks";
 import { alertService } from "@/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { formatTime } from "@/utils/format";
+import { formatTime } from "@/utils";
 import { ALERT_SEVERITY, ALERT_STATUS } from "@/types";
 
 export function ActiveAlerts() {

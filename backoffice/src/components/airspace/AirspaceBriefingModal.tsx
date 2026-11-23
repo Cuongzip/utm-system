@@ -4,20 +4,15 @@ import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Modal, ChamferButton, StatusBadge, FormInput } from "@/components/ui";
-import { formatCoordinates, formatAltitude, formatNullable } from "@/utils";
+import { formatCoordinates, formatAltitude, formatNullable, validateSchema } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
-import type { CheckPathPayload, CheckPathResult } from "@/types";
+import { checkPathBody } from "@/generated/airspace";
+import type { CheckPathPayload, CheckPathResult, PathPoint } from "@/types";
 import { DEFAULT_AIRSPACE_ZONE_TYPE } from "@/types";
 
 interface AirspaceBriefingModalProps {
     isOpen: boolean;
     onClose: () => void;
-}
-
-interface Waypoint {
-    lat: number;
-    lon: number;
-    alt: number;
 }
 
 const PRESET_ROUTES = [
@@ -44,8 +39,8 @@ function WaypointInputs({
     onChange,
 }: {
     title: string;
-    point: Waypoint;
-    onChange: (field: keyof Waypoint, val: number) => void;
+    point: PathPoint;
+    onChange: (field: keyof PathPoint, val: number) => void;
 }) {
     const [latStr, setLatStr] = useState(() => String(point.lat ?? ""));
     const [lonStr, setLonStr] = useState(() => String(point.lon ?? ""));
@@ -58,7 +53,7 @@ function WaypointInputs({
     }, [point.lat, point.lon, point.alt]);
 
     const handleFieldChange =
-        (field: keyof Waypoint, setStr: (s: string) => void) =>
+        (field: keyof PathPoint, setStr: (s: string) => void) =>
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const val = e.target.value;
             setStr(val);
@@ -69,7 +64,7 @@ function WaypointInputs({
         };
 
     const handleFieldBlur =
-        (field: keyof Waypoint, currentStr: string, setStr: (s: string) => void) => () => {
+        (field: keyof PathPoint, currentStr: string, setStr: (s: string) => void) => () => {
             const parsed = parseFloat(currentStr);
             if (isNaN(parsed) || !isFinite(parsed) || currentStr.trim() === "") {
                 setStr(String(point[field] ?? ""));
@@ -123,8 +118,8 @@ function WaypointInputs({
 }
 
 export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModalProps) {
-    const [start, setStart] = useState<Waypoint>({ lat: 10.8185, lon: 106.6588, alt: 100 });
-    const [end, setEnd] = useState<Waypoint>({ lat: 10.7715, lon: 106.7214, alt: 120 });
+    const [start, setStart] = useState<PathPoint>({ lat: 10.8185, lon: 106.6588, alt: 100 });
+    const [end, setEnd] = useState<PathPoint>({ lat: 10.7715, lon: 106.7214, alt: 120 });
     const [spacingM, setSpacingM] = useState<number>(200);
     const [spacingStr, setSpacingStr] = useState<string>("200");
     const [checkResult, setCheckResult] = useState<CheckPathResult | null>(null);
@@ -136,8 +131,8 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
     });
 
     const updateWaypoint =
-        (setter: React.Dispatch<React.SetStateAction<Waypoint>>) =>
-        (field: keyof Waypoint, val: number) => {
+        (setter: React.Dispatch<React.SetStateAction<PathPoint>>) =>
+        (field: keyof PathPoint, val: number) => {
             setter((prev) => ({ ...prev, [field]: val }));
         };
 
@@ -148,10 +143,12 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
     };
 
     const handleRunCheck = () => {
-        checkMutation.mutate({
+        const validation = validateSchema<CheckPathPayload>(checkPathBody, {
             points: [start, end],
             spacingM: spacingM ?? 200,
         });
+        if (!validation.success) return;
+        checkMutation.mutate(validation.data);
     };
 
     const handleClose = () => {

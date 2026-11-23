@@ -3,7 +3,12 @@
 import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
 import { FlightFeasibilityCard } from "../FlightFeasibilityCard";
-import type { Drone, FeasibilityVerdict, FlightFormPayload } from "@/types";
+import {
+    FEASIBILITY_VERDICT,
+    type Drone,
+    type FeasibilityVerdict,
+    type FlightFormPayload,
+} from "@/types";
 
 export interface FlightDetailsTabProps {
     formData: FlightFormPayload;
@@ -12,15 +17,15 @@ export interface FlightDetailsTabProps {
         value: FlightFormPayload[K]
     ) => void;
     mode: "create" | "edit";
-    drones?: Drone[];
+    drones: Drone[];
     droneOptions: SelectOption[];
     hubOptions: SelectOption[];
     totalDistanceM: number;
-    feasibilityVerdict?: FeasibilityVerdict;
-    isFeasibilityWarning?: boolean;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    feasibilityVerdict: FeasibilityVerdict;
+    isFeasibilityWarning: boolean;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function FlightDetailsTab({
@@ -51,7 +56,7 @@ export function FlightDetailsTab({
                 value={formData.flightNumber ?? ""}
                 onChange={(e) => {
                     onFormChange("flightNumber", e.target.value);
-                    onClearFieldError?.("flightNumber");
+                    onClearFieldError("flightNumber");
                 }}
                 error={fieldErrors.flightNumber}
             />
@@ -169,7 +174,8 @@ export function FlightDetailsTab({
             {isFeasibilityWarning && (
                 <div className="form-group pt-1">
                     <label className="form-label" htmlFor="feasibilityOverride">
-                        Feasibility Reason ({feasibilityVerdict === "no_go" ? "No Go" : "Marginal"}){" "}
+                        Feasibility Reason (
+                        {feasibilityVerdict === FEASIBILITY_VERDICT.NO_GO ? "No Go" : "Marginal"}){" "}
                         <span className="text-red-500">*</span>
                     </label>
                     <textarea

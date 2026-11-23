@@ -8,7 +8,6 @@ export interface TacticalLabelOptions {
     pixelOffset?: CesiumType.Cartesian2;
     eyeOffset?: CesiumType.Cartesian3;
     maxDistance?: number;
-    showBackground?: boolean;
 }
 
 export function createTacticalLabel(
@@ -33,7 +32,7 @@ export function createTacticalLabel(
         fillColor: textColor,
         outlineColor: Cesium.Color.BLACK,
         outlineWidth: 1.5,
-        showBackground: options.showBackground ?? true,
+        showBackground: true,
         backgroundColor: bgColor,
         backgroundPadding: new Cesium.Cartesian2(7, 4),
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,

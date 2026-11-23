@@ -7,7 +7,12 @@ import { cn } from "@/lib";
 import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
 import { toast } from "sonner";
-import { SIMULATION_STATUS, type SimulationSession, type InjectScenarioPayload } from "@/types";
+import {
+    SIMULATION_STATUS,
+    SIMULATION_SCENARIO,
+    type SimulationSession,
+    type InjectScenarioType,
+} from "@/types";
 
 export interface SessionChaosPanelProps {
     session: SimulationSession;
@@ -15,7 +20,7 @@ export interface SessionChaosPanelProps {
 }
 
 export interface ScenarioDefinition {
-    type: InjectScenarioPayload["scenario"];
+    type: InjectScenarioType;
     name: string;
     description: string;
     icon: React.ComponentType<{ className?: string }>;
@@ -23,31 +28,31 @@ export interface ScenarioDefinition {
 
 export const CHAOS_SCENARIOS: ScenarioDefinition[] = [
     {
-        type: "gps_failure",
+        type: SIMULATION_SCENARIO.GPS_FAILURE,
         name: "GPS Failure",
         description: "Simulates complete loss of GNSS positioning.",
         icon: Satellite,
     },
     {
-        type: "battery_drain",
+        type: SIMULATION_SCENARIO.BATTERY_DRAIN,
         name: "Battery Drain",
         description: "Forces rapid battery level depletion.",
         icon: ZapOff,
     },
     {
-        type: "c2_lost",
+        type: SIMULATION_SCENARIO.C2_LOST,
         name: "C2 Link Lost",
         description: "Simulates lost C2 command telemetry link.",
         icon: WifiOff,
     },
     {
-        type: "motor_failure",
+        type: SIMULATION_SCENARIO.MOTOR_FAILURE,
         name: "Motor Failure",
         description: "Simulates propulsion motor subsystem fault.",
         icon: TriangleAlert,
     },
     {
-        type: "geofence_breach",
+        type: SIMULATION_SCENARIO.GEOFENCE_BREACH,
         name: "Geofence Breach",
         description: "Forces flight outside authorized airspace boundaries.",
         icon: ShieldAlert,

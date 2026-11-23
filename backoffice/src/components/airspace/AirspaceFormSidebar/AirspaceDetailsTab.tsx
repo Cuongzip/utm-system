@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
-import { cn } from "@/lib";
 import {
     type AirspaceZoneType,
     type AirspaceZoneStatus,
@@ -20,10 +19,10 @@ export interface AirspaceDetailsTabProps {
         field: K,
         value: AirspaceZoneFormPayload[K]
     ) => void;
-    isEdit?: boolean;
-    hubs?: Hub[];
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    isEdit: boolean;
+    hubs: Hub[];
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 const ZONE_TYPE_OPTIONS: SelectOption[] = AIRSPACE_ZONE_TYPES.map((type) => ({
@@ -67,7 +66,7 @@ export function AirspaceDetailsTab({
                 value={formData.code ?? ""}
                 onChange={(e) => {
                     onFormChange("code", e.target.value);
-                    onClearFieldError?.("code");
+                    onClearFieldError("code");
                 }}
                 error={fieldErrors.code}
             />
@@ -80,7 +79,7 @@ export function AirspaceDetailsTab({
                 value={formData.name}
                 onChange={(e) => {
                     onFormChange("name", e.target.value);
-                    onClearFieldError?.("name");
+                    onClearFieldError("name");
                 }}
                 error={fieldErrors.name}
             />
@@ -93,7 +92,7 @@ export function AirspaceDetailsTab({
                     value={formData.zoneType}
                     onValueChange={(val: string) => {
                         onFormChange("zoneType", val as AirspaceZoneType);
-                        onClearFieldError?.("zoneType");
+                        onClearFieldError("zoneType");
                     }}
                     options={ZONE_TYPE_OPTIONS}
                 />
@@ -105,7 +104,7 @@ export function AirspaceDetailsTab({
                     value={formData.status}
                     onValueChange={(val: string) => {
                         onFormChange("status", val as AirspaceZoneStatus);
-                        onClearFieldError?.("status");
+                        onClearFieldError("status");
                     }}
                     options={ZONE_STATUS_OPTIONS}
                 />
@@ -117,7 +116,7 @@ export function AirspaceDetailsTab({
                     value={formData.hubId ?? ""}
                     onValueChange={(val: string) => {
                         onFormChange("hubId", val);
-                        onClearFieldError?.("hubId");
+                        onClearFieldError("hubId");
                     }}
                     options={hubOptions}
                 />
@@ -137,7 +136,7 @@ export function AirspaceDetailsTab({
                 value={formData.altitudeCeiling ?? 120}
                 onChange={(e) => {
                     onFormChange("altitudeCeiling", Number(e.target.value));
-                    onClearFieldError?.("altitudeCeiling");
+                    onClearFieldError("altitudeCeiling");
                 }}
                 error={fieldErrors.altitudeCeiling}
             />
@@ -152,7 +151,7 @@ export function AirspaceDetailsTab({
                     value={formData.description ?? ""}
                     onChange={(e) => {
                         onFormChange("description", e.target.value);
-                        onClearFieldError?.("description");
+                        onClearFieldError("description");
                     }}
                     placeholder="Enter legal basis, operational constraints, or activation schedule..."
                     className="form-input resize-none"

@@ -9,16 +9,9 @@ export interface PaginationProps {
     totalPages: number;
     totalItems: number;
     onPageChange: (page: number) => void;
-    className?: string;
 }
 
-export function Pagination({
-    currentPage,
-    totalPages,
-    totalItems,
-    onPageChange,
-    className,
-}: PaginationProps) {
+export function Pagination({ currentPage, totalPages, totalItems, onPageChange }: PaginationProps) {
     const pageNumbers = useMemo(() => {
         if (totalPages <= 7) {
             return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -53,12 +46,7 @@ export function Pagination({
     }
 
     return (
-        <div
-            className={cn(
-                "flex items-center justify-end px-5 py-3 bg-[var(--color-surface-panel)] border-t border-[var(--color-border-default)] select-none",
-                className
-            )}
-        >
+        <div className="flex items-center justify-end px-5 py-3 bg-[var(--color-surface-panel)] border-t border-[var(--color-border-default)] select-none">
             <div className="flex items-center gap-1.5">
                 <button
                     type="button"

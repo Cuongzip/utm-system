@@ -12,7 +12,6 @@ import type {
     ReorderWaypointsPayload,
     MissionQueryParams,
     Waypoint,
-    ScoredDroneCandidate,
 } from "@/types";
 
 export const missionService = {
@@ -60,10 +59,6 @@ export const missionService = {
             method: "POST",
             body: JSON.stringify(payload),
         });
-    },
-
-    getCandidateDrones: async (id: string): Promise<ScoredDroneCandidate[]> => {
-        return apiClient<ScoredDroneCandidate[]>(API_ENDPOINTS.MISSIONS.CANDIDATE_DRONES(id));
     },
 
     addWaypoint: async (missionId: string, waypoint: AddWaypointPayload): Promise<Waypoint> => {

@@ -10,11 +10,11 @@ export interface MissionWaypointsTabProps {
     onUpdateWaypoint: (wp: Waypoint) => void;
     onDeleteWaypoint: (wpId: string) => void;
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function MissionWaypointsTab({

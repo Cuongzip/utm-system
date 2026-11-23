@@ -8,9 +8,6 @@ import {
     checkPathBody,
     checkPathResponse,
 } from "@/generated/airspace";
-import type { ConflictAlert } from "./alert";
-
-export type { ConflictAlert };
 
 export type CreateAirspaceZonePayload = zod.infer<typeof createZoneBody>;
 export type UpdateAirspaceZonePayload = zod.infer<typeof updateZoneBody>;
@@ -55,7 +52,7 @@ export function getInitialAirspaceFormPayload(
     initialData?: AirspaceZone | null
 ): AirspaceZoneFormPayload {
     return {
-        code: initialData?.code || "",
+        code: initialData?.code || undefined,
         name: initialData?.name || "",
         zoneType: initialData?.zoneType || AIRSPACE_ZONE_TYPES[0],
         status: initialData?.status || AIRSPACE_ZONE_STATUSES[0],
@@ -77,4 +74,5 @@ export type AirspaceZoneListResponse = Omit<
 };
 
 export type CheckPathPayload = zod.infer<typeof checkPathBody>;
+export type PathPoint = CheckPathPayload["points"][number];
 export type CheckPathResult = zod.infer<typeof checkPathResponse>;

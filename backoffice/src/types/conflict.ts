@@ -6,9 +6,8 @@ import {
     evaluateConflictsResponse,
 } from "@/generated/conflict";
 
-export const CONFLICT_TYPES = getConflictByIdResponse.shape.conflictType.unwrap().options;
 export const CONFLICT_SEVERITIES = getConflictByIdResponse.shape.severity.unwrap().options;
-export const CONFLICT_STATUSES = getConflictByIdResponse.shape.status.unwrap().options;
+const CONFLICT_STATUSES = getConflictByIdResponse.shape.status.unwrap().options;
 export const RESOLUTION_STRATEGIES =
     getConflictByIdResponse.shape.resolutionStrategy.unwrap().options;
 
@@ -47,9 +46,6 @@ export type ConflictQueryParams = zod.infer<typeof getAllConflictsQueryParams>;
 export type ConflictScanResult = zod.infer<typeof evaluateConflictsResponse>;
 export type ResolveConflictPayload = zod.infer<typeof resolveConflictBody>;
 
-export type ConflictType = (typeof CONFLICT_TYPES)[number];
-export type ConflictSeverity = (typeof CONFLICT_SEVERITIES)[number];
-export type ConflictStatus = (typeof CONFLICT_STATUSES)[number];
 export type ResolutionStrategy = (typeof RESOLUTION_STRATEGIES)[number];
 
 export type Conflict = NonNullable<zod.infer<typeof getConflictByIdResponse>> & {

@@ -8,15 +8,12 @@ import type {
     updateWaypointBody,
     getWaypointsResponseItem,
     reorderWaypointsBody,
+    executeMissionBody,
     getExecutionsByMissionIdResponse,
 } from "@/generated/mission";
 
-export type CreateMissionPayload = zod.infer<typeof createMissionBody> & {
-    payloadWeightKg?: number;
-};
-export type UpdateMissionPayload = zod.infer<typeof updateMissionBody> & {
-    payloadWeightKg?: number;
-};
+export type CreateMissionPayload = zod.infer<typeof createMissionBody>;
+export type UpdateMissionPayload = zod.infer<typeof updateMissionBody>;
 
 export const WAYPOINT_ACTION_TYPES = [
     "takeoff",
@@ -29,7 +26,19 @@ export const WAYPOINT_ACTION_TYPES = [
     "land",
 ] as const;
 export type WaypointActionType = (typeof WAYPOINT_ACTION_TYPES)[number];
-export const DEFAULT_WAYPOINT_ACTION: WaypointActionType = "fly_through";
+
+export const WAYPOINT_ACTION_TYPE = {
+    TAKEOFF: "takeoff",
+    FLY_THROUGH: "fly_through",
+    HOVER: "hover",
+    PHOTO: "photo",
+    WINCH_DROP: "winch_drop",
+    PAYLOAD_PICKUP: "payload_pickup",
+    PAYLOAD_DROP: "payload_drop",
+    LAND: "land",
+} as const satisfies Record<string, WaypointActionType>;
+
+export const DEFAULT_WAYPOINT_ACTION: WaypointActionType = WAYPOINT_ACTION_TYPE.FLY_THROUGH;
 export const WAYPOINT_ACTION_LABELS: Record<WaypointActionType, string> = {
     takeoff: "Takeoff",
     fly_through: "Fly Through",
@@ -78,16 +87,13 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
     failed: "Failed",
 };
 
-export type MissionFormPayload = CreateMissionPayload & {
-    payloadWeightKg?: number;
-};
+export type MissionFormPayload = CreateMissionPayload;
 
 export function getInitialMissionFormPayload(initialData?: Mission | null): MissionFormPayload {
     return {
         code: initialData?.code || undefined,
         name: initialData?.name || "",
         description: initialData?.description || "",
-        payloadWeightKg: initialData?.payloadWeightKg ?? 0,
         departureHubId: initialData?.departureHubId || "",
         arrivalHubId: initialData?.arrivalHubId || "",
         scheduleType: initialData?.scheduleType || DEFAULT_MISSION_SCHEDULE_TYPE,
@@ -98,7 +104,6 @@ export function getInitialMissionFormPayload(initialData?: Mission | null): Miss
 export type Mission = NonNullable<zod.infer<typeof getMissionByIdResponse>> & {
     id: string;
     code?: string;
-    payloadWeightKg?: number;
 };
 
 export type MissionListResponse = Omit<
@@ -135,27 +140,12 @@ export type UpdateWaypointPayload = zod.infer<typeof updateWaypointBody> & {
 };
 export type ReorderWaypointsPayload = zod.infer<typeof reorderWaypointsBody>;
 
-export interface ExecuteMissionPayload {
+export type ExecuteMissionPayload = Omit<zod.infer<typeof executeMissionBody>, "droneId"> & {
     droneId?: string;
-    pilotId: string;
     autoAssign?: boolean;
-}
+};
 
-export interface ScoredDroneCandidate {
-    droneId: string;
-    registrationNumber: string;
-    manufacturer?: string;
-    model?: string;
-    maxPayloadKg: number;
-    batteryCapacityWh: number;
-    estimatedEnergyConsumptionWh: number;
-    batteryMarginPct: number;
-    eligible: boolean;
-    ineligibilityReason?: string;
-    finalScore: number;
-}
-
-export type MissionExecution = NonNullable<zod.infer<typeof getExecutionsByMissionIdResponse>>;
+type MissionExecution = NonNullable<zod.infer<typeof getExecutionsByMissionIdResponse>>;
 
 export interface MissionExecutionResult {
     execution?: MissionExecution;

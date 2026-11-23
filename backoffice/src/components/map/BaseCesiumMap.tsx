@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { Viewer } from "cesium";
 import { Loader2 } from "lucide-react";
 import { CesiumContext } from "./CesiumContext";
-import type { MapMode, ImageryType, MapCoordinates } from "./types";
+import { getCesium } from "./cesiumLoader";
+import type { MapMode, ImageryType } from "./types";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 declare global {
@@ -16,16 +17,11 @@ declare global {
 export interface BaseCesiumMapProps {
     mode?: MapMode;
     layerType?: ImageryType;
-    height?: string;
-    hideToolbar?: boolean;
-    initialCoordinates?: MapCoordinates;
     onEntityClick?: (entityId: string) => void;
     children?: React.ReactNode;
-    className?: string;
-    loadingText?: string;
 }
 
-const DEFAULT_COORDINATES: MapCoordinates = {
+const DEFAULT_COORDINATES = {
     lng: 108.2208,
     lat: 16.0544,
     height: 45000.0,
@@ -34,14 +30,11 @@ const DEFAULT_COORDINATES: MapCoordinates = {
 export function BaseCesiumMap({
     mode = "2d",
     layerType = "satellite",
-    height = "100%",
-    hideToolbar = true,
-    initialCoordinates = DEFAULT_COORDINATES,
     onEntityClick,
     children,
-    className = "",
-    loadingText = "Loading map...",
 }: BaseCesiumMapProps) {
+    const hideToolbar = true;
+    const initialCoordinates = DEFAULT_COORDINATES;
     const containerRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<Viewer | null>(null);
     const [viewer, setViewer] = useState<Viewer | null>(null);
@@ -56,13 +49,14 @@ export function BaseCesiumMap({
     useEffect(() => {
         let activeViewer: Viewer | null = null;
         let resizeObserver: ResizeObserver | null = null;
+        let handler: { destroy: () => void; isDestroyed: () => boolean } | null = null;
 
         async function initViewer() {
             if (!containerRef.current) return;
 
             try {
                 window.CESIUM_BASE_URL = "/cesium";
-                const Cesium = await import("cesium");
+                const Cesium = await getCesium();
 
                 Cesium.Ion.defaultAccessToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
 
@@ -131,14 +125,15 @@ export function BaseCesiumMap({
                     ),
                 });
 
-                const handler = new Cesium.ScreenSpaceEventHandler(activeViewer.scene.canvas);
-                handler.setInputAction((click: any) => {
+                const inputHandler = new Cesium.ScreenSpaceEventHandler(activeViewer.scene.canvas);
+                inputHandler.setInputAction((click: any) => {
                     if (!activeViewer || activeViewer.isDestroyed()) return;
                     const picked = activeViewer.scene.pick(click.position);
                     if (Cesium.defined(picked) && picked.id && picked.id.id) {
                         onEntityClickRef.current?.(picked.id.id);
                     }
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                handler = inputHandler;
 
                 activeViewer.resize();
 
@@ -167,6 +162,9 @@ export function BaseCesiumMap({
             if (resizeObserver) {
                 resizeObserver.disconnect();
             }
+            if (handler && !handler.isDestroyed()) {
+                handler.destroy();
+            }
             if (activeViewer && !activeViewer.isDestroyed()) {
                 activeViewer.destroy();
             }
@@ -181,7 +179,7 @@ export function BaseCesiumMap({
         if (!v || !isLoaded || v.isDestroyed()) return;
 
         async function updateSceneMode() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (!v || v.isDestroyed()) return;
 
             const targetMode = mode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D;
@@ -227,7 +225,7 @@ export function BaseCesiumMap({
         if (!v || !isLoaded || v.isDestroyed()) return;
 
         async function updateImagery() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (!v || v.isDestroyed()) return;
 
             v.imageryLayers.removeAll();
@@ -261,10 +259,7 @@ export function BaseCesiumMap({
 
     return (
         <CesiumContext.Provider value={{ viewer, isLoaded }}>
-            <div
-                className={`relative w-full overflow-hidden select-none ${className}`}
-                style={{ height }}
-            >
+            <div className="relative w-full overflow-hidden select-none" style={{ height: "100%" }}>
                 <div
                     ref={containerRef}
                     className="w-full h-full [&_.cesium-widget]:!absolute [&_.cesium-widget]:!inset-0 [&_.cesium-widget]:!w-full [&_.cesium-widget]:!h-full [&_.cesium-widget]:!overflow-hidden [&_.cesium-widget_canvas]:!w-full [&_.cesium-widget_canvas]:!h-full [&_.cesium-widget_canvas]:!block"
@@ -274,7 +269,7 @@ export function BaseCesiumMap({
                     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-slate-900/80 text-white backdrop-blur-xs">
                         <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
                         <span className="text-xs font-mono font-medium tracking-wide">
-                            {loadingText}
+                            Loading map...
                         </span>
                     </div>
                 )}

@@ -4,7 +4,6 @@ import React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { ChamferCard, ChamferButton } from "@/components/ui";
-import { cn } from "@/lib";
 
 export interface ConfirmDialogProps {
     isOpen: boolean;
@@ -12,9 +11,7 @@ export interface ConfirmDialogProps {
     onConfirm: () => void | Promise<void>;
     title: React.ReactNode;
     description: React.ReactNode;
-    confirmText?: string;
-    cancelText?: string;
-    variant?: "danger" | "default";
+    confirmText: string;
     loading?: boolean;
 }
 
@@ -24,9 +21,7 @@ export function ConfirmDialog({
     onConfirm,
     title,
     description,
-    confirmText = "Confirm",
-    cancelText = "Cancel",
-    variant = "danger",
+    confirmText,
     loading = false,
 }: ConfirmDialogProps) {
     return (
@@ -42,14 +37,7 @@ export function ConfirmDialog({
                             <ChamferCard size="lg" className="w-full">
                                 <div className="p-5 flex flex-col gap-4">
                                     <div className="flex items-start gap-3.5">
-                                        <div
-                                            className={cn(
-                                                "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                                                variant === "danger"
-                                                    ? "bg-red-50 text-red-600 border border-red-200"
-                                                    : "bg-slate-100 text-slate-700 border border-slate-200"
-                                            )}
-                                        >
+                                        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600 border border-red-200">
                                             <AlertTriangle className="w-5 h-5" />
                                         </div>
 
@@ -72,7 +60,7 @@ export function ConfirmDialog({
                                                 onClick={onClose}
                                                 disabled={loading}
                                             >
-                                                {cancelText}
+                                                Cancel
                                             </ChamferButton>
                                         </AlertDialogPrimitive.Cancel>
 

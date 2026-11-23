@@ -3,7 +3,7 @@
 import { Clock, Terminal, Loader2 } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
 import { useDroneCommands } from "@/hooks";
-import { formatTime } from "@/utils/format";
+import { formatTime } from "@/utils";
 import { type DroneCommand, DEFAULT_COMMAND_STATUS } from "@/types";
 
 export interface RecentCommandsProps {

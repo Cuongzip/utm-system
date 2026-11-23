@@ -18,6 +18,8 @@ import {
     getInitialFlightFormPayload,
     EDITABLE_FLIGHT_STATUSES,
     DEFAULT_FLIGHT_STATUS,
+    FEASIBILITY_VERDICT,
+    WAYPOINT_ACTION_TYPE,
     type Hub,
     type Drone,
     type Flight,
@@ -30,10 +32,10 @@ import {
 export interface FlightEditorProps {
     mode: "create" | "edit";
     initialData?: Flight | null;
-    hubs?: Hub[];
-    drones?: Drone[];
+    hubs: Hub[];
+    drones: Drone[];
     onSave: (payload: CreateFlightPayload | UpdateFlightPayload) => Promise<void>;
-    loading?: boolean;
+    loading: boolean;
 }
 
 export function FlightEditor({
@@ -157,7 +159,8 @@ export function FlightEditor({
 
     const isFeasibilityWarning = Boolean(
         totalDistanceM > 0 &&
-        (routeFeasibility.verdict === "marginal" || routeFeasibility.verdict === "no_go")
+        (routeFeasibility.verdict === FEASIBILITY_VERDICT.MARGINAL ||
+            routeFeasibility.verdict === FEASIBILITY_VERDICT.NO_GO)
     );
 
     const handleSave = async () => {
@@ -240,20 +243,20 @@ export function FlightEditor({
                       {
                           sequence: 1,
                           name: `Departure: ${selectedDepHub.name || selectedDepHub.code || "Hub"}`,
-                          latitude: Number(selectedDepHub.location.latitude),
-                          longitude: Number(selectedDepHub.location.longitude),
-                          altitude: Number(selectedDepHub.altitudeMsl ?? 0),
-                          actions: { type: "takeoff" },
+                          latitude: selectedDepHub.location.latitude,
+                          longitude: selectedDepHub.location.longitude,
+                          altitude: selectedDepHub.altitudeMsl ?? 0,
+                          actions: { type: WAYPOINT_ACTION_TYPE.TAKEOFF },
                       },
                   ]
                 : []),
             ...waypoints.map((wp, idx) => ({
                 sequence: (selectedDepHub?.location ? 2 : 1) + idx,
                 name: wp.name?.trim() || `Waypoint ${(selectedDepHub?.location ? 2 : 1) + idx}`,
-                latitude: Number(wp.latitude),
-                longitude: Number(wp.longitude),
+                latitude: wp.latitude,
+                longitude: wp.longitude,
                 altitude: wp.altitude ?? alt,
-                actions: wp.actions || { type: "fly_through" },
+                actions: wp.actions || { type: WAYPOINT_ACTION_TYPE.FLY_THROUGH },
                 conditions: wp.conditions || undefined,
             })),
             ...(selectedArrHub?.location
@@ -261,10 +264,10 @@ export function FlightEditor({
                       {
                           sequence: (selectedDepHub?.location ? 2 : 1) + waypoints.length,
                           name: `Arrival: ${selectedArrHub.name || selectedArrHub.code || "Hub"}`,
-                          latitude: Number(selectedArrHub.location.latitude),
-                          longitude: Number(selectedArrHub.location.longitude),
-                          altitude: Number(selectedArrHub.altitudeMsl ?? 0),
-                          actions: { type: "land" },
+                          latitude: selectedArrHub.location.latitude,
+                          longitude: selectedArrHub.location.longitude,
+                          altitude: selectedArrHub.altitudeMsl ?? 0,
+                          actions: { type: WAYPOINT_ACTION_TYPE.LAND },
                       },
                   ]
                 : []),

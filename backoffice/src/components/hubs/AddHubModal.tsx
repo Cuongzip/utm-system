@@ -8,6 +8,7 @@ import { parseApiError } from "@/utils";
 import { createHubBody, updateHubBody } from "@/generated";
 import {
     HUB_STATUSES,
+    ACTIVE_HUB_STATUS,
     type Hub,
     type CreateHubPayload,
     type UpdateHubPayload,
@@ -20,8 +21,6 @@ interface AddHubModalProps {
     onClose: () => void;
     onSubmit: (payload: CreateHubPayload | UpdateHubPayload, id?: string) => Promise<unknown>;
 }
-
-const HUB_STATUS_OPTIONS = HUB_STATUSES;
 
 export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModalProps) {
     const [loading, setLoading] = useState(false);
@@ -44,7 +43,7 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
             },
             airspaceRadius: 1500,
             altitudeMsl: 12.5,
-            status: HUB_STATUS_OPTIONS[0],
+            status: HUB_STATUSES[0],
         },
     });
 
@@ -52,7 +51,7 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
         if (!isOpen) return;
 
         const matchedStatus = hubToEdit?.status
-            ? HUB_STATUS_OPTIONS.find((s) => s.toLowerCase() === hubToEdit.status?.toLowerCase())
+            ? HUB_STATUSES.find((s) => s.toLowerCase() === hubToEdit.status?.toLowerCase())
             : undefined;
 
         reset({
@@ -64,7 +63,7 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
             },
             airspaceRadius: hubToEdit?.airspaceRadius ?? 1500,
             altitudeMsl: hubToEdit?.altitudeMsl ?? 12.5,
-            status: matchedStatus || HUB_STATUS_OPTIONS[0],
+            status: matchedStatus || HUB_STATUSES[0],
         });
     }, [isOpen, hubToEdit, reset]);
 
@@ -197,9 +196,9 @@ export function AddHubModal({ isOpen, hubToEdit, onClose, onSubmit }: AddHubModa
                         control={control}
                         render={({ field }) => (
                             <CustomSelect
-                                value={field.value}
+                                value={field.value ?? ACTIVE_HUB_STATUS}
                                 onValueChange={field.onChange}
-                                options={HUB_STATUS_OPTIONS.map((opt) => ({
+                                options={HUB_STATUSES.map((opt) => ({
                                     value: opt,
                                     label: opt.toUpperCase(),
                                 }))}

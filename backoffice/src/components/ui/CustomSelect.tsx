@@ -11,11 +11,9 @@ export interface SelectOption {
     description?: string;
 }
 
-export type CustomSelectOption = SelectOption;
-
 export interface CustomSelectProps {
-    value?: string;
-    onValueChange?: (value: string) => void;
+    value: string;
+    onValueChange: (value: string) => void;
     options: SelectOption[];
     placeholder?: string;
     disabled?: boolean;
@@ -37,7 +35,7 @@ export function CustomSelect({
     const internalValue = value === "" ? EMPTY_VALUE : value;
 
     const handleValueChange = (val: string) => {
-        onValueChange?.(val === EMPTY_VALUE ? "" : val);
+        onValueChange(val === EMPTY_VALUE ? "" : val);
     };
 
     return (

@@ -20,10 +20,6 @@ export const hubService = {
         return res.items ?? [];
     },
 
-    getById: async (id: string): Promise<Hub> => {
-        return apiClient<Hub>(API_ENDPOINTS.HUBS.BY_ID(id));
-    },
-
     createHub: async (payload: CreateHubPayload): Promise<Hub> => {
         return apiClient<Hub>(API_ENDPOINTS.HUBS.BASE, {
             method: "POST",

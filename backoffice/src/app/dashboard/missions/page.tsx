@@ -24,11 +24,7 @@ export default function MissionsPage() {
 
     const fetchMissions = useCallback(() => missionService.getMissions({ size: 100 }), []);
 
-    const {
-        items: missions,
-        loading,
-        refresh: fetchData,
-    } = useCrudList<Mission>({
+    const { items: missions, loading } = useCrudList<Mission>({
         queryKey: QUERY_KEYS.missions,
         fetchFn: fetchMissions,
         entityName: "Mission",
@@ -60,7 +56,6 @@ export default function MissionsPage() {
         onSuccess: (_data, mission) => {
             toast.success(`Mission "${mission.name || mission.id}" duplicated as draft`);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
-            fetchData();
         },
         meta: { defaultErrorMessage: "Failed to duplicate mission" },
     });
@@ -70,7 +65,6 @@ export default function MissionsPage() {
         onSuccess: (_data, mission) => {
             toast.success(`Mission "${mission.name || mission.id}" deleted successfully`);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
-            fetchData();
         },
         meta: { defaultErrorMessage: "Failed to delete mission" },
     });
@@ -95,7 +89,6 @@ export default function MissionsPage() {
             toast.success(`Mission started successfully with ${legCount} flight leg(s)`);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
-            fetchData();
         },
         meta: { defaultErrorMessage: "Failed to start mission execution" },
     });
@@ -107,7 +100,12 @@ export default function MissionsPage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="MISSION PLANNING">
-                <ChamferButton variant="outline" size="sm" clip="xs" onClick={fetchData}>
+                <ChamferButton
+                    variant="outline"
+                    size="sm"
+                    clip="xs"
+                    onClick={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions })}
+                >
                     <RotateCw className="w-3.5 h-3.5 text-slate-500" />
                     <span>Refresh</span>
                 </ChamferButton>

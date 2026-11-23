@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
+import { getCesium } from "../cesiumLoader";
 import type { Hub } from "@/types";
 import { getHubIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
@@ -24,7 +25,7 @@ export function HubsLayer({ hubs = [], selectedHubId, autoFitBounds = true }: Hu
         let cancelled = false;
 
         async function renderHubs() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
             entityIdsRef.current.forEach((id) => {

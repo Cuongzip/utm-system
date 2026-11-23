@@ -14,9 +14,9 @@ export interface EmptyStateProps {
         icon?: React.ComponentType<{ className?: string }>;
         variant?: "outline" | "chamfer";
     };
-    children?: React.ReactNode;
     className?: string;
     compact?: boolean;
+    children?: React.ReactNode;
 }
 
 export function EmptyState({
@@ -24,9 +24,9 @@ export function EmptyState({
     title,
     description,
     action,
-    children,
     className,
     compact = false,
+    children,
 }: EmptyStateProps) {
     const ActionIcon = action?.icon;
 

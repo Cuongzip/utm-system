@@ -19,12 +19,12 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import { formatNullable } from "@/utils";
+import { formatNullable, formatHubName } from "@/utils";
 import { type Drone, DEFAULT_DRONE_STATUS } from "@/types";
 
 export interface DronesTableProps {
     drones: Drone[];
-    loading?: boolean;
+    loading: boolean;
     onEditDrone: (drone: Drone) => void;
     onDeleteDrone: (id: string) => void;
 }
@@ -88,8 +88,12 @@ export function DronesTable({
                                 const regText = drone.registrationNumber || drone.id;
                                 const mfgText = drone.manufacturer || "Unknown";
                                 const modelText = drone.model || "—";
-                                const hubText =
-                                    drone.homeHub?.name || drone.homeHubId || "Unassigned";
+                                const hubText = formatHubName(
+                                    drone.homeHub,
+                                    drone.homeHubId,
+                                    undefined,
+                                    "Unassigned"
+                                );
                                 const maxPayloadText = formatNullable(
                                     drone.maxPayload,
                                     (val) => `${val} kg`
@@ -157,7 +161,6 @@ export function DronesTable({
                     </span>
                 }
                 confirmText="Decommission"
-                variant="danger"
             />
         </div>
     );

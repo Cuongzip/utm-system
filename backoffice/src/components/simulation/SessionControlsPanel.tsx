@@ -201,7 +201,6 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
                 title="Delete Simulation Session"
                 description={`Are you sure you want to permanently delete session "${sessionId}"? This will stop any active simulation and erase session history.`}
                 confirmText="Delete Session"
-                variant="danger"
                 loading={deleteMutation.isPending}
             />
         </>

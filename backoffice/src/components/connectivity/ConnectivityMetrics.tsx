@@ -4,11 +4,11 @@ import { Radio, Wifi, Activity, CheckCircle2 } from "lucide-react";
 import { MetricCard } from "@/components/ui";
 
 export interface ConnectivityMetricsProps {
-    totalDevices?: number;
-    activeDevices?: number;
-    onlineDevices?: number;
-    pendingCommands?: number;
-    protocolStatusCount?: number;
+    totalDevices: number;
+    activeDevices: number;
+    onlineDevices: number;
+    pendingCommands: number;
+    protocolStatusCount: number;
 }
 
 export function ConnectivityMetrics({

@@ -1,12 +1,5 @@
 export const MAP_TOKENS = {
     colors: {
-        drone: {
-            active: "#10b981",
-            selected: "#00e5ff",
-            alert: "#ef4444",
-            standby: "#f59e0b",
-            offline: "#64748b",
-        },
         flightStatus: {
             active: "#10b981",
             in_flight: "#10b981",
@@ -24,16 +17,5 @@ export const MAP_TOKENS = {
             hub_corridor: "#06b6d4",
             warning: "#eab308",
         },
-        hub: {
-            normal: "#06b6d4",
-            selected: "#00e5ff",
-            warning: "#f59e0b",
-        },
-    },
-    dimensions: {
-        droneBillboardSize: 32,
-        hubBillboardSize: 30,
-        pinBillboardSize: 24,
-        waypointBillboardSize: 26,
     },
 } as const;

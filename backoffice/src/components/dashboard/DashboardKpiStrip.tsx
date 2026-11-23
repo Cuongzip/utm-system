@@ -9,8 +9,8 @@ export interface DashboardKpiStripProps {
     totalHubsCount: number;
     fleetCount: number;
     conflictsCount: number;
-    activeTelemetryCount?: number;
-    isLoading?: boolean;
+    activeTelemetryCount: number;
+    isLoading: boolean;
 }
 
 export function DashboardKpiStrip({

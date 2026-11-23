@@ -26,7 +26,6 @@ export default function DronesPage() {
     const {
         items: drones,
         loading,
-        refresh,
         isModalOpen: isRegisterOpen,
         itemToEdit: selectedDrone,
         openCreateModal,
@@ -57,7 +56,6 @@ export default function DronesPage() {
             );
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dronesAll });
-            refresh();
         },
         meta: { defaultErrorMessage: "Failed to save drone" },
     });

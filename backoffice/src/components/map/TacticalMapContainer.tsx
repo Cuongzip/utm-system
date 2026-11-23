@@ -186,7 +186,6 @@ export function TacticalMapContainer({
                     <BaseCesiumMap
                         mode={mapMode === "globe" ? "3d" : "2d"}
                         layerType={imageryType}
-                        hideToolbar
                         onEntityClick={onEntityClick}
                     >
                         {children}

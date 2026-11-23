@@ -7,7 +7,7 @@ import { type Hub, ACTIVE_HUB_STATUS } from "@/types";
 
 interface HubsMapProps {
     hubs: Hub[];
-    selectedHubId?: string | null;
+    selectedHubId: string | null;
     onSelectHub: (hub: Hub | null) => void;
 }
 

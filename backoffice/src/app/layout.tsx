@@ -4,8 +4,8 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "UTM Backoffice - Hệ Thống Giám Sát Bản Đồ Không Gian",
-    description: "Hệ thống điều hành không gian bay không người lái UTM",
+    title: "UTM Backoffice | Unmanned Traffic Management",
+    description: "Tactical Command & Control System for Unmanned Traffic Management (UTM)",
 };
 
 export default function RootLayout({
@@ -18,7 +18,7 @@ export default function RootLayout({
             <body className="min-h-full flex flex-col">
                 <QueryProvider>
                     {children}
-                    <Toaster position="top-right" />
+                    <Toaster />
                 </QueryProvider>
             </body>
         </html>

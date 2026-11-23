@@ -2,15 +2,13 @@
 
 import React from "react";
 import { PageHeader } from "./PageHeader";
-import { cn } from "@/lib";
 
 export interface SplitMapLayoutProps {
     title: string | React.ReactNode;
-    badges?: React.ReactNode;
-    headerActions?: React.ReactNode;
+    badges: React.ReactNode;
+    headerActions: React.ReactNode;
     mapContent: React.ReactNode;
     sidebarContent: React.ReactNode;
-    className?: string;
 }
 
 export function SplitMapLayout({
@@ -19,15 +17,9 @@ export function SplitMapLayout({
     headerActions,
     mapContent,
     sidebarContent,
-    className,
 }: SplitMapLayoutProps) {
     return (
-        <div
-            className={cn(
-                "p-6 xl:p-8 flex flex-col gap-4 xl:gap-6 w-full min-h-[calc(100vh-80px)] xl:h-[calc(100vh-80px)] xl:min-h-[680px]",
-                className
-            )}
-        >
+        <div className="p-6 xl:p-8 flex flex-col gap-4 xl:gap-6 w-full min-h-[calc(100vh-80px)] xl:h-[calc(100vh-80px)] xl:min-h-[680px]">
             <PageHeader title={title} badges={badges}>
                 {headerActions}
             </PageHeader>

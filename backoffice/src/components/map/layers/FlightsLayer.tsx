@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
+import { getCesium } from "../cesiumLoader";
 import { ACTIVE_FLIGHT_STATUSES, DEFAULT_FLIGHT_STATUS, type Flight, type Hub } from "@/types";
-import { getWaypointIconUri } from "../mapIcons";
+import { MAP_TOKENS } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
 
@@ -18,36 +19,19 @@ export interface FlightsLayerProps {
     flights: Flight[];
     selectedFlightId?: string | null;
     hubs?: Hub[];
-    autoFitBounds?: boolean;
-    focusOnSelected?: boolean;
     activeOnly?: boolean;
-    showEndpoints?: boolean;
 }
 
-const STATUS_COLOR_MAP: Record<string, string> = {
-    active: "#10b981",
-    in_flight: "#10b981",
-    authorized: "#00a3bf",
-    scheduled: "#00a3bf",
-    planned: "#00a3bf",
-    completed: "#94a3b8",
-    cancelled: "#ef4444",
-    aborted: "#ef4444",
-    warning: "#f59e0b",
-};
+const STATUS_COLOR_MAP: Record<string, string> = MAP_TOKENS.colors.flightStatus;
 
 export function FlightsLayer({
     flights = [],
     selectedFlightId,
     hubs,
-    autoFitBounds = true,
-    focusOnSelected = true,
     activeOnly = false,
-    showEndpoints = false,
 }: FlightsLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
-    const hasAutoFittedRef = useRef(false);
     const lastFocusedFlightIdRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -62,7 +46,7 @@ export function FlightsLayer({
         let cancelled = false;
 
         async function renderFlights() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
             entityIdsRef.current.forEach((id) => {
@@ -87,7 +71,6 @@ export function FlightsLayer({
 
             const newEntityIds: string[] = [];
             let selectedCoords: number[][] | null = null;
-            const allPoints: { lng: number; lat: number }[] = [];
 
             const targetFlights = activeOnly
                 ? flights.filter(
@@ -137,7 +120,6 @@ export function FlightsLayer({
                     const dep = effectiveHubMap.get(flight.departureHubId);
                     const arr = effectiveHubMap.get(flight.arrivalHubId);
                     if (dep && arr) {
-                        const cruiseAlt = flight.cruisingAltitudeM ?? 120;
                         coordinates = [
                             [dep.lng, dep.lat, 10],
                             [arr.lng, arr.lat, 10],
@@ -174,7 +156,6 @@ export function FlightsLayer({
                             lat <= 90
                         ) {
                             cartesianPositions.push(Cesium.Cartesian3.fromDegrees(lng, lat, alt));
-                            allPoints.push({ lng, lat });
                         }
                     }
                 });
@@ -200,41 +181,6 @@ export function FlightsLayer({
                 });
                 newEntityIds.push(routeEntityId);
 
-                if (showEndpoints) {
-                    const startPos = cartesianPositions[0];
-                    const startPinId = `flight-start-${flight.id}`;
-                    viewer.entities.add({
-                        id: startPinId,
-                        position: startPos,
-                        billboard: {
-                            image: getWaypointIconUri(1, isSelected),
-                            width: isSelected ? 22 : 18,
-                            height: isSelected ? 22 : 18,
-                            eyeOffset: new Cesium.Cartesian3(0, 0, -10),
-                            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        },
-                    });
-                    newEntityIds.push(startPinId);
-
-                    const endPos = cartesianPositions[cartesianPositions.length - 1];
-                    const isRoundTrip = Cesium.Cartesian3.distance(startPos, endPos) < 1.0;
-                    if (!isRoundTrip) {
-                        const endPinId = `flight-end-${flight.id}`;
-                        viewer.entities.add({
-                            id: endPinId,
-                            position: endPos,
-                            billboard: {
-                                image: getWaypointIconUri(coordinates.length, isSelected),
-                                width: isSelected ? 22 : 18,
-                                height: isSelected ? 22 : 18,
-                                eyeOffset: new Cesium.Cartesian3(0, 0, -10),
-                                disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                            },
-                        });
-                        newEntityIds.push(endPinId);
-                    }
-                }
-
                 const midIdx = Math.floor(cartesianPositions.length / 2);
                 const midPos = cartesianPositions[midIdx];
                 const labelId = `flight-label-${flight.id}`;
@@ -254,7 +200,6 @@ export function FlightsLayer({
             entityIdsRef.current = newEntityIds;
 
             if (
-                focusOnSelected &&
                 selectedFlightId &&
                 lastFocusedFlightIdRef.current !== selectedFlightId &&
                 selectedCoords &&
@@ -268,14 +213,6 @@ export function FlightsLayer({
                     animate: true,
                     duration: 0.8,
                     minHeight: 1500,
-                    paddingMultiplier: 1.5,
-                });
-            } else if (autoFitBounds && !hasAutoFittedRef.current && allPoints.length > 0) {
-                hasAutoFittedRef.current = true;
-                fitCameraToBounds(viewer, allPoints, {
-                    animate: true,
-                    duration: 1.0,
-                    minHeight: 2000,
                     paddingMultiplier: 1.5,
                 });
             }
@@ -295,17 +232,7 @@ export function FlightsLayer({
             }
             entityIdsRef.current = [];
         };
-    }, [
-        viewer,
-        isLoaded,
-        flights,
-        selectedFlightId,
-        hubs,
-        autoFitBounds,
-        focusOnSelected,
-        activeOnly,
-        showEndpoints,
-    ]);
+    }, [viewer, isLoaded, flights, selectedFlightId, hubs, activeOnly]);
 
     return null;
 }

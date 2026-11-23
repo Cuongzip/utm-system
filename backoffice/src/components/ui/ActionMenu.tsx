@@ -14,10 +14,9 @@ export interface ActionMenuItem {
 
 interface ActionMenuProps {
     items: ActionMenuItem[];
-    className?: string;
 }
 
-export function ActionMenu({ items, className }: ActionMenuProps) {
+export function ActionMenu({ items }: ActionMenuProps) {
     return (
         <DropdownMenuPrimitive.Root>
             <DropdownMenuPrimitive.Trigger asChild>
@@ -39,8 +38,7 @@ export function ActionMenu({ items, className }: ActionMenuProps) {
                     onClick={(e) => e.stopPropagation()}
                     className={cn(
                         "z-[9999] min-w-[8.5rem] overflow-hidden rounded-md border border-slate-200 bg-white p-1 text-slate-700 shadow-md",
-                        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
-                        className
+                        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2"
                     )}
                 >
                     {items.map((item, index) => (

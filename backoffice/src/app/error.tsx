@@ -55,13 +55,12 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                         </div>
 
                         <h1 className="text-xl sm:text-2xl font-black tracking-wider text-white uppercase mb-2">
-                            Sự Cố Phân Hệ Vận Hành
+                            Operational Subsystem Failure
                         </h1>
 
                         <p className="text-xs sm:text-sm text-slate-300 max-w-md mb-6 leading-relaxed">
-                            Phát hiện lỗi bất thường trong quá trình điều phối dữ liệu hoặc phân
-                            đoạn hiển thị. Hệ thống đã cách ly lỗi để bảo toàn an toàn các luồng dữ
-                            liệu khác.
+                            An unexpected runtime exception occurred in the tactical interface.
+                            Automated diagnostics have logged the fault for review.
                         </p>
 
                         <div className="w-full bg-[#0a0507] border border-red-500/30 rounded p-3 mb-6 text-left font-mono text-[11px] text-slate-300 space-y-1.5">
@@ -106,7 +105,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                                     />
                                 </svg>
-                                KHỞI ĐỘNG LẠI PHÂN HỆ
+                                Retry Subsystem
                             </ChamferButton>
 
                             <Link href="/">
@@ -124,7 +123,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
                                         />
                                     </svg>
-                                    VỀ TRANG CHỦ
+                                    Return to Dashboard
                                 </ChamferButton>
                             </Link>
                         </div>

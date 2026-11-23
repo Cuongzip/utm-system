@@ -36,11 +36,11 @@ import {
     type FlightStatus,
     type FlightAuthorizationStatus,
 } from "@/types";
-import { formatDateTime } from "@/utils";
+import { formatDateTime, formatHubName } from "@/utils";
 
 export interface FlightsTableProps {
     flights: Flight[];
-    loading?: boolean;
+    loading: boolean;
     selectedFlightId?: string | null;
     onSelectFlight: (flight: Flight) => void;
     onAuthorizeFlight: (flight: Flight) => void;
@@ -48,8 +48,8 @@ export interface FlightsTableProps {
     onCompleteFlight: (flight: Flight) => void;
     onAbortFlight: (flight: Flight) => void;
     onNewFlight: () => void;
-    hubMap?: Map<string, string>;
-    droneMap?: Map<string, string>;
+    hubMap: Map<string, string>;
+    droneMap: Map<string, string>;
 }
 
 export function FlightsTable({
@@ -150,14 +150,10 @@ export function FlightsTable({
                                         icon={PlaneTakeoff}
                                         title="No flights found"
                                         description="Register a new flight operation or corridor mission"
-                                        action={
-                                            onNewFlight
-                                                ? {
-                                                      label: "+ New Flight",
-                                                      onClick: onNewFlight,
-                                                  }
-                                                : undefined
-                                        }
+                                        action={{
+                                            label: "+ New Flight",
+                                            onClick: onNewFlight,
+                                        }}
                                     />
                                 </TableCell>
                             </TableRow>
@@ -172,13 +168,17 @@ export function FlightsTable({
                                     ? droneMap.get(flight.droneId) || flight.droneId.slice(0, 8)
                                     : "—";
 
-                                const depName = flight.departureHubId
-                                    ? hubMap.get(flight.departureHubId) || flight.departureHubId
-                                    : "—";
+                                const depName = formatHubName(
+                                    undefined,
+                                    flight.departureHubId,
+                                    hubMap
+                                );
 
-                                const arrName = flight.arrivalHubId
-                                    ? hubMap.get(flight.arrivalHubId) || flight.arrivalHubId
-                                    : "—";
+                                const arrName = formatHubName(
+                                    undefined,
+                                    flight.arrivalHubId,
+                                    hubMap
+                                );
 
                                 const departureTime = flight.scheduledDeparture
                                     ? formatDateTime(flight.scheduledDeparture, "MMM dd, HH:mm")
@@ -252,7 +252,6 @@ export function FlightsTable({
                     </span>
                 }
                 confirmText="Abort Flight"
-                variant="danger"
             />
         </div>
     );

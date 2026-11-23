@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface UseCrudListOptions<T extends { id?: string }> {
-    queryKey?: readonly unknown[];
+    queryKey: readonly unknown[];
     fetchFn: () => Promise<T[] | { items?: T[] }>;
     deleteFn?: (id: string) => Promise<unknown>;
-    entityName?: string;
-    autoFetch?: boolean;
+    entityName: string;
     refetchInterval?: number;
 }
 
@@ -17,43 +16,31 @@ export function useCrudList<T extends { id?: string }>({
     queryKey,
     fetchFn,
     deleteFn,
-    entityName = "Item",
-    autoFetch = true,
+    entityName,
     refetchInterval,
 }: UseCrudListOptions<T>) {
     const queryClient = useQueryClient();
-    const effectiveKey = useMemo(
-        () => queryKey || ["crud-list", entityName.toLowerCase()],
-        [queryKey, entityName]
-    );
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [itemToEdit, setItemToEdit] = useState<T | null>(null);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
-    const [customError, setCustomError] = useState<string | null>(null);
 
     const {
         data,
-        isLoading: queryLoading,
-        error: queryError,
+        isLoading: loading,
         refetch,
     } = useQuery({
-        queryKey: effectiveKey,
+        queryKey,
         queryFn: async () => {
             const res = await fetchFn();
             return Array.isArray(res) ? res : res?.items || [];
         },
-        enabled: autoFetch,
         refetchInterval,
     });
 
     const items: T[] = data || [];
-    const loading = autoFetch && queryLoading;
-    const error =
-        customError || (queryError ? `Failed to fetch ${entityName.toLowerCase()}s` : null);
 
     const refresh = useCallback(async () => {
-        setCustomError(null);
         await refetch();
     }, [refetch]);
 
@@ -86,7 +73,7 @@ export function useCrudList<T extends { id?: string }>({
                 setHighlightedId(null);
             }
             toast.success(`${entityName} deleted successfully`);
-            queryClient.invalidateQueries({ queryKey: effectiveKey });
+            queryClient.invalidateQueries({ queryKey });
         },
         meta: { defaultErrorMessage: `Failed to delete ${entityName.toLowerCase()}` },
     });
@@ -102,18 +89,13 @@ export function useCrudList<T extends { id?: string }>({
     return {
         items,
         loading,
-        error,
-        setError: setCustomError,
         refresh,
         isModalOpen,
-        setIsModalOpen,
         itemToEdit,
-        setItemToEdit,
         openCreateModal,
         openEditModal,
         closeModal,
         highlightedId,
-        setHighlightedId,
         handleSelect,
         handleDelete,
     };

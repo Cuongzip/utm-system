@@ -26,7 +26,7 @@ import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS, type SimulationSession } 
 
 interface SimulationTableProps {
     sessions: SimulationSession[];
-    loading?: boolean;
+    loading: boolean;
     onPauseSession: (id: string) => void;
     onResumeSession: (id: string) => void;
     onStopSession: (id: string) => void;
@@ -266,7 +266,6 @@ export function SimulationTable({
                     </span>
                 }
                 confirmText="Delete Session"
-                variant="danger"
             />
 
             {sessionForInject && (

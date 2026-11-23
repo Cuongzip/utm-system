@@ -10,10 +10,10 @@ export interface MissionInteractionControllerProps {
     mode: EditorMode;
     defaultAltitude: number;
     waypoints: Waypoint[];
-    isReadOnly?: boolean;
-    onAddWaypoint?: (lat: number, lng: number, altitude: number) => void;
-    onMoveWaypoint?: (wpId: string, lat: number, lng: number) => void;
-    onSelectWaypoint?: (waypoint: Waypoint | null) => void;
+    isReadOnly: boolean;
+    onAddWaypoint: (lat: number, lng: number, altitude: number) => void;
+    onMoveWaypoint: (wpId: string, lat: number, lng: number) => void;
+    onSelectWaypoint: (waypoint: Waypoint | null) => void;
 }
 
 export function MissionInteractionController({
@@ -78,7 +78,7 @@ export function MissionInteractionController({
                             (w) => String(w.id || w.tempId) === rawId
                         );
                         if (found) {
-                            onSelectWaypointRef.current?.(found);
+                            onSelectWaypointRef.current(found);
                             if (!isReadOnlyRef.current) {
                                 isDraggingRef.current = true;
                                 draggedWpIdRef.current = rawId;
@@ -130,7 +130,7 @@ export function MissionInteractionController({
                                 const lng = Number(
                                     Cesium.Math.toDegrees(carto.longitude).toFixed(6)
                                 );
-                                onMoveWaypointRef.current?.(draggedWpIdRef.current, lat, lng);
+                                onMoveWaypointRef.current(draggedWpIdRef.current, lat, lng);
                                 viewer.scene.requestRender();
                             }
                         }
@@ -187,7 +187,7 @@ export function MissionInteractionController({
                             (w) => String(w.id || w.tempId) === rawId
                         );
                         if (found) {
-                            onSelectWaypointRef.current?.(found);
+                            onSelectWaypointRef.current(found);
                             return;
                         }
                     }
@@ -204,7 +204,7 @@ export function MissionInteractionController({
                             const carto = Cesium.Cartographic.fromCartesian(cartesian);
                             const lat = Cesium.Math.toDegrees(carto.latitude);
                             const lng = Cesium.Math.toDegrees(carto.longitude);
-                            onAddWaypointRef.current?.(
+                            onAddWaypointRef.current(
                                 Number(lat.toFixed(6)),
                                 Number(lng.toFixed(6)),
                                 altRef.current

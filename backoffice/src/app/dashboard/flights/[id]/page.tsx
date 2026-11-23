@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
-import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
+import { useHubsAll, useDronesAll, useFlightDetail, QUERY_KEYS } from "@/hooks";
 import { flightService } from "@/services/flightService";
 import { FlightEditor } from "@/components/flights";
 import { EmptyState } from "@/components/ui";
@@ -23,22 +23,13 @@ export default function EditFlightPage() {
         data: flight,
         isLoading: flightLoading,
         error: flightError,
-    } = useQuery({
-        queryKey: QUERY_KEYS.flightDetail(flightId),
-        queryFn: () => flightService.getById(flightId),
-        enabled: Boolean(flightId),
-    });
-
-    const invalidateAll = () => {
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightDetail(flightId) });
-    };
+    } = useFlightDetail(flightId);
 
     const updateMutation = useMutation({
         mutationFn: (payload: UpdateFlightPayload) => flightService.updateFlight(flightId, payload),
         onSuccess: () => {
             toast.success("Flight plan updated successfully");
-            invalidateAll();
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
             router.push("/dashboard/flights");
         },
         meta: { defaultErrorMessage: "Failed to update flight plan" },

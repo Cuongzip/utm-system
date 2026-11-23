@@ -7,8 +7,7 @@ import {
     getDronesQueryParams,
 } from "@/generated/drone";
 
-export type DroneRegistrationPayload = zod.infer<typeof createDroneBody>;
-export type CreateDronePayload = DroneRegistrationPayload;
+export type CreateDronePayload = zod.infer<typeof createDroneBody>;
 export type UpdateDronePayload = zod.infer<typeof updateDroneBody>;
 export type DroneQueryParams = zod.infer<typeof getDronesQueryParams>;
 

@@ -2,18 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
+import { getCesium } from "../cesiumLoader";
 import type { Waypoint, Hub } from "@/types";
 import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
-import { fitCameraToBounds } from "../cesiumUtils";
 import { buildMissionRoutePoints } from "@/components/missions";
+import { formatAltitude } from "@/utils";
 
 export interface MissionLayerProps {
     waypoints?: Waypoint[];
     selectedWaypointId?: string | null;
     departureHub?: Hub | null;
     arrivalHub?: Hub | null;
-    autoFitBounds?: boolean;
 }
 
 export function MissionLayer({
@@ -21,7 +21,6 @@ export function MissionLayer({
     selectedWaypointId,
     departureHub,
     arrivalHub,
-    autoFitBounds = true,
 }: MissionLayerProps) {
     const routeColor = "#00a3bf";
     const { viewer, isLoaded } = useCesium();
@@ -33,7 +32,7 @@ export function MissionLayer({
         let cancelled = false;
 
         async function renderMissionRoute() {
-            const Cesium = await import("cesium");
+            const Cesium = await getCesium();
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
             entityIdsRef.current.forEach((id) => {
@@ -43,7 +42,6 @@ export function MissionLayer({
             entityIdsRef.current = [];
 
             const newEntityIds: string[] = [];
-            const allPoints: { lng: number; lat: number }[] = [];
 
             if (
                 departureHub?.location?.latitude !== undefined &&
@@ -52,7 +50,6 @@ export function MissionLayer({
                 const depId = "hub-dep-marker";
                 const lng = departureHub.location.longitude;
                 const lat = departureHub.location.latitude;
-                allPoints.push({ lng, lat });
 
                 const isSameHub = arrivalHub?.id === departureHub.id;
                 const labelText = isSameHub
@@ -87,7 +84,6 @@ export function MissionLayer({
                 const arrId = "hub-arr-marker";
                 const lng = arrivalHub.location.longitude;
                 const lat = arrivalHub.location.latitude;
-                allPoints.push({ lng, lat });
 
                 const entity = viewer.entities.add({
                     id: arrId,
@@ -122,10 +118,9 @@ export function MissionLayer({
 
             if (routeCoords.length >= 2) {
                 const polylineId = "mission-polyline";
-                const positions = routeCoords.map((pt) => {
-                    allPoints.push({ lng: pt.lng, lat: pt.lat });
-                    return Cesium.Cartesian3.fromDegrees(pt.lng, pt.lat, pt.alt);
-                });
+                const positions = routeCoords.map((pt) =>
+                    Cesium.Cartesian3.fromDegrees(pt.lng, pt.lat, pt.alt)
+                );
 
                 const entity = viewer.entities.add({
                     id: polylineId,
@@ -138,8 +133,6 @@ export function MissionLayer({
                     },
                 });
                 newEntityIds.push(entity.id);
-            } else if (routeCoords.length === 1) {
-                allPoints.push({ lng: routeCoords[0].lng, lat: routeCoords[0].lat });
             }
 
             sortedWaypoints.forEach((wp, idx) => {
@@ -148,9 +141,11 @@ export function MissionLayer({
                     (selectedWaypointId && wp.id === selectedWaypointId) ||
                     (selectedWaypointId && wp.tempId === selectedWaypointId)
                 );
-                const isStart = idx === 0;
                 const seqNum = wp.sequence ?? idx + 1;
-                const altText = wp.altitude ? `${wp.altitude}m` : "";
+                const altText =
+                    wp.altitude !== undefined && wp.altitude !== null
+                        ? formatAltitude(wp.altitude)
+                        : "";
                 const labelText = `WP${seqNum} ${altText}`.trim();
 
                 const entity = viewer.entities.add({
@@ -180,15 +175,6 @@ export function MissionLayer({
 
             entityIdsRef.current = newEntityIds;
 
-            if (autoFitBounds && allPoints.length > 0) {
-                fitCameraToBounds(viewer, allPoints, {
-                    animate: true,
-                    duration: 1.0,
-                    minHeight: 1500,
-                    paddingMultiplier: 1.5,
-                });
-            }
-
             viewer.scene.requestRender();
         }
 
@@ -204,16 +190,7 @@ export function MissionLayer({
             }
             entityIdsRef.current = [];
         };
-    }, [
-        viewer,
-        isLoaded,
-        waypoints,
-        selectedWaypointId,
-        departureHub,
-        arrivalHub,
-        autoFitBounds,
-        routeColor,
-    ]);
+    }, [viewer, isLoaded, waypoints, selectedWaypointId, departureHub, arrivalHub, routeColor]);
 
     return null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { isValidElement } from "react";
+import React from "react";
 import { cn } from "@/lib";
 import { ChamferCard } from "./ChamferCard";
 
@@ -9,7 +9,7 @@ export interface MetricCardProps {
     value: string | number;
     subValue?: React.ReactNode;
     subValuePosition?: "inline" | "bottom";
-    icon?: React.ComponentType<{ className?: string }> | React.ReactNode;
+    icon?: React.ComponentType<{ className?: string }>;
     iconClassName?: string;
     children?: React.ReactNode;
 }
@@ -19,17 +19,10 @@ export function MetricCard({
     value,
     subValue,
     subValuePosition = "inline",
-    icon,
+    icon: IconComponent,
     iconClassName,
     children,
 }: MetricCardProps) {
-    const renderIcon = () => {
-        if (!icon) return null;
-        if (isValidElement(icon)) return icon;
-        const IconComponent = icon as React.ComponentType<{ className?: string }>;
-        return <IconComponent className={cn("w-4 h-4 text-[#64748b]", iconClassName)} />;
-    };
-
     return (
         <ChamferCard size="md" className="h-[119px]">
             <div className="p-4 flex flex-col justify-between h-full">
@@ -37,9 +30,11 @@ export function MetricCard({
                     <span className="text-[11px] font-bold text-[#64748b] tracking-[0.55px] uppercase font-mono">
                         {title}
                     </span>
-                    {icon && (
+                    {IconComponent && (
                         <div className="shrink-0 flex items-center justify-center">
-                            {renderIcon()}
+                            <IconComponent
+                                className={cn("w-4 h-4 text-[#64748b]", iconClassName)}
+                            />
                         </div>
                     )}
                 </div>

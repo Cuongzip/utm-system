@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Circle, Pentagon } from "lucide-react";
 import { TacticalMapContainer, MapUndoClear, MapZoneAction, AirspaceLayer } from "@/components/map";
 import { cn } from "@/lib";
+import { formatCoordinates } from "@/utils";
 import type { AirspaceZone, AirspaceZoneType } from "@/types";
 import type { GeometryMode, GeoPoint } from "../useAirspaceGeometry";
 import { AirspaceCameraController } from "./AirspaceCameraController";
@@ -22,9 +23,9 @@ export interface AirspaceMapEditorProps {
     onClearPolygonPoints: () => void;
     zoneType: AirspaceZoneType;
     altitudeCeiling: number;
-    existingZones?: AirspaceZone[];
+    existingZones: AirspaceZone[];
     currentZoneId?: string;
-    className?: string;
+    className: string;
 }
 
 export function AirspaceMapEditor({
@@ -39,9 +40,9 @@ export function AirspaceMapEditor({
     onClearPolygonPoints,
     zoneType,
     altitudeCeiling,
-    existingZones = [],
+    existingZones,
     currentZoneId,
-    className = "",
+    className,
 }: AirspaceMapEditorProps) {
     const [showContextZones, setShowContextZones] = useState(false);
     const backgroundZones = existingZones.filter((z) => z.id !== currentZoneId);
@@ -58,7 +59,7 @@ export function AirspaceMapEditor({
                             className={cn(
                                 "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
                                 geometryMode === "radius"
-                                    ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                    ? "bg-slate-800 text-white shadow-2xs"
                                     : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                             title="Circle radius mode"
@@ -73,7 +74,7 @@ export function AirspaceMapEditor({
                             className={cn(
                                 "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
                                 geometryMode === "polygon"
-                                    ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
+                                    ? "bg-slate-800 text-white shadow-2xs"
                                     : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                             title="Draw polygon corridor"
@@ -108,7 +109,10 @@ export function AirspaceMapEditor({
                                 <span>
                                     Center:{" "}
                                     <strong className="text-white">
-                                        {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
+                                        {formatCoordinates(
+                                            { latitude: center.lat, longitude: center.lng },
+                                            6
+                                        )}
                                     </strong>
                                 </span>
                                 <span className="text-slate-500">|</span>
@@ -161,7 +165,7 @@ export function AirspaceMapEditor({
             />
 
             {showContextZones && backgroundZones.length > 0 && (
-                <AirspaceLayer zones={backgroundZones} autoFitBounds={false} />
+                <AirspaceLayer zones={backgroundZones} />
             )}
         </TacticalMapContainer>
     );

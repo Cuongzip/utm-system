@@ -10,7 +10,7 @@ export interface FlightInteractionControllerProps {
     mode: FlightEditorMode;
     cruisingAltitude: number;
     waypoints: FlightWaypoint[];
-    isReadOnly?: boolean;
+    isReadOnly: boolean;
     onAddWaypoint: (lat: number, lng: number, altitude: number) => void;
     onMoveWaypoint: (id: string, lat: number, lng: number) => void;
     onSelectWaypoint: (waypoint: FlightWaypoint | null) => void;

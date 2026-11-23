@@ -10,11 +10,11 @@ export interface FlightRouteTabProps {
     onUpdateWaypoint: (wp: FlightWaypoint) => void;
     onDeleteWaypoint: (id: string) => void;
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
-    isReadOnly?: boolean;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
+    isReadOnly: boolean;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
 }
 
 export function FlightRouteTab({

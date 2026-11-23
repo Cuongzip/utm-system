@@ -101,7 +101,7 @@ function normalizePendingItem(pending: PendingConfirmationVm): LiveAlertItem {
         message: `Failsafe action ${pending.protocol?.responseAction || "REQUIRED"} awaiting operator confirmation for Drone ${pending.incident?.droneId || "N/A"}`,
         droneId: pending.incident?.droneId,
         flightId: pending.incident?.flightId,
-        status: "pending_confirmation",
+        status: INCIDENT_STATUS.PENDING_CONFIRMATION,
         timestamp: pending.timeoutAt || new Date().toISOString(),
         actionUrl: "/dashboard/emergency",
         actionLabel: "CONFIRM ACTION",

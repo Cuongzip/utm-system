@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FormInput } from "@/components/ui";
-import { parseOptionalNumber, type WaypointItem } from "../types";
+import type { WaypointItem } from "../types";
 
 export interface WaypointPositionSubTabProps<T extends WaypointItem> {
     waypoint: T;
@@ -130,43 +130,18 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                 />
             </div>
 
-            <div className="form-row-2">
-                <FormInput
-                    id="wpAlt"
-                    label="Altitude (m)"
-                    type="number"
-                    min="0"
-                    max="1000"
-                    value={altStr}
-                    disabled={isReadOnly}
-                    onChange={handleAltChange}
-                    onBlur={handleAltBlur}
-                    error={altError}
-                />
-                <FormInput
-                    id="wpDuration"
-                    label="Hold Time (s)"
-                    type="number"
-                    min="0"
-                    max="3600"
-                    placeholder="0"
-                    value={
-                        (waypoint.actions?.durationS as number | undefined) ??
-                        (waypoint.actions?.hoverDurationS as number | undefined) ??
-                        ""
-                    }
-                    disabled={isReadOnly}
-                    onChange={(e) =>
-                        onUpdate({
-                            ...waypoint,
-                            actions: {
-                                ...waypoint.actions,
-                                durationS: parseOptionalNumber(e.target.value),
-                            },
-                        })
-                    }
-                />
-            </div>
+            <FormInput
+                id="wpAlt"
+                label="Altitude (m)"
+                type="number"
+                min="0"
+                max="1000"
+                value={altStr}
+                disabled={isReadOnly}
+                onChange={handleAltChange}
+                onBlur={handleAltBlur}
+                error={altError}
+            />
         </div>
     );
 }

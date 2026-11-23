@@ -5,20 +5,12 @@ import { telemetryService, ApiError } from "@/services";
 import { useStomp, useTelemetryStream } from "./useStomp";
 import type { Flight, TelemetryRecord } from "@/types";
 
-interface UseLiveTelemetryOptions {
-    intervalMs?: number;
-    enabled?: boolean;
-}
+const POLL_INTERVAL_MS = 1000;
 
-export function useLiveTelemetry(flights: Flight[], options: UseLiveTelemetryOptions = {}) {
-    const { intervalMs = 1000, enabled = true } = options;
+export function useLiveTelemetry(flights: Flight[]) {
     const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryRecord>>({});
-    const [telemetryHistoryMap, setTelemetryHistoryMap] = useState<
-        Record<string, TelemetryRecord[]>
-    >({});
-    const [isPolling, setIsPolling] = useState(false);
     const isPollingRef = useRef(false);
-    const { isConnected: isSocketConnected } = useStomp({ autoConnect: enabled });
+    const { isConnected: isSocketConnected } = useStomp();
 
     const handleIncomingTelemetry = useCallback(
         (record: TelemetryRecord) => {
@@ -38,30 +30,20 @@ export function useLiveTelemetry(flights: Flight[], options: UseLiveTelemetryOpt
                 ...prev,
                 [targetFlightId!]: record,
             }));
-
-            setTelemetryHistoryMap((prev) => {
-                const existing = prev[targetFlightId!] || [];
-                const updated = [...existing.slice(-99), record];
-                return {
-                    ...prev,
-                    [targetFlightId!]: updated,
-                };
-            });
         },
         [flights]
     );
 
-    useTelemetryStream(handleIncomingTelemetry, null, enabled);
+    useTelemetryStream(handleIncomingTelemetry);
 
     useEffect(() => {
-        if (!enabled || flights.length === 0) return;
+        if (flights.length === 0) return;
 
         let alive = true;
 
         const pollTelemetry = async () => {
             if (isPollingRef.current) return;
             isPollingRef.current = true;
-            setIsPolling(true);
 
             try {
                 const promises = flights.map(async (flight) => {
@@ -105,30 +87,25 @@ export function useLiveTelemetry(flights: Flight[], options: UseLiveTelemetryOpt
                 console.error("Error polling telemetry records:", err);
             } finally {
                 isPollingRef.current = false;
-                if (alive) setIsPolling(false);
             }
         };
 
         pollTelemetry();
 
-        const activeInterval = isSocketConnected ? 10000 : intervalMs;
+        const activeInterval = isSocketConnected ? 10000 : POLL_INTERVAL_MS;
         const intervalId = setInterval(pollTelemetry, activeInterval);
 
         return () => {
             alive = false;
             clearInterval(intervalId);
         };
-    }, [flights, intervalMs, enabled, isSocketConnected]);
+    }, [flights, isSocketConnected]);
 
     const activeTelemetryCount = Object.keys(telemetryMap).length;
 
     return {
         telemetryMap,
-        telemetryHistoryMap,
-        isPolling,
         isSocketConnected,
         activeTelemetryCount,
-        setTelemetryMap,
-        setTelemetryHistoryMap,
     };
 }

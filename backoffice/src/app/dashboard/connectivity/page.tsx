@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ChamferButton, AlertBanner } from "@/components/ui";
+import { PageHeader, ChamferButton } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,7 +26,6 @@ export default function ConnectivityPage() {
     const {
         data: devices = [],
         isLoading: devicesLoading,
-        error: devicesError,
         refetch: refetchDevices,
     } = useConnectivityDevices();
 
@@ -37,7 +36,6 @@ export default function ConnectivityPage() {
     } = useConnectivityOnlineDevices();
 
     const loading = devicesLoading || onlineLoading;
-    const error = devicesError ? "Failed to fetch devices" : null;
 
     const refreshAll = () => {
         refetchDevices();
@@ -88,8 +86,6 @@ export default function ConnectivityPage() {
                     <span>Register Device</span>
                 </ChamferButton>
             </PageHeader>
-
-            {error && <AlertBanner message={error} onDismiss={() => {}} />}
 
             <ConnectivityMetrics
                 totalDevices={devices.length}

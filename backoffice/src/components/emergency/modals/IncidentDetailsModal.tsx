@@ -40,7 +40,6 @@ export function IncidentDetailsModal({
     if (!isOpen || !incident) return null;
 
     const isAwaiting = incident.status === INCIDENT_STATUS.PENDING_CONFIRMATION;
-    const isResolved = incident.status === INCIDENT_STATUS.RESOLVED;
 
     const selectedFlight = incident.flightId ? flightMap.get(incident.flightId) : undefined;
     const flightLabel =

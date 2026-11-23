@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { ChamferButton, PageHeader, AlertBanner } from "@/components/ui";
+import { ChamferButton, PageHeader } from "@/components/ui";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { SimulationTable, AddSimulationModal, DeviceHeartbeatTable } from "@/components/simulation";
@@ -18,9 +18,6 @@ export default function SimulationPage() {
     const {
         items: sessions,
         loading,
-        error,
-        setError,
-        refresh,
         isModalOpen: isLaunchOpen,
         openCreateModal: openLaunchModal,
         closeModal,
@@ -45,7 +42,6 @@ export default function SimulationPage() {
         onSuccess: () => {
             toast.success("Simulation session launched successfully");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            refresh();
         },
         meta: { defaultErrorMessage: "Failed to launch simulation session" },
     });
@@ -55,7 +51,6 @@ export default function SimulationPage() {
         onSuccess: () => {
             toast.success("Simulation paused");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            refresh();
         },
         meta: { defaultErrorMessage: "Failed to pause simulation" },
     });
@@ -65,7 +60,6 @@ export default function SimulationPage() {
         onSuccess: () => {
             toast.success("Simulation resumed");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            refresh();
         },
         meta: { defaultErrorMessage: "Failed to resume simulation" },
     });
@@ -75,7 +69,6 @@ export default function SimulationPage() {
         onSuccess: () => {
             toast.success("Simulation stopped");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
-            refresh();
         },
         meta: { defaultErrorMessage: "Failed to stop simulation" },
     });
@@ -109,8 +102,6 @@ export default function SimulationPage() {
                 </ChamferButton>
             </PageHeader>
 
-            {error && <AlertBanner message={error} onDismiss={() => setError(null)} />}
-
             <SimulationTable
                 sessions={sessions}
                 loading={loading}
@@ -118,7 +109,7 @@ export default function SimulationPage() {
                 onResumeSession={(id) => resumeSessionMutation.mutate(id)}
                 onStopSession={(id) => stopSessionMutation.mutate(id)}
                 onDeleteSession={handleDeleteSession}
-                onRefresh={refresh}
+                onRefresh={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation })}
             />
 
             <DeviceHeartbeatTable

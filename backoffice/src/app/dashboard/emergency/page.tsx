@@ -21,7 +21,7 @@ import {
     useEmergencyActiveIncidents,
     useEmergencyStats,
     useEmergencyConfig,
-} from "@/hooks/useQueries";
+} from "@/hooks";
 import { emergencyService } from "@/services/emergencyService";
 import {
     INCIDENT_STATUS,
@@ -104,9 +104,13 @@ export default function EmergencyResponsePage() {
     return (
         <div className="p-8 flex flex-col gap-6 w-full">
             <PageHeader title="EMERGENCY RESPONSE">
-                <div
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isSupervisedMode}
+                    disabled={setModeMutation.isPending}
                     onClick={handleToggleSupervisedMode}
-                    className="rounded-lg flex items-center gap-3 px-3.5 py-1.5 bg-[var(--color-surface-panel)] border border-[var(--color-border-default)] hover:border-[var(--color-border-strong)] transition-all cursor-pointer select-none"
+                    className="rounded-lg flex items-center gap-3 px-3.5 py-1.5 bg-[var(--color-surface-panel)] border border-[var(--color-border-default)] hover:border-[var(--color-border-strong)] transition-all cursor-pointer select-none disabled:opacity-50"
                     title="Toggle Operator Supervised Mode"
                 >
                     <div className="flex items-center gap-2">
@@ -129,7 +133,7 @@ export default function EmergencyResponsePage() {
                             }`}
                         />
                     </div>
-                </div>
+                </button>
             </PageHeader>
 
             <EmergencyKpiStrip

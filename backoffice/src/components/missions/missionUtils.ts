@@ -1,5 +1,5 @@
 import { addWaypointBody } from "@/generated/mission";
-import { calculatePathDistance, interpolatePoint, isDuplicateCoord } from "@/utils/geo";
+import { isDuplicateCoord } from "@/utils/geo";
 import type { Hub, Waypoint, AddWaypointPayload, ProfilePoint } from "@/types";
 import { missionService } from "@/services/missionService";
 import zod from "zod";
@@ -30,8 +30,6 @@ export function sanitizeWaypointForApi(
     };
 }
 
-export type MissionRoutePoint = ProfilePoint;
-
 export function buildMissionRoutePoints(
     waypoints: Waypoint[],
     departureHub?: Hub | null,
@@ -39,7 +37,7 @@ export function buildMissionRoutePoints(
     defaultAltitude = 50
 ): ProfilePoint[] {
     const sorted = [...waypoints].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
-    const pts: MissionRoutePoint[] = [];
+    const pts: ProfilePoint[] = [];
 
     const hasDep =
         departureHub?.location?.latitude !== undefined &&
@@ -98,23 +96,6 @@ export function buildMissionRoutePoints(
     }
 
     return pts;
-}
-
-export function calculateMissionDistance(
-    waypoints: Waypoint[],
-    departureHub?: Hub | null,
-    arrivalHub?: Hub | null
-): number {
-    const route = buildMissionRoutePoints(waypoints, departureHub, arrivalHub);
-    return calculatePathDistance(route.map((p) => ({ lat: p.latitude, lng: p.longitude })));
-}
-
-export function generateHubToHubWaypoints(
-    _departureHub?: Hub | null,
-    _arrivalHub?: Hub | null,
-    _defaultAltitude = 50
-): Waypoint[] {
-    return [];
 }
 
 export function determineActiveTabFromErrors(

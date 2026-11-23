@@ -3,7 +3,13 @@
 import { useMemo } from "react";
 import { ChamferCard, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib";
-import type { Drone, Hub, FeasibilityVerdict, FlightFormPayload } from "@/types";
+import {
+    DEFAULT_DRONE_STATUS,
+    type Drone,
+    type Hub,
+    type FeasibilityVerdict,
+    type FlightFormPayload,
+} from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 import { FlightDetailsTab } from "./FlightDetailsTab";
 import { FlightRouteTab } from "./FlightRouteTab";
@@ -16,25 +22,24 @@ export interface FlightFormSidebarProps {
         value: FlightFormPayload[K]
     ) => void;
     mode: "create" | "edit";
-    drones?: Drone[];
-    hubs?: Hub[];
-    departureHub?: Hub | null;
-    arrivalHub?: Hub | null;
-    waypoints?: FlightWaypoint[];
+    drones: Drone[];
+    hubs: Hub[];
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
+    waypoints: FlightWaypoint[];
     selectedWaypoint: FlightWaypoint | null;
     onSelectWaypoint: (wp: FlightWaypoint | null) => void;
     onUpdateWaypoint: (wp: FlightWaypoint) => void;
     onDeleteWaypoint: (id: string) => void;
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
-    totalDistanceM?: number;
-    feasibilityVerdict?: FeasibilityVerdict;
-    isFeasibilityWarning?: boolean;
+    totalDistanceM: number;
+    feasibilityVerdict: FeasibilityVerdict;
+    isFeasibilityWarning: boolean;
     activeTab: "details" | "waypoints" | "schedule";
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
-    fieldErrors?: Record<string, string>;
-    onClearFieldError?: (field: string) => void;
-    isReadOnly?: boolean;
-    className?: string;
+    fieldErrors: Record<string, string>;
+    onClearFieldError: (field: string) => void;
+    isReadOnly: boolean;
 }
 
 export function FlightFormSidebar({
@@ -59,14 +64,13 @@ export function FlightFormSidebar({
     fieldErrors = {},
     onClearFieldError,
     isReadOnly = false,
-    className = "",
 }: FlightFormSidebarProps) {
     const droneOptions: SelectOption[] = useMemo(() => {
         return [
             { value: "", label: "Select assigned drone..." },
             ...drones.map((d) => ({
                 value: d.id,
-                label: `${d.registrationNumber || d.model || d.id} (${(d.status || "available").toUpperCase()})`,
+                label: `${d.registrationNumber || d.model || d.id} (${(d.status ?? DEFAULT_DRONE_STATUS).toUpperCase()})`,
             })),
         ];
     }, [drones]);
@@ -112,7 +116,7 @@ export function FlightFormSidebar({
     const totalPoints = waypoints.length + (departureHub ? 1 : 0) + (arrivalHub ? 1 : 0);
 
     return (
-        <ChamferCard size="lg" className={cn("w-full h-full min-h-0", className)}>
+        <ChamferCard size="lg" className="w-full h-full min-h-0">
             <div className="flex flex-col h-full min-h-0 bg-[var(--color-surface-panel)] select-none overflow-hidden">
                 <div className="grid grid-cols-3 border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-xs shrink-0">
                     <button
@@ -191,20 +195,8 @@ export function FlightFormSidebar({
                             onUpdateWaypoint={onUpdateWaypoint}
                             onDeleteWaypoint={onDeleteWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
-                            departureHub={
-                                departureHub !== undefined
-                                    ? departureHub
-                                    : hubs.find((h) => h.id === formData.departureHubId) || null
-                            }
-                            arrivalHub={
-                                arrivalHub !== undefined
-                                    ? arrivalHub
-                                    : hubs.find(
-                                          (h) =>
-                                              h.id ===
-                                              (formData.arrivalHubId || formData.departureHubId)
-                                      ) || null
-                            }
+                            departureHub={departureHub}
+                            arrivalHub={arrivalHub}
                             isReadOnly={isReadOnly}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}

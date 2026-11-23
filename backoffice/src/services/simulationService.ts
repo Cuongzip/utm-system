@@ -11,14 +11,10 @@ import type {
 } from "@/types";
 
 export const simulationService = {
-    getSessions: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
+    getAll: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
         const url = buildUrl(API_ENDPOINTS.SIMULATION.BASE, params as Record<string, unknown>);
         const res = await apiClient<SimulationSessionList | SimulationSession[]>(url);
         return normalizeList<SimulationSession>(res);
-    },
-
-    getAll: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
-        return simulationService.getSessions(params);
     },
 
     getById: async (id: string): Promise<SimulationSession> => {

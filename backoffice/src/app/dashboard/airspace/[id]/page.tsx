@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
-import { useHubsAll, useAirspaceAll, QUERY_KEYS } from "@/hooks";
+import { useHubsAll, useAirspaceAll, useAirspaceDetail, QUERY_KEYS } from "@/hooks";
 import { airspaceService } from "@/services/airspaceService";
 import { AirspaceEditor } from "@/components/airspace";
 import { EmptyState } from "@/components/ui";
@@ -19,22 +19,13 @@ export default function EditAirspacePage() {
     const { data: hubs = [], isLoading: hubsLoading } = useHubsAll();
     const { data: zones = [] } = useAirspaceAll();
 
-    const {
-        data: zone,
-        isLoading: zoneLoading,
-        error: zoneError,
-    } = useQuery({
-        queryKey: QUERY_KEYS.airspaceDetail(zoneId),
-        queryFn: () => airspaceService.getZoneById(zoneId),
-        enabled: Boolean(zoneId),
-    });
+    const { data: zone, isLoading: zoneLoading, error: zoneError } = useAirspaceDetail(zoneId);
 
     const updateMutation = useMutation({
         mutationFn: (payload: UpdateAirspaceZonePayload) =>
             airspaceService.updateZone(zoneId, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspace });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspaceDetail(zoneId) });
             toast.success("Airspace zone updated successfully");
             router.push("/dashboard/airspace");
         },

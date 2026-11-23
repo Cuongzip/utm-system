@@ -6,7 +6,7 @@ import {
     ChamferCard,
     StatusBadge,
     TableFilterBar,
-    type CustomSelectOption,
+    type SelectOption,
     EmptyState,
     ConfirmDialog,
     ActionMenu,
@@ -27,19 +27,13 @@ import {
     type DeviceRegistration,
     type DeviceConnectionStatus,
 } from "@/types";
-import { formatDateTime, formatRelativeTime } from "@/utils";
+import { formatDateTime, formatRelativeTime, createStatusOptions } from "@/utils";
 
-const DEVICE_STATUS_OPTIONS: CustomSelectOption[] = [
-    { value: "all", label: "All Statuses" },
-    ...DEVICE_CONNECTION_STATUSES.map((status) => ({
-        value: status,
-        label: status.charAt(0).toUpperCase() + status.slice(1),
-    })),
-];
+const DEVICE_STATUS_OPTIONS: SelectOption[] = createStatusOptions(DEVICE_CONNECTION_STATUSES);
 
 export interface RegisteredDevicesTableProps {
     devices: DeviceRegistration[];
-    loading?: boolean;
+    loading: boolean;
     onHeartbeat: (id: string) => void;
     onRevoke: (id: string) => void;
 }
@@ -236,7 +230,6 @@ export function RegisteredDevicesTable({
                     </span>
                 }
                 confirmText="Revoke Device"
-                variant="danger"
             />
         </div>
     );

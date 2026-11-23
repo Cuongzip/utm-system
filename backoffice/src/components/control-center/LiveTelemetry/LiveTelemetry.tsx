@@ -8,12 +8,12 @@ import { FlightSelectorPopover } from "./FlightSelectorPopover";
 import { type Flight, type TelemetryRecord, DEFAULT_FLIGHT_STATUS } from "@/types";
 
 export interface LiveTelemetryProps {
-    telemetry?: TelemetryRecord | null;
-    flight?: Flight | null;
-    flights?: Flight[];
-    selectedFlightId?: string | null;
-    onSelectFlight?: (flightId: string) => void;
-    telemetryMap?: Record<string, TelemetryRecord>;
+    telemetry: TelemetryRecord | null;
+    flight: Flight | null;
+    flights: Flight[];
+    selectedFlightId: string | null;
+    onSelectFlight: (flightId: string) => void;
+    telemetryMap: Record<string, TelemetryRecord>;
 }
 
 export function LiveTelemetry({
