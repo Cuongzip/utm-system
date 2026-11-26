@@ -30,6 +30,8 @@ public class ConnectivitySecurityConfig {
                                 "/actuator/**",
                                 "/ws/**",
                                 "/api/v1/connectivity/ca-certificate",
+                                "/api/v1/connectivity/devices/*/heartbeat",
+                                "/api/v1/connectivity/devices/*/disconnect",
                                 "/api/v1/integration/telemetry",
                                 "/api/v1/integration/register",
                                 "/api/v1/integration/status",

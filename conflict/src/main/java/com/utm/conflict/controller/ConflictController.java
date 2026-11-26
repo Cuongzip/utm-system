@@ -179,6 +179,18 @@ public class ConflictController {
         return ResponseEntity.ok(conflictService.resolveConflict(id, resolveVm, resolvedBy));
     }
 
+    @PostMapping("/resolve-conformance/{flightId}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Auto-resolve active conformance conflicts for a flight")
+    public ResponseEntity<java.util.Map<String, Object>> resolveConformanceConflicts(
+            @PathVariable String flightId,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        int resolvedCount = conflictService.resolveConformanceConflictsByFlight(flightId, reason);
+        return ResponseEntity.ok(java.util.Map.of("flightId", flightId, "resolvedCount", resolvedCount));
+    }
+
     @PostMapping("/evaluate")
     @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator')")
     @Operation(summary = "Trigger conflict detection evaluation", description = "Manually trigger an immediate conflict evaluation scan across all airborne flights")

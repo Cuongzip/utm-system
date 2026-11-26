@@ -125,4 +125,56 @@ class SimulationCommandReactionTest {
         verify(eventRepository, atLeastOnce()).save(any(SimulationEvent.class));
         assertThat(entity.getSpeed()).isEqualTo(0.0);
     }
+
+    @Test
+    @DisplayName("handleDroneCommand RTL overrides c2_lost loiter freeze so drone returns to departure hub")
+    void handleDroneCommand_rtlDuringC2Lost_restoresCruiseSpeedForFailsafeReturn() {
+        String sessionId = "sim-c2-rtl";
+        String flightId = "flt-c2-rtl";
+        String droneId = "drn-c2-rtl";
+
+        GeoJsonLineStringVm route = new GeoJsonLineStringVm("LineString", List.of(
+                List.of(106.7000, 10.7700, 60.0),
+                List.of(106.7200, 10.7900, 60.0)));
+        FlightDetailVm activeFlight = new FlightDetailVm(
+                flightId, "FLT-C2-02", droneId, "hub-1", "hub-2", 60.0, route, 2,
+                Collections.emptyList(), "active");
+        SimulationSession entity = SimulationSession.builder()
+                .id(sessionId)
+                .flightId(flightId)
+                .droneId(droneId)
+                .status(SimulationStatus.RUNNING)
+                .speed(15.0)
+                .timeScale(1.0)
+                .currentBattery(90.0)
+                .build();
+        SimulationSessionVm vm = new SimulationSessionVm(
+                sessionId, flightId, droneId, SimulationStatus.RUNNING, 15.0, 1.0,
+                10.77, 106.70, 60.0, 45.0, 90.0, 0.0, 3000.0, 0.0, 0, null,
+                ZonedDateTime.now(), ZonedDateTime.now());
+        SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(flightId, 15.0, 1.0, 90.0);
+
+        when(flightClientService.getFlightDetail(flightId)).thenReturn(activeFlight);
+        when(sessionRepository.existsByDroneIdAndStatusIn(eq(droneId), anyList())).thenReturn(false);
+        when(sessionRepository.existsByFlightIdAndStatusIn(eq(flightId), anyList())).thenReturn(false);
+        when(simulationMapper.toEntity(createVm)).thenReturn(entity);
+        when(sessionRepository.saveAndFlush(entity)).thenReturn(entity);
+        when(simulationMapper.toVm(entity)).thenReturn(vm);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(entity));
+        when(sessionRepository.save(entity)).thenReturn(entity);
+        when(simulationMapper.toEventEntity(eq(sessionId), anyString(), any(), anyString(), anyString(), any()))
+                .thenReturn(SimulationEvent.builder().id("evt-rtl").sessionId(sessionId).build());
+        when(eventRepository.save(any(SimulationEvent.class)))
+                .thenReturn(SimulationEvent.builder().id("evt-rtl").sessionId(sessionId).build());
+
+        simulationService.createSession(createVm);
+        simulationService.injectScenario(sessionId, new com.utm.simulation.viewmodel.scenario.InjectScenarioVm(
+                com.utm.simulation.model.enumeration.EmergencyScenarioType.C2_LOST, null));
+        assertThat(entity.getActiveScenario()).isEqualTo("c2_lost");
+
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-rtl-1", droneId, flightId, "RTL", 0, "{}", "PENDING", ZonedDateTime.now()));
+
+        assertThat(entity.getSpeed()).isEqualTo(15.0);
+    }
 }

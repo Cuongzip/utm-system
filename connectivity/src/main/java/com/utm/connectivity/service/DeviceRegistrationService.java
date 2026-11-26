@@ -38,5 +38,9 @@ public interface DeviceRegistrationService {
 
     HeartbeatResultVm processHeartbeat(String idOrIdentifier, DeviceHeartbeatPostVm heartbeatVm);
 
+    default HeartbeatResultVm disconnectDevice(String idOrIdentifier) {
+        return new HeartbeatResultVm(true, java.time.ZonedDateTime.now());
+    }
+
     RevokeResultVm revokeDeviceRegistration(String id);
 }

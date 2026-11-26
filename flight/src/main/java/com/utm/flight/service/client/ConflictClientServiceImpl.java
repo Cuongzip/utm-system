@@ -30,24 +30,50 @@ public class ConflictClientServiceImpl implements ConflictClientService {
     @Override
     public void reportConformanceConflict(Flight flight, FlightConformance conformance,
                                           TelemetryBriefVm telemetry, String message) {
+        reportConformanceConflict(flight, conformance, telemetry, message, "geofence_violation", null);
+    }
+
+    @Override
+    public void reportConformanceConflict(Flight flight, FlightConformance conformance,
+                                          TelemetryBriefVm telemetry, String message,
+                                          String conflictType, String alertType) {
         if (flight == null || conformance == null) {
             return;
         }
 
-        String severity = conformance.getStatus() == ConformanceStatus.CONTINGENT ? "emergency" : "critical";
-        String conflictType = "geofence_violation";
+        String severity = conformance.getStatus() == ConformanceStatus.CONTINGENT ? "critical" : "high";
+        String resolvedConflictType = (conflictType != null && !conflictType.isBlank())
+                ? conflictType
+                : "geofence_violation";
 
-        Double lat = telemetry != null ? telemetry.latitude() : null;
-        Double lon = telemetry != null ? telemetry.longitude() : null;
-        Double alt = telemetry != null ? telemetry.altitude() : null;
+        Double lat = telemetry != null && telemetry.latitude() != null
+                ? telemetry.latitude()
+                : conformance.getCurrentLatitude();
+        Double lon = telemetry != null && telemetry.longitude() != null
+                ? telemetry.longitude()
+                : conformance.getCurrentLongitude();
+        Double alt = telemetry != null && telemetry.altitude() != null
+                ? telemetry.altitude()
+                : conformance.getCurrentAltitude();
 
         Double separationDist = conformance.getCrossTrackErrorM();
         Double vertSeparation = conformance.getVerticalErrorM();
 
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        if (alertType != null && !alertType.isBlank()) {
+            metadata.put("alertType", alertType);
+        }
+        if (flight.getDroneId() != null && !flight.getDroneId().isBlank()) {
+            metadata.put("droneId", flight.getDroneId());
+        }
+        if (flight.getFlightNumber() != null && !flight.getFlightNumber().isBlank()) {
+            metadata.put("flightNumber", flight.getFlightNumber());
+        }
+
         ConflictPostVm postVm = new ConflictPostVm(
                 flight.getId(),
                 null,
-                conflictType,
+                resolvedConflictType,
                 severity,
                 flight.getDepartureHubId(),
                 lat,
@@ -56,7 +82,8 @@ public class ConflictClientServiceImpl implements ConflictClientService {
                 separationDist,
                 vertSeparation,
                 0,
-                message
+                message,
+                metadata.isEmpty() ? null : metadata
         );
 
         String endpoint = serviceUrlConfig.getConflictUrl() + "/api/v1/conflicts";
@@ -68,11 +95,32 @@ public class ConflictClientServiceImpl implements ConflictClientService {
                     .body(postVm)
                     .retrieve()
                     .toBodilessEntity();
-            log.info("Reported conformance conflict [severity={}] for flight '{}' (Flight Number: {}) to conflict service",
-                    severity, flight.getId(), flight.getFlightNumber());
+            log.info("Reported conformance conflict [type={}, severity={}, alertType={}] for flight '{}' (Flight Number: {}) to conflict service",
+                    resolvedConflictType, severity, alertType, flight.getId(), flight.getFlightNumber());
         } catch (Exception ex) {
             log.warn("Failed to report conformance conflict for flight '{}' to conflict service: {}",
                     flight.getId(), ex.getMessage());
+        }
+    }
+
+    @Override
+    public void resolveConformanceConflicts(String flightId, String reason) {
+        if (flightId == null || flightId.isBlank()) {
+            return;
+        }
+        String endpoint = serviceUrlConfig.getConflictUrl() + "/api/v1/conflicts/resolve-conformance/" + flightId.trim();
+        try {
+            restClient.post()
+                    .uri(endpoint)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("reason", reason != null && !reason.isBlank()
+                            ? reason
+                            : "Flight returned to 4D corridor conformance"))
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Auto-resolved conformance conflicts for flight '{}'", flightId);
+        } catch (Exception ex) {
+            log.debug("Failed to auto-resolve conformance conflicts for flight '{}': {}", flightId, ex.getMessage());
         }
     }
 

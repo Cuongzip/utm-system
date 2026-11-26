@@ -214,6 +214,13 @@ class AlertServiceImplTest {
                 }
 
                 @Test
+                @DisplayName("createAlert maps legacy EMERGENCY and WARNING severities cleanly without throwing 400")
+                void createAlert_withEmergencyAndWarningAliases_mapsToCriticalAndMedium() {
+                        assertThat(AlertSeverity.fromValue("emergency")).isEqualTo(AlertSeverity.CRITICAL);
+                        assertThat(AlertSeverity.fromValue("warning")).isEqualTo(AlertSeverity.MEDIUM);
+                }
+
+                @Test
                 @DisplayName("createAlert with null severity defaults to HIGH and avoids critical topic")
                 void createAlert_withNullSeverity_defaultsToHighAndOmitsCriticalTopic() {
                         AlertPostVm postVm = new AlertPostVm(

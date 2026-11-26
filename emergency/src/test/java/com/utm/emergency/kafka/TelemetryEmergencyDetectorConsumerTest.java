@@ -103,5 +103,26 @@ class TelemetryEmergencyDetectorConsumerTest {
         verify(emergencyIncidentService, times(1)).createIncident(captor.capture(), eq("telemetry-detector"));
         assertThat(captor.getValue().emergencyType()).isEqualTo(EmergencyType.COLLISION_AIRCRAFT);
         assertThat(captor.getValue().severity()).isEqualTo(EmergencySeverity.EMERGENCY);
+
+        adsbConsumer.onTelemetryReceived("drone-5", new TelemetryStreamVm(
+                "drone-5", "flight-5", 10.850, 106.800, 80.0, 12.0, 0.0, 85.0,
+                ZonedDateTime.parse("2026-11-23T10:05:01Z")));
+        verify(weatherAisClient, times(1)).getLiveAircraft();
+    }
+
+    @Test
+    @DisplayName("triggers CRITICAL MOTOR_FAILURE immediately when vertical descent exceeds 5 m/s while airborne")
+    void onTelemetryReceived_rapidNegativeVerticalSpeed_triggersMotorFailureEmergency() {
+        ZonedDateTime t0 = ZonedDateTime.parse("2026-11-23T10:10:00Z");
+
+        consumer.onTelemetryReceived("drone-6", new TelemetryStreamVm(
+                "drone-6", "flight-6", 10.7769, 106.7009, 55.0, 8.0, 90.0, 88.0, t0,
+                92.0, 0.9, 14, -8.0));
+
+        ArgumentCaptor<EmergencyIncidentPostVm> captor = ArgumentCaptor.forClass(EmergencyIncidentPostVm.class);
+        verify(emergencyIncidentService, times(1)).createIncident(captor.capture(), eq("telemetry-detector"));
+        assertThat(captor.getValue().emergencyType()).isEqualTo(EmergencyType.MOTOR_FAILURE);
+        assertThat(captor.getValue().severity()).isEqualTo(EmergencySeverity.CRITICAL);
+        assertThat(captor.getValue().droneId()).isEqualTo("drone-6");
     }
 }

@@ -311,6 +311,12 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
         if (protocol == null) {
             log.warn("No matching protocol for {} (severity: {}). Using immediate LAND.", incident.getEmergencyType(),
                     incident.getSeverity());
+            incident.setWasAutoExecuted(true);
+            alertClient.publishAlert(buildFallbackAlertPayload(
+                    incident,
+                    "AUTO FAILSAFE: LAND executing for "
+                            + (incident.getEmergencyType() != null ? incident.getEmergencyType().getValue() : "emergency")
+                            + ". " + (incident.getMessage() != null ? incident.getMessage() : "")));
             responseExecutorService.executeResponse(incident, ResponseAction.LAND, null);
             return;
         }
@@ -430,18 +436,37 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
                 details);
     }
 
+    private AlertPostVm buildFallbackAlertPayload(EmergencyIncident incident, String message) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("emergencyType", incident.getEmergencyType() != null ? incident.getEmergencyType().getValue() : null);
+        details.put("responseAction", ResponseAction.LAND.name());
+        return new AlertPostVm(
+                mapEmergencyTypeToAlertType(incident.getEmergencyType()),
+                mapToAlertSeverity(incident.getSeverity()),
+                incident.getFlightId(),
+                incident.getDroneId(),
+                null,
+                null,
+                incident.getId(),
+                message,
+                details);
+    }
+
     private String mapEmergencyTypeToAlertType(EmergencyType type) {
         if (type == null) {
             return "EMERGENCY_INCIDENT";
         }
         return switch (type) {
-            case BATTERY_LOW, BATTERY_CRITICAL, BATTERY_RAPID_DISCHARGE -> "BATTERY_LOW";
-            case SIGNAL_LOST, SIGNAL_WEAK -> "SIGNAL_LOSS";
-            case GEOFENCE_BREACH, GEOFENCE_WARNING -> "GEOFENCE_VIOLATION";
+            case BATTERY_CRITICAL -> "BATTERY_CRITICAL";
+            case BATTERY_LOW, BATTERY_RAPID_DISCHARGE -> "BATTERY_LOW";
+            case SIGNAL_LOST -> "C2_LINK_LOST_CONTINGENT";
+            case SIGNAL_WEAK -> "SIGNAL_LOSS";
+            case GEOFENCE_BREACH -> "GEOFENCE_BREACH";
+            case GEOFENCE_WARNING -> "GEOFENCE_VIOLATION";
             case COLLISION_AIRCRAFT, COLLISION_OBSTACLE -> "COLLISION_WARNING";
             case MOTOR_FAILURE, MOTOR_ANOMALY -> "MOTOR_FAILURE";
             case GPS_LOST, GPS_DEGRADED -> "GPS_FAILURE";
-            case WEATHER_WIND, WEATHER_VISIBILITY -> "EMERGENCY_INCIDENT";
+            case WEATHER_WIND, WEATHER_VISIBILITY -> "WEATHER_HAZARD";
         };
     }
 
@@ -538,8 +563,7 @@ public class DecisionEngineServiceImpl implements DecisionEngineService {
             return "HIGH";
         }
         return switch (severity) {
-            case EMERGENCY -> "CRITICAL";
-            case CRITICAL -> "HIGH";
+            case EMERGENCY, CRITICAL -> "CRITICAL";
             case WARNING -> "MEDIUM";
         };
     }

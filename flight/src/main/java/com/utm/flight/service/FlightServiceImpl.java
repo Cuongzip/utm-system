@@ -588,7 +588,10 @@ public class FlightServiceImpl implements FlightService {
                     || "maintenance".equalsIgnoreCase(drone.status())
                     || "offline".equalsIgnoreCase(drone.status())
                     || "retired".equalsIgnoreCase(drone.status()))) {
-                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "droneId", flight.getDroneId());
+                throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE,
+                        java.util.Map.of(
+                                "droneId", flight.getDroneId(),
+                                "registrationNumber", drone.registrationNumber() != null ? drone.registrationNumber() : flight.getDroneId()));
             }
             if (drone.currentHubId() != null && !drone.currentHubId().isBlank()
                     && flight.getDepartureHubId() != null && !flight.getDepartureHubId().isBlank()
@@ -641,6 +644,9 @@ public class FlightServiceImpl implements FlightService {
             return flightRepository.saveAndFlush(target);
         });
         publishEvent(FlightLifecycleEvent.FLIGHT_COMPLETED, savedFlight, savedFlight.getArrivalHubId(), null, null);
+        if (conflictClientService != null) {
+            conflictClientService.resolveConformanceConflicts(id, "Flight completed at arrival hub");
+        }
         log.info("Flight ID: {} completed successfully (endingBatteryPct={})", id, savedFlight.getEndingBatteryPct());
         return flightMapper.toVm(savedFlight);
     }
@@ -690,6 +696,10 @@ public class FlightServiceImpl implements FlightService {
                 ? FlightLifecycleEvent.FLIGHT_EMERGENCY_LANDING
                 : FlightLifecycleEvent.FLIGHT_CANCELLED;
         publishEvent(eventType, savedFlight, null, null, trimmedReason);
+        if (conflictClientService != null) {
+            conflictClientService.resolveConformanceConflicts(id,
+                    "Flight terminated (" + savedFlight.getStatus().getValue() + ")");
+        }
         log.warn("Flight ID: {} was aborted / cancelled (status: {})", id, savedFlight.getStatus());
         return flightMapper.toVm(savedFlight);
     }

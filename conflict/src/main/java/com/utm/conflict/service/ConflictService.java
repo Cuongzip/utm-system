@@ -21,6 +21,10 @@ public interface ConflictService {
 
     ConflictVm resolveConflict(String id, ConflictResolvePostVm resolveVm, String resolvedBy);
 
+    default int resolveConformanceConflictsByFlight(String flightId, String reason) {
+        return 0;
+    }
+
     default ConflictResolutionAdviceVm getResolutionAdvice(String conflictId) {
         throw new UnsupportedOperationException("getResolutionAdvice not implemented");
     }

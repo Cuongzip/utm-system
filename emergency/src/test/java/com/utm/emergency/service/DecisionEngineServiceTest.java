@@ -314,16 +314,22 @@ class DecisionEngineServiceTest {
         }
 
         @Test
-        @DisplayName("processEmergency executes immediate LAND when no protocol is configured")
+        @DisplayName("processEmergency executes immediate LAND and publishes fallback alert when no protocol is configured")
         void processEmergency_whenNoProtocol_executesImmediateLand() {
             EmergencyIncident incident = EmergencyIncident.builder()
                     .id("inc-unmatched")
+                    .droneId("drone-weather-1")
+                    .flightId("flight-weather-1")
                     .emergencyType(EmergencyType.WEATHER_VISIBILITY)
                     .severity(EmergencySeverity.WARNING)
+                    .message("Visibility dropped below safe threshold")
                     .build();
 
             decisionEngineService.processEmergency(incident);
 
+            verify(alertClient).publishAlert(alertPostCaptor.capture());
+            assertThat(alertPostCaptor.getValue().alertType()).isEqualTo("WEATHER_HAZARD");
+            assertThat(alertPostCaptor.getValue().severity()).isEqualTo("MEDIUM");
             verify(responseExecutorService).executeResponse(incident, ResponseAction.LAND, null);
         }
     }

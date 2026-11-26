@@ -12,6 +12,7 @@ import com.utm.conflict.model.enumeration.ConflictStatus;
 import com.utm.conflict.model.enumeration.ResolutionStrategy;
 import com.utm.conflict.repository.ConflictRepository;
 import com.utm.conflict.model.enumeration.ConflictType;
+import com.utm.conflict.viewmodel.client.AlertTriggerPostVm;
 import com.utm.conflict.viewmodel.client.FlightBriefVm;
 import com.utm.conflict.viewmodel.conflict.ConflictPostVm;
 import com.utm.conflict.viewmodel.conflict.ConflictResolutionAdviceVm;
@@ -153,6 +154,7 @@ public class ConflictServiceImpl implements ConflictService {
 
         if (matched.isPresent()) {
             Conflict existing = matched.get();
+            ConflictSeverity previousSeverity = existing.getSeverity();
             conflictMapper.updateEntityFromPostVm(existing, postVm);
             if (postVm.hubId() != null && !postVm.hubId().isBlank() && existing.getHubId() == null) {
                 existing.setHubId(postVm.hubId().trim());
@@ -163,6 +165,9 @@ public class ConflictServiceImpl implements ConflictService {
             Conflict saved = conflictRepository.save(existing);
             log.info("Updated existing active conflict {} ({}) for flight {}", saved.getId(), saved.getConflictType(),
                     saved.getPrimaryFlightId());
+            if (previousSeverity != saved.getSeverity() || extractExplicitAlertType(postVm) != null) {
+                runAfterCommit(() -> publishConflictAlert(saved, postVm));
+            }
             return conflictMapper.toVm(saved);
         }
 
@@ -171,6 +176,7 @@ public class ConflictServiceImpl implements ConflictService {
         Conflict saved = conflictRepository.save(entity);
         log.warn("Created new conflict {} [{}-{}] for flight {}", saved.getId(), saved.getConflictType(),
                 saved.getSeverity(), saved.getPrimaryFlightId());
+        runAfterCommit(() -> publishConflictAlert(saved, postVm));
         return conflictMapper.toVm(saved);
     }
 
@@ -217,18 +223,47 @@ public class ConflictServiceImpl implements ConflictService {
             dispatchResolutionCommand(saved.getId(), primaryFlightId, strategy, actionsCopy);
             autoResolveLinkedAlerts(saved.getId(), "Conflict resolved by " + resolvedByActor);
         };
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    afterCommitActions.run();
-                }
-            });
-        } else {
-            afterCommitActions.run();
-        }
+        runAfterCommit(afterCommitActions);
 
         return conflictMapper.toVm(saved);
+    }
+
+    @Override
+    public int resolveConformanceConflictsByFlight(String flightId, String reason) {
+        if (flightId == null || flightId.isBlank()) {
+            return 0;
+        }
+        List<Conflict> active = conflictRepository.findByPrimaryFlightIdAndStatusIn(flightId.trim(), ACTIVE_STATUSES)
+                .stream()
+                .filter(c -> c.getSecondaryFlightId() == null)
+                .filter(c -> c.getConflictType() == ConflictType.GEOFENCE_VIOLATION
+                        || c.getConflictType() == ConflictType.EQUIPMENT_FAILURE)
+                .toList();
+        if (active.isEmpty()) {
+            return 0;
+        }
+        ZonedDateTime now = ZonedDateTime.now();
+        List<String> resolvedIds = new ArrayList<>();
+        for (Conflict conflict : active) {
+            conflict.setStatus(ConflictStatus.RESOLVED);
+            conflict.setResolutionStrategy(ResolutionStrategy.AUTO_CLEARED);
+            conflict.setResolvedAt(now);
+            conflict.setResolvedBy("SYSTEM_AUTO");
+            Conflict saved = conflictRepository.save(conflict);
+            if (saved.getId() != null) {
+                resolvedIds.add(saved.getId());
+            }
+        }
+        String effectiveReason = (reason != null && !reason.isBlank())
+                ? reason.trim()
+                : "Flight returned to 4D corridor conformance";
+        runAfterCommit(() -> {
+            for (String resolvedId : resolvedIds) {
+                autoResolveLinkedAlerts(resolvedId, effectiveReason);
+            }
+        });
+        log.info("Auto-resolved {} conformance conflict(s) for flight '{}'", active.size(), flightId);
+        return active.size();
     }
 
     @Override
@@ -363,6 +398,132 @@ public class ConflictServiceImpl implements ConflictService {
             log.warn("Failed to dispatch C2 command {} for resolved conflict {}: {}",
                     commandType, conflictId, ex.getMessage());
         }
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
+    }
+
+    private String extractExplicitAlertType(ConflictPostVm postVm) {
+        if (postVm == null || postVm.data() == null) {
+            return null;
+        }
+        Object raw = postVm.data().get("alertType");
+        if (raw instanceof String str && !str.isBlank()) {
+            return str.trim();
+        }
+        return null;
+    }
+
+    private void publishConflictAlert(Conflict conflict, ConflictPostVm postVm) {
+        if (restClient == null || serviceUrlConfig == null || conflict == null || conflict.getId() == null) {
+            return;
+        }
+        try {
+            String droneId = null;
+            if (postVm != null && postVm.data() != null && postVm.data().get("droneId") instanceof String d
+                    && !d.isBlank()) {
+                droneId = d.trim();
+            }
+            if (droneId == null && conflict.getPrimaryFlightId() != null && !conflict.getPrimaryFlightId().isBlank()) {
+                try {
+                    String flightUrl = serviceUrlConfig.getFlightUrl() + "/api/v1/flights/" + conflict.getPrimaryFlightId();
+                    FlightBriefVm flight = restClient.get().uri(flightUrl).retrieve().body(FlightBriefVm.class);
+                    if (flight != null && flight.droneId() != null && !flight.droneId().isBlank()) {
+                        droneId = flight.droneId().trim();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            String alertType = extractExplicitAlertType(postVm);
+            if (alertType == null) {
+                alertType = mapConflictToAlertType(conflict.getConflictType(), conflict.getSeverity());
+            }
+            String alertSeverity = mapConflictToAlertSeverity(conflict.getSeverity());
+            String message = (conflict.getDescription() != null && !conflict.getDescription().isBlank())
+                    ? conflict.getDescription()
+                    : String.format("Operational conflict [%s] detected for flight %s",
+                            conflict.getConflictType() != null ? conflict.getConflictType().getValue() : "conflict",
+                            conflict.getPrimaryFlightId());
+
+            Map<String, Object> details = new LinkedHashMap<>();
+            if (conflict.getConflictType() != null) {
+                details.put("conflictType", conflict.getConflictType().getValue());
+            }
+            if (conflict.getLocationLat() != null) {
+                details.put("latitude", conflict.getLocationLat());
+            }
+            if (conflict.getLocationLon() != null) {
+                details.put("longitude", conflict.getLocationLon());
+            }
+            if (conflict.getAltitude() != null) {
+                details.put("altitude", conflict.getAltitude());
+            }
+            if (conflict.getSeparationDistance() != null) {
+                details.put("separationDistance", conflict.getSeparationDistance());
+            }
+
+            AlertTriggerPostVm payload = new AlertTriggerPostVm(
+                    alertType,
+                    alertSeverity,
+                    conflict.getPrimaryFlightId(),
+                    droneId,
+                    conflict.getHubId(),
+                    conflict.getId(),
+                    null,
+                    message,
+                    details.isEmpty() ? null : details);
+
+            String url = serviceUrlConfig.getAlertUrl() + "/api/v1/alerts";
+            restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Published alert [type={}, severity={}] for conflict {} (flight {})",
+                    alertType, alertSeverity, conflict.getId(), conflict.getPrimaryFlightId());
+        } catch (Exception ex) {
+            log.warn("Failed to publish alert for conflict {}: {}", conflict.getId(), ex.getMessage());
+        }
+    }
+
+    private static String mapConflictToAlertType(ConflictType type, ConflictSeverity severity) {
+        if (type == null) {
+            return "CONFLICT";
+        }
+        return switch (type) {
+            case EQUIPMENT_FAILURE -> (severity == ConflictSeverity.CRITICAL || severity == ConflictSeverity.EMERGENCY)
+                    ? "C2_LINK_LOST_CONTINGENT"
+                    : "C2_LINK_LOST";
+            case GEOFENCE_VIOLATION -> "GEOFENCE_VIOLATION";
+            case AIRSPACE_BREACH, RESTRICTED_ZONE -> "AIRSPACE_BREACH";
+            case WEATHER -> "WEATHER_HAZARD";
+            case TERRAIN_PROXIMITY -> "VERTICAL_ALTITUDE_BREACH";
+            default -> "CONFLICT_PROXIMITY";
+        };
+    }
+
+    private static String mapConflictToAlertSeverity(ConflictSeverity severity) {
+        if (severity == null) {
+            return "HIGH";
+        }
+        return switch (severity) {
+            case EMERGENCY, CRITICAL -> "CRITICAL";
+            case HIGH -> "HIGH";
+            case WARNING, MEDIUM -> "MEDIUM";
+            case LOW -> "LOW";
+        };
     }
 
     private void autoResolveLinkedAlerts(String conflictId, String resolutionNotes) {

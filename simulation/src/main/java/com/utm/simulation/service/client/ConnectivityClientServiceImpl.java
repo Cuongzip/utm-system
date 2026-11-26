@@ -52,4 +52,25 @@ public class ConnectivityClientServiceImpl implements ConnectivityClientService 
             return false;
         }
     }
+
+    @Override
+    public boolean disconnectDevice(String deviceId) {
+        if (deviceId == null || deviceId.isBlank() || serviceUrlConfig.connectivity() == null
+                || serviceUrlConfig.connectivity().url() == null || serviceUrlConfig.connectivity().url().isBlank()) {
+            return false;
+        }
+        String baseUrl = ClientUrlUtils.normalizeBaseUrl(serviceUrlConfig.connectivity().url(),
+                "http://connectivity:8094", "connectivity");
+        String endpoint = baseUrl + "/api/v1/connectivity/devices/" + deviceId.trim() + "/disconnect";
+        try {
+            var response = restClient.post()
+                    .uri(endpoint)
+                    .retrieve()
+                    .toBodilessEntity();
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception ex) {
+            log.warn("Failed to mark device '{}' offline in connectivity service: {}", deviceId, ex.getMessage());
+            return false;
+        }
+    }
 }

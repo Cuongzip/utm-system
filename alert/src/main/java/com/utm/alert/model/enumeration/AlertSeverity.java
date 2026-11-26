@@ -27,8 +27,15 @@ public enum AlertSeverity {
         if (value == null || value.isBlank()) {
             return MEDIUM;
         }
+        String normalized = value.trim();
+        if ("EMERGENCY".equalsIgnoreCase(normalized)) {
+            return CRITICAL;
+        }
+        if ("WARNING".equalsIgnoreCase(normalized)) {
+            return MEDIUM;
+        }
         for (AlertSeverity severity : values()) {
-            if (severity.value.equalsIgnoreCase(value.trim())) {
+            if (severity.value.equalsIgnoreCase(normalized)) {
                 return severity;
             }
         }

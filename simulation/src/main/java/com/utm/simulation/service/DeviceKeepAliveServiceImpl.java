@@ -75,6 +75,7 @@ public class DeviceKeepAliveServiceImpl implements DeviceKeepAliveService {
         }
         String cleanId = id.trim();
         activeDeviceIds.remove(cleanId);
+        connectivityClientService.disconnectDevice(cleanId);
         log.info("Device '{}' powered OFF in simulation. Periodic keepalive pulse deactivated.", cleanId);
     }
 

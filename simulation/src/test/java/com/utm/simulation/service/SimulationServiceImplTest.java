@@ -204,13 +204,13 @@ class SimulationServiceImplTest {
         }
 
         @Test
-        @DisplayName("whenFlightIsCompletedOrActive_throwsBadRequestException")
-        void whenFlightIsCompletedOrActive_throwsBadRequestException() {
-            FlightDetailVm activeFlight = new FlightDetailVm(
-                    FLIGHT_ID, "FL-ACTIVE", DRONE_ID, "hub-1", "hub-2", 50.0, testFlight.plannedRoute(), 3,
-                    Collections.emptyList(), "active");
+        @DisplayName("whenFlightIsCompletedOrScheduled_throwsBadRequestException")
+        void whenFlightIsCompletedOrScheduled_throwsBadRequestException() {
+            FlightDetailVm completedFlight = new FlightDetailVm(
+                    FLIGHT_ID, "FL-DONE", DRONE_ID, "hub-1", "hub-2", 50.0, testFlight.plannedRoute(), 3,
+                    Collections.emptyList(), "completed");
             SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(FLIGHT_ID, 15.0, 1.0, 100.0);
-            when(flightClientService.getFlightDetail(FLIGHT_ID)).thenReturn(activeFlight);
+            when(flightClientService.getFlightDetail(FLIGHT_ID)).thenReturn(completedFlight);
 
             assertThatThrownBy(() -> simulationService.createSession(createVm))
                     .isInstanceOf(BadRequestException.class)
@@ -218,6 +218,39 @@ class SimulationServiceImplTest {
                         BadRequestException bre = (BadRequestException) ex;
                         assertThat(bre.getErrorCode()).isEqualTo(MessageCode.FLIGHT_NOT_SIMULATABLE);
                     });
+
+            FlightDetailVm unapprovedScheduledFlight = new FlightDetailVm(
+                    FLIGHT_ID, "FL-SCHED", DRONE_ID, "hub-1", "hub-2", 50.0, testFlight.plannedRoute(), 3,
+                    Collections.emptyList(), "scheduled");
+            when(flightClientService.getFlightDetail(FLIGHT_ID)).thenReturn(unapprovedScheduledFlight);
+
+            assertThatThrownBy(() -> simulationService.createSession(createVm))
+                    .isInstanceOf(BadRequestException.class)
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.FLIGHT_NOT_SIMULATABLE);
+                    });
+        }
+
+        @Test
+        @DisplayName("whenFlightIsAlreadyActiveWithoutRunningSession_createsSessionWithoutCallingStartFlight")
+        void whenFlightIsAlreadyActiveWithoutRunningSession_createsSessionWithoutCallingStartFlight() {
+            FlightDetailVm activeFlight = new FlightDetailVm(
+                    FLIGHT_ID, "FL-ACTIVE", DRONE_ID, "hub-1", "hub-2", 50.0, testFlight.plannedRoute(), 3,
+                    Collections.emptyList(), "active");
+            SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(FLIGHT_ID, 15.0, 1.0, 100.0);
+            when(flightClientService.getFlightDetail(FLIGHT_ID)).thenReturn(activeFlight);
+            when(sessionRepository.existsByDroneIdAndStatusIn(eq(DRONE_ID), anyList())).thenReturn(false);
+            when(sessionRepository.existsByFlightIdAndStatusIn(eq(FLIGHT_ID), anyList())).thenReturn(false);
+            when(simulationMapper.toEntity(createVm)).thenReturn(testSession);
+            when(sessionRepository.saveAndFlush(testSession)).thenReturn(testSession);
+            when(simulationMapper.toVm(testSession)).thenReturn(testSessionVm);
+
+            SimulationSessionVm result = simulationService.createSession(createVm);
+
+            assertThat(result).isNotNull();
+            assertThat(result.status()).isEqualTo(SimulationStatus.RUNNING);
+            verify(flightClientService, never()).startFlight(anyString());
         }
 
         @Test

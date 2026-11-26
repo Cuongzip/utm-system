@@ -110,6 +110,7 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
                     yield new ValidationResult(false, "Hub location coordinates unavailable", ResponseAction.LAND);
                 }
 
+                hydrateIncidentCoordinatesIfMissing(incident);
                 if (incident.getLatitude() == null || incident.getLongitude() == null) {
                     yield new ValidationResult(false, "Current drone position unknown", ResponseAction.LAND);
                 }
@@ -129,6 +130,7 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
                 yield new ValidationResult(true, "RTH feasible", ResponseAction.RTH);
             }
             case DIVERT -> {
+                hydrateIncidentCoordinatesIfMissing(incident);
                 if (incident.getLatitude() == null || incident.getLongitude() == null) {
                     yield new ValidationResult(false, "Position unknown for divert", ResponseAction.LAND);
                 }
@@ -215,6 +217,28 @@ public class ResponseExecutorServiceImpl implements ResponseExecutorService {
 
         log.info("Failsafe action {} dispatched (success: {}) for incident {}", actionToExecute, dispatched,
                 incident.getId());
+    }
+
+    private void hydrateIncidentCoordinatesIfMissing(EmergencyIncident incident) {
+        if (incident == null || (incident.getLatitude() != null && incident.getLongitude() != null)) {
+            return;
+        }
+        if (telemetryClient != null && incident.getDroneId() != null && !incident.getDroneId().isBlank()) {
+            try {
+                telemetryClient.getLatestByDroneId(incident.getDroneId()).ifPresent(latest -> {
+                    if (latest.latitude() != null && latest.longitude() != null) {
+                        incident.setLatitude(latest.latitude());
+                        incident.setLongitude(latest.longitude());
+                        if (incident.getAltitude() == null && latest.altitude() != null) {
+                            incident.setAltitude(latest.altitude());
+                        }
+                    }
+                });
+            } catch (Exception ex) {
+                log.debug("Could not hydrate missing incident coordinates from telemetry for drone {}: {}",
+                        incident.getDroneId(), ex.getMessage());
+            }
+        }
     }
 
     private double extractBatteryLevel(Map<String, Object> detectionData) {

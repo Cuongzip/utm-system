@@ -19,7 +19,15 @@ public interface FlightClientService {
         return false;
     }
 
+    default boolean completeFlight(String flightId, String bearerToken) {
+        return completeFlight(flightId);
+    }
+
     default boolean abortFlight(String flightId, String reason) {
         return false;
+    }
+
+    default boolean abortFlight(String flightId, String reason, String bearerToken) {
+        return abortFlight(flightId, reason);
     }
 }

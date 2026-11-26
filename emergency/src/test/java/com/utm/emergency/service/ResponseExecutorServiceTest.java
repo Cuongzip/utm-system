@@ -222,6 +222,33 @@ class ResponseExecutorServiceTest {
             assertThat(result.recommendedAction()).isEqualTo(ResponseAction.LAND);
             assertThat(result.reason()).contains("No active safe zones");
         }
+
+        @Test
+        @DisplayName("validateAction for RTH hydrates missing incident coordinates from latest drone telemetry")
+        void validateAction_rth_whenCoordinatesMissing_hydratesFromLatestTelemetry() {
+            EmergencyIncident incident = EmergencyIncident.builder()
+                    .droneId("dr-c2-lost")
+                    .flightId("fl-c2-lost")
+                    .latitude(null)
+                    .longitude(null)
+                    .detectionData(Map.of("batteryPercentage", 80.0))
+                    .build();
+
+            when(flightClient.getFlightById("fl-c2-lost")).thenReturn(Optional.of(
+                    new FlightSummaryVm("fl-c2-lost", "FL-404", "dr-c2-lost", "hub-d1", "hub-d7", "active")));
+            when(hubClient.getHubById("hub-d1")).thenReturn(Optional.of(
+                    new HubLocationVm("hub-d1", "HUB1", "District 1 Hub", 10.770000, 106.670000, "active")));
+            when(telemetryClient.getLatestByDroneId("dr-c2-lost")).thenReturn(Optional.of(
+                    new TelemetryStreamVm("dr-c2-lost", "fl-c2-lost", 10.765000, 106.665000, 60.0, 0.0, 90.0, 80.0,
+                            ZonedDateTime.now(ZoneOffset.UTC))));
+
+            var result = responseExecutorService.validateAction(incident, ResponseAction.RTH);
+
+            assertThat(result.safe()).isTrue();
+            assertThat(result.recommendedAction()).isEqualTo(ResponseAction.RTH);
+            assertThat(incident.getLatitude()).isEqualTo(10.765000);
+            assertThat(incident.getLongitude()).isEqualTo(106.665000);
+        }
     }
 
     @Nested

@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
@@ -45,11 +46,14 @@ public class TelemetryEmergencyDetectorConsumer extends BaseCdcConsumer<String, 
     private static final double AIRCRAFT_CRITICAL_DISTANCE_M = 500.0;
     private static final double AIRCRAFT_VERTICAL_BUFFER_M = 150.0;
     private static final long ALERT_COOLDOWN_SECONDS = 120L;
+    private static final long ADSB_CACHE_TTL_MS = 5_000L;
+    private static final double MOTOR_FAILURE_DESCENT_MPS = -5.0;
 
     private final EmergencyIncidentService emergencyIncidentService;
     private final WeatherAisClientService weatherAisClientService;
     private final Map<String, Deque<BatterySample>> batteryWindows = new ConcurrentHashMap<>();
     private final Map<String, Instant> lastAlertedAt = new ConcurrentHashMap<>();
+    private final AtomicReference<CachedAdsbAircraft> adsbCache = new AtomicReference<>();
 
     public TelemetryEmergencyDetectorConsumer(EmergencyIncidentService emergencyIncidentService) {
         this(emergencyIncidentService, null);
@@ -193,14 +197,36 @@ public class TelemetryEmergencyDetectorConsumer extends BaseCdcConsumer<String, 
                         buildSensorData(telemetry, "gpsHdop", hdop));
             }
         }
+
+        Double vertSpeed = telemetry.verticalSpeed();
+        Double alt = telemetry.altitude();
+        if (vertSpeed != null && vertSpeed <= MOTOR_FAILURE_DESCENT_MPS && (alt == null || alt > 5.0)
+                && !isOnCooldown(droneId + ":MOTOR_FAILURE", sampleTime)) {
+            Map<String, Object> motorData = buildSensorData(telemetry, "verticalSpeed", vertSpeed);
+            if (alt != null) {
+                motorData.put("altitude", alt);
+            }
+            reportIncidentSafely(droneId, telemetry, EmergencyType.MOTOR_FAILURE, EmergencySeverity.CRITICAL,
+                    String.format("Rapid uncontrolled descent detected (%.1f m/s): suspected motor failure", vertSpeed),
+                    motorData);
+        }
     }
 
     private void evaluateAdsbAircraftProximity(String droneId, Instant sampleTime, TelemetryStreamVm telemetry) {
         if (weatherAisClientService == null || telemetry.latitude() == null || telemetry.longitude() == null) {
             return;
         }
-        List<AdsbAircraftBriefVm> aircraft = weatherAisClientService.getLiveAircraft();
-        if (aircraft == null || aircraft.isEmpty()) {
+        long nowMs = System.currentTimeMillis();
+        CachedAdsbAircraft cached = adsbCache.get();
+        List<AdsbAircraftBriefVm> aircraft;
+        if (cached != null && (nowMs - cached.fetchedAtMs()) < ADSB_CACHE_TTL_MS) {
+            aircraft = cached.aircraft();
+        } else {
+            List<AdsbAircraftBriefVm> fetched = weatherAisClientService.getLiveAircraft();
+            aircraft = fetched != null ? fetched : List.of();
+            adsbCache.set(new CachedAdsbAircraft(aircraft, nowMs));
+        }
+        if (aircraft.isEmpty()) {
             return;
         }
         double droneAlt = telemetry.altitude() != null ? telemetry.altitude() : 0.0;
@@ -300,5 +326,8 @@ public class TelemetryEmergencyDetectorConsumer extends BaseCdcConsumer<String, 
     }
 
     private record BatterySample(Instant timestamp, double batteryPercentage) {
+    }
+
+    private record CachedAdsbAircraft(List<AdsbAircraftBriefVm> aircraft, long fetchedAtMs) {
     }
 }

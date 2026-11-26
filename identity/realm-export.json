@@ -562,7 +562,9 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
-        "default-roles-utm"
+        "default-roles-utm",
+        "admin",
+        "atc"
       ],
       "clientRoles": {
         "realm-management": [
@@ -576,6 +578,16 @@
       },
       "notBefore": 0,
       "groups": []
+    },
+    {
+      "username": "service-account-backoffice-bff",
+      "enabled": true,
+      "serviceAccountClientId": "backoffice-bff",
+      "realmRoles": [
+        "default-roles-utm",
+        "admin",
+        "atc"
+      ]
     }
   ],
   "scopeMappings": [
@@ -1203,7 +1215,7 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
+      "serviceAccountsEnabled": true,
       "publicClient": false,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
@@ -1844,7 +1856,6 @@
     "strictTransportSecurity": "max-age=31536000; includeSubDomains"
   },
   "smtpServer": {},
-  "loginTheme": "utm",
   "eventsEnabled": false,
   "eventsListeners": [
     "jboss-logging"

@@ -125,6 +125,7 @@ class DeviceKeepAliveServiceImplTest {
             keepAliveService.powerOff(DEVICE_ID);
 
             assertThat(activeDevices).doesNotContain(DEVICE_ID);
+            verify(connectivityClientService).disconnectDevice(DEVICE_ID);
         }
     }
 

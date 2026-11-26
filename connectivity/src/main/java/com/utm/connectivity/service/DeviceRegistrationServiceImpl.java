@@ -346,6 +346,16 @@ public class DeviceRegistrationServiceImpl implements DeviceRegistrationService 
 
     @Override
     @Transactional
+    public HeartbeatResultVm disconnectDevice(String idOrIdentifier) {
+        DeviceRegistration reg = requireEntityByKey(idOrIdentifier);
+        reg.setConnectionStatus(DeviceConnectionStatus.OFFLINE);
+        reg.setSocketId(null);
+        deviceRegistrationRepository.save(reg);
+        return new HeartbeatResultVm(true, ZonedDateTime.now());
+    }
+
+    @Override
+    @Transactional
     public RevokeResultVm revokeDeviceRegistration(String id) {
         DeviceRegistration reg = requireEntityByKey(id);
 

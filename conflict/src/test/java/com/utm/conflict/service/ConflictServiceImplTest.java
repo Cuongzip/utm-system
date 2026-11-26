@@ -484,4 +484,43 @@ class ConflictServiceImplTest {
             assertThat(advice.options().getFirst().commandType()).isEqualTo("GOTO");
         }
     }
+
+    @Nested
+    @DisplayName("resolveConformanceConflictsByFlight")
+    class ResolveConformanceConflictsByFlight {
+
+        @Test
+        @DisplayName("auto-resolves single-flight conformance and equipment conflicts while preserving multi-flight conflicts")
+        void resolveConformanceConflictsByFlight_resolvesOnlySingleFlightConformanceConflicts() {
+            Conflict c2Conflict = Conflict.builder()
+                    .id("conf-c2-1")
+                    .primaryFlightId(PRIMARY_FLIGHT_ID)
+                    .secondaryFlightId(null)
+                    .conflictType(ConflictType.EQUIPMENT_FAILURE)
+                    .severity(ConflictSeverity.HIGH)
+                    .status(ConflictStatus.DETECTED)
+                    .build();
+            Conflict separationConflict = Conflict.builder()
+                    .id("conf-sep-1")
+                    .primaryFlightId(PRIMARY_FLIGHT_ID)
+                    .secondaryFlightId(SECONDARY_FLIGHT_ID)
+                    .conflictType(ConflictType.LOSS_OF_SEPARATION)
+                    .severity(ConflictSeverity.CRITICAL)
+                    .status(ConflictStatus.DETECTED)
+                    .build();
+
+            when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(PRIMARY_FLIGHT_ID), anyList()))
+                    .thenReturn(List.of(c2Conflict, separationConflict));
+            when(conflictRepository.save(c2Conflict)).thenReturn(c2Conflict);
+
+            int count = conflictService.resolveConformanceConflictsByFlight(
+                    PRIMARY_FLIGHT_ID, "Flight returned to corridor");
+
+            assertThat(count).isEqualTo(1);
+            assertThat(c2Conflict.getStatus()).isEqualTo(ConflictStatus.RESOLVED);
+            assertThat(c2Conflict.getResolutionStrategy()).isEqualTo(ResolutionStrategy.AUTO_CLEARED);
+            assertThat(separationConflict.getStatus()).isEqualTo(ConflictStatus.DETECTED);
+            verify(conflictRepository).save(c2Conflict);
+        }
+    }
 }

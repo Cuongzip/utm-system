@@ -24,6 +24,7 @@ import com.utm.flight.viewmodel.flight.FlightConformanceVm;
 import com.utm.flight.viewmodel.flight.GeoJsonLineStringVm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,9 +46,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     private static final double EARTH_RADIUS_M = 6371000.0;
-    private static final long TELEMETRY_TIMEOUT_NON_CONFORMING_SEC = 30L;
-    private static final long TELEMETRY_TIMEOUT_CONTINGENT_SEC = 90L;
+    private static final long DEFAULT_TELEMETRY_TIMEOUT_NON_CONFORMING_SEC = 10L;
+    private static final long DEFAULT_TELEMETRY_TIMEOUT_CONTINGENT_SEC = 25L;
     private static final double WAYPOINT_REACHED_THRESHOLD_M = 35.0;
+
+    @Value("${utm.conformance.telemetry-warning-timeout-sec:10}")
+    private long telemetryTimeoutNonConformingSec = DEFAULT_TELEMETRY_TIMEOUT_NON_CONFORMING_SEC;
+
+    @Value("${utm.conformance.telemetry-contingent-timeout-sec:25}")
+    private long telemetryTimeoutContingentSec = DEFAULT_TELEMETRY_TIMEOUT_CONTINGENT_SEC;
 
     private final FlightRepository flightRepository;
     private final FlightConformanceRepository conformanceRepository;
@@ -61,6 +69,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     private final Map<String, Set<String>> reportedEmergencyTypes = new ConcurrentHashMap<>();
     private final Map<String, Integer> lastReachedWaypointIndex = new ConcurrentHashMap<>();
+    private final Map<String, Double> lastKnownBatteryPct = new ConcurrentHashMap<>();
 
     public FlightConformanceServiceImpl(
             FlightRepository flightRepository,
@@ -145,6 +154,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         if (activeFlights.isEmpty()) {
             reportedEmergencyTypes.clear();
             lastReachedWaypointIndex.clear();
+            lastKnownBatteryPct.clear();
             return;
         }
 
@@ -156,6 +166,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         }
         reportedEmergencyTypes.keySet().retainAll(activeIds);
         lastReachedWaypointIndex.keySet().retainAll(activeIds);
+        lastKnownBatteryPct.keySet().retainAll(activeIds);
 
         log.debug("Running 4D conformance watchdog for {} active flight(s)", activeFlights.size());
         for (Flight flight : activeFlights) {
@@ -199,29 +210,34 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         }
 
         TelemetryBriefVm telemetry = telemetryOpt.get();
+        if (telemetry.batteryPercentage() != null && flight.getId() != null) {
+            lastKnownBatteryPct.put(flight.getId(), telemetry.batteryPercentage());
+        }
         Double prevAlt = conformance.getCurrentAltitude();
         ZonedDateTime prevTime = conformance.getLastTelemetryTime();
         conformanceMapper.updateFromTelemetry(conformance, telemetry);
+        TelemetryBriefVm effectiveTelemetry = resolveEffectiveTelemetry(flight, conformance, telemetry);
 
         long ageSeconds = Math.max(0, Duration.between(telemetry.getEffectiveTimestamp(), now).getSeconds());
-        if (ageSeconds > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
+        if (ageSeconds > telemetryTimeoutContingentSec) {
             String msg = String.format("Telemetry lost for %d seconds (exceeded %ds emergency threshold)",
-                    ageSeconds, TELEMETRY_TIMEOUT_CONTINGENT_SEC);
-            transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, telemetry, conflictNotices);
+                    ageSeconds, telemetryTimeoutContingentSec);
+            transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg,
+                    effectiveTelemetry, "equipment_failure", "C2_LINK_LOST_CONTINGENT", conflictNotices);
             if (markEmergencyReported(flight.getId(), "signal_lost")) {
-                emergencyNotices.add(new EmergencyNotice(flight, "signal_lost", "critical", msg, telemetry,
-                        Map.of("lostSeconds", ageSeconds)));
+                emergencyNotices.add(new EmergencyNotice(flight, "signal_lost", "critical", msg, effectiveTelemetry,
+                        buildSignalLostDetectionData(ageSeconds, effectiveTelemetry)));
             }
             updateFlightStatusAndSave(flight, conformance);
             FlightConformance saved = conformanceRepository.save(conformance);
             return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices, null);
         }
 
-        if (ageSeconds > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
+        if (ageSeconds > telemetryTimeoutNonConformingSec) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
                     String.format("Telemetry lost for %d seconds (exceeded %ds warning threshold)",
-                            ageSeconds, TELEMETRY_TIMEOUT_NON_CONFORMING_SEC),
-                    telemetry, conflictNotices);
+                            ageSeconds, telemetryTimeoutNonConformingSec),
+                    effectiveTelemetry, "equipment_failure", "C2_LINK_LOST", conflictNotices);
             updateFlightStatusAndSave(flight, conformance);
             FlightConformance saved = conformanceRepository.save(conformance);
             return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices, null);
@@ -235,9 +251,10 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                 if (vz < -5.0) {
                     String msg = String.format(
                             "Rapid descent rate %.1f m/s detected! Suspected motor or propulsion failure", vz);
-                    transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, telemetry, conflictNotices);
+                    transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg,
+                            effectiveTelemetry, "equipment_failure", "MOTOR_FAILURE", conflictNotices);
                     if (markEmergencyReported(flight.getId(), "motor_failure")) {
-                        emergencyNotices.add(new EmergencyNotice(flight, "motor_failure", "critical", msg, telemetry,
+                        emergencyNotices.add(new EmergencyNotice(flight, "motor_failure", "critical", msg, effectiveTelemetry,
                                 Map.of("descentRateMs", Math.round(vz * 10.0) / 10.0, "previousAltitude", prevAlt,
                                         "currentAltitude", telemetry.altitude())));
                     }
@@ -253,9 +270,10 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             if (battery <= 10.0) {
                 String msg = String.format(
                         "Critical battery depletion: %.1f%%! Immediate failsafe landing or RTH required", battery);
-                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, telemetry, conflictNotices);
+                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg,
+                        effectiveTelemetry, "equipment_failure", "BATTERY_CRITICAL", conflictNotices);
                 if (markEmergencyReported(flight.getId(), "battery_critical")) {
-                    emergencyNotices.add(new EmergencyNotice(flight, "battery_critical", "critical", msg, telemetry,
+                    emergencyNotices.add(new EmergencyNotice(flight, "battery_critical", "critical", msg, effectiveTelemetry,
                             Map.of("batteryPercentage", battery)));
                 }
                 updateFlightStatusAndSave(flight, conformance);
@@ -265,9 +283,10 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                     && (conformance.getStatus() == ConformanceStatus.CONFORMANT
                             || conformance.getStatus() == ConformanceStatus.UNKNOWN)) {
                 String msg = String.format("Low battery level: %.1f%%. Return to base recommended", battery);
-                transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING, msg, telemetry, conflictNotices);
+                transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING, msg,
+                        effectiveTelemetry, "equipment_failure", "BATTERY_LOW", conflictNotices);
                 if (markEmergencyReported(flight.getId(), "battery_low")) {
-                    emergencyNotices.add(new EmergencyNotice(flight, "battery_low", "warning", msg, telemetry,
+                    emergencyNotices.add(new EmergencyNotice(flight, "battery_low", "warning", msg, effectiveTelemetry,
                             Map.of("batteryPercentage", battery)));
                 }
             }
@@ -312,32 +331,51 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
         conformance.setViolations(violations.isEmpty() ? null : new ArrayList<>(violations));
 
+        boolean recoveredToConformant = false;
+        String corridorAlertType = (isLateralBreached && isVerticalBreached)
+                ? "3D_VOLUME_BREACH"
+                : (isLateralBreached ? "LATERAL_CORRIDOR_BREACH" : "VERTICAL_ALTITUDE_BREACH");
+
         if (result.crossTrackDistanceM() > 30.0 || (isLateralBreached && isVerticalBreached)) {
             transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT,
-                    String.join("; ", violations), telemetry, conflictNotices);
+                    String.join("; ", violations), effectiveTelemetry,
+                    "geofence_violation", corridorAlertType, conflictNotices);
             if (result.crossTrackDistanceM() > 50.0 && markEmergencyReported(flight.getId(), "geofence_breach")) {
                 emergencyNotices.add(new EmergencyNotice(flight, "geofence_breach", "critical",
-                        "Severe 4D trajectory deviation: " + String.join("; ", violations), telemetry,
+                        "Severe 4D trajectory deviation: " + String.join("; ", violations), effectiveTelemetry,
                         Map.of("crossTrackDistanceM", result.crossTrackDistanceM())));
             }
         } else if (isLateralBreached || isVerticalBreached) {
             transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
-                    String.join("; ", violations), telemetry, conflictNotices);
+                    String.join("; ", violations), effectiveTelemetry,
+                    "geofence_violation", corridorAlertType, conflictNotices);
         } else if (battery == null || battery > 20.0) {
+            ConformanceStatus prevStatus = conformance.getStatus();
             transitionStatus(flight, conformance, ConformanceStatus.CONFORMANT,
-                    "Drone on planned 4D corridor trajectory", telemetry, conflictNotices);
+                    "Drone on planned 4D corridor trajectory", effectiveTelemetry,
+                    null, null, conflictNotices);
+            if (prevStatus == ConformanceStatus.NON_CONFORMING || prevStatus == ConformanceStatus.CONTINGENT) {
+                recoveredToConformant = true;
+            }
             reportedEmergencyTypes.remove(flight.getId());
         }
 
         updateFlightStatusAndSave(flight, conformance);
         FlightConformance saved = conformanceRepository.save(conformance);
-        return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices, reachedWaypointIdx, holdForConfirmation);
+        return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices,
+                reachedWaypointIdx, holdForConfirmation, recoveredToConformant);
     }
 
     private void dispatchPostTxNotifications(EvaluationOutcome outcome) {
         for (ConflictNotice notice : outcome.conflictNotices()) {
             conflictClientService.reportConformanceConflict(
-                    notice.flight(), notice.conformance(), notice.telemetry(), notice.message());
+                    notice.flight(), notice.conformance(), notice.telemetry(), notice.message(),
+                    notice.conflictType(), notice.alertType());
+        }
+        if (outcome.recoveredToConformant() && outcome.flight() != null && outcome.flight().getId() != null) {
+            conflictClientService.resolveConformanceConflicts(
+                    outcome.flight().getId(),
+                    "Flight returned to planned 4D corridor and C2 link nominal");
         }
         for (EmergencyNotice notice : outcome.emergencyNotices()) {
             emergencyClientService.reportIncident(
@@ -442,9 +480,74 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         }
     }
 
+    void setTelemetryTimeouts(long warningTimeoutSec, long contingentTimeoutSec) {
+        this.telemetryTimeoutNonConformingSec = warningTimeoutSec;
+        this.telemetryTimeoutContingentSec = contingentTimeoutSec;
+    }
+
+    private TelemetryBriefVm resolveEffectiveTelemetry(
+            Flight flight,
+            FlightConformance conformance,
+            TelemetryBriefVm liveTelemetry) {
+        if (liveTelemetry != null && liveTelemetry.latitude() != null && liveTelemetry.longitude() != null) {
+            return liveTelemetry;
+        }
+        Double lat = conformance != null ? conformance.getCurrentLatitude() : null;
+        Double lon = conformance != null ? conformance.getCurrentLongitude() : null;
+        Double alt = conformance != null ? conformance.getCurrentAltitude() : null;
+
+        if ((lat == null || lon == null) && flight != null) {
+            List<List<Double>> coords = extractRouteCoordinates(flight.getPlannedRoute());
+            if (!coords.isEmpty() && coords.getFirst() != null && coords.getFirst().size() >= 2) {
+                lon = coords.getFirst().get(0);
+                lat = coords.getFirst().get(1);
+                if (alt == null && coords.getFirst().size() >= 3) {
+                    alt = coords.getFirst().get(2);
+                }
+            } else if (flight.getWaypoints() != null && !flight.getWaypoints().isEmpty()) {
+                FlightWaypoint firstWp = flight.getWaypoints().getFirst();
+                if (firstWp != null) {
+                    lat = firstWp.latitude();
+                    lon = firstWp.longitude();
+                    if (alt == null) {
+                        alt = firstWp.altitude();
+                    }
+                }
+            }
+        }
+        if (alt == null && flight != null) {
+            alt = flight.getCruisingAltitudeM() != null ? flight.getCruisingAltitudeM() : 50.0;
+        }
+        Double battery = liveTelemetry != null && liveTelemetry.batteryPercentage() != null
+                ? liveTelemetry.batteryPercentage()
+                : (flight != null && flight.getId() != null ? lastKnownBatteryPct.get(flight.getId()) : null);
+        ZonedDateTime ts = liveTelemetry != null && liveTelemetry.timestamp() != null
+                ? liveTelemetry.timestamp()
+                : (conformance != null ? conformance.getLastTelemetryTime() : null);
+
+        return new TelemetryBriefVm(
+                lat,
+                lon,
+                alt,
+                conformance != null ? conformance.getCurrentSpeed() : null,
+                conformance != null ? conformance.getCurrentHeading() : null,
+                battery,
+                ts);
+    }
+
+    private Map<String, Object> buildSignalLostDetectionData(long lostSeconds, TelemetryBriefVm effectiveTel) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("lostSeconds", lostSeconds);
+        if (effectiveTel != null && effectiveTel.batteryPercentage() != null) {
+            data.put("batteryPercentage", effectiveTel.batteryPercentage());
+        }
+        return data;
+    }
+
     private void transitionStatus(Flight flight, FlightConformance conformance,
             ConformanceStatus newStatus, String message,
-            TelemetryBriefVm telemetry, List<ConflictNotice> conflictNotices) {
+            TelemetryBriefVm telemetry, String conflictType, String alertType,
+            List<ConflictNotice> conflictNotices) {
         ConformanceStatus prevStatus = conformance.getStatus();
         conformance.setStatus(newStatus);
 
@@ -456,7 +559,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                 log.warn(
                         "{} breach detected for Flight '{}' (Flight Number: {}). Reporting conflict to conflict service.",
                         newStatus, flight.getId(), flight.getFlightNumber());
-                conflictNotices.add(new ConflictNotice(flight, conformance, telemetry, message));
+                conflictNotices.add(new ConflictNotice(
+                        flight, conformance, telemetry, message, conflictType, alertType));
             }
         }
     }
@@ -469,18 +573,21 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                     : (flight.getActualDeparture() != null ? flight.getActualDeparture() : now);
 
             long missingSec = Math.max(0, Duration.between(referenceTime, now).getSeconds());
+            TelemetryBriefVm effectiveTelemetry = resolveEffectiveTelemetry(flight, conformance, null);
 
-            if (missingSec > TELEMETRY_TIMEOUT_CONTINGENT_SEC) {
+            if (missingSec > telemetryTimeoutContingentSec) {
                 String msg = String.format("Telemetry stream absent for %d seconds (exceeded %ds emergency threshold)",
-                        missingSec, TELEMETRY_TIMEOUT_CONTINGENT_SEC);
-                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg, null, conflictNotices);
+                        missingSec, telemetryTimeoutContingentSec);
+                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg,
+                        effectiveTelemetry, "equipment_failure", "C2_LINK_LOST_CONTINGENT", conflictNotices);
                 if (markEmergencyReported(flight.getId(), "signal_lost")) {
-                    emergencyNotices.add(new EmergencyNotice(flight, "signal_lost", "critical", msg, null,
-                            Map.of("lostSeconds", missingSec)));
+                    emergencyNotices.add(new EmergencyNotice(flight, "signal_lost", "critical", msg,
+                            effectiveTelemetry, buildSignalLostDetectionData(missingSec, effectiveTelemetry)));
                 }
-            } else if (missingSec > TELEMETRY_TIMEOUT_NON_CONFORMING_SEC) {
+            } else if (missingSec > telemetryTimeoutNonConformingSec) {
                 transitionStatus(flight, conformance, ConformanceStatus.NON_CONFORMING,
-                        "Telemetry lost for " + missingSec + " seconds", null, conflictNotices);
+                        "Telemetry lost for " + missingSec + " seconds",
+                        effectiveTelemetry, "equipment_failure", "C2_LINK_LOST", conflictNotices);
             }
         }
     }
@@ -594,7 +701,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     }
 
     private record ConflictNotice(Flight flight, FlightConformance conformance, TelemetryBriefVm telemetry,
-            String message) {
+            String message, String conflictType, String alertType) {
     }
 
     private record EmergencyNotice(Flight flight, String emergencyType, String severity, String message,
@@ -603,11 +710,11 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     private record EvaluationOutcome(Flight flight, FlightConformance conformance,
             List<ConflictNotice> conflictNotices, List<EmergencyNotice> emergencyNotices,
-            Integer reachedWaypointIndex, boolean waitForConfirmation) {
+            Integer reachedWaypointIndex, boolean waitForConfirmation, boolean recoveredToConformant) {
         EvaluationOutcome(Flight flight, FlightConformance conformance,
                 List<ConflictNotice> conflictNotices, List<EmergencyNotice> emergencyNotices,
                 Integer reachedWaypointIndex) {
-            this(flight, conformance, conflictNotices, emergencyNotices, reachedWaypointIndex, false);
+            this(flight, conformance, conflictNotices, emergencyNotices, reachedWaypointIndex, false, false);
         }
     }
 }

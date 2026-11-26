@@ -12,6 +12,15 @@ public interface ConflictClientService {
     void reportConformanceConflict(Flight flight, FlightConformance conformance,
                                    TelemetryBriefVm telemetry, String message);
 
+    default void reportConformanceConflict(Flight flight, FlightConformance conformance,
+                                           TelemetryBriefVm telemetry, String message,
+                                           String conflictType, String alertType) {
+        reportConformanceConflict(flight, conformance, telemetry, message);
+    }
+
+    default void resolveConformanceConflicts(String flightId, String reason) {
+    }
+
     default Optional<TrajectoryConflictCheckResultClientVm> checkTrajectory4D(Flight flight) {
         return Optional.empty();
     }

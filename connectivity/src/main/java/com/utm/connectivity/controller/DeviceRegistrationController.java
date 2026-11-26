@@ -95,6 +95,12 @@ public class DeviceRegistrationController {
         return ResponseEntity.ok(deviceRegistrationService.processHeartbeat(id, heartbeatVm));
     }
 
+    @PostMapping("/devices/{id}/disconnect")
+    @Operation(summary = "Mark device immediately offline (graceful disconnect / power-off)")
+    public ResponseEntity<HeartbeatResultVm> disconnectDevice(@PathVariable("id") String id) {
+        return ResponseEntity.ok(deviceRegistrationService.disconnectDevice(id));
+    }
+
     @DeleteMapping("/devices/{id}")
     @PreAuthorize("hasRole('admin')")
     @Operation(summary = "Revoke device registration")

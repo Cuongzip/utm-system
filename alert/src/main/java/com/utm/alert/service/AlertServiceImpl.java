@@ -61,6 +61,9 @@ public class AlertServiceImpl implements AlertService {
         if (existingOpen.isPresent()) {
             Alert existing = existingOpen.get();
             existing.setMessage(postVm.message());
+            if (alertType != null && alertType != AlertType.OTHER) {
+                existing.setAlertType(alertType);
+            }
             if (severity != null && (existing.getSeverity() == null
                     || severity.ordinal() > existing.getSeverity().ordinal())) {
                 existing.setSeverity(severity);

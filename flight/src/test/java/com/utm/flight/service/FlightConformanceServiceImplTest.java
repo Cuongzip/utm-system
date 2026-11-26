@@ -199,10 +199,10 @@ class FlightConformanceServiceImplTest {
     }
 
     @Test
-    @DisplayName("evaluateFlightConformance - when telemetry is late beyond 30s marks NON_CONFORMING and triggers conflict")
-    void evaluateFlightConformance_whenTelemetryLate35s_marksNonConformingAndTriggersConflict() {
+    @DisplayName("evaluateFlightConformance - when telemetry is late beyond warning timeout marks NON_CONFORMING and triggers C2_LINK_LOST conflict")
+    void evaluateFlightConformance_whenTelemetryLate15s_marksNonConformingAndTriggersConflict() {
         TelemetryBriefVm lateTelemetry = new TelemetryBriefVm(
-                10.7769, 106.7009, 100.0, 15.0, 45.0, 85.0, ZonedDateTime.now().minusSeconds(40)
+                10.7769, 106.7009, 100.0, 15.0, 45.0, 85.0, ZonedDateTime.now().minusSeconds(15)
         );
 
         when(flightRepository.findById(FLIGHT_ID)).thenReturn(Optional.of(testFlight));
@@ -214,14 +214,16 @@ class FlightConformanceServiceImplTest {
         conformanceService.evaluateFlightConformance(FLIGHT_ID);
 
         assertThat(testConformance.getStatus()).isEqualTo(ConformanceStatus.NON_CONFORMING);
-        verify(conflictClientService).reportConformanceConflict(eq(testFlight), eq(testConformance), eq(lateTelemetry), anyString());
+        verify(conflictClientService).reportConformanceConflict(
+                eq(testFlight), eq(testConformance), eq(lateTelemetry), anyString(),
+                eq("equipment_failure"), eq("C2_LINK_LOST"));
     }
 
     @Test
-    @DisplayName("evaluateFlightConformance - when telemetry is late beyond 90s marks CONTINGENT and triggers emergency")
-    void evaluateFlightConformance_whenTelemetryLate100s_marksContingentAndTriggersEmergency() {
+    @DisplayName("evaluateFlightConformance - when telemetry is late beyond contingent timeout marks CONTINGENT and triggers emergency")
+    void evaluateFlightConformance_whenTelemetryLate30s_marksContingentAndTriggersEmergency() {
         TelemetryBriefVm lostTelemetry = new TelemetryBriefVm(
-                10.7769, 106.7009, 100.0, 15.0, 45.0, 85.0, ZonedDateTime.now().minusSeconds(100)
+                10.7769, 106.7009, 100.0, 15.0, 45.0, 85.0, ZonedDateTime.now().minusSeconds(30)
         );
 
         when(flightRepository.findById(FLIGHT_ID)).thenReturn(Optional.of(testFlight));
@@ -233,7 +235,41 @@ class FlightConformanceServiceImplTest {
         conformanceService.evaluateFlightConformance(FLIGHT_ID);
 
         assertThat(testConformance.getStatus()).isEqualTo(ConformanceStatus.CONTINGENT);
+        verify(conflictClientService).reportConformanceConflict(
+                eq(testFlight), eq(testConformance), eq(lostTelemetry), anyString(),
+                eq("equipment_failure"), eq("C2_LINK_LOST_CONTINGENT"));
         verify(emergencyClientService).reportIncident(eq(testFlight), eq("signal_lost"), eq("critical"), anyString(), eq(lostTelemetry), any());
+    }
+
+    @Test
+    @DisplayName("evaluateFlightConformance - when telemetry stream is missing preserves last known coordinates and auto-resolves upon recovery")
+    void evaluateFlightConformance_whenMissingTelemetryRecovers_preservesCoordsAndAutoResolvesConflicts() {
+        testConformance.setLastTelemetryTime(ZonedDateTime.now().minusSeconds(30));
+
+        when(flightRepository.findById(FLIGHT_ID)).thenReturn(Optional.of(testFlight));
+        when(conformanceRepository.findByFlightId(FLIGHT_ID)).thenReturn(Optional.of(testConformance));
+        when(telemetryClientService.getLatestFlightTelemetry(FLIGHT_ID)).thenReturn(Optional.empty());
+        when(conformanceRepository.save(testConformance)).thenReturn(testConformance);
+        when(conformanceMapper.toVm(testConformance)).thenReturn(testConformanceVm);
+
+        conformanceService.evaluateFlightConformance(FLIGHT_ID);
+
+        assertThat(testConformance.getStatus()).isEqualTo(ConformanceStatus.CONTINGENT);
+        org.mockito.ArgumentCaptor<TelemetryBriefVm> telCaptor = org.mockito.ArgumentCaptor.forClass(TelemetryBriefVm.class);
+        verify(emergencyClientService).reportIncident(
+                eq(testFlight), eq("signal_lost"), eq("critical"), anyString(), telCaptor.capture(), any());
+        assertThat(telCaptor.getValue().latitude()).isEqualTo(10.7769);
+        assertThat(telCaptor.getValue().longitude()).isEqualTo(106.7009);
+
+        TelemetryBriefVm recoveredTelemetry = new TelemetryBriefVm(
+                10.7769, 106.7009, 100.0, 15.0, 45.0, 82.0, ZonedDateTime.now()
+        );
+        when(telemetryClientService.getLatestFlightTelemetry(FLIGHT_ID)).thenReturn(Optional.of(recoveredTelemetry));
+
+        conformanceService.evaluateFlightConformance(FLIGHT_ID);
+
+        assertThat(testConformance.getStatus()).isEqualTo(ConformanceStatus.CONFORMANT);
+        verify(conflictClientService).resolveConformanceConflicts(eq(FLIGHT_ID), anyString());
     }
 
     @Test

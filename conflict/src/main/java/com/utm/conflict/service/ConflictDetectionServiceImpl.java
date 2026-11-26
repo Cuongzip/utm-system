@@ -251,13 +251,14 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                 });
 
                 if (createdConflictId != null) {
-                    if (severity == ConflictSeverity.CRITICAL || severity == ConflictSeverity.HIGH) {
+                    if (severity == ConflictSeverity.CRITICAL || severity == ConflictSeverity.HIGH
+                            || severity == ConflictSeverity.EMERGENCY) {
                         triggerAlert(
                                 incomingTelemetry.droneId(),
                                 incomingTelemetry.flightId(),
                                 createdConflictId,
                                 "CONFLICT_PROXIMITY",
-                                severity.getValue(),
+                                toAlertSeverity(severity),
                                 String.format("Loss of separation with flight %s (%.1fm)",
                                         otherFlight.flightNumber(), distHoriz),
                                 distHoriz,
@@ -461,13 +462,14 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                                     distHoriz, distVert, timeToConflict, severity);
                             newConflictsDetected++;
 
-                            if (severity == ConflictSeverity.CRITICAL || severity == ConflictSeverity.HIGH) {
+                            if (severity == ConflictSeverity.CRITICAL || severity == ConflictSeverity.HIGH
+                                    || severity == ConflictSeverity.EMERGENCY) {
                                 triggerAlert(
                                         f1.flight().droneId(),
                                         f1.flight().id(),
                                         newConflict.getId(),
                                         "CONFLICT_PROXIMITY",
-                                        severity.getValue(),
+                                        toAlertSeverity(severity),
                                         String.format("Loss of separation with flight %s (%.1fm)",
                                                 f2.flight().flightNumber(), distHoriz),
                                         distHoriz,
@@ -831,6 +833,18 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     telemetry.latitude(), telemetry.longitude(), telemetry.altitude(), ex.getMessage());
             return null;
         }
+    }
+
+    private static String toAlertSeverity(ConflictSeverity severity) {
+        if (severity == null) {
+            return "HIGH";
+        }
+        return switch (severity) {
+            case EMERGENCY, CRITICAL -> "CRITICAL";
+            case HIGH -> "HIGH";
+            case WARNING, MEDIUM -> "MEDIUM";
+            case LOW -> "LOW";
+        };
     }
 
     private void triggerAlert(

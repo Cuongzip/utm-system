@@ -27,6 +27,7 @@ public class SystemTokenService {
     private final String username;
     private final String password;
     private final ReentrantLock tokenLock = new ReentrantLock();
+    private final java.util.concurrent.atomic.AtomicBoolean missingCredentialsWarned = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     private volatile String cachedToken;
     private volatile Instant expiryTime = Instant.MIN;
@@ -35,9 +36,9 @@ public class SystemTokenService {
     public SystemTokenService(
             @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:http://identity/realms/UTM}") String issuerUri,
             @Value("${utm.system-auth.token-url:}") String customTokenUrl,
-            @Value("${utm.system-auth.client-id:swagger-ui}") String clientId,
-            @Value("${utm.system-auth.client-secret:}") String clientSecret,
-            @Value("${utm.system-auth.username:admin}") String username,
+            @Value("${utm.system-auth.client-id:${UTM_SYSTEM_AUTH_CLIENT_ID:swagger-ui}}") String clientId,
+            @Value("${utm.system-auth.client-secret:${UTM_SYSTEM_AUTH_CLIENT_SECRET:}}") String clientSecret,
+            @Value("${utm.system-auth.username:${UTM_SYSTEM_AUTH_USERNAME:admin}}") String username,
             @Value("${utm.system-auth.password:${UTM_SYSTEM_AUTH_PASSWORD:}}") String password
     ) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -48,10 +49,15 @@ public class SystemTokenService {
         this.tokenUrl = (customTokenUrl != null && !customTokenUrl.isBlank())
                 ? customTokenUrl
                 : issuerUri + "/protocol/openid-connect/token";
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.username = username;
-        this.password = password;
+        boolean hasClientSecret = clientSecret != null && !clientSecret.isBlank();
+        if (hasClientSecret && (clientId == null || clientId.isBlank() || "swagger-ui".equalsIgnoreCase(clientId.trim()))) {
+            this.clientId = "backoffice-bff";
+        } else {
+            this.clientId = (clientId != null && !clientId.isBlank()) ? clientId.trim() : "swagger-ui";
+        }
+        this.clientSecret = hasClientSecret ? clientSecret.trim() : "";
+        this.username = (username != null && !username.isBlank()) ? username.trim() : "admin";
+        this.password = password != null ? password : "";
     }
 
     public SystemTokenService(String issuerUri, String customTokenUrl, String clientId, String username, String password) {
@@ -81,7 +87,11 @@ public class SystemTokenService {
                 formData.add("password", password);
                 formData.add("grant_type", "password");
             } else {
-                log.warn("SystemTokenService credentials not configured (set utm.system-auth.client-secret or UTM_SYSTEM_AUTH_PASSWORD)");
+                if (missingCredentialsWarned.compareAndSet(false, true)) {
+                    log.warn("SystemTokenService credentials not configured (set UTM_SYSTEM_AUTH_CLIENT_SECRET or UTM_SYSTEM_AUTH_PASSWORD)");
+                } else {
+                    log.debug("SystemTokenService credentials not configured");
+                }
                 return null;
             }
 
