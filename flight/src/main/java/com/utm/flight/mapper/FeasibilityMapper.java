@@ -1,9 +1,7 @@
 package com.utm.flight.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.FeasibilityEvaluation;
+import com.utm.flight.model.FeasibilitySolution;
 import com.utm.flight.model.Flight;
 import com.utm.flight.viewmodel.feasibility.EnergyBreakdownVm;
 import com.utm.flight.viewmodel.feasibility.EnergyCalculationResultVm;
@@ -23,7 +21,9 @@ import java.util.List;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true))
 public interface FeasibilityMapper {
 
-    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    FeasibilitySolution toSolutionModel(FeasibilitySolutionVm vm);
+
+    FeasibilitySolutionVm toSolutionVm(FeasibilitySolution model);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "flight", source = "flight")
@@ -39,7 +39,7 @@ public interface FeasibilityMapper {
     @Mapping(target = "windFactor", source = "result.windFactor")
     @Mapping(target = "windSpeedMs", source = "windSpeedMs")
     @Mapping(target = "confidence", source = "result.confidence")
-    @Mapping(target = "solutionsJson", source = "result.solutions", qualifiedByName = "solutionsToString")
+    @Mapping(target = "solutions", source = "result.solutions", qualifiedByName = "toSolutionModels")
     @Mapping(target = "explanation", source = "result.explanation")
     @Mapping(target = "explanationSource", source = "result.explanationSource")
     @Mapping(target = "createdOn", ignore = true)
@@ -78,7 +78,7 @@ public interface FeasibilityMapper {
 
     @Mapping(target = "flightId", source = "entity.flight.id")
     @Mapping(target = "breakdown", source = "entity", qualifiedByName = "entityToBreakdown")
-    @Mapping(target = "solutions", source = "solutionsJson", qualifiedByName = "stringToSolutions")
+    @Mapping(target = "solutions", source = "solutions", qualifiedByName = "toSolutionVms")
     FeasibilityEvaluationVm toEvaluationVm(FeasibilityEvaluation entity);
 
     List<FeasibilityEvaluationVm> toEvaluationVmList(List<FeasibilityEvaluation> entities);
@@ -109,36 +109,19 @@ public interface FeasibilityMapper {
                 entity.getWindFactor());
     }
 
-    @Named("solutionsToString")
-    default String solutionsToString(List<FeasibilitySolutionVm> solutions) {
-        if (solutions == null || solutions.isEmpty()) {
-            return "[]";
-        }
-        try {
-            return OBJECT_MAPPER.writeValueAsString(solutions);
-        } catch (JsonProcessingException e) {
-            return "[]";
-        }
-    }
-
-    @Named("stringToSolutions")
-    default List<FeasibilitySolutionVm> stringToSolutions(String solutionsJson) {
-        if (solutionsJson == null || solutionsJson.isBlank()) {
+    @Named("toSolutionModels")
+    default List<FeasibilitySolution> toSolutionModels(List<FeasibilitySolutionVm> vms) {
+        if (vms == null || vms.isEmpty()) {
             return Collections.emptyList();
         }
-        try {
-            return OBJECT_MAPPER.readValue(solutionsJson, new TypeReference<List<FeasibilitySolutionVm>>() {
-            });
-        } catch (JsonProcessingException e) {
+        return vms.stream().map(this::toSolutionModel).toList();
+    }
+
+    @Named("toSolutionVms")
+    default List<FeasibilitySolutionVm> toSolutionVms(List<FeasibilitySolution> models) {
+        if (models == null || models.isEmpty()) {
             return Collections.emptyList();
         }
-    }
-
-    default String serializeSolutions(List<FeasibilitySolutionVm> solutions) {
-        return solutionsToString(solutions);
-    }
-
-    default List<FeasibilitySolutionVm> deserializeSolutions(String solutionsJson) {
-        return stringToSolutions(solutionsJson);
+        return models.stream().map(this::toSolutionVm).toList();
     }
 }

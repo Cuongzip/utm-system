@@ -9,11 +9,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MissionStatus {
     DRAFT("draft"),
+    READY("ready"),
     SCHEDULED("scheduled"),
     EXECUTING("executing"),
     PAUSED("paused"),
     COMPLETED("completed"),
     ABORTED("aborted"),
+    CANCELLED("cancelled"),
     FAILED("failed");
 
     private final String value;

@@ -1,0 +1,87 @@
+databaseChangeLog:
+  - changeSet:
+      id: 08-standardize-mission-schema
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE mission SET code = 'MSN-' || UPPER(SUBSTRING(id, 1, 8)) WHERE code IS NULL OR TRIM(code) = '';
+              UPDATE mission SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE waypoint SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE mission_execution SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE mission_execution_leg SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE mission_execution_leg SET created_by = LEFT(created_by, 100) WHERE LENGTH(created_by) > 100;
+              UPDATE mission_execution_leg SET last_modified_by = LEFT(last_modified_by, 100) WHERE LENGTH(last_modified_by) > 100;
+
+              WITH ranked AS (
+                SELECT id, ROW_NUMBER() OVER (PARTITION BY mission_id ORDER BY sequence ASC, created_on ASC, id ASC) AS rn
+                FROM waypoint
+              )
+              UPDATE waypoint w
+              SET sequence = r.rn
+              FROM ranked r
+              WHERE w.id = r.id AND w.sequence <> r.rn;
+
+              ALTER TABLE mission ALTER COLUMN payload_weight_kg TYPE DOUBLE PRECISION USING payload_weight_kg::DOUBLE PRECISION;
+              ALTER TABLE mission ALTER COLUMN code SET NOT NULL;
+              ALTER TABLE mission ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE mission ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS drone_id VARCHAR(36);
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS pilot_id VARCHAR(100);
+
+              ALTER TABLE waypoint ALTER COLUMN latitude TYPE DOUBLE PRECISION USING latitude::DOUBLE PRECISION;
+              ALTER TABLE waypoint ALTER COLUMN longitude TYPE DOUBLE PRECISION USING longitude::DOUBLE PRECISION;
+              ALTER TABLE waypoint ALTER COLUMN altitude TYPE DOUBLE PRECISION USING altitude::DOUBLE PRECISION;
+              ALTER TABLE waypoint ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE waypoint ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE waypoint DROP COLUMN IF EXISTS speed_mps;
+
+              ALTER TABLE mission_execution DROP COLUMN IF EXISTS current_waypoint_index;
+              ALTER TABLE mission_execution DROP COLUMN IF EXISTS total_waypoints;
+              ALTER TABLE mission_execution DROP COLUMN IF EXISTS completed_waypoints;
+              ALTER TABLE mission_execution ADD COLUMN IF NOT EXISTS pilot_id VARCHAR(100);
+              ALTER TABLE mission_execution ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE mission_execution ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE mission_execution ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+
+              ALTER TABLE mission_execution_leg ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE mission_execution_leg ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE mission_execution_leg ALTER COLUMN created_by TYPE VARCHAR(100);
+              ALTER TABLE mission_execution_leg ALTER COLUMN last_modified_by TYPE VARCHAR(100);
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS mission_id;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS flight_number;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS distance_meters;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS payload_weight_kg;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS scheduled_departure;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS scheduled_arrival;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS actual_departure;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS actual_arrival;
+              ALTER TABLE mission_execution_leg DROP COLUMN IF EXISTS depends_on_flight_id;
+
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_mission_payload_non_negative') THEN
+                  ALTER TABLE mission ADD CONSTRAINT chk_mission_payload_non_negative CHECK (payload_weight_kg >= 0);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_waypoint_coordinates') THEN
+                  ALTER TABLE waypoint ADD CONSTRAINT chk_waypoint_coordinates
+                    CHECK (latitude >= -90 AND latitude <= 90 AND longitude >= -180 AND longitude <= 180 AND altitude > 0);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_waypoint_mission_sequence') THEN
+                  ALTER TABLE waypoint ADD CONSTRAINT uq_waypoint_mission_sequence
+                    UNIQUE (mission_id, sequence) DEFERRABLE INITIALLY DEFERRED;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_mission_exec_leg_index') THEN
+                  ALTER TABLE mission_execution_leg ADD CONSTRAINT uq_mission_exec_leg_index
+                    UNIQUE (execution_id, leg_index);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_mission_exec_leg_flight_id') THEN
+                  ALTER TABLE mission_execution_leg ADD CONSTRAINT uq_mission_exec_leg_flight_id
+                    UNIQUE (flight_id);
+                END IF;
+              END $$;
+
+              CREATE INDEX IF NOT EXISTS idx_waypoint_hub_id ON waypoint(hub_id);
+              CREATE INDEX IF NOT EXISTS idx_mission_schedule_poll ON mission(status, schedule_type, scheduled_at);

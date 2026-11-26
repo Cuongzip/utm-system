@@ -1,0 +1,113 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-init-fleet-schema
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS fleet_configuration (
+                id VARCHAR(36) PRIMARY KEY,
+                name VARCHAR(120) NOT NULL UNIQUE,
+                description TEXT,
+                weights JSONB NOT NULL,
+                thresholds JSONB NOT NULL,
+                is_preset BOOLEAN NOT NULL DEFAULT FALSE,
+                is_active BOOLEAN NOT NULL DEFAULT FALSE,
+                created_on TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(100),
+                last_modified_on TIMESTAMPTZ,
+                last_modified_by VARCHAR(100)
+              );
+
+              CREATE TABLE IF NOT EXISTS fleet_assignment (
+                id VARCHAR(36) PRIMARY KEY,
+                mission_id VARCHAR(36) NOT NULL,
+                drone_id VARCHAR(36),
+                scores JSONB NOT NULL,
+                weights JSONB NOT NULL,
+                final_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+                assigned_by VARCHAR(30) NOT NULL DEFAULT 'SYSTEM',
+                operator_id VARCHAR(100),
+                alternative_drones JSONB,
+                rejection_reason TEXT,
+                assigned_at TIMESTAMPTZ,
+                completed_at TIMESTAMPTZ,
+                created_on TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(100),
+                last_modified_on TIMESTAMPTZ,
+                last_modified_by VARCHAR(100)
+              );
+
+              CREATE TABLE IF NOT EXISTS rebalancing_task (
+                id VARCHAR(36) PRIMARY KEY,
+                source_hub_id VARCHAR(36) NOT NULL,
+                target_hub_id VARCHAR(36) NOT NULL,
+                drone_id VARCHAR(36) NOT NULL,
+                repositioning_mission_id VARCHAR(36),
+                repositioning_flight_id VARCHAR(36),
+                trigger_type VARCHAR(40) NOT NULL DEFAULT 'THRESHOLD_BREACH',
+                rule JSONB NOT NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+                priority INTEGER NOT NULL DEFAULT 1,
+                approved_by VARCHAR(100),
+                approved_at TIMESTAMPTZ,
+                started_at TIMESTAMPTZ,
+                completed_at TIMESTAMPTZ,
+                cancelled_reason TEXT,
+                failure_reason TEXT,
+                created_on TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(100),
+                last_modified_on TIMESTAMPTZ,
+                last_modified_by VARCHAR(100)
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_fleet_assignment_mission ON fleet_assignment(mission_id);
+              CREATE INDEX IF NOT EXISTS idx_fleet_assignment_drone ON fleet_assignment(drone_id);
+              CREATE INDEX IF NOT EXISTS idx_rebalancing_status ON rebalancing_task(status);
+              CREATE INDEX IF NOT EXISTS idx_rebalancing_drone ON rebalancing_task(drone_id);
+
+              INSERT INTO fleet_configuration (id, name, description, weights, thresholds, is_preset, is_active, created_by)
+              VALUES
+                (
+                  'fc000000-0000-4000-8000-000000000001',
+                  'Balanced Mode',
+                  'Balance efficiency with fleet health and capability matching',
+                  '{"proximity": 0.25, "battery": 0.20, "capability": 0.25, "utilization": 0.15, "maintenance": 0.15}'::jsonb,
+                  '{"minDronesPerHub": 2, "maxIdleTimeMinutes": 90, "rebalanceCooldownMinutes": 30, "minDonorReserve": 2, "maxConcurrentRepositions": 3, "minBatteryForReposition": 70, "quietHoursOnly": false}'::jsonb,
+                  TRUE,
+                  TRUE,
+                  'system'
+                ),
+                (
+                  'fc000000-0000-4000-8000-000000000002',
+                  'Rapid Response',
+                  'Prioritize minimizing flight time and nearest-hub dispatch',
+                  '{"proximity": 0.40, "battery": 0.25, "capability": 0.20, "utilization": 0.05, "maintenance": 0.10}'::jsonb,
+                  '{"minDronesPerHub": 2, "maxIdleTimeMinutes": 120, "rebalanceCooldownMinutes": 30, "minDonorReserve": 2, "maxConcurrentRepositions": 3, "minBatteryForReposition": 70, "quietHoursOnly": false}'::jsonb,
+                  TRUE,
+                  FALSE,
+                  'system'
+                ),
+                (
+                  'fc000000-0000-4000-8000-000000000003',
+                  'Battery Priority',
+                  'Prioritize maximum energy reserve margin for long-range or heavy-wind operations',
+                  '{"proximity": 0.20, "battery": 0.40, "capability": 0.20, "utilization": 0.10, "maintenance": 0.10}'::jsonb,
+                  '{"minDronesPerHub": 2, "maxIdleTimeMinutes": 90, "rebalanceCooldownMinutes": 30, "minDonorReserve": 2, "maxConcurrentRepositions": 2, "minBatteryForReposition": 80, "quietHoursOnly": false}'::jsonb,
+                  TRUE,
+                  FALSE,
+                  'system'
+                ),
+                (
+                  'fc000000-0000-4000-8000-000000000004',
+                  'Fleet Longevity',
+                  'Prioritize even wear distribution and proactive maintenance scheduling',
+                  '{"proximity": 0.15, "battery": 0.15, "capability": 0.20, "utilization": 0.30, "maintenance": 0.20}'::jsonb,
+                  '{"minDronesPerHub": 3, "maxIdleTimeMinutes": 60, "rebalanceCooldownMinutes": 45, "minDonorReserve": 3, "maxConcurrentRepositions": 2, "minBatteryForReposition": 80, "quietHoursOnly": false}'::jsonb,
+                  TRUE,
+                  FALSE,
+                  'system'
+                )
+              ON CONFLICT (name) DO NOTHING;

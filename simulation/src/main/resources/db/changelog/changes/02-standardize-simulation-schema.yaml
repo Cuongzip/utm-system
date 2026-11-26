@@ -1,0 +1,87 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-standardize-simulation-schema
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE simulation_session SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE simulation_session SET created_by = LEFT(created_by, 100) WHERE LENGTH(created_by) > 100;
+              UPDATE simulation_session SET last_modified_by = LEFT(last_modified_by, 100) WHERE LENGTH(last_modified_by) > 100;
+              UPDATE simulation_session SET drone_id = LEFT(TRIM(drone_id), 36) WHERE LENGTH(drone_id) > 36;
+
+              WITH dup_flights AS (
+                SELECT id, ROW_NUMBER() OVER (PARTITION BY flight_id ORDER BY created_on DESC, id DESC) AS rn
+                FROM simulation_session
+                WHERE status IN ('RUNNING', 'PAUSED')
+              )
+              UPDATE simulation_session SET status = 'STOPPED'
+              WHERE id IN (SELECT id FROM dup_flights WHERE rn > 1);
+
+              WITH dup_drones AS (
+                SELECT id, ROW_NUMBER() OVER (PARTITION BY drone_id ORDER BY created_on DESC, id DESC) AS rn
+                FROM simulation_session
+                WHERE status IN ('RUNNING', 'PAUSED')
+              )
+              UPDATE simulation_session SET status = 'STOPPED'
+              WHERE id IN (SELECT id FROM dup_drones WHERE rn > 1);
+
+              ALTER TABLE simulation_session ALTER COLUMN drone_id TYPE VARCHAR(36);
+              ALTER TABLE simulation_session ALTER COLUMN speed TYPE DOUBLE PRECISION USING speed::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN time_scale TYPE DOUBLE PRECISION USING time_scale::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN current_lat TYPE DOUBLE PRECISION USING current_lat::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN current_lon TYPE DOUBLE PRECISION USING current_lon::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN current_alt TYPE DOUBLE PRECISION USING current_alt::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN current_heading TYPE DOUBLE PRECISION USING current_heading::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN current_battery TYPE DOUBLE PRECISION USING current_battery::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN progress TYPE DOUBLE PRECISION USING progress::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN total_distance TYPE DOUBLE PRECISION USING total_distance::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN traveled_distance TYPE DOUBLE PRECISION USING traveled_distance::DOUBLE PRECISION;
+              ALTER TABLE simulation_session ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE simulation_session ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE simulation_session ALTER COLUMN created_by TYPE VARCHAR(100);
+              ALTER TABLE simulation_session ALTER COLUMN last_modified_by TYPE VARCHAR(100);
+              ALTER TABLE simulation_session ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+
+              DELETE FROM simulation_event e
+              WHERE NOT EXISTS (SELECT 1 FROM simulation_session s WHERE s.id = e.session_id);
+
+              UPDATE simulation_event SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE simulation_event SET created_by = LEFT(created_by, 100) WHERE LENGTH(created_by) > 100;
+              UPDATE simulation_event SET config_json = NULL WHERE config_json IS NOT NULL AND TRIM(config_json) = '';
+
+              ALTER TABLE simulation_event ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE simulation_event ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE simulation_event ALTER COLUMN created_by TYPE VARCHAR(100);
+              ALTER TABLE simulation_event ADD COLUMN IF NOT EXISTS last_modified_on TIMESTAMP WITH TIME ZONE;
+              ALTER TABLE simulation_event ADD COLUMN IF NOT EXISTS last_modified_by VARCHAR(100);
+              ALTER TABLE simulation_event ALTER COLUMN config_json TYPE JSONB USING CASE
+                WHEN config_json IS NULL THEN NULL
+                WHEN LEFT(TRIM(config_json), 1) IN ('{', '[') THEN config_json::JSONB
+                ELSE to_jsonb(config_json)
+              END;
+
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_sim_event_session') THEN
+                  ALTER TABLE simulation_event ADD CONSTRAINT fk_sim_event_session
+                    FOREIGN KEY (session_id) REFERENCES simulation_session(id) ON DELETE CASCADE;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_sim_session_bounds') THEN
+                  ALTER TABLE simulation_session ADD CONSTRAINT chk_sim_session_bounds
+                    CHECK (
+                      (speed IS NULL OR speed >= 0) AND
+                      (time_scale IS NULL OR time_scale > 0) AND
+                      (current_battery IS NULL OR (current_battery >= 0 AND current_battery <= 100)) AND
+                      (progress IS NULL OR (progress >= 0 AND progress <= 100))
+                    );
+                END IF;
+              END $$;
+
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_sim_session_active_flight
+                ON simulation_session (flight_id) WHERE status IN ('RUNNING', 'PAUSED');
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_sim_session_active_drone
+                ON simulation_session (drone_id) WHERE status IN ('RUNNING', 'PAUSED');
+              CREATE INDEX IF NOT EXISTS idx_sim_event_session_created
+                ON simulation_event (session_id, created_on ASC);

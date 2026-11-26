@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 09-multi-leg-turnaround-and-battery-gate
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE flight ADD COLUMN IF NOT EXISTS expected_initial_battery_pct DOUBLE PRECISION;
+              ALTER TABLE flight ADD COLUMN IF NOT EXISTS minimum_turnaround_minutes INTEGER NOT NULL DEFAULT 0;
+              ALTER TABLE flight ADD COLUMN IF NOT EXISTS arrival_stopover_type VARCHAR(30) DEFAULT 'none';

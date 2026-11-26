@@ -5,6 +5,7 @@ import com.utm.flight.viewmodel.feasibility.FeasibilityCheckPostVm;
 import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationListVm;
 import com.utm.flight.viewmodel.feasibility.FeasibilityOverridePostVm;
 import com.utm.flight.viewmodel.feasibility.FeasibilityResultVm;
+import com.utm.flight.viewmodel.feasibility.StandaloneFeasibilityCheckPostVm;
 import com.utm.flight.viewmodel.flight.FlightVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +34,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeasibilityController {
 
     private final FeasibilityService feasibilityService;
+
+    @PostMapping(value = "/feasibility/check", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('pilot', 'hub_operator', 'atc', 'admin')")
+    @Operation(summary = "Standalone pre-flight feasibility check", description = "Evaluates energy and live wind feasibility for any drone + mission/distance profile without requiring a saved Flight.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Standalone feasibility evaluated successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = FeasibilityResultVm.class)))
+    })
+    public ResponseEntity<FeasibilityResultVm> checkStandaloneFeasibility(
+            @Valid @RequestBody StandaloneFeasibilityCheckPostVm request) {
+        return ResponseEntity.ok(feasibilityService.checkStandaloneFeasibility(request));
+    }
 
     @PostMapping(value = "/flights/{flightId}/feasibility/check", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAnyRole('pilot', 'hub_operator', 'atc', 'admin')")

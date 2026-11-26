@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-align-drops-simulation-fields
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE simulation_session ALTER COLUMN flight_id DROP NOT NULL;
+              ALTER TABLE simulation_session ADD COLUMN IF NOT EXISTS mission_id VARCHAR(36);
+              ALTER TABLE simulation_session ADD COLUMN IF NOT EXISTS flight_phase VARCHAR(30) DEFAULT 'PREFLIGHT';
+              ALTER TABLE simulation_session ADD COLUMN IF NOT EXISTS scenario_config JSONB;
+              ALTER TABLE simulation_session ADD COLUMN IF NOT EXISTS waypoints JSONB;
+              ALTER TABLE simulation_session ADD COLUMN IF NOT EXISTS tick_rate DOUBLE PRECISION DEFAULT 1.0;
+              CREATE INDEX IF NOT EXISTS idx_simulation_session_mission_id ON simulation_session(mission_id);

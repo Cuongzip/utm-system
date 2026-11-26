@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 10-hub-waypoint-and-execution-progress
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE waypoint ADD COLUMN IF NOT EXISTS waypoint_type VARCHAR(20) NOT NULL DEFAULT 'COORDINATE';
+
+              UPDATE waypoint
+              SET waypoint_type = 'HUB',
+                  stopover_type = CASE WHEN stopover_type IS NULL OR stopover_type = 'NONE' THEN 'RECHARGE' ELSE stopover_type END
+              WHERE hub_id IS NOT NULL AND TRIM(hub_id) <> '';
+
+              ALTER TABLE waypoint DROP CONSTRAINT IF EXISTS chk_waypoint_coordinates;
+              ALTER TABLE waypoint ADD CONSTRAINT chk_waypoint_coordinates
+                CHECK (
+                  latitude >= -90 AND latitude <= 90
+                  AND longitude >= -180 AND longitude <= 180
+                  AND (
+                    (waypoint_type = 'HUB' AND altitude >= 0 AND hub_id IS NOT NULL AND stopover_type <> 'NONE')
+                    OR (waypoint_type = 'COORDINATE' AND altitude > 0)
+                  )
+                );
+
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS dispatch_grace_minutes INTEGER NOT NULL DEFAULT 30;
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+
+              ALTER TABLE mission_execution ADD COLUMN IF NOT EXISTS current_waypoint_index INTEGER NOT NULL DEFAULT 0;
+              ALTER TABLE mission_execution ADD COLUMN IF NOT EXISTS completed_waypoints INTEGER NOT NULL DEFAULT 0;
+              ALTER TABLE mission_execution ADD COLUMN IF NOT EXISTS waypoint_logs JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+              CREATE INDEX IF NOT EXISTS idx_waypoint_type ON waypoint(waypoint_type);

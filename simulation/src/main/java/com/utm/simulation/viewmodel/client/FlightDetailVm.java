@@ -16,6 +16,21 @@ public record FlightDetailVm(
         Double cruisingAltitudeM,
         GeoJsonLineStringVm plannedRoute,
         Integer totalWaypoints,
-        List<WaypointVm> waypoints) {
+        List<WaypointVm> waypoints,
+        String status) {
+
+    public FlightDetailVm(
+            String id,
+            String flightNumber,
+            String droneId,
+            String departureHubId,
+            String arrivalHubId,
+            Double cruisingAltitudeM,
+            GeoJsonLineStringVm plannedRoute,
+            Integer totalWaypoints,
+            List<WaypointVm> waypoints) {
+        this(id, flightNumber, droneId, departureHubId, arrivalHubId, cruisingAltitudeM, plannedRoute,
+                totalWaypoints, waypoints, null);
+    }
 }
 

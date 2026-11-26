@@ -10,4 +10,8 @@ public interface DroneClientService {
     Optional<DroneBriefVm> getDroneById(String droneId);
 
     List<DroneBriefVm> getAvailableDronesAtHub(String hubId);
+
+    default boolean sendDroneCommand(String droneId, String commandType, String flightId, String parameters) {
+        return false;
+    }
 }

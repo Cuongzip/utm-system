@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: 08-align-drops-flight-fields
+      author: utm-system
+      changes:
+        - addColumn:
+            tableName: flight
+            columns:
+              - column:
+                  name: flight_type
+                  type: varchar(50)
+                  defaultValue: "DELIVERY"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: operation_mode
+                  type: varchar(50)
+                  defaultValue: "AUTONOMOUS"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: min_altitude_m
+                  type: double precision
+              - column:
+                  name: max_altitude_m
+                  type: double precision
+              - column:
+                  name: authorization_number
+                  type: varchar(100)
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uk_flight_authorization_number
+              - column:
+                  name: authorized_by
+                  type: varchar(100)
+              - column:
+                  name: authorized_at
+                  type: timestamp with time zone
+              - column:
+                  name: risk_assessment
+                  type: varchar(30)
+              - column:
+                  name: mission_type
+                  type: varchar(50)
+              - column:
+                  name: mission_data
+                  type: jsonb
+              - column:
+                  name: weather_conditions
+                  type: jsonb
+        - dropNotNullConstraint:
+            tableName: feasibility_evaluations
+            columnName: flight_id
+            columnDataType: varchar(36)
+      rollback:
+        - dropColumn:
+            tableName: flight
+            columnName: weather_conditions
+        - dropColumn:
+            tableName: flight
+            columnName: mission_data
+        - dropColumn:
+            tableName: flight
+            columnName: mission_type
+        - dropColumn:
+            tableName: flight
+            columnName: risk_assessment
+        - dropColumn:
+            tableName: flight
+            columnName: authorized_at
+        - dropColumn:
+            tableName: flight
+            columnName: authorized_by
+        - dropColumn:
+            tableName: flight
+            columnName: authorization_number
+        - dropColumn:
+            tableName: flight
+            columnName: max_altitude_m
+        - dropColumn:
+            tableName: flight
+            columnName: min_altitude_m
+        - dropColumn:
+            tableName: flight
+            columnName: operation_mode
+        - dropColumn:
+            tableName: flight
+            columnName: flight_type

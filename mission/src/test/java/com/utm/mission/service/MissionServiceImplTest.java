@@ -118,8 +118,8 @@ class MissionServiceImplTest {
         when(missionMapper.toEntity(postVm)).thenReturn(testMission);
         when(missionRepository.save(testMission)).thenReturn(testMission);
 
-        MissionVm expectedVm = createMissionVm(testMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
-        when(missionMapper.toVm(eq(testMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
+        MissionVm expectedVm = createMissionVm(testMission, 2, 5000.0, List.of(), departureHubVm, arrivalHubVm);
+        when(missionMapper.toVm(eq(testMission), eq(2), org.mockito.ArgumentMatchers.anyDouble(), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
                 .thenReturn(expectedVm);
 
         MissionVm result = missionService.createMission(postVm);
@@ -131,6 +131,13 @@ class MissionServiceImplTest {
         assertThat(result.scheduleType()).isEqualTo(MissionScheduleType.IMMEDIATE);
         assertThat(result.departureHub().code()).isEqualTo("HUB-DEP");
         assertThat(result.arrivalHub().code()).isEqualTo("HUB-ARR");
+        assertThat(testMission.getWaypoints()).hasSize(2);
+        assertThat(testMission.getWaypoints().get(0).getWaypointType())
+                .isEqualTo(com.utm.mission.model.enumeration.WaypointType.HUB);
+        assertThat(testMission.getWaypoints().get(0).getHubId()).isEqualTo(DEP_HUB_ID);
+        assertThat(testMission.getWaypoints().get(1).getWaypointType())
+                .isEqualTo(com.utm.mission.model.enumeration.WaypointType.HUB);
+        assertThat(testMission.getWaypoints().get(1).getHubId()).isEqualTo(ARR_HUB_ID);
 
         verify(missionRepository).save(testMission);
     }
@@ -167,8 +174,8 @@ class MissionServiceImplTest {
         when(missionMapper.toEntity(postVm)).thenReturn(scheduledMission);
         when(missionRepository.save(scheduledMission)).thenReturn(scheduledMission);
 
-        MissionVm expectedVm = createMissionVm(scheduledMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
-        when(missionMapper.toVm(eq(scheduledMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
+        MissionVm expectedVm = createMissionVm(scheduledMission, 2, 5000.0, List.of(), departureHubVm, arrivalHubVm);
+        when(missionMapper.toVm(eq(scheduledMission), eq(2), org.mockito.ArgumentMatchers.anyDouble(), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
                 .thenReturn(expectedVm);
 
         MissionVm result = missionService.createMission(postVm);
@@ -197,8 +204,8 @@ class MissionServiceImplTest {
         when(missionMapper.toEntity(postVm)).thenReturn(testMission);
         when(missionRepository.save(testMission)).thenReturn(testMission);
 
-        MissionVm expectedVm = createMissionVm(testMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
-        when(missionMapper.toVm(eq(testMission), eq(0), eq(0.0), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
+        MissionVm expectedVm = createMissionVm(testMission, 2, 5000.0, List.of(), departureHubVm, arrivalHubVm);
+        when(missionMapper.toVm(eq(testMission), eq(2), org.mockito.ArgumentMatchers.anyDouble(), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
                 .thenReturn(expectedVm);
 
         MissionVm result = missionService.createMission(postVm);
@@ -491,6 +498,63 @@ class MissionServiceImplTest {
                 .isInstanceOf(BadRequestException.class);
 
         verify(missionRepository, never()).delete(any(Mission.class));
+    }
+
+    @Test
+    @DisplayName("deleteMission - when mission is paused throws BadRequestException")
+    void deleteMission_whenPaused_shouldThrowBadRequestException() {
+        testMission.setStatus(MissionStatus.PAUSED);
+        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(testMission));
+
+        assertThatThrownBy(() -> missionService.deleteMission(MISSION_ID))
+                .isInstanceOf(BadRequestException.class);
+
+        verify(missionRepository, never()).delete(any(Mission.class));
+    }
+
+    @Test
+    @DisplayName("scheduleMission - transitions draft scheduled mission with >=2 waypoints to SCHEDULED")
+    void scheduleMission_whenValid_shouldTransitionToScheduled() {
+        testMission.setScheduleType(MissionScheduleType.SCHEDULED);
+        testMission.setScheduledAt(ZonedDateTime.now().plusHours(2));
+        testMission.setWaypoints(List.of(
+                Waypoint.builder().id("wp-1").sequence(1).latitude(10.77).longitude(106.70).altitude(50.0).build(),
+                Waypoint.builder().id("wp-2").sequence(2).latitude(10.76).longitude(106.66).altitude(50.0).build()
+        ));
+
+        when(missionRepository.findByIdWithWaypoints(MISSION_ID)).thenReturn(Optional.of(testMission));
+        when(missionRepository.save(testMission)).thenReturn(testMission);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
+        when(waypointMapper.toVmList(anyList())).thenReturn(List.of());
+        MissionVm scheduledVm = createMissionVm(testMission, 2, 100.0, List.of(), departureHubVm, arrivalHubVm);
+        when(missionMapper.toVm(eq(testMission), eq(2), anyDouble(), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
+                .thenReturn(scheduledVm);
+
+        MissionVm result = missionService.scheduleMission(MISSION_ID);
+
+        assertThat(result).isNotNull();
+        assertThat(testMission.getStatus()).isEqualTo(MissionStatus.SCHEDULED);
+        verify(missionRepository).save(testMission);
+    }
+
+    @Test
+    @DisplayName("unscheduleMission - reverts scheduled mission back to DRAFT")
+    void unscheduleMission_whenScheduled_shouldRevertToDraft() {
+        testMission.setStatus(MissionStatus.SCHEDULED);
+        when(missionRepository.findByIdWithWaypoints(MISSION_ID)).thenReturn(Optional.of(testMission));
+        when(missionRepository.save(testMission)).thenReturn(testMission);
+        when(hubClientService.getHubById(DEP_HUB_ID)).thenReturn(Optional.of(departureHubVm));
+        when(hubClientService.getHubById(ARR_HUB_ID)).thenReturn(Optional.of(arrivalHubVm));
+        MissionVm draftVm = createMissionVm(testMission, 0, 0.0, List.of(), departureHubVm, arrivalHubVm);
+        when(missionMapper.toVm(eq(testMission), eq(0), anyDouble(), anyList(), eq(departureHubVm), eq(arrivalHubVm)))
+                .thenReturn(draftVm);
+
+        MissionVm result = missionService.unscheduleMission(MISSION_ID);
+
+        assertThat(result).isNotNull();
+        assertThat(testMission.getStatus()).isEqualTo(MissionStatus.DRAFT);
+        verify(missionRepository).save(testMission);
     }
 
     @Test

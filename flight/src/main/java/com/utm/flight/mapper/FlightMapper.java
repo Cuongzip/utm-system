@@ -1,11 +1,12 @@
 package com.utm.flight.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.Flight;
+import com.utm.flight.model.FlightWaypoint;
+import com.utm.flight.model.GeoJsonLineString;
 import com.utm.flight.viewmodel.flight.FlightPostVm;
 import com.utm.flight.viewmodel.flight.FlightPutVm;
 import com.utm.flight.viewmodel.flight.FlightVm;
+import com.utm.flight.viewmodel.flight.FlightWaypointVm;
 import com.utm.flight.viewmodel.flight.GeoJsonLineStringVm;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Builder;
@@ -15,19 +16,38 @@ import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true))
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true), unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface FlightMapper {
 
-    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "stringToLineString")
-    @Mapping(target = "actualRoute", source = "actualRoute", qualifiedByName = "stringToLineString")
     FlightVm toVm(Flight flight);
 
     List<FlightVm> toVmList(List<Flight> flights);
+
+    FlightWaypoint toWaypointModel(FlightWaypointVm vm);
+
+    FlightWaypointVm toWaypointVm(FlightWaypoint model);
+
+    List<FlightWaypoint> toWaypointModels(List<FlightWaypointVm> vms);
+
+    List<FlightWaypointVm> toWaypointVms(List<FlightWaypoint> models);
+
+    default GeoJsonLineString toLineStringModel(GeoJsonLineStringVm vm) {
+        if (vm == null) {
+            return null;
+        }
+        return GeoJsonLineString.of(vm.coordinates());
+    }
+
+    default GeoJsonLineStringVm toLineStringVm(GeoJsonLineString model) {
+        if (model == null || model.coordinates() == null) {
+            return GeoJsonLineStringVm.empty();
+        }
+        return GeoJsonLineStringVm.of(model.coordinates());
+    }
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -41,8 +61,18 @@ public interface FlightMapper {
     @Mapping(target = "arrivalHubId", qualifiedByName = "trimString")
     @Mapping(target = "pilotId", qualifiedByName = "trimString")
     @Mapping(target = "executionId", qualifiedByName = "trimString")
-    @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "lineStringToString")
+    @Mapping(target = "missionId", qualifiedByName = "trimString")
+    @Mapping(target = "dependsOnFlightId", qualifiedByName = "trimString")
+    @Mapping(target = "payloadWeightKg", defaultValue = "0.0")
+    @Mapping(target = "minimumTurnaroundMinutes", defaultValue = "0")
+    @Mapping(target = "arrivalStopoverType", defaultValue = "none")
+    @Mapping(target = "endingBatteryPct", ignore = true)
+    @Mapping(target = "flightType", defaultValue = "DELIVERY")
+    @Mapping(target = "operationMode", defaultValue = "AUTONOMOUS")
     @Mapping(target = "actualRoute", ignore = true)
+    @Mapping(target = "feasibilityVerdict", ignore = true)
+    @Mapping(target = "feasibilityOverride", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -60,10 +90,16 @@ public interface FlightMapper {
     @Mapping(target = "arrivalHubId", qualifiedByName = "trimString")
     @Mapping(target = "pilotId", qualifiedByName = "trimString")
     @Mapping(target = "executionId", ignore = true)
+    @Mapping(target = "missionId", ignore = true)
+    @Mapping(target = "legIndex", ignore = true)
+    @Mapping(target = "totalLegs", ignore = true)
+    @Mapping(target = "dependsOnFlightId", qualifiedByName = "trimString")
+    @Mapping(target = "endingBatteryPct", ignore = true)
     @Mapping(target = "authorizationStatus", ignore = true)
     @Mapping(target = "conformanceStatus", ignore = true)
-    @Mapping(target = "plannedRoute", source = "plannedRoute", qualifiedByName = "lineStringToString")
-    @Mapping(target = "actualRoute", source = "actualRoute", qualifiedByName = "lineStringToString")
+    @Mapping(target = "feasibilityVerdict", ignore = true)
+    @Mapping(target = "feasibilityOverride", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -72,30 +108,10 @@ public interface FlightMapper {
 
     @Named("trimString")
     default String trimString(String value) {
-        return value != null ? value.trim() : null;
-    }
-
-    @Named("stringToLineString")
-    default GeoJsonLineStringVm stringToLineString(String routeJson) {
-        if (routeJson == null || routeJson.isBlank()) {
-            return GeoJsonLineStringVm.empty();
-        }
-        try {
-            return OBJECT_MAPPER.readValue(routeJson, GeoJsonLineStringVm.class);
-        } catch (JsonProcessingException e) {
-            return GeoJsonLineStringVm.empty();
-        }
-    }
-
-    @Named("lineStringToString")
-    default String lineStringToString(GeoJsonLineStringVm lineStringVm) {
-        if (lineStringVm == null) {
+        if (value == null) {
             return null;
         }
-        try {
-            return OBJECT_MAPPER.writeValueAsString(lineStringVm);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to serialize route GeoJSON LineString", e);
-        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

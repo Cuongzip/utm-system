@@ -4,9 +4,12 @@ import com.utm.flight.config.ServiceUrlConfig;
 import com.utm.flight.viewmodel.client.TelemetryBriefVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,6 +37,26 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
         } catch (Exception ex) {
             log.debug("Telemetry not found or unavailable for flight '{}': {}", flightId, ex.getMessage());
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<TelemetryBriefVm> getFlightTrack(String flightId) {
+        if (flightId == null || flightId.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        String endpoint = serviceUrlConfig.getTelemetryUrl() + "/api/v1/telemetry/flight/" + flightId.trim() + "/track";
+        try {
+            List<TelemetryBriefVm> track = restClient.get()
+                    .uri(endpoint)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {
+                    });
+            return track != null ? track : Collections.emptyList();
+        } catch (Exception ex) {
+            log.debug("Telemetry track unavailable for flight '{}': {}", flightId, ex.getMessage());
+            return Collections.emptyList();
         }
     }
 }

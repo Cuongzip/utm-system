@@ -7,25 +7,71 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Schema(description = "Request payload for updating an existing mission in draft status")
 public record MissionPutVm(
-                @Schema(description = "Mission name", example = "Nhiệm vụ giao hàng chặng Hub 1 - Hub 2 (Điều chỉnh)") @Size(min = 1, max = 255, message = "Mission name must be between 1 and 255 characters") String name,
+        @Schema(description = "Mission name")
+        @Size(min = 1, max = 255, message = "Mission name must be between 1 and 255 characters")
+        String name,
 
-                @Schema(description = "Mission detailed description", example = "Giao bưu kiện nhẹ 1.5kg") String description,
+        @Schema(description = "Mission detailed description")
+        String description,
 
-                @Schema(description = "Payload mass in kilograms to transport", example = "1.5") @PositiveOrZero(message = "Payload weight must be positive or zero") @DecimalMax(value = "50.0", message = "Payload weight cannot exceed 50kg") Double payloadWeightKg,
+        @Schema(description = "Payload mass in kilograms to transport", example = "1.5")
+        @PositiveOrZero(message = "Payload weight must be positive or zero")
+        @DecimalMax(value = "50.0", message = "Payload weight cannot exceed 50kg")
+        Double payloadWeightKg,
 
-                @Schema(description = "Departure Hub UUID identifier", example = "550e8400-e29b-41d4-a716-446655440000") String departureHubId,
+        @Schema(description = "Departure Hub UUID identifier")
+        String departureHubId,
 
-                @Schema(description = "Arrival Hub UUID identifier", example = "660e8400-e29b-41d4-a716-446655440001") String arrivalHubId,
+        @Schema(description = "Arrival Hub UUID identifier")
+        String arrivalHubId,
 
-                @Schema(description = "Mission schedule type ('immediate' or 'scheduled')", example = "scheduled") MissionScheduleType scheduleType,
+        @Schema(description = "Mission schedule type")
+        MissionScheduleType scheduleType,
 
-                @Schema(description = "Scheduled flight departure timestamp", example = "2026-10-16T09:00:00Z") ZonedDateTime scheduledAt) {
+        @Schema(description = "Scheduled flight departure timestamp")
+        ZonedDateTime scheduledAt,
+
+        @Schema(description = "Optional pre-assigned Drone UUID identifier")
+        String droneId,
+
+        @Schema(description = "Optional pre-assigned Remote Pilot ID")
+        @Size(max = 100, message = "Pilot ID must not exceed 100 characters")
+        String pilotId,
+
+        @Schema(description = "Optional cron expression for recurring missions")
+        @Size(max = 100, message = "Recurring pattern must not exceed 100 characters")
+        String recurringPattern,
+
+        @Schema(description = "Optional event trigger conditions")
+        List<Map<String, Object>> triggerConditions,
+
+        @Schema(description = "Optional required drone capabilities")
+        List<String> requiredCapabilities,
+
+        @Schema(description = "Optional feasibility override metadata")
+        Map<String, Object> feasibilityOverride
+) {
+    public MissionPutVm(String name, String description, Double payloadWeightKg, String departureHubId,
+            String arrivalHubId, MissionScheduleType scheduleType, ZonedDateTime scheduledAt,
+            String droneId, String pilotId) {
+        this(name, description, payloadWeightKg, departureHubId, arrivalHubId, scheduleType, scheduledAt,
+                droneId, pilotId, null, null, null, null);
+    }
+
+    public MissionPutVm(String name, String description, Double payloadWeightKg, String departureHubId,
+            String arrivalHubId, MissionScheduleType scheduleType, ZonedDateTime scheduledAt) {
+        this(name, description, payloadWeightKg, departureHubId, arrivalHubId, scheduleType, scheduledAt,
+                null, null, null, null, null, null);
+    }
 
     public MissionPutVm(String name, String description, String departureHubId, String arrivalHubId,
-                        MissionScheduleType scheduleType, ZonedDateTime scheduledAt) {
-        this(name, description, 0.0, departureHubId, arrivalHubId, scheduleType, scheduledAt);
+            MissionScheduleType scheduleType, ZonedDateTime scheduledAt) {
+        this(name, description, 0.0, departureHubId, arrivalHubId, scheduleType, scheduledAt,
+                null, null, null, null, null, null);
     }
 }

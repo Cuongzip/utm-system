@@ -6,11 +6,13 @@ import com.utm.simulation.viewmodel.client.FlightDetailVm;
 import com.utm.simulation.viewmodel.client.WaypointVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -68,5 +70,68 @@ public class FlightClientServiceImpl implements FlightClientService {
             return detail.waypoints();
         }
         return Collections.emptyList();
+    }
+
+    @Override
+    public boolean startFlight(String flightId) {
+        if (flightId == null || flightId.isBlank() || !isFlightUrlConfigured()) {
+            return false;
+        }
+        String endpoint = buildBaseUrl() + "/api/v1/flights/" + flightId.trim() + "/start";
+        try {
+            restClient.post().uri(endpoint).retrieve().toBodilessEntity();
+            log.info("Synchronized flight '{}' -> ACTIVE from simulation start", flightId);
+            return true;
+        } catch (Exception ex) {
+            log.warn("Could not start flight '{}' from simulation: {}", flightId, ex.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean completeFlight(String flightId) {
+        if (flightId == null || flightId.isBlank() || !isFlightUrlConfigured()) {
+            return false;
+        }
+        String endpoint = buildBaseUrl() + "/api/v1/flights/" + flightId.trim() + "/complete";
+        try {
+            restClient.post().uri(endpoint).retrieve().toBodilessEntity();
+            log.info("Synchronized flight '{}' -> COMPLETED from simulation finish", flightId);
+            return true;
+        } catch (Exception ex) {
+            log.warn("Could not complete flight '{}' from simulation: {}", flightId, ex.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean abortFlight(String flightId, String reason) {
+        if (flightId == null || flightId.isBlank() || !isFlightUrlConfigured()) {
+            return false;
+        }
+        String endpoint = buildBaseUrl() + "/api/v1/flights/" + flightId.trim() + "/abort";
+        try {
+            restClient.post()
+                    .uri(endpoint)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("reason", reason != null && !reason.isBlank() ? reason : "Simulation aborted"))
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Synchronized flight '{}' -> ABORTED from simulation ({})", flightId, reason);
+            return true;
+        } catch (Exception ex) {
+            log.warn("Could not abort flight '{}' from simulation: {}", flightId, ex.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isFlightUrlConfigured() {
+        return serviceUrlConfig.flight() != null
+                && serviceUrlConfig.flight().url() != null
+                && !serviceUrlConfig.flight().url().isBlank();
+    }
+
+    private String buildBaseUrl() {
+        return ClientUrlUtils.normalizeBaseUrl(serviceUrlConfig.flight().url(), "http://flight:8086", "flight");
     }
 }

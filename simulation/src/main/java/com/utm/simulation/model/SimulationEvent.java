@@ -1,5 +1,6 @@
 package com.utm.simulation.model;
 
+import com.utm.commonlibrary.model.AbstractAuditEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,9 +12,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-import java.time.ZonedDateTime;
+import java.util.Map;
 
 @Entity
 @Table(name = "simulation_event")
@@ -22,7 +24,7 @@ import java.time.ZonedDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SimulationEvent {
+public class SimulationEvent extends AbstractAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -44,13 +46,7 @@ public class SimulationEvent {
     @Column(name = "severity", length = 20)
     private String severity;
 
-    @Column(name = "config_json", columnDefinition = "TEXT")
-    private String configJson;
-
-    @CreationTimestamp
-    @Column(name = "created_on")
-    private ZonedDateTime createdOn;
-
-    @Column(name = "created_by")
-    private String createdBy;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "config_json", columnDefinition = "jsonb")
+    private Map<String, Object> configJson;
 }

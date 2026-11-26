@@ -18,8 +18,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "flight_conformance")
@@ -50,11 +53,11 @@ public class FlightConformance extends AbstractAuditEntity {
     @Column(name = "vertical_error_m")
     private Double verticalErrorM;
 
-    @Column(name = "corridor_radius_m")
+    @Column(name = "corridor_radius_m", nullable = false)
     @Builder.Default
     private Double corridorRadiusM = 15.0;
 
-    @Column(name = "altitude_buffer_m")
+    @Column(name = "altitude_buffer_m", nullable = false)
     @Builder.Default
     private Double altitudeBufferM = 10.0;
 
@@ -79,6 +82,7 @@ public class FlightConformance extends AbstractAuditEntity {
     @Column(name = "last_evaluated_at")
     private ZonedDateTime lastEvaluatedAt;
 
-    @Column(name = "violations_json", columnDefinition = "TEXT")
-    private String violationsJson;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "violations_json", columnDefinition = "jsonb")
+    private List<Object> violations;
 }

@@ -37,7 +37,35 @@ public record DroneBriefVm(
         Double windToleranceMs,
 
         @Schema(description = "Maximum flight duration in minutes")
-        Double maxFlightTimeMin
+        Double maxFlightTimeMin,
+
+        @Schema(description = "Home hub UUID identifier")
+        String homeHubId,
+
+        @Schema(description = "Current parked hub UUID identifier")
+        String currentHubId,
+
+        @Schema(description = "Current battery state of charge (%)")
+        Double currentBatteryPct,
+
+        @Schema(description = "Maximum range on single charge in meters")
+        Double maxRangeM
 ) {
+    public DroneBriefVm(
+            String id,
+            String registrationNumber,
+            String status,
+            Double batteryCapacityWh,
+            Double maxPayload,
+            Double hoverPowerW,
+            Double cruisePowerW,
+            Double cruiseSpeedMs,
+            Double batteryHealthPct,
+            Double windToleranceMs,
+            Double maxFlightTimeMin
+    ) {
+        this(id, registrationNumber, status, batteryCapacityWh, maxPayload, hoverPowerW, cruisePowerW,
+                cruiseSpeedMs, batteryHealthPct, windToleranceMs, maxFlightTimeMin, null, null, null, null);
+    }
 }
 

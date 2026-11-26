@@ -1,5 +1,7 @@
 package com.utm.flight.mapper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.flight.model.Flight;
 import com.utm.flight.model.FlightConformance;
 import com.utm.flight.model.enumeration.ConformanceStatus;
@@ -14,11 +16,16 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
+import java.util.List;
+
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING, builder = @Builder(disableBuilder = true))
 public interface FlightConformanceMapper {
 
+    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Mapping(target = "flightId", source = "flight.id")
     @Mapping(target = "status", source = "status", qualifiedByName = "mapStatusToString")
+    @Mapping(target = "violationsJson", source = "violations", qualifiedByName = "violationsToJson")
     FlightConformanceVm toVm(FlightConformance entity);
 
     @Mapping(target = "id", ignore = true)
@@ -35,7 +42,7 @@ public interface FlightConformanceMapper {
     @Mapping(target = "currentHeading", ignore = true)
     @Mapping(target = "lastTelemetryTime", ignore = true)
     @Mapping(target = "lastEvaluatedAt", expression = "java(java.time.ZonedDateTime.now())")
-    @Mapping(target = "violationsJson", ignore = true)
+    @Mapping(target = "violations", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -57,7 +64,7 @@ public interface FlightConformanceMapper {
     @Mapping(target = "corridorRadiusM", ignore = true)
     @Mapping(target = "altitudeBufferM", ignore = true)
     @Mapping(target = "lastEvaluatedAt", ignore = true)
-    @Mapping(target = "violationsJson", ignore = true)
+    @Mapping(target = "violations", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -67,5 +74,17 @@ public interface FlightConformanceMapper {
     @Named("mapStatusToString")
     default String mapStatusToString(ConformanceStatus status) {
         return status != null ? status.getValue() : null;
+    }
+
+    @Named("violationsToJson")
+    default String violationsToJson(List<Object> violations) {
+        if (violations == null || violations.isEmpty()) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.writeValueAsString(violations);
+        } catch (JsonProcessingException e) {
+            return "[]";
+        }
     }
 }

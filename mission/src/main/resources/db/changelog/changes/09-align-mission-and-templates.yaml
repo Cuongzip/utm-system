@@ -1,0 +1,49 @@
+databaseChangeLog:
+  - changeSet:
+      id: 09-align-mission-and-templates
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS recurring_pattern VARCHAR(100);
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS trigger_conditions JSONB;
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS required_capabilities JSONB;
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS feasibility_override JSONB;
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS template_id VARCHAR(36);
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS template_version INTEGER;
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS estimated_distance DOUBLE PRECISION;
+              ALTER TABLE mission ADD COLUMN IF NOT EXISTS estimated_duration INTEGER;
+
+              ALTER TABLE waypoint ADD COLUMN IF NOT EXISTS speed_to_waypoint DOUBLE PRECISION;
+              ALTER TABLE waypoint ADD COLUMN IF NOT EXISTS heading_at_waypoint DOUBLE PRECISION;
+              ALTER TABLE waypoint ADD COLUMN IF NOT EXISTS turn_radius DOUBLE PRECISION;
+              ALTER TABLE waypoint ADD COLUMN IF NOT EXISTS wait_for_confirmation BOOLEAN NOT NULL DEFAULT FALSE;
+
+              CREATE TABLE IF NOT EXISTS mission_template (
+                id VARCHAR(36) PRIMARY KEY,
+                code VARCHAR(50) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                category VARCHAR(60),
+                tags JSONB,
+                variables JSONB,
+                blueprint JSONB NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                is_latest BOOLEAN NOT NULL DEFAULT TRUE,
+                previous_version_id VARCHAR(36),
+                changelog TEXT,
+                usage_count INTEGER NOT NULL DEFAULT 0,
+                is_published BOOLEAN NOT NULL DEFAULT FALSE,
+                published_at TIMESTAMPTZ,
+                created_on TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_by VARCHAR(100),
+                last_modified_on TIMESTAMPTZ,
+                last_modified_by VARCHAR(100),
+                CONSTRAINT uq_mission_template_code_version UNIQUE (code, version)
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_mission_drone_id ON mission(drone_id);
+              CREATE INDEX IF NOT EXISTS idx_mission_template_latest ON mission_template(is_latest);
+              CREATE INDEX IF NOT EXISTS idx_mission_template_category ON mission_template(category);
+              CREATE INDEX IF NOT EXISTS idx_mission_template_published ON mission_template(is_published);

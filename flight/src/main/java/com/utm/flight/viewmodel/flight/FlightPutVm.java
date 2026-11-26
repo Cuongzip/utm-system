@@ -1,51 +1,42 @@
 package com.utm.flight.viewmodel.flight;
 
+import com.utm.flight.model.enumeration.FlightOperationMode;
+import com.utm.flight.model.enumeration.FlightType;
+import com.utm.flight.model.enumeration.RiskAssessmentLevel;
 import com.utm.flight.model.enumeration.Verdict;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
-@Schema(
-        description = "Request payload for updating an existing Flight Plan before departure"
-)
+@Schema(description = "Request payload for updating an existing Flight Plan before departure")
 public record FlightPutVm(
-        @Schema(description = "Updated Drone UUID identifier", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
         String droneId,
-
-        @Schema(description = "Updated Departure Hub UUID identifier", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
         String departureHubId,
-
-        @Schema(description = "Updated Arrival Hub UUID identifier", example = "b2c3d4e5-f6a7-8901-bcde-f12345678901")
         String arrivalHubId,
-
-        @Schema(description = "Updated Remote Pilot ID", example = "PILOT-VN-008")
         String pilotId,
-
-        @Schema(description = "Updated scheduled departure timestamp", example = "2026-10-01T08:30:00Z")
         ZonedDateTime scheduledDeparture,
-
-        @Schema(description = "Updated scheduled arrival timestamp", example = "2026-10-01T09:15:00Z")
         ZonedDateTime scheduledArrival,
-
-        @Schema(description = "Updated cruising altitude in meters (m)", example = "150.0")
         Double cruisingAltitudeM,
-
-        @Schema(description = "Updated flight remarks or weather considerations", example = "Adjusted route due to wind speed")
         String notes,
-
-        @Schema(description = "Updated planned route GeoJSON LineString geometry")
         GeoJsonLineStringVm plannedRoute,
-
-        @Schema(description = "Updated actual route GeoJSON LineString geometry")
         GeoJsonLineStringVm actualRoute,
-
-        @Schema(description = "Updated operational justification / reason if feasibility is marginal or no-go")
         String feasibilityOverride,
-
-        @Schema(description = "Updated pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)", example = "go")
         Verdict feasibilityVerdict,
-
-        @Schema(description = "Updated ordered list of waypoints along the flight route")
-        java.util.List<FlightWaypointVm> waypoints
+        List<FlightWaypointVm> waypoints,
+        Double payloadWeightKg,
+        FlightType flightType,
+        FlightOperationMode operationMode,
+        Double minAltitudeM,
+        Double maxAltitudeM,
+        RiskAssessmentLevel riskAssessment,
+        String missionType,
+        Map<String, Object> missionData,
+        String dependsOnFlightId,
+        Double expectedInitialBatteryPct,
+        Integer minimumTurnaroundMinutes,
+        String arrivalStopoverType
 ) {
     public FlightPutVm(
             String droneId, String departureHubId, String arrivalHubId,
@@ -53,7 +44,32 @@ public record FlightPutVm(
             Double cruisingAltitudeM, String notes, GeoJsonLineStringVm plannedRoute,
             GeoJsonLineStringVm actualRoute, String feasibilityOverride, Verdict feasibilityVerdict) {
         this(droneId, departureHubId, arrivalHubId, pilotId, scheduledDeparture, scheduledArrival,
-                cruisingAltitudeM, notes, plannedRoute, actualRoute, feasibilityOverride, feasibilityVerdict, null);
+                cruisingAltitudeM, notes, plannedRoute, actualRoute, feasibilityOverride,
+                feasibilityVerdict, null, null, null, null, null, null, null, null, null,
+                null, null, null, null);
+    }
+
+    public FlightPutVm(
+            String droneId, String departureHubId, String arrivalHubId,
+            String pilotId, ZonedDateTime scheduledDeparture, ZonedDateTime scheduledArrival,
+            Double cruisingAltitudeM, String notes, GeoJsonLineStringVm plannedRoute,
+            GeoJsonLineStringVm actualRoute, String feasibilityOverride, Verdict feasibilityVerdict,
+            List<FlightWaypointVm> waypoints) {
+        this(droneId, departureHubId, arrivalHubId, pilotId, scheduledDeparture, scheduledArrival,
+                cruisingAltitudeM, notes, plannedRoute, actualRoute, feasibilityOverride,
+                feasibilityVerdict, waypoints, null, null, null, null, null, null, null, null,
+                null, null, null, null);
+    }
+
+    public FlightPutVm(
+            String droneId, String departureHubId, String arrivalHubId,
+            String pilotId, ZonedDateTime scheduledDeparture, ZonedDateTime scheduledArrival,
+            Double cruisingAltitudeM, String notes, GeoJsonLineStringVm plannedRoute,
+            GeoJsonLineStringVm actualRoute, String feasibilityOverride, Verdict feasibilityVerdict,
+            List<FlightWaypointVm> waypoints, Double payloadWeightKg) {
+        this(droneId, departureHubId, arrivalHubId, pilotId, scheduledDeparture, scheduledArrival,
+                cruisingAltitudeM, notes, plannedRoute, actualRoute, feasibilityOverride,
+                feasibilityVerdict, waypoints, payloadWeightKg, null, null, null, null, null, null, null,
+                null, null, null, null);
     }
 }
-

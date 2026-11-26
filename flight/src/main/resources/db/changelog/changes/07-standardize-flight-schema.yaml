@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 07-standardize-flight-schema
+      author: utm-system
+      changes:
+        - sql:
+            sql: |
+              UPDATE flight SET conformance_status = 'CONFORMANT' WHERE UPPER(conformance_status) = 'CONFORMING';
+              UPDATE flight SET status = 'SCHEDULED' WHERE UPPER(status) = 'PLANNED';
+              UPDATE flight SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status);
+              UPDATE flight SET authorization_status = UPPER(authorization_status) WHERE authorization_status IS NOT NULL AND authorization_status <> UPPER(authorization_status);
+              UPDATE flight SET conformance_status = UPPER(conformance_status) WHERE conformance_status IS NOT NULL AND conformance_status <> UPPER(conformance_status);
+              UPDATE flight SET feasibility_verdict = COALESCE(UPPER(feasibility_verdict), 'UNKNOWN');
+              UPDATE flight SET pilot_id = NULL WHERE pilot_id IS NOT NULL AND BTRIM(pilot_id) = '';
+              UPDATE flight SET execution_id = NULL WHERE execution_id IS NOT NULL AND BTRIM(execution_id) = '';
+              UPDATE flight SET mission_id = NULL WHERE mission_id IS NOT NULL AND BTRIM(mission_id) = '';
+              UPDATE flight SET depends_on_flight_id = NULL WHERE depends_on_flight_id IS NOT NULL AND (BTRIM(depends_on_flight_id) = '' OR depends_on_flight_id NOT IN (SELECT id FROM flight));
+              UPDATE flight SET planned_route = '{"type":"LineString","coordinates":[]}' WHERE planned_route IS NULL OR BTRIM(planned_route) = '';
+              UPDATE flight SET actual_route = '{"type":"LineString","coordinates":[]}' WHERE actual_route IS NULL OR BTRIM(actual_route) = '';
+              UPDATE flight SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+
+              ALTER TABLE flight ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE flight ALTER COLUMN status SET DEFAULT 'SCHEDULED';
+              ALTER TABLE flight ALTER COLUMN conformance_status SET DEFAULT 'CONFORMANT';
+              ALTER TABLE flight ALTER COLUMN feasibility_verdict SET DEFAULT 'UNKNOWN';
+              ALTER TABLE flight ALTER COLUMN feasibility_verdict SET NOT NULL;
+              ALTER TABLE flight ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE flight ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE flight ALTER COLUMN planned_route TYPE JSONB USING planned_route::jsonb;
+              ALTER TABLE flight ALTER COLUMN actual_route DROP DEFAULT;
+              ALTER TABLE flight ALTER COLUMN actual_route TYPE JSONB USING actual_route::jsonb;
+              ALTER TABLE flight ALTER COLUMN actual_route SET DEFAULT '{"type":"LineString","coordinates":[]}'::jsonb;
+
+              ALTER TABLE flight DROP CONSTRAINT IF EXISTS fk_flight_depends_on;
+              ALTER TABLE flight ADD CONSTRAINT fk_flight_depends_on FOREIGN KEY (depends_on_flight_id) REFERENCES flight(id) ON DELETE SET NULL;
+              ALTER TABLE flight DROP CONSTRAINT IF EXISTS chk_flight_schedule_window;
+              ALTER TABLE flight ADD CONSTRAINT chk_flight_schedule_window CHECK (scheduled_arrival > scheduled_departure);
+              ALTER TABLE flight DROP CONSTRAINT IF EXISTS chk_flight_payload;
+              ALTER TABLE flight ADD CONSTRAINT chk_flight_payload CHECK (payload_weight_kg >= 0.0);
+
+              DROP INDEX IF EXISTS idx_flight_drone_id;
+              DROP INDEX IF EXISTS idx_flight_execution_id;
+              CREATE INDEX IF NOT EXISTS idx_flight_mission_id ON flight (mission_id);
+              CREATE INDEX IF NOT EXISTS idx_flight_dep_hub_status ON flight (departure_hub_id, status);
+              CREATE INDEX IF NOT EXISTS idx_flight_arr_hub_status ON flight (arrival_hub_id, status);
+
+              UPDATE flight_conformance SET status = 'CONFORMANT' WHERE UPPER(status) = 'CONFORMING';
+              UPDATE flight_conformance SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status);
+              UPDATE flight_conformance SET corridor_radius_m = 15.0 WHERE corridor_radius_m IS NULL;
+              UPDATE flight_conformance SET altitude_buffer_m = 10.0 WHERE altitude_buffer_m IS NULL;
+              UPDATE flight_conformance SET violations_json = NULL WHERE violations_json IS NOT NULL AND BTRIM(violations_json) = '';
+              UPDATE flight_conformance SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE flight_conformance ALTER COLUMN corridor_radius_m SET DEFAULT 15.0;
+              ALTER TABLE flight_conformance ALTER COLUMN corridor_radius_m SET NOT NULL;
+              ALTER TABLE flight_conformance ALTER COLUMN altitude_buffer_m SET DEFAULT 10.0;
+              ALTER TABLE flight_conformance ALTER COLUMN altitude_buffer_m SET NOT NULL;
+              ALTER TABLE flight_conformance ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE flight_conformance ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE flight_conformance ALTER COLUMN violations_json TYPE JSONB USING CASE WHEN violations_json IS NULL THEN NULL ELSE violations_json::jsonb END;
+              DROP INDEX IF EXISTS idx_flight_conformance_flight_id;
+
+              UPDATE feasibility_evaluations SET verdict = UPPER(verdict) WHERE verdict IS NOT NULL AND verdict <> UPPER(verdict);
+              UPDATE feasibility_evaluations SET solutions_json = NULL WHERE solutions_json IS NOT NULL AND BTRIM(solutions_json) = '';
+              UPDATE feasibility_evaluations SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE feasibility_evaluations ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE feasibility_evaluations ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE feasibility_evaluations ALTER COLUMN solutions_json TYPE JSONB USING CASE WHEN solutions_json IS NULL THEN NULL ELSE solutions_json::jsonb END;

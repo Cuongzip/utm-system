@@ -11,3 +11,13 @@ databaseChangeLog:
       file: db/changelog/changes/05-clean-mission-and-waypoint-fields.yaml
   - include:
       file: db/changelog/changes/06-drop-waypoint-hub-id.yaml
+  - include:
+      file: db/changelog/changes/07-multi-leg-mission-execution-architecture.yaml
+  - include:
+      file: db/changelog/changes/08-standardize-mission-schema.yaml
+  - include:
+      file: db/changelog/changes/09-align-mission-and-templates.yaml
+  - include:
+      file: db/changelog/changes/10-hub-waypoint-and-execution-progress.yaml
+  - include:
+      file: db/changelog/changes/11-allow-terminal-hub-waypoints.yaml

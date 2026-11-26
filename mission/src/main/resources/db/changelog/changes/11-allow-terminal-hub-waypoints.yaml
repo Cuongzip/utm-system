@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 11-allow-terminal-hub-waypoints
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE waypoint DROP CONSTRAINT IF EXISTS chk_waypoint_coordinates;
+              ALTER TABLE waypoint ADD CONSTRAINT chk_waypoint_coordinates
+                CHECK (
+                  latitude >= -90 AND latitude <= 90
+                  AND longitude >= -180 AND longitude <= 180
+                  AND (
+                    (waypoint_type = 'HUB' AND altitude >= 0 AND hub_id IS NOT NULL)
+                    OR (waypoint_type = 'COORDINATE' AND altitude > 0)
+                  )
+                );

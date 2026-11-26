@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.ZonedDateTime;
 
 @RestController
 @RequestMapping("/api/v1/flights")
@@ -61,12 +64,21 @@ public class FlightController {
             @RequestParam(required = false) String droneId,
             @Parameter(description = "Filter by mission execution ID")
             @RequestParam(required = false) String executionId,
+            @Parameter(description = "Filter by departure OR arrival Hub ID")
+            @RequestParam(required = false) String hubId,
+            @Parameter(description = "Filter by flight type (delivery, inspection, surveillance, training, test, repositioning)")
+            @RequestParam(required = false) String flightType,
+            @Parameter(description = "Filter flights with scheduledDeparture >= from (ISO-8601 date-time)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime from,
+            @Parameter(description = "Filter flights with scheduledDeparture <= to (ISO-8601 date-time)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime to,
             @Parameter(description = "Page size limit (default: 20, 0 or negative for unpaged)")
             @RequestParam(defaultValue = "20") int limit,
             @Parameter(description = "Offset index (default: 0)")
             @RequestParam(defaultValue = "0") int offset
     ) {
-        return ResponseEntity.ok(flightService.getFlights(status, authorizationStatus, pilotId, droneId, executionId, limit, offset));
+        return ResponseEntity.ok(flightService.getFlights(
+                status, authorizationStatus, pilotId, droneId, executionId, hubId, flightType, from, to, limit, offset));
     }
 
     @PostMapping

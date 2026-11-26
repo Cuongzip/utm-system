@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 06-add-multi-leg-and-payload-to-flight
+      author: utm-backend
+      changes:
+        - addColumn:
+            tableName: flight
+            columns:
+              - column:
+                  name: mission_id
+                  type: VARCHAR(36)
+              - column:
+                  name: leg_index
+                  type: INTEGER
+              - column:
+                  name: total_legs
+                  type: INTEGER
+              - column:
+                  name: depends_on_flight_id
+                  type: VARCHAR(36)
+              - column:
+                  name: payload_weight_kg
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_execution_leg
+            columns:
+              - column:
+                  name: execution_id
+              - column:
+                  name: leg_index
+        - createIndex:
+            tableName: flight
+            indexName: idx_flight_drone_schedule
+            columns:
+              - column:
+                  name: drone_id
+              - column:
+                  name: status
+              - column:
+                  name: scheduled_departure
+              - column:
+                  name: scheduled_arrival
+      rollback:
+        - dropIndex:
+            tableName: flight
+            indexName: idx_flight_drone_schedule
+        - dropIndex:
+            tableName: flight
+            indexName: idx_flight_execution_leg
+        - dropColumn:
+            tableName: flight
+            columnName: payload_weight_kg
+        - dropColumn:
+            tableName: flight
+            columnName: depends_on_flight_id
+        - dropColumn:
+            tableName: flight
+            columnName: total_legs
+        - dropColumn:
+            tableName: flight
+            columnName: leg_index
+        - dropColumn:
+            tableName: flight
+            columnName: mission_id

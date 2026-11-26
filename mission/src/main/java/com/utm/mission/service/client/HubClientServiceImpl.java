@@ -2,15 +2,17 @@ package com.utm.mission.service.client;
 
 import com.utm.mission.config.ServiceUrlConfig;
 import com.utm.mission.viewmodel.client.HubBriefVm;
+import com.utm.mission.viewmodel.client.HubListClientVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,12 +35,12 @@ public class HubClientServiceImpl implements HubClientService {
             return Boolean.TRUE.equals(restClient.get()
                     .uri(hubUrl + "/api/v1/hubs/{id}", hubId.trim())
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError,
-                            (request, response) -> log.warn("Hub {} verification returned status {}", hubId,
-                                    response.getStatusCode()))
                     .toBodilessEntity()
                     .getStatusCode()
                     .is2xxSuccessful());
+        } catch (RestClientResponseException e) {
+            log.warn("Hub {} verification returned status {}", hubId, e.getStatusCode());
+            return false;
         } catch (Exception e) {
             log.error("Failed to verify hub ID {} at {}: {}", hubId, hubUrl, e.getMessage());
             return false;
@@ -77,5 +79,20 @@ public class HubClientServiceImpl implements HubClientService {
             }
         }
         return result;
+    }
+
+    @Override
+    public List<HubBriefVm> getActiveHubs() {
+        String hubUrl = serviceUrlConfig.getHubUrl();
+        try {
+            HubListClientVm list = restClient.get()
+                    .uri(hubUrl + "/api/v1/hubs?status=ACTIVE&limit=0")
+                    .retrieve()
+                    .body(HubListClientVm.class);
+            return list != null && list.items() != null ? list.items() : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("Failed to list active hubs from {}: {}", hubUrl, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 }

@@ -30,6 +30,9 @@ public interface MissionMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "name", source = "name", qualifiedByName = "trimString")
     @Mapping(target = "description", source = "description", qualifiedByName = "trimString")
+    @Mapping(target = "droneId", source = "droneId", qualifiedByName = "missionTrimBlankToNull")
+    @Mapping(target = "pilotId", source = "pilotId", qualifiedByName = "missionTrimBlankToNull")
+    @Mapping(target = "recurringPattern", source = "recurringPattern", qualifiedByName = "missionTrimBlankToNull")
     @Mapping(target = "scheduleType", source = "scheduleType", defaultExpression = "java(com.utm.mission.model.enumeration.MissionScheduleType.IMMEDIATE)")
     @Mapping(target = "payloadWeightKg", source = "payloadWeightKg", defaultExpression = "java(0.0)")
     Mission toEntity(MissionPostVm postVm);
@@ -44,10 +47,13 @@ public interface MissionMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "name", source = "name", qualifiedByName = "trimString")
     @Mapping(target = "description", source = "description", qualifiedByName = "trimString")
+    @Mapping(target = "droneId", source = "droneId", qualifiedByName = "missionTrimBlankToNull")
+    @Mapping(target = "pilotId", source = "pilotId", qualifiedByName = "missionTrimBlankToNull")
+    @Mapping(target = "recurringPattern", source = "recurringPattern", qualifiedByName = "missionTrimBlankToNull")
     void updateEntityFromVm(MissionPutVm putVm, @MappingTarget Mission entity);
 
     @Mapping(target = "waypointCount", expression = "java(entity.getWaypoints() != null ? entity.getWaypoints().size() : 0)")
-    @Mapping(target = "estimatedDistanceMeters", ignore = true)
+    @Mapping(target = "estimatedDistanceMeters", source = "estimatedDistance")
     @Mapping(target = "departureHub", ignore = true)
     @Mapping(target = "arrivalHub", ignore = true)
     @Mapping(target = "waypoints", source = "waypoints")
@@ -73,6 +79,8 @@ public interface MissionMapper {
     @Mapping(target = "payloadWeightKg", source = "entity.payloadWeightKg")
     @Mapping(target = "departureHubId", source = "entity.departureHubId")
     @Mapping(target = "arrivalHubId", source = "entity.arrivalHubId")
+    @Mapping(target = "droneId", source = "entity.droneId")
+    @Mapping(target = "pilotId", source = "entity.pilotId")
     @Mapping(target = "scheduleType", source = "entity.scheduleType")
     @Mapping(target = "scheduledAt", source = "entity.scheduledAt")
     @Mapping(target = "status", source = "entity.status")
@@ -85,6 +93,14 @@ public interface MissionMapper {
     @Mapping(target = "createdBy", source = "entity.createdBy")
     @Mapping(target = "lastModifiedOn", source = "entity.lastModifiedOn")
     @Mapping(target = "lastModifiedBy", source = "entity.lastModifiedBy")
+    @Mapping(target = "recurringPattern", source = "entity.recurringPattern")
+    @Mapping(target = "triggerConditions", source = "entity.triggerConditions")
+    @Mapping(target = "requiredCapabilities", source = "entity.requiredCapabilities")
+    @Mapping(target = "feasibilityOverride", source = "entity.feasibilityOverride")
+    @Mapping(target = "templateId", source = "entity.templateId")
+    @Mapping(target = "templateVersion", source = "entity.templateVersion")
+    @Mapping(target = "estimatedDistance", expression = "java(estimatedDistanceMeters != null ? estimatedDistanceMeters : entity.getEstimatedDistance())")
+    @Mapping(target = "estimatedDuration", source = "entity.estimatedDuration")
     MissionVm toVm(Mission entity, Integer waypointCount, Double estimatedDistanceMeters,
             List<com.utm.mission.viewmodel.waypoint.WaypointVm> waypoints,
             com.utm.mission.viewmodel.client.HubBriefVm departureHub,
@@ -93,5 +109,10 @@ public interface MissionMapper {
     @Named("trimString")
     default String trimString(String value) {
         return value != null ? value.trim() : null;
+    }
+
+    @Named("missionTrimBlankToNull")
+    default String missionTrimBlankToNull(String value) {
+        return (value != null && !value.isBlank()) ? value.trim() : null;
     }
 }

@@ -157,9 +157,9 @@ class SimulationServiceImplTest {
                 .scenario("battery_drain")
                 .message("Injected emergency scenario Critical Battery Drain")
                 .severity("CRITICAL")
-                .createdOn(ZonedDateTime.now())
-                .createdBy("admin")
                 .build();
+        testEvent.setCreatedOn(ZonedDateTime.now());
+        testEvent.setCreatedBy("admin");
 
         testEventVm = new SimulationEventVm(
                 EVENT_ID,
@@ -200,6 +200,23 @@ class SimulationServiceImplTest {
                         NotFoundException nfe = (NotFoundException) ex;
                         assertThat(nfe.getErrorCode()).isEqualTo(MessageCode.FLIGHT_NOT_FOUND);
                         assertThat(nfe.getParams()).containsEntry("id", "flight-missing");
+                    });
+        }
+
+        @Test
+        @DisplayName("whenFlightIsCompletedOrActive_throwsBadRequestException")
+        void whenFlightIsCompletedOrActive_throwsBadRequestException() {
+            FlightDetailVm activeFlight = new FlightDetailVm(
+                    FLIGHT_ID, "FL-ACTIVE", DRONE_ID, "hub-1", "hub-2", 50.0, testFlight.plannedRoute(), 3,
+                    Collections.emptyList(), "active");
+            SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(FLIGHT_ID, 15.0, 1.0, 100.0);
+            when(flightClientService.getFlightDetail(FLIGHT_ID)).thenReturn(activeFlight);
+
+            assertThatThrownBy(() -> simulationService.createSession(createVm))
+                    .isInstanceOf(BadRequestException.class)
+                    .satisfies(ex -> {
+                        BadRequestException bre = (BadRequestException) ex;
+                        assertThat(bre.getErrorCode()).isEqualTo(MessageCode.FLIGHT_NOT_SIMULATABLE);
                     });
         }
 
@@ -447,6 +464,7 @@ class SimulationServiceImplTest {
 
             verify(eventRepository).deleteAll(List.of(testEvent));
             verify(sessionRepository).delete(testSession);
+            verify(flightClientService).abortFlight(eq(FLIGHT_ID), anyString());
         }
 
         @Test
@@ -706,7 +724,7 @@ class SimulationServiceImplTest {
             when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(testSession));
             when(sessionRepository.save(testSession)).thenReturn(testSession);
             when(simulationMapper.toEventEntity(eq(SESSION_ID), eq("SCENARIO_INJECTED"), eq("battery_drain"),
-                    anyString(), eq("CRITICAL"), eq("{\"dischargeRate\":5.0}")))
+                    anyString(), eq("CRITICAL"), eq(Map.of("dischargeRate", 5.0))))
                     .thenReturn(testEvent);
             when(eventRepository.save(testEvent)).thenReturn(testEvent);
             when(simulationMapper.toVm(testEvent)).thenReturn(testEventVm);
@@ -778,6 +796,7 @@ class SimulationServiceImplTest {
             assertThat(testSession.getStatus()).isEqualTo(SimulationStatus.STOPPED);
             verify(sessionRepository).save(testSession);
             verify(eventRepository).save(testEvent);
+            verify(flightClientService).abortFlight(eq(FLIGHT_ID), anyString());
         }
 
         @Test
@@ -868,5 +887,21 @@ class SimulationServiceImplTest {
 
         assertThat(testSession.getStatus()).isEqualTo(SimulationStatus.STOPPED);
         verify(sessionRepository).saveAll(List.of(testSession));
+    }
+
+    @Test
+    @DisplayName("evaluateScenarioTrigger evaluates time, waypoint, battery, and position trigger rules")
+    void evaluateScenarioTrigger_allTriggerTypes_workAccurately() {
+        assertThat(SimulationServiceImpl.evaluateScenarioTrigger(
+                java.util.Map.of("type", "time", "value", 30), 25.0, 0, 90.0, 10.77, 106.70)).isFalse();
+        assertThat(SimulationServiceImpl.evaluateScenarioTrigger(
+                java.util.Map.of("type", "time", "value", 30), 30.0, 0, 90.0, 10.77, 106.70)).isTrue();
+        assertThat(SimulationServiceImpl.evaluateScenarioTrigger(
+                java.util.Map.of("type", "waypoint", "value", 2), 10.0, 2, 90.0, 10.77, 106.70)).isTrue();
+        assertThat(SimulationServiceImpl.evaluateScenarioTrigger(
+                java.util.Map.of("type", "battery", "value", 25), 10.0, 0, 22.0, 10.77, 106.70)).isTrue();
+        assertThat(SimulationServiceImpl.evaluateScenarioTrigger(
+                java.util.Map.of("type", "position", "value", java.util.Map.of("lat", 10.7701, "lon", 106.7001)),
+                10.0, 0, 90.0, 10.7700, 106.7000)).isTrue();
     }
 }

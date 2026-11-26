@@ -7,6 +7,7 @@ import com.utm.flight.mapper.FeasibilityMapper;
 import com.utm.flight.mapper.FlightMapper;
 import com.utm.flight.model.FeasibilityEvaluation;
 import com.utm.flight.model.Flight;
+import com.utm.flight.model.GeoJsonLineString;
 import com.utm.flight.model.enumeration.FlightAuthorizationStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.model.enumeration.Verdict;
@@ -92,7 +93,9 @@ class FeasibilityServiceImplTest {
                 .status(FlightStatus.SCHEDULED)
                 .authorizationStatus(FlightAuthorizationStatus.PENDING)
                 .feasibilityVerdict(Verdict.NO_GO)
-                .plannedRoute("{\"type\":\"LineString\",\"coordinates\":[[106.7009,10.7769],[106.6598,10.7554]]}")
+                .plannedRoute(GeoJsonLineString.of(List.of(
+                        List.of(106.7009, 10.7769),
+                        List.of(106.6598, 10.7554))))
                 .build();
     }
 

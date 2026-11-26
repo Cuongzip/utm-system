@@ -18,6 +18,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.List;
 
 @Entity
 @Table(name = "feasibility_evaluations")
@@ -34,7 +38,7 @@ public class FeasibilityEvaluation extends AbstractAuditEntity {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "flight_id", nullable = false)
+    @JoinColumn(name = "flight_id")
     private Flight flight;
 
     @Column(name = "drone_id", length = 36, nullable = false)
@@ -74,8 +78,9 @@ public class FeasibilityEvaluation extends AbstractAuditEntity {
     @Column(name = "confidence", length = 20, nullable = false)
     private String confidence;
 
-    @Column(name = "solutions_json", columnDefinition = "TEXT")
-    private String solutionsJson;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "solutions_json", columnDefinition = "jsonb")
+    private List<FeasibilitySolution> solutions;
 
     @Column(name = "explanation", columnDefinition = "TEXT")
     private String explanation;

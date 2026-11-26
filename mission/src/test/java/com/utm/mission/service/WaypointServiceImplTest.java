@@ -345,6 +345,141 @@ class WaypointServiceImplTest {
                 verify(waypointRepository, never()).saveAll(any());
         }
 
+        @Test
+        @DisplayName("addWaypoint - HUB waypoint locks coordinates from active Hub and allows 0m AGL pad altitude")
+        void addWaypoint_hubType_locksCoordinatesAndAllowsZeroAltitude() {
+                com.utm.mission.service.client.HubClientService hubClient =
+                                org.mockito.Mockito.mock(com.utm.mission.service.client.HubClientService.class);
+                WaypointServiceImpl serviceWithHub = new WaypointServiceImpl(
+                                missionRepository, waypointRepository, waypointMapper, airspaceClientService, hubClient, null);
+
+                com.utm.mission.viewmodel.client.HubBriefVm activeHub = new com.utm.mission.viewmodel.client.HubBriefVm(
+                                "hub-mid-1", "HUB-MID", "Midway Vertiport", 10.8000, 106.7500, null, "active", 8);
+
+                WaypointPostVm postVm = new WaypointPostVm(
+                                null, 11.9999, 109.9999, 0.0, null, null,
+                                "hub-mid-1", com.utm.mission.model.enumeration.StopoverType.RECHARGE, null,
+                                0.0, 0, null, null, null, false, com.utm.mission.model.enumeration.WaypointType.HUB);
+
+                Waypoint entity = Waypoint.builder().id("wp-hub-1").build();
+                WaypointVm expectedVm = new WaypointVm(
+                                "wp-hub-1", MISSION_ID, 1, "Hub Stopover: Midway Vertiport",
+                                10.8000, 106.7500, 0.0, "hub-mid-1",
+                                com.utm.mission.model.enumeration.StopoverType.RECHARGE, 30, 0.0, 0,
+                                null, null, null, null, null, null, null, null, null, null, false,
+                                com.utm.mission.model.enumeration.WaypointType.HUB, activeHub);
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findMaxSequenceByMissionId(MISSION_ID)).thenReturn(0);
+                when(hubClient.getHubById("hub-mid-1")).thenReturn(Optional.of(activeHub));
+                when(waypointMapper.toEntity(postVm)).thenReturn(entity);
+                when(waypointRepository.save(entity)).thenReturn(entity);
+                when(waypointMapper.toVm(entity, null, activeHub)).thenReturn(expectedVm);
+
+                WaypointVm result = serviceWithHub.addWaypoint(MISSION_ID, postVm);
+
+                assertThat(entity.getWaypointType()).isEqualTo(com.utm.mission.model.enumeration.WaypointType.HUB);
+                assertThat(entity.getLatitude()).isEqualTo(10.8000);
+                assertThat(entity.getLongitude()).isEqualTo(106.7500);
+                assertThat(entity.getAltitude()).isEqualTo(0.0);
+                assertThat(entity.getGroundTimeMinutes()).isEqualTo(30);
+                assertThat(result.hub()).isEqualTo(activeHub);
+        }
+
+        @Test
+        @DisplayName("addWaypoint - rejects HUB waypoint pointing to inactive hub")
+        void addWaypoint_inactiveHub_throwsHubNotActive() {
+                com.utm.mission.service.client.HubClientService hubClient =
+                                org.mockito.Mockito.mock(com.utm.mission.service.client.HubClientService.class);
+                WaypointServiceImpl serviceWithHub = new WaypointServiceImpl(
+                                missionRepository, waypointRepository, waypointMapper, airspaceClientService, hubClient, null);
+
+                com.utm.mission.viewmodel.client.HubBriefVm inactiveHub = new com.utm.mission.viewmodel.client.HubBriefVm(
+                                "hub-maint", "HUB-M", "Closed Hub", 10.8000, 106.7500, null, "maintenance", 4);
+
+                WaypointPostVm postVm = new WaypointPostVm(
+                                "Closed Stop", null, null, 0.0, null, null,
+                                "hub-maint", com.utm.mission.model.enumeration.StopoverType.RECHARGE, 30,
+                                0.0, 0, null, null, null, false, com.utm.mission.model.enumeration.WaypointType.HUB);
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findMaxSequenceByMissionId(MISSION_ID)).thenReturn(0);
+                when(hubClient.getHubById("hub-maint")).thenReturn(Optional.of(inactiveHub));
+
+                assertThatThrownBy(() -> serviceWithHub.addWaypoint(MISSION_ID, postVm))
+                                .isInstanceOf(BadRequestException.class)
+                                .satisfies(ex -> assertThat(((BadRequestException) ex).getErrorCode())
+                                                .isEqualTo(com.utm.commonlibrary.constants.MessageCode.HUB_NOT_ACTIVE));
+        }
+
+        @Test
+        @DisplayName("autoPlanHubs - allows preview on mission with 1 waypoint when departure/arrival hub pair is configured")
+        void autoPlanHubs_singleWaypointWithHubPair_allowsPreview() {
+                com.utm.mission.service.client.HubClientService hubClient =
+                                org.mockito.Mockito.mock(com.utm.mission.service.client.HubClientService.class);
+                WaypointServiceImpl serviceWithHub = new WaypointServiceImpl(
+                                missionRepository, waypointRepository, waypointMapper, airspaceClientService, hubClient, null);
+
+                draftMission.setDepartureHubId("hub-a");
+                draftMission.setArrivalHubId("hub-b");
+                com.utm.mission.viewmodel.client.HubBriefVm hubA = new com.utm.mission.viewmodel.client.HubBriefVm(
+                                "hub-a", "HUB-A", "Hub A", 10.7850, 106.7350, null, "active", 8);
+                com.utm.mission.viewmodel.client.HubBriefVm hubB = new com.utm.mission.viewmodel.client.HubBriefVm(
+                                "hub-b", "HUB-B", "Hub B", 10.7290, 106.7210, null, "active", 8);
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(List.of(waypoint1));
+                when(hubClient.getActiveHubs()).thenReturn(List.of(hubA, hubB));
+
+                var result = serviceWithHub.autoPlanHubs(
+                                MISSION_ID,
+                                new com.utm.mission.viewmodel.waypoint.AutoPlanHubsRequestVm(
+                                                null, com.utm.mission.model.enumeration.StopoverType.RECHARGE, false));
+
+                assertThat(result.persisted()).isFalse();
+                assertThat(result.plannedLegCount()).isGreaterThanOrEqualTo(1);
+                verify(waypointRepository, never()).saveAll(any());
+        }
+
+        @Test
+        @DisplayName("addWaypoint - inserts intermediate waypoint before terminal Arrival HUB and protects terminal deletion")
+        void addWaypoint_withTerminalHubs_insertsBeforeArrivalAndBlocksTerminalDelete() {
+                draftMission.setDepartureHubId("hub-dep");
+                draftMission.setArrivalHubId("hub-arr");
+                Waypoint depTerminal = Waypoint.builder()
+                                .id("wp-dep").mission(draftMission).sequence(1).name("Departure: Hub A")
+                                .waypointType(com.utm.mission.model.enumeration.WaypointType.HUB)
+                                .hubId("hub-dep").latitude(10.7850).longitude(106.7350).altitude(0.0)
+                                .stopoverType(com.utm.mission.model.enumeration.StopoverType.NONE).build();
+                Waypoint arrTerminal = Waypoint.builder()
+                                .id("wp-arr").mission(draftMission).sequence(2).name("Arrival: Hub B")
+                                .waypointType(com.utm.mission.model.enumeration.WaypointType.HUB)
+                                .hubId("hub-arr").latitude(10.7290).longitude(106.7210).altitude(0.0)
+                                .stopoverType(com.utm.mission.model.enumeration.StopoverType.NONE).build();
+
+                WaypointPostVm postVm = new WaypointPostVm(
+                                "Midpoint", 10.7600, 106.7300, 60.0, null, null);
+                Waypoint midEntity = Waypoint.builder().id("wp-mid").build();
+
+                when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(draftMission));
+                when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID))
+                                .thenReturn(List.of(depTerminal, arrTerminal));
+                when(airspaceClientService.checkPointSafety(10.7600, 106.7300, 60.0)).thenReturn(Optional.empty());
+                when(waypointMapper.toEntity(postVm)).thenReturn(midEntity);
+                when(waypointRepository.save(any(Waypoint.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(waypointMapper.toVm(midEntity, null)).thenReturn(createWaypointVm(midEntity, null));
+
+                waypointService.addWaypoint(MISSION_ID, postVm);
+
+                assertThat(midEntity.getSequence()).isEqualTo(2);
+                assertThat(arrTerminal.getSequence()).isEqualTo(3);
+
+                when(waypointRepository.findByIdAndMissionId("wp-dep", MISSION_ID))
+                                .thenReturn(Optional.of(depTerminal));
+                assertThatThrownBy(() -> waypointService.deleteWaypoint(MISSION_ID, "wp-dep"))
+                                .isInstanceOf(BadRequestException.class);
+        }
+
         private WaypointVm createWaypointVm(Waypoint waypoint, String warning) {
                 return new WaypointVm(
                                 waypoint.getId(),

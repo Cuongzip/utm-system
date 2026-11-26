@@ -1,5 +1,7 @@
 package com.utm.mission.service;
 
+import com.utm.mission.viewmodel.waypoint.AutoPlanHubsRequestVm;
+import com.utm.mission.viewmodel.waypoint.AutoPlanHubsResultVm;
 import com.utm.mission.viewmodel.waypoint.WaypointPostVm;
 import com.utm.mission.viewmodel.waypoint.WaypointPutVm;
 import com.utm.mission.viewmodel.waypoint.WaypointReorderVm;
@@ -18,5 +20,6 @@ public interface WaypointService {
     void deleteWaypoint(String missionId, String waypointId);
 
     List<WaypointVm> reorderWaypoints(String missionId, WaypointReorderVm reorderVm);
-}
 
+    AutoPlanHubsResultVm autoPlanHubs(String missionId, AutoPlanHubsRequestVm requestVm);
+}

@@ -5,6 +5,7 @@ import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.flight.mapper.FlightConformanceMapper;
 import com.utm.flight.model.Flight;
 import com.utm.flight.model.FlightConformance;
+import com.utm.flight.model.GeoJsonLineString;
 import com.utm.flight.model.enumeration.ConformanceStatus;
 import com.utm.flight.model.enumeration.FlightStatus;
 import com.utm.flight.repository.FlightConformanceRepository;
@@ -76,15 +77,17 @@ class FlightConformanceServiceImplTest {
                 .flightNumber("FL-2026-001")
                 .droneId("drone-001")
                 .status(FlightStatus.ACTIVE)
-                .conformanceStatus(ConformanceStatus.CONFORMING)
+                .conformanceStatus(ConformanceStatus.CONFORMANT)
                 .cruisingAltitudeM(100.0)
-                .plannedRoute("{\"type\":\"LineString\",\"coordinates\":[[106.7009,10.7769],[106.6598,10.7554]]}")
+                .plannedRoute(GeoJsonLineString.of(List.of(
+                        List.of(106.7009, 10.7769),
+                        List.of(106.6598, 10.7554))))
                 .build();
 
         testConformance = FlightConformance.builder()
                 .id("conf-001")
                 .flight(testFlight)
-                .status(ConformanceStatus.CONFORMING)
+                .status(ConformanceStatus.CONFORMANT)
                 .corridorRadiusM(15.0)
                 .altitudeBufferM(10.0)
                 .currentLatitude(10.7769)
@@ -94,7 +97,7 @@ class FlightConformanceServiceImplTest {
 
         testConformanceVm = new FlightConformanceVm(
                 FLIGHT_ID,
-                "conforming",
+                "conformant",
                 0.0,
                 0.0,
                 15.0,
@@ -122,7 +125,7 @@ class FlightConformanceServiceImplTest {
 
         assertThat(result).isNotNull();
         assertThat(result.flightId()).isEqualTo(FLIGHT_ID);
-        assertThat(result.status()).isEqualTo("conforming");
+        assertThat(result.status()).isEqualTo("conformant");
         assertThat(result.corridorRadiusM()).isEqualTo(15.0);
     }
 
@@ -354,5 +357,48 @@ class FlightConformanceServiceImplTest {
 
         assertThat(result).isNotNull();
         verify(conformanceRepository).save(testConformance);
+    }
+
+    @Test
+    @DisplayName("evaluateFlightConformance - reports distinct emergency types even when flight is already CONTINGENT")
+    void evaluateFlightConformance_consecutiveDistinctEmergencies_reportsBoth() {
+        TelemetryBriefVm deviatedTelemetry = new TelemetryBriefVm(
+                10.7790, 106.7040, 100.0, 15.0, 45.0, 80.0, ZonedDateTime.now()
+        );
+
+        when(flightRepository.findById(FLIGHT_ID)).thenReturn(Optional.of(testFlight));
+        when(conformanceRepository.findByFlightId(FLIGHT_ID)).thenReturn(Optional.of(testConformance));
+        when(telemetryClientService.getLatestFlightTelemetry(FLIGHT_ID)).thenReturn(Optional.of(deviatedTelemetry));
+        when(conformanceRepository.save(testConformance)).thenReturn(testConformance);
+        when(conformanceMapper.toVm(testConformance)).thenReturn(testConformanceVm);
+
+        conformanceService.evaluateFlightConformance(FLIGHT_ID);
+        assertThat(testConformance.getStatus()).isEqualTo(ConformanceStatus.CONTINGENT);
+
+        testConformance.setCurrentAltitude(100.0);
+        testConformance.setLastTelemetryTime(ZonedDateTime.now().minusSeconds(2));
+        TelemetryBriefVm fallingTelemetry = new TelemetryBriefVm(
+                10.7790, 106.7040, 70.0, 10.0, 45.0, 75.0, ZonedDateTime.now()
+        );
+        when(telemetryClientService.getLatestFlightTelemetry(FLIGHT_ID)).thenReturn(Optional.of(fallingTelemetry));
+
+        conformanceService.evaluateFlightConformance(FLIGHT_ID);
+
+        verify(emergencyClientService).reportIncident(eq(testFlight), eq("geofence_breach"), eq("critical"),
+                anyString(), eq(deviatedTelemetry), any());
+        verify(emergencyClientService).reportIncident(eq(testFlight), eq("motor_failure"), eq("critical"),
+                anyString(), eq(fallingTelemetry), any());
+    }
+
+    @Test
+    @DisplayName("violationsToJson - supports both structured object maps and plain string violation entries")
+    void violationsToJson_supportsStructuredObjectsAndStrings() {
+        FlightConformanceMapper realMapper = org.mapstruct.factory.Mappers.getMapper(FlightConformanceMapper.class);
+        List<Object> mixed = List.of(
+                java.util.Map.of("type", "CORRIDOR_BREACH", "axis", "LATERAL", "deviationM", 22.5),
+                "Vertical deviation 14.0m exceeds altitude buffer 10.0m"
+        );
+        String json = realMapper.violationsToJson(mixed);
+        assertThat(json).contains("CORRIDOR_BREACH").contains("Vertical deviation 14.0m");
     }
 }

@@ -9,7 +9,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MissionScheduleType {
     IMMEDIATE("immediate"),
-    SCHEDULED("scheduled");
+    MANUAL("manual"),
+    SCHEDULED("scheduled"),
+    RECURRING("recurring"),
+    EVENT_TRIGGERED("event_triggered");
 
     private final String value;
 

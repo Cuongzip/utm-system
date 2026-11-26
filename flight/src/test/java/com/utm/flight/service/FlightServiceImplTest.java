@@ -483,7 +483,9 @@ class FlightServiceImplTest {
 
             flightService.updateFlight("flight-123", putVm);
 
-            assertThat(testFlight.getPlannedRoute()).contains("LineString", "106.7", "10.77", "106.71", "10.78");
+            assertThat(testFlight.getPlannedRoute()).isNotNull();
+            assertThat(testFlight.getPlannedRoute().coordinates())
+                    .containsExactly(List.of(106.7, 10.77, 60.0), List.of(106.71, 10.78, 70.0));
             verify(flightRepository).saveAndFlush(testFlight);
         }
 

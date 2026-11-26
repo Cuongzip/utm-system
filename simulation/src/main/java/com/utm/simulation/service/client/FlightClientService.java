@@ -10,4 +10,16 @@ public interface FlightClientService {
     FlightDetailVm getFlightDetail(String flightId);
 
     List<WaypointVm> getFlightWaypoints(String flightId);
+
+    default boolean startFlight(String flightId) {
+        return false;
+    }
+
+    default boolean completeFlight(String flightId) {
+        return false;
+    }
+
+    default boolean abortFlight(String flightId, String reason) {
+        return false;
+    }
 }

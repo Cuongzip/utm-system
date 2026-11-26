@@ -9,6 +9,7 @@ public interface DroneClientService {
     boolean checkDroneExists(String droneId);
     Optional<DroneBriefVm> getDroneById(String droneId);
     Optional<DroneEnergySpecVm> getDroneEnergySpec(String droneId);
+
+    default void sendDroneCommand(String droneId, String commandType, String flightId, String payloadJson) {
+    }
 }
-
-

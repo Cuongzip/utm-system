@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -39,109 +40,105 @@ import java.util.Map;
 @Tag(name = "Missions", description = "Endpoints for managing flight missions")
 public class MissionController {
 
-        private final MissionService missionService;
-        private final FleetScoringService fleetScoringService;
+    private final MissionService missionService;
+    private final FleetScoringService fleetScoringService;
 
-        @PostMapping
-        @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
-        @ResponseStatus(HttpStatus.CREATED)
-        @Operation(summary = "Create a new mission", description = "Plan a new flight mission in draft status")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Mission created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid request payload or scheduled time", content = @Content),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Departure or arrival hub not found", content = @Content)
-        })
-        public ResponseEntity<MissionVm> createMission(@Valid @RequestBody MissionPostVm postVm) {
-                return ResponseEntity.status(HttpStatus.CREATED).body(missionService.createMission(postVm));
-        }
+    @PostMapping
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create a new mission", description = "Plan a new flight mission in draft status")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Mission created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionVm.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload or scheduled time", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Departure or arrival hub not found", content = @Content)
+    })
+    public ResponseEntity<MissionVm> createMission(@Valid @RequestBody MissionPostVm postVm) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(missionService.createMission(postVm));
+    }
 
-        @GetMapping
-        @Operation(summary = "Get list of missions", description = "Get paginated missions filtered by status, hubs, and schedule type")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Missions retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionListVm.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
-        })
-        public ResponseEntity<MissionListVm> getMissions(
-                        @Parameter(description = "Filter by mission status (draft, scheduled, executing, paused, completed, aborted, failed)") @RequestParam(required = false) String status,
-                        @Parameter(description = "Filter by departure hub UUID") @RequestParam(required = false) String departureHubId,
-                        @Parameter(description = "Filter by destination arrival hub UUID") @RequestParam(required = false) String arrivalHubId,
-                        @Parameter(description = "Filter by schedule type (immediate, scheduled)") @RequestParam(required = false) String scheduleType,
-                        @Parameter(description = "Page number (zero-based)", example = "0") @RequestParam(defaultValue = "0") int page,
-                        @Parameter(description = "Page size (records per page)", example = "20") @RequestParam(defaultValue = "20") int size) {
-                return ResponseEntity.ok(missionService.getMissions(status, departureHubId, arrivalHubId, scheduleType,
-                                size, page * size));
-        }
+    @GetMapping
+    @Operation(summary = "Get list of missions", description = "Get paginated missions filtered by status, hubs, drone, and schedule type")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Missions retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionListVm.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+    })
+    public ResponseEntity<MissionListVm> getMissions(
+            @Parameter(description = "Filter by mission status") @RequestParam(required = false) String status,
+            @Parameter(description = "Filter by departure hub UUID") @RequestParam(required = false) String departureHubId,
+            @Parameter(description = "Filter by destination arrival hub UUID") @RequestParam(required = false) String arrivalHubId,
+            @Parameter(description = "Filter by assigned drone UUID") @RequestParam(required = false) String droneId,
+            @Parameter(description = "Filter by schedule type") @RequestParam(required = false) String scheduleType,
+            @Parameter(description = "Page number (zero-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size (records per page)", example = "20") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Optional limit alias") @RequestParam(required = false) Integer limit,
+            @Parameter(description = "Optional offset alias") @RequestParam(required = false) Integer offset) {
+        int effectiveLimit = limit != null ? limit : size;
+        int effectiveOffset = offset != null ? offset : page * effectiveLimit;
+        return ResponseEntity.ok(missionService.getMissions(status, departureHubId, arrivalHubId, droneId, scheduleType,
+                effectiveLimit, effectiveOffset));
+    }
 
-        @GetMapping("/{id}")
-        @Operation(summary = "Get mission by ID", description = "Get detailed information of a mission including 3D waypoints and estimated route distance")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Mission retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionVm.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Mission not found", content = @Content)
-        })
-        public ResponseEntity<MissionVm> getMissionById(
-                        @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id) {
-                return ResponseEntity.ok(missionService.getMissionById(id));
-        }
+    @GetMapping("/{id}")
+    @Operation(summary = "Get mission by ID", description = "Get detailed information of a mission including 3D waypoints and estimated route distance")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Mission retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionVm.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Mission not found", content = @Content)
+    })
+    public ResponseEntity<MissionVm> getMissionById(
+            @Parameter(description = "Unique UUID identifier of the mission") @PathVariable String id) {
+        return ResponseEntity.ok(missionService.getMissionById(id));
+    }
 
-        @GetMapping("/{id}/candidate-drones")
-        @Operation(summary = "Get candidate drones with suitability scores", description = "Evaluate available drones at the departure hub against mission payload and battery consumption requirements")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Candidate drones evaluated and scored successfully"),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Mission not found", content = @Content)
-        })
-        public ResponseEntity<java.util.List<ScoredDroneCandidateVm>> getCandidateDrones(
-                        @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id) {
-                return ResponseEntity.ok(fleetScoringService.scoreCandidateDrones(id));
-        }
+    @GetMapping("/{id}/candidate-drones")
+    @Operation(summary = "Get candidate drones with suitability scores", description = "Evaluate available drones at the departure hub against mission payload and battery consumption requirements")
+    public ResponseEntity<List<ScoredDroneCandidateVm>> getCandidateDrones(
+            @Parameter(description = "Unique UUID identifier of the mission") @PathVariable String id) {
+        return ResponseEntity.ok(fleetScoringService.scoreCandidateDrones(id));
+    }
 
-        @PutMapping("/{id}")
-        @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
-        @Operation(summary = "Update a mission", description = "Update mission details while it is still in draft status")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Mission updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionVm.class))),
-                        @ApiResponse(responseCode = "400", description = "Mission not in draft status or executing", content = @Content),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Mission or hub not found", content = @Content)
-        })
-        public ResponseEntity<MissionVm> updateMission(
-                        @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id,
-                        @Valid @RequestBody MissionPutVm putVm) {
-                return ResponseEntity.ok(missionService.updateMission(id, putVm));
-        }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @Operation(summary = "Update a mission", description = "Update mission details while it is still in draft status")
+    public ResponseEntity<MissionVm> updateMission(
+            @Parameter(description = "Unique UUID identifier of the mission") @PathVariable String id,
+            @Valid @RequestBody MissionPutVm putVm) {
+        return ResponseEntity.ok(missionService.updateMission(id, putVm));
+    }
 
-        @DeleteMapping("/{id}")
-        @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
-        @Operation(summary = "Delete a mission", description = "Delete a mission and all its waypoints (cannot delete while executing)")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Mission deleted successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)),
-                        @ApiResponse(responseCode = "400", description = "Cannot delete an executing mission", content = @Content),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Mission not found", content = @Content)
-        })
-        public ResponseEntity<Map<String, String>> deleteMission(
-                        @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id) {
-                missionService.deleteMission(id);
-                return ResponseEntity.ok(Map.of("message", "Mission deleted successfully"));
-        }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @Operation(summary = "Delete a mission", description = "Delete a mission and all its waypoints (cannot delete while executing)")
+    public ResponseEntity<Map<String, String>> deleteMission(
+            @Parameter(description = "Unique UUID identifier of the mission") @PathVariable String id) {
+        missionService.deleteMission(id);
+        return ResponseEntity.ok(Map.of("message", "Mission deleted successfully"));
+    }
 
-        @PostMapping("/{id}/duplicate")
-        @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
-        @ResponseStatus(HttpStatus.CREATED)
-        @Operation(summary = "Duplicate a mission", description = "Clone an existing mission and all its waypoints as a new draft mission")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Mission duplicated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MissionVm.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "Source mission not found", content = @Content)
-        })
-        public ResponseEntity<MissionVm> duplicateMission(
-                        @Parameter(description = "Unique UUID identifier of the mission to clone", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6") @PathVariable String id) {
-                return ResponseEntity.status(HttpStatus.CREATED).body(missionService.duplicateMission(id));
-        }
+    @PostMapping("/{id}/duplicate")
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Duplicate a mission", description = "Clone an existing mission and all its waypoints as a new draft mission")
+    public ResponseEntity<MissionVm> duplicateMission(
+            @Parameter(description = "Unique UUID identifier of the mission to clone") @PathVariable String id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(missionService.duplicateMission(id));
+    }
+
+    @PostMapping("/{id}/schedule")
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @Operation(summary = "Schedule a draft mission", description = "Transition a draft mission with future scheduledAt and >=2 waypoints to scheduled status for automatic dispatch")
+    public ResponseEntity<MissionVm> scheduleMission(
+            @Parameter(description = "Unique UUID identifier of the mission") @PathVariable String id) {
+        return ResponseEntity.ok(missionService.scheduleMission(id));
+    }
+
+    @PostMapping("/{id}/unschedule")
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @Operation(summary = "Unschedule a scheduled mission", description = "Revert a scheduled mission back to draft status for editing")
+    public ResponseEntity<MissionVm> unscheduleMission(
+            @Parameter(description = "Unique UUID identifier of the mission") @PathVariable String id) {
+        return ResponseEntity.ok(missionService.unscheduleMission(id));
+    }
 }

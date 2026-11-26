@@ -1,6 +1,8 @@
 package com.utm.mission.controller;
 
 import com.utm.mission.service.WaypointService;
+import com.utm.mission.viewmodel.waypoint.AutoPlanHubsRequestVm;
+import com.utm.mission.viewmodel.waypoint.AutoPlanHubsResultVm;
 import com.utm.mission.viewmodel.waypoint.WaypointPostVm;
 import com.utm.mission.viewmodel.waypoint.WaypointPutVm;
 import com.utm.mission.viewmodel.waypoint.WaypointReorderVm;
@@ -161,6 +163,35 @@ public class WaypointController {
             @Valid @RequestBody WaypointReorderVm reorderVm
     ) {
         return ResponseEntity.ok(waypointService.reorderWaypoints(missionId, reorderVm));
+    }
+
+    @PostMapping("/auto-plan-hubs")
+    @PreAuthorize("hasAnyRole('hub_operator', 'pilot', 'admin')")
+    @Operation(
+            summary = "Auto-plan intermediate HUB stopover waypoints",
+            description = "Analyzes the mission's energy budget across all waypoints and automatically inserts first-class HUB stopover nodes (via multi-hop Dijkstra hub bridging or survey diversion to nearest active Hub) so large missions decompose cleanly into flyable flight legs"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Intermediate HUB waypoints planned successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = AutoPlanHubsResultVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Mission not in draft status (when persisting), < 2 waypoints, or segment exceeds active Hub network range", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Mission or Drone not found", content = @Content)
+    })
+    public ResponseEntity<AutoPlanHubsResultVm> autoPlanHubs(
+            @Parameter(description = "Unique UUID identifier of the mission", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
+            @PathVariable String missionId,
+            @RequestBody(required = false) AutoPlanHubsRequestVm requestVm
+    ) {
+        return ResponseEntity.ok(waypointService.autoPlanHubs(
+                missionId, requestVm != null ? requestVm : new AutoPlanHubsRequestVm()));
     }
 }
 

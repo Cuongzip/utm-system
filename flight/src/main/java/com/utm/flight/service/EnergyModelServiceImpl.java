@@ -53,7 +53,15 @@ public class EnergyModelServiceImpl implements EnergyModelService {
                 ? droneSpec.maxPayloadKg()
                 : FeasibilityConfig.DEFAULT_MAX_PAYLOAD_KG;
 
-        double usableWh = batteryCapacityWh * (batteryHealthPct / 100.0) * (1.0 - FeasibilityConfig.RESERVE_FRACTION);
+        double currentBatteryPct = (droneSpec != null && droneSpec.currentBatteryPct() != null
+                && droneSpec.currentBatteryPct() > 0)
+                        ? Math.min(100.0, droneSpec.currentBatteryPct())
+                        : 100.0;
+
+        double usableWh = batteryCapacityWh
+                * (batteryHealthPct / 100.0)
+                * (currentBatteryPct / 100.0)
+                * (1.0 - FeasibilityConfig.RESERVE_FRACTION);
 
         double distanceM = missionProfile != null ? Math.max(0.0, missionProfile.distanceM()) : 0.0;
         double hoverTimeS = missionProfile != null ? Math.max(0.0, missionProfile.hoverTimeS()) : FeasibilityConfig.DEFAULT_HOVER_TIME_S;
@@ -94,11 +102,18 @@ public class EnergyModelServiceImpl implements EnergyModelService {
             verdict = Verdict.GO;
         }
 
-        String confidence = "HIGH";
+        boolean hasCompleteSpecs = droneSpec != null
+                && droneSpec.batteryCapacityWh() != null && droneSpec.batteryCapacityWh() > 0
+                && droneSpec.hoverPowerW() != null && droneSpec.hoverPowerW() > 0
+                && droneSpec.cruisePowerW() != null && droneSpec.cruisePowerW() > 0
+                && droneSpec.cruiseSpeedMs() != null && droneSpec.cruiseSpeedMs() > 0;
+        String confidence;
         if (droneSpec == null || droneSpec.batteryCapacityWh() == null) {
             confidence = "LOW";
-        } else if (windSpeedMs == null) {
+        } else if (!hasCompleteSpecs || windSpeedMs == null) {
             confidence = "MEDIUM";
+        } else {
+            confidence = "HIGH";
         }
 
         List<FeasibilitySolutionVm> solutions = new ArrayList<>();

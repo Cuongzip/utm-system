@@ -1,7 +1,5 @@
 package com.utm.mission.service;
 
-import com.utm.mission.service.client.HubClientService;
-
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
@@ -14,9 +12,12 @@ import com.utm.mission.model.Mission;
 import com.utm.mission.model.Waypoint;
 import com.utm.mission.model.enumeration.MissionScheduleType;
 import com.utm.mission.model.enumeration.MissionStatus;
+import com.utm.mission.model.enumeration.StopoverType;
+import com.utm.mission.model.enumeration.WaypointType;
 import com.utm.mission.repository.MissionRepository;
 import com.utm.mission.repository.WaypointRepository;
-import com.utm.mission.util.GeoUtils;
+import com.utm.mission.service.client.HubClientService;
+import com.utm.mission.util.MissionLegUtils;
 import com.utm.mission.viewmodel.client.HubBriefVm;
 import com.utm.mission.viewmodel.mission.MissionListVm;
 import com.utm.mission.viewmodel.mission.MissionPostVm;
@@ -47,6 +48,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Slf4j
 public class MissionServiceImpl implements MissionService {
+
+    private static final double DEFAULT_CRUISE_SPEED_MPS = 15.0;
 
     private final MissionRepository missionRepository;
     private final WaypointRepository waypointRepository;
@@ -85,15 +88,26 @@ public class MissionServiceImpl implements MissionService {
         Mission mission = missionMapper.toEntity(postVm);
         mission.setCode(code);
         mission.setStatus(MissionStatus.DRAFT);
+        initializeTerminalHubWaypoints(mission, depHub, arrHub);
+        double initialDistance = calculateEstimatedDistance(mission.getWaypoints(), depHub, arrHub);
+        mission.setEstimatedDistance(initialDistance);
+        mission.setEstimatedDuration(calculateEstimatedDuration(mission.getWaypoints(), initialDistance));
         Mission saved = missionRepository.save(mission);
 
-        return toEnrichedMissionVm(saved, depHub, arrHub, 0.0);
+        return toEnrichedMissionVm(saved, depHub, arrHub, initialDistance);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String scheduleType,
-            Integer limit, Integer offset) {
+    public MissionListVm getMissions(String status, String departureHubId, String arrivalHubId,
+            String scheduleType, Integer limit, Integer offset) {
+        return getMissions(status, departureHubId, arrivalHubId, null, scheduleType, limit, offset);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String droneId,
+            String scheduleType, Integer limit, Integer offset) {
         Specification<Mission> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (status != null && !status.isBlank()) {
@@ -108,6 +122,9 @@ public class MissionServiceImpl implements MissionService {
             }
             if (arrivalHubId != null && !arrivalHubId.isBlank()) {
                 predicates.add(cb.equal(root.get("arrivalHubId"), arrivalHubId.trim()));
+            }
+            if (droneId != null && !droneId.isBlank()) {
+                predicates.add(cb.equal(root.get("droneId"), droneId.trim()));
             }
             if (scheduleType != null && !scheduleType.isBlank()) {
                 try {
@@ -130,10 +147,12 @@ public class MissionServiceImpl implements MissionService {
         List<String> missionIds = new ArrayList<>();
         for (Mission m : page.getContent()) {
             missionIds.add(m.getId());
-            if (m.getDepartureHubId() != null)
+            if (m.getDepartureHubId() != null) {
                 hubIds.add(m.getDepartureHubId());
-            if (m.getArrivalHubId() != null)
+            }
+            if (m.getArrivalHubId() != null) {
                 hubIds.add(m.getArrivalHubId());
+            }
         }
         Map<String, HubBriefVm> hubMap = hubClientService.getHubsByIds(hubIds);
 
@@ -149,7 +168,7 @@ public class MissionServiceImpl implements MissionService {
                     long wpCount = wpCountMap.getOrDefault(m.getId(), 0L);
                     HubBriefVm depHub = hubMap.get(m.getDepartureHubId());
                     HubBriefVm arrHub = hubMap.get(m.getArrivalHubId());
-                    return missionMapper.toVm(m, (int) wpCount, null, null, depHub, arrHub);
+                    return missionMapper.toVm(m, (int) wpCount, m.getEstimatedDistance(), null, depHub, arrHub);
                 })
                 .toList();
 
@@ -162,9 +181,10 @@ public class MissionServiceImpl implements MissionService {
         Mission mission = missionRepository.findByIdWithWaypoints(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
 
-        double estimatedDistance = calculateEstimatedDistance(mission.getWaypoints());
         Optional<HubBriefVm> depHub = hubClientService.getHubById(mission.getDepartureHubId());
         Optional<HubBriefVm> arrHub = hubClientService.getHubById(mission.getArrivalHubId());
+        double estimatedDistance = calculateEstimatedDistance(
+                mission.getWaypoints(), depHub.orElse(null), arrHub.orElse(null));
 
         return toEnrichedMissionVm(mission, depHub.orElse(null), arrHub.orElse(null), estimatedDistance);
     }
@@ -205,13 +225,19 @@ public class MissionServiceImpl implements MissionService {
             }
         }
 
+        String previousDepHubId = mission.getDepartureHubId();
+        String previousArrHubId = mission.getArrivalHubId();
         missionMapper.updateEntityFromVm(putVm, mission);
+
+        Optional<HubBriefVm> depHub = hubClientService.getHubById(mission.getDepartureHubId());
+        Optional<HubBriefVm> arrHub = hubClientService.getHubById(mission.getArrivalHubId());
+        syncTerminalHubWaypoints(mission, previousDepHubId, previousArrHubId, depHub.orElse(null), arrHub.orElse(null));
+        double estimatedDistance = calculateEstimatedDistance(
+                mission.getWaypoints(), depHub.orElse(null), arrHub.orElse(null));
+        mission.setEstimatedDistance(estimatedDistance);
+        mission.setEstimatedDuration(calculateEstimatedDuration(mission.getWaypoints(), estimatedDistance));
+
         Mission updated = missionRepository.save(mission);
-
-        double estimatedDistance = calculateEstimatedDistance(updated.getWaypoints());
-        Optional<HubBriefVm> depHub = hubClientService.getHubById(updated.getDepartureHubId());
-        Optional<HubBriefVm> arrHub = hubClientService.getHubById(updated.getArrivalHubId());
-
         return toEnrichedMissionVm(updated, depHub.orElse(null), arrHub.orElse(null), estimatedDistance);
     }
 
@@ -221,11 +247,75 @@ public class MissionServiceImpl implements MissionService {
         Mission mission = missionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
 
-        if (mission.getStatus() == MissionStatus.EXECUTING) {
+        if (mission.getStatus() == MissionStatus.EXECUTING || mission.getStatus() == MissionStatus.PAUSED) {
             throw new BadRequestException(MessageCode.CANNOT_DELETE_EXECUTING_MISSION);
         }
 
         missionRepository.delete(mission);
+    }
+
+    @Override
+    @Transactional
+    public MissionVm scheduleMission(String id) {
+        Mission mission = missionRepository.findByIdWithWaypoints(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
+
+        if (mission.getStatus() != MissionStatus.DRAFT
+                && mission.getStatus() != MissionStatus.COMPLETED
+                && mission.getStatus() != MissionStatus.ABORTED
+                && mission.getStatus() != MissionStatus.FAILED) {
+            throw new BadRequestException(MessageCode.MISSION_NOT_IN_DRAFT_STATUS);
+        }
+        if ((mission.getScheduleType() != MissionScheduleType.SCHEDULED
+                && mission.getScheduleType() != MissionScheduleType.RECURRING)
+                || mission.getScheduledAt() == null
+                || !mission.getScheduledAt().isAfter(ZonedDateTime.now())) {
+            throw new BadRequestException(MessageCode.SCHEDULED_TIME_MUST_BE_FUTURE);
+        }
+        if (mission.getWaypoints() == null || mission.getWaypoints().size() < 2) {
+            throw new BadRequestException(MessageCode.MISSION_WAYPOINTS_LESS_THAN_TWO,
+                    "Mission must have at least 2 waypoints to be scheduled");
+        }
+        if (mission.getDepartureHubId() != null
+                && mission.getDepartureHubId().equals(mission.getArrivalHubId())
+                && mission.getWaypoints().size() <= 2
+                && mission.getWaypoints().stream().allMatch(w -> w.getWaypointType() == WaypointType.HUB
+                        && (w.getStopoverType() == null || w.getStopoverType() == StopoverType.NONE))) {
+            throw new BadRequestException(MessageCode.MISSION_WAYPOINTS_LESS_THAN_TWO,
+                    "Round-trip mission returning to the same hub requires at least 1 intermediate waypoint");
+        }
+
+        mission.setStatus(MissionStatus.SCHEDULED);
+        Mission saved = missionRepository.save(mission);
+
+        Optional<HubBriefVm> depHub = hubClientService.getHubById(saved.getDepartureHubId());
+        Optional<HubBriefVm> arrHub = hubClientService.getHubById(saved.getArrivalHubId());
+        double estimatedDistance = calculateEstimatedDistance(
+                saved.getWaypoints(), depHub.orElse(null), arrHub.orElse(null));
+
+        return toEnrichedMissionVm(saved, depHub.orElse(null), arrHub.orElse(null), estimatedDistance);
+    }
+
+    @Override
+    @Transactional
+    public MissionVm unscheduleMission(String id) {
+        Mission mission = missionRepository.findByIdWithWaypoints(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", id));
+
+        if (mission.getStatus() != MissionStatus.SCHEDULED) {
+            throw new BadRequestException(MessageCode.MISSION_EXECUTION_INVALID_STATE,
+                    "Only scheduled missions can be reverted to draft");
+        }
+
+        mission.setStatus(MissionStatus.DRAFT);
+        Mission saved = missionRepository.save(mission);
+
+        Optional<HubBriefVm> depHub = hubClientService.getHubById(saved.getDepartureHubId());
+        Optional<HubBriefVm> arrHub = hubClientService.getHubById(saved.getArrivalHubId());
+        double estimatedDistance = calculateEstimatedDistance(
+                saved.getWaypoints(), depHub.orElse(null), arrHub.orElse(null));
+
+        return toEnrichedMissionVm(saved, depHub.orElse(null), arrHub.orElse(null), estimatedDistance);
     }
 
     @Override
@@ -265,14 +355,153 @@ public class MissionServiceImpl implements MissionService {
     private MissionVm toEnrichedMissionVm(Mission mission, HubBriefVm depHub, HubBriefVm arrHub,
             Double estimatedDistance) {
         int wpCount = mission.getWaypoints() != null ? mission.getWaypoints().size() : 0;
-        List<WaypointVm> waypoints = mission.getWaypoints() != null ? waypointMapper.toVmList(mission.getWaypoints())
-                : List.of();
+        List<WaypointVm> waypoints = List.of();
+        if (mission.getWaypoints() != null && !mission.getWaypoints().isEmpty()) {
+            Set<String> wpHubIds = mission.getWaypoints().stream()
+                    .map(Waypoint::getHubId)
+                    .filter(id -> id != null && !id.isBlank())
+                    .map(String::trim)
+                    .collect(java.util.stream.Collectors.toSet());
+            if (wpHubIds.isEmpty()) {
+                waypoints = waypointMapper.toVmList(mission.getWaypoints());
+            } else {
+                Map<String, HubBriefVm> wpHubs = new HashMap<>();
+                if (depHub != null && depHub.id() != null) {
+                    wpHubs.put(depHub.id().trim(), depHub);
+                }
+                if (arrHub != null && arrHub.id() != null) {
+                    wpHubs.put(arrHub.id().trim(), arrHub);
+                }
+                Set<String> missingHubIds = wpHubIds.stream()
+                        .filter(id -> !wpHubs.containsKey(id))
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!missingHubIds.isEmpty()) {
+                    wpHubs.putAll(hubClientService.getHubsByIds(missingHubIds));
+                }
+                waypoints = mission.getWaypoints().stream()
+                        .map(wp -> {
+                            HubBriefVm h = wp.getHubId() != null ? wpHubs.get(wp.getHubId().trim()) : null;
+                            return h != null ? waypointMapper.toVm(wp, null, h) : waypointMapper.toVm(wp);
+                        })
+                        .toList();
+            }
+        }
 
         return missionMapper.toVm(mission, wpCount, estimatedDistance, waypoints, depHub, arrHub);
     }
 
-    private double calculateEstimatedDistance(List<Waypoint> waypoints) {
-        double totalDistance = GeoUtils.calculateTotalDistance(waypoints);
-        return Math.round(totalDistance * 100.0) / 100.0;
+    static void initializeTerminalHubWaypoints(Mission mission, HubBriefVm depHub, HubBriefVm arrHub) {
+        if (mission == null || depHub == null || arrHub == null
+                || depHub.latitude() == null || depHub.longitude() == null
+                || arrHub.latitude() == null || arrHub.longitude() == null) {
+            return;
+        }
+        if (mission.getWaypoints() != null && !mission.getWaypoints().isEmpty()) {
+            return;
+        }
+        Waypoint depWp = buildTerminalHubWaypoint(mission, depHub, 1, true);
+        Waypoint arrWp = buildTerminalHubWaypoint(mission, arrHub, 2, false);
+        mission.addWaypoint(depWp);
+        mission.addWaypoint(arrWp);
+    }
+
+    private void syncTerminalHubWaypoints(
+            Mission mission,
+            String previousDepHubId,
+            String previousArrHubId,
+            HubBriefVm depHub,
+            HubBriefVm arrHub
+    ) {
+        if (mission == null) {
+            return;
+        }
+        List<Waypoint> wps = mission.getWaypoints();
+        if (wps == null || wps.isEmpty()) {
+            initializeTerminalHubWaypoints(mission, depHub, arrHub);
+            return;
+        }
+        Waypoint first = wps.getFirst();
+        if (depHub != null && depHub.latitude() != null && depHub.longitude() != null
+                && first.getWaypointType() == WaypointType.HUB
+                && (first.getStopoverType() == null || first.getStopoverType() == StopoverType.NONE)
+                && (first.getHubId() == null || first.getHubId().equals(previousDepHubId)
+                        || first.getHubId().equals(mission.getDepartureHubId()))) {
+            first.setHubId(depHub.id());
+            first.setName("Departure: " + (depHub.name() != null ? depHub.name() : depHub.code()));
+            first.setLatitude(depHub.latitude());
+            first.setLongitude(depHub.longitude());
+            first.setAltitude(0.0);
+        }
+
+        if (wps.size() >= 2) {
+            Waypoint last = wps.getLast();
+            if (arrHub != null && arrHub.latitude() != null && arrHub.longitude() != null
+                    && last.getWaypointType() == WaypointType.HUB
+                    && (last.getStopoverType() == null || last.getStopoverType() == StopoverType.NONE)
+                    && (last.getHubId() == null || last.getHubId().equals(previousArrHubId)
+                            || last.getHubId().equals(mission.getArrivalHubId()))) {
+                last.setHubId(arrHub.id());
+                last.setName("Arrival: " + (arrHub.name() != null ? arrHub.name() : arrHub.code()));
+                last.setLatitude(arrHub.latitude());
+                last.setLongitude(arrHub.longitude());
+                last.setAltitude(0.0);
+            }
+        }
+    }
+
+    static Waypoint buildTerminalHubWaypoint(Mission mission, HubBriefVm hub, int sequence, boolean departure) {
+        String labelPrefix = departure ? "Departure: " : "Arrival: ";
+        String hubLabel = hub.name() != null && !hub.name().isBlank()
+                ? hub.name()
+                : (hub.code() != null ? hub.code() : hub.id());
+        Map<String, Object> actions = new HashMap<>();
+        actions.put("type", departure ? "takeoff" : "land");
+        return Waypoint.builder()
+                .mission(mission)
+                .sequence(sequence)
+                .name(labelPrefix + hubLabel)
+                .waypointType(WaypointType.HUB)
+                .hubId(hub.id())
+                .latitude(hub.latitude())
+                .longitude(hub.longitude())
+                .altitude(0.0)
+                .stopoverType(StopoverType.NONE)
+                .groundTimeMinutes(0)
+                .payloadDeltaKg(0.0)
+                .hoverDurationSec(0)
+                .waitForConfirmation(false)
+                .actions(actions)
+                .build();
+    }
+
+    private double calculateEstimatedDistance(List<Waypoint> waypoints, HubBriefVm depHub, HubBriefVm arrHub) {
+        return MissionLegUtils.calculateAnchoredDistance(waypoints, depHub, arrHub);
+    }
+
+    static int calculateEstimatedDuration(List<Waypoint> waypoints, double distanceMeters) {
+        double avgSpeed = DEFAULT_CRUISE_SPEED_MPS;
+        int hoverTotalSec = 0;
+        int groundTotalSec = 0;
+        if (waypoints != null && !waypoints.isEmpty()) {
+            double speedSum = 0.0;
+            int speedCount = 0;
+            for (Waypoint wp : waypoints) {
+                if (wp.getSpeedToWaypoint() != null && wp.getSpeedToWaypoint() > 0) {
+                    speedSum += wp.getSpeedToWaypoint();
+                    speedCount++;
+                }
+                if (wp.getHoverDurationSec() != null && wp.getHoverDurationSec() > 0) {
+                    hoverTotalSec += wp.getHoverDurationSec();
+                }
+                if (wp.getGroundTimeMinutes() != null && wp.getGroundTimeMinutes() > 0) {
+                    groundTotalSec += wp.getGroundTimeMinutes() * 60;
+                }
+            }
+            if (speedCount > 0) {
+                avgSpeed = speedSum / speedCount;
+            }
+        }
+        int cruiseSec = distanceMeters > 0 ? (int) Math.ceil(distanceMeters / Math.max(1.0, avgSpeed)) : 0;
+        return cruiseSec + hoverTotalSec + groundTotalSec;
     }
 }

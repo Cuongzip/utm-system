@@ -5,10 +5,13 @@ import com.utm.flight.viewmodel.client.DroneBriefVm;
 import com.utm.flight.viewmodel.feasibility.DroneEnergySpecVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -35,11 +38,11 @@ public class DroneClientServiceImpl implements DroneClientService {
             DroneBriefVm drone = restClient.get()
                     .uri(endpoint, droneId.trim())
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        log.warn("Drone {} verification returned status {}", droneId, response.getStatusCode());
-                    })
                     .body(DroneBriefVm.class);
             return Optional.ofNullable(drone);
+        } catch (RestClientResponseException e) {
+            log.warn("Drone {} verification returned status {}", droneId, e.getStatusCode());
+            return Optional.empty();
         } catch (Exception e) {
             log.error("Failed to fetch drone ID {} at url {}: {}", droneId, endpoint, e.getMessage());
             return Optional.empty();
@@ -56,8 +59,37 @@ public class DroneClientServiceImpl implements DroneClientService {
                 drone.batteryHealthPct(),
                 drone.windToleranceMs(),
                 drone.maxPayload(),
-                drone.maxFlightTimeMin()
+                drone.maxFlightTimeMin(),
+                drone.currentBatteryPct()
         ));
+    }
+
+    @Override
+    public void sendDroneCommand(String droneId, String commandType, String flightId, String payloadJson) {
+        if (droneId == null || droneId.isBlank() || commandType == null || commandType.isBlank()) {
+            return;
+        }
+        String endpoint = serviceUrlConfig.getDroneUrl() + "/api/v1/drones/{id}/commands";
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("commandType", commandType.toLowerCase());
+        body.put("priority", 1);
+        if (flightId != null && !flightId.isBlank()) {
+            body.put("flightId", flightId);
+        }
+        if (payloadJson != null && !payloadJson.isBlank()) {
+            body.put("parameters", payloadJson);
+        }
+        try {
+            restClient.post()
+                    .uri(endpoint, droneId.trim())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Dispatched {} command to drone {} for flight {}", commandType, droneId, flightId);
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch {} command to drone {}: {}", commandType, droneId, ex.getMessage());
+        }
     }
 }
 

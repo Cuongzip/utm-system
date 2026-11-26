@@ -13,7 +13,21 @@ public record DroneEnergySpecVm(
         Double batteryHealthPct,
         Double windToleranceMs,
         Double maxPayloadKg,
-        Double maxFlightTimeMin
+        Double maxFlightTimeMin,
+        Double currentBatteryPct
 ) {
+    public DroneEnergySpecVm(
+            Double batteryCapacityWh,
+            Double hoverPowerW,
+            Double cruisePowerW,
+            Double cruiseSpeedMs,
+            Double batteryHealthPct,
+            Double windToleranceMs,
+            Double maxPayloadKg,
+            Double maxFlightTimeMin
+    ) {
+        this(batteryCapacityWh, hoverPowerW, cruisePowerW, cruiseSpeedMs,
+                batteryHealthPct, windToleranceMs, maxPayloadKg, maxFlightTimeMin, null);
+    }
 }
 

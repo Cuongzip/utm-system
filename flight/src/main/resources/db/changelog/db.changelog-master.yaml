@@ -7,3 +7,11 @@ databaseChangeLog:
       file: db/changelog/changes/04-create-feasibility-evaluation-tables.yaml
   - include:
       file: db/changelog/changes/05-add-waypoints-to-flight.yaml
+  - include:
+      file: db/changelog/changes/06-add-multi-leg-and-payload-to-flight.yaml
+  - include:
+      file: db/changelog/changes/07-standardize-flight-schema.yaml
+  - include:
+      file: db/changelog/changes/08-align-drops-flight-fields.yaml
+  - include:
+      file: db/changelog/changes/09-multi-leg-turnaround-and-battery-gate.yaml

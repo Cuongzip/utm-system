@@ -7,7 +7,6 @@ import lombok.Getter;
 @Getter
 public enum ConformanceStatus {
     CONFORMANT("conformant"),
-    CONFORMING("conforming"),
     CONTINGENT("contingent"),
     NON_CONFORMING("non_conforming"),
     UNKNOWN("unknown");
@@ -25,14 +24,18 @@ public enum ConformanceStatus {
 
     @JsonCreator
     public static ConformanceStatus fromValue(String value) {
-        if (value == null) {
-            return CONFORMING;
+        if (value == null || value.isBlank()) {
+            return CONFORMANT;
+        }
+        String trimmed = value.trim();
+        if ("conforming".equalsIgnoreCase(trimmed)) {
+            return CONFORMANT;
         }
         for (ConformanceStatus status : ConformanceStatus.values()) {
-            if (status.value.equalsIgnoreCase(value) || status.name().equalsIgnoreCase(value)) {
+            if (status.value.equalsIgnoreCase(trimmed) || status.name().equalsIgnoreCase(trimmed)) {
                 return status;
             }
         }
-        return CONFORMING;
+        return CONFORMANT;
     }
 }

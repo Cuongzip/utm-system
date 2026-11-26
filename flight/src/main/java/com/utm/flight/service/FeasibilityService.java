@@ -4,11 +4,14 @@ import com.utm.flight.viewmodel.feasibility.FeasibilityCheckPostVm;
 import com.utm.flight.viewmodel.feasibility.FeasibilityEvaluationListVm;
 import com.utm.flight.viewmodel.feasibility.FeasibilityOverridePostVm;
 import com.utm.flight.viewmodel.feasibility.FeasibilityResultVm;
+import com.utm.flight.viewmodel.feasibility.StandaloneFeasibilityCheckPostVm;
 import com.utm.flight.viewmodel.flight.FlightVm;
 
 public interface FeasibilityService {
 
     FeasibilityResultVm checkFeasibility(String flightId, FeasibilityCheckPostVm request);
+
+    FeasibilityResultVm checkStandaloneFeasibility(StandaloneFeasibilityCheckPostVm request);
 
     FlightVm overrideFeasibility(String flightId, FeasibilityOverridePostVm request);
 

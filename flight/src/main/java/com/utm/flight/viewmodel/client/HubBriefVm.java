@@ -21,8 +21,20 @@ public record HubBriefVm(
         LocationVm location,
 
         @Schema(description = "Altitude MSL in meters (m)", example = "12.5")
-        Double altitudeMsl
+        Double altitudeMsl,
+
+        @Schema(description = "Maximum simultaneous active drones allowed at hub", example = "10")
+        Integer maxSimultaneousDrones
 ) {
+    public HubBriefVm(
+            String id,
+            String code,
+            String name,
+            LocationVm location,
+            Double altitudeMsl
+    ) {
+        this(id, code, name, location, altitudeMsl, null);
+    }
 }
 
 

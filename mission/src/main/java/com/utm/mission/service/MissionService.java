@@ -9,7 +9,13 @@ public interface MissionService {
 
     MissionVm createMission(MissionPostVm postVm);
 
-    MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String scheduleType, Integer limit, Integer offset);
+    default MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String scheduleType,
+            Integer limit, Integer offset) {
+        return getMissions(status, departureHubId, arrivalHubId, null, scheduleType, limit, offset);
+    }
+
+    MissionListVm getMissions(String status, String departureHubId, String arrivalHubId, String droneId,
+            String scheduleType, Integer limit, Integer offset);
 
     MissionVm getMissionById(String id);
 
@@ -18,5 +24,8 @@ public interface MissionService {
     void deleteMission(String id);
 
     MissionVm duplicateMission(String id);
-}
 
+    MissionVm scheduleMission(String id);
+
+    MissionVm unscheduleMission(String id);
+}

@@ -149,4 +149,54 @@ class FleetScoringServiceImplTest {
         assertThatThrownBy(() -> fleetScoringService.getBestCandidate(MISSION_ID))
                 .isInstanceOf(BadRequestException.class);
     }
+
+    @Test
+    @DisplayName("scoreCandidateDrones - marks drone ineligible when consecutive non-charging PAYLOAD_DROPOFF legs exceed cumulative battery")
+    void scoreCandidateDrones_cumulativePayloadDropoffExceedsBattery_marksIneligible() {
+        List<Waypoint> multiDropWaypoints = List.of(
+                Waypoint.builder().id("wp-1").sequence(1).latitude(10.70).longitude(106.70).altitude(60.0)
+                        .waypointType(com.utm.mission.model.enumeration.WaypointType.COORDINATE)
+                        .stopoverType(com.utm.mission.model.enumeration.StopoverType.NONE).build(),
+                Waypoint.builder().id("wp-2").sequence(2).latitude(10.82).longitude(106.70).altitude(0.0)
+                        .waypointType(com.utm.mission.model.enumeration.WaypointType.HUB)
+                        .hubId("hub-mid-drop")
+                        .stopoverType(com.utm.mission.model.enumeration.StopoverType.PAYLOAD_DROPOFF)
+                        .groundTimeMinutes(5).payloadDeltaKg(-0.5).build(),
+                Waypoint.builder().id("wp-3").sequence(3).latitude(10.94).longitude(106.70).altitude(60.0)
+                        .waypointType(com.utm.mission.model.enumeration.WaypointType.COORDINATE)
+                        .stopoverType(com.utm.mission.model.enumeration.StopoverType.NONE).build());
+
+        DroneBriefVm singleLegCapableOnly = new DroneBriefVm(
+                "d-cum", "VN-CUM-01", "DJI", "M350", "available", DEP_HUB_ID, DEP_HUB_ID,
+                220.0, 100.0, 4.0, 350.0, 280.0, 15.0, 100.0, 12.0, 30, 20000.0, 0.0, 0, List.of());
+
+        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(mission));
+        when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(multiDropWaypoints);
+        when(droneClientService.getAvailableDronesAtHub(DEP_HUB_ID)).thenReturn(List.of(singleLegCapableOnly));
+
+        List<ScoredDroneCandidateVm> candidates = fleetScoringService.scoreCandidateDrones(MISSION_ID);
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).eligible()).isFalse();
+        assertThat(candidates.get(0).ineligibilityReason()).contains("Insufficient battery range on battery segment 1");
+    }
+
+    @Test
+    @DisplayName("scoreCandidateDrones - marks drone ineligible when missing required mission capabilities")
+    void scoreCandidateDrones_missingRequiredCapabilities_marksIneligible() {
+        mission.setRequiredCapabilities(List.of("thermal_camera", "rtk_gps"));
+        DroneBriefVm missingCapDrone = new DroneBriefVm(
+                "d-nocap", "VN-NOCAP", "DJI", "M350", "available", DEP_HUB_ID, DEP_HUB_ID,
+                1000.0, 100.0, 5.0, 350.0, 280.0, 15.0, 100.0, 12.0, 40, 30000.0, 0.0, 0, List.of("rtk_gps"));
+
+        when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(mission));
+        when(waypointRepository.findByMissionIdOrderBySequenceAsc(MISSION_ID)).thenReturn(waypoints);
+        when(droneClientService.getAvailableDronesAtHub(DEP_HUB_ID)).thenReturn(List.of(missingCapDrone));
+
+        List<ScoredDroneCandidateVm> candidates = fleetScoringService.scoreCandidateDrones(MISSION_ID);
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).eligible()).isFalse();
+        assertThat(candidates.get(0).ineligibilityReason()).contains("thermal_camera");
+    }
 }

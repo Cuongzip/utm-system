@@ -1,6 +1,8 @@
 package com.utm.mission.repository;
 
 import com.utm.mission.model.Mission;
+import com.utm.mission.model.enumeration.MissionScheduleType;
+import com.utm.mission.model.enumeration.MissionStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -8,6 +10,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.ZonedDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,4 +25,14 @@ public interface MissionRepository extends JpaRepository<Mission, String>, JpaSp
     boolean existsByCode(String code);
 
     Optional<Mission> findByCode(String code);
+
+    List<Mission> findByStatusAndScheduleTypeAndScheduledAtLessThanEqual(
+            MissionStatus status,
+            MissionScheduleType scheduleType,
+            ZonedDateTime threshold);
+
+    List<Mission> findByStatusAndScheduleTypeInAndScheduledAtLessThanEqual(
+            MissionStatus status,
+            Collection<MissionScheduleType> scheduleTypes,
+            ZonedDateTime threshold);
 }
