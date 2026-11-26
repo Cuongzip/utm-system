@@ -19,6 +19,16 @@ export interface FlightRouteRendererProps {
     cruisingAltitude: number;
 }
 
+function isCoincidentWithHub(wp: FlightWaypoint, hub: Hub | null): boolean {
+    if (!hub?.location || hub.location.latitude == null || hub.location.longitude == null) {
+        return false;
+    }
+    return (
+        Math.abs(wp.latitude - hub.location.latitude) < 0.00015 &&
+        Math.abs(wp.longitude - hub.location.longitude) < 0.00015
+    );
+}
+
 export function FlightRouteRenderer({
     departureHub,
     arrivalHub,
@@ -142,12 +152,20 @@ export function FlightRouteRenderer({
             }
 
             waypoints.forEach((wp, index) => {
-                const alt = wp.altitude ?? cruisingAltitude;
-                const pos = Cesium.Cartesian3.fromDegrees(wp.longitude, wp.latitude, alt);
                 const isSelected =
                     selectedWaypointId === wp.id ||
                     selectedWaypointId === wp.tempId ||
                     selectedWaypointId === `wp-${wp.id}`;
+
+                if (
+                    !isSelected &&
+                    (isCoincidentWithHub(wp, departureHub) || isCoincidentWithHub(wp, arrivalHub))
+                ) {
+                    return;
+                }
+
+                const alt = wp.altitude ?? cruisingAltitude;
+                const pos = Cesium.Cartesian3.fromDegrees(wp.longitude, wp.latitude, alt);
                 const wpId = `flight-wp-${wp.id || wp.tempId || index}`;
 
                 viewer.entities.add({

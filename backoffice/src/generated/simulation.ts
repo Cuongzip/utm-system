@@ -35,68 +35,27 @@ export const getSessionsResponse = zod
             .array(
                 zod
                     .object({
-                        id: zod.string().optional().describe("Unique simulation session ID"),
-                        flightId: zod
-                            .string()
-                            .optional()
-                            .describe("Associated flight plan UUID identifier"),
-                        droneId: zod.string().optional().describe("Drone hardware ID"),
-                        status: zod
-                            .enum(["running", "paused", "stopped", "completed"])
-                            .optional()
-                            .describe(
-                                "Current lifecycle status: running, paused, stopped, completed"
-                            ),
-                        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-                        timeScale: zod
-                            .number()
-                            .optional()
-                            .describe("Current time-scale acceleration factor"),
-                        currentLat: zod
-                            .number()
-                            .optional()
-                            .describe("Current latitude in WGS84 degrees"),
-                        currentLon: zod
-                            .number()
-                            .optional()
-                            .describe("Current longitude in WGS84 degrees"),
-                        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-                        currentHeading: zod
-                            .number()
-                            .optional()
-                            .describe("Current heading in degrees (0-360)"),
-                        currentBattery: zod
-                            .number()
-                            .optional()
-                            .describe("Current battery percentage (0-100%)"),
-                        progress: zod
-                            .number()
-                            .optional()
-                            .describe("Trajectory completion progress percentage (0-100%)"),
-                        totalDistance: zod
-                            .number()
-                            .optional()
-                            .describe("Total trajectory distance in meters"),
-                        traveledDistance: zod
-                            .number()
-                            .optional()
-                            .describe("Total distance traveled so far in meters"),
-                        currentSegment: zod
-                            .number()
-                            .optional()
-                            .describe("Current active waypoint segment index (0-based)"),
-                        activeScenario: zod
-                            .string()
-                            .optional()
-                            .describe("Currently active injected emergency scenario, if any"),
-                        createdOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Creation timestamp (ISO-8601 UTC)"),
-                        lastModifiedOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Last update timestamp (ISO-8601 UTC)"),
+                        id: zod.string().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+                        speed: zod.number().optional(),
+                        timeScale: zod.number().optional(),
+                        currentLat: zod.number().optional(),
+                        currentLon: zod.number().optional(),
+                        currentAlt: zod.number().optional(),
+                        currentHeading: zod.number().optional(),
+                        currentBattery: zod.number().optional(),
+                        progress: zod.number().optional(),
+                        totalDistance: zod.number().optional(),
+                        traveledDistance: zod.number().optional(),
+                        currentSegment: zod.number().optional(),
+                        activeScenario: zod.string().optional(),
+                        createdOn: zod.iso.datetime({}).optional(),
+                        lastModifiedOn: zod.iso.datetime({}).optional(),
+                        missionId: zod.string().optional(),
+                        flightPhase: zod.string().optional(),
+                        tickRate: zod.number().optional(),
                     })
                     .describe("Details of a virtual flight simulation session")
             )
@@ -121,7 +80,7 @@ export const createSessionBodyStartBatteryDefault = 100.0;
 
 export const createSessionBody = zod
     .object({
-        flightId: zod.string().min(1).describe("Associated flight plan UUID identifier"),
+        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
         speed: zod
             .number()
             .default(createSessionBodySpeedDefault)
@@ -136,9 +95,50 @@ export const createSessionBody = zod
             .number()
             .default(createSessionBodyStartBatteryDefault)
             .describe("Initial battery percentage at takeoff (0 - 100%)"),
+        missionId: zod
+            .string()
+            .optional()
+            .describe(
+                "Optional Mission UUID when simulating a mission directly without a created flight"
+            ),
+        droneId: zod
+            .string()
+            .optional()
+            .describe("Optional Drone UUID when simulating from mission or manual waypoints"),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        lat: zod.number().describe("Latitude in degrees"),
+                        lon: zod.number().describe("Longitude in degrees"),
+                        alt: zod.number().describe("Altitude in meters AGL"),
+                        speed: zod
+                            .number()
+                            .optional()
+                            .describe(
+                                "Target cruising speed towards this waypoint in m/s (optional)"
+                            ),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe(
+                                "Hover hold duration in seconds upon reaching this waypoint (optional)"
+                            ),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe(
+                                "Desired heading in degrees (0-360) upon reaching this waypoint (optional)"
+                            ),
+                    })
+                    .describe("3D coordinate waypoint for flight trajectory simulation")
+            )
+            .optional()
+            .describe("Optional manual waypoints list ([lat, lon, alt])"),
+        tickRate: zod.number().optional().describe("Telemetry tick frequency in Hz (default 1.0)"),
     })
     .describe(
-        "Payload to launch a new virtual flight simulation session for an existing flight plan"
+        "Payload to launch a virtual flight simulation session from a flight, mission, or manual waypoints"
     );
 
 /**
@@ -151,42 +151,27 @@ export const stopSessionParams = zod.object({
 
 export const stopSessionResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique simulation session ID"),
-        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
-        droneId: zod.string().optional().describe("Drone hardware ID"),
-        status: zod
-            .enum(["running", "paused", "stopped", "completed"])
-            .optional()
-            .describe("Current lifecycle status: running, paused, stopped, completed"),
-        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-        timeScale: zod.number().optional().describe("Current time-scale acceleration factor"),
-        currentLat: zod.number().optional().describe("Current latitude in WGS84 degrees"),
-        currentLon: zod.number().optional().describe("Current longitude in WGS84 degrees"),
-        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-        currentHeading: zod.number().optional().describe("Current heading in degrees (0-360)"),
-        currentBattery: zod.number().optional().describe("Current battery percentage (0-100%)"),
-        progress: zod
-            .number()
-            .optional()
-            .describe("Trajectory completion progress percentage (0-100%)"),
-        totalDistance: zod.number().optional().describe("Total trajectory distance in meters"),
-        traveledDistance: zod
-            .number()
-            .optional()
-            .describe("Total distance traveled so far in meters"),
-        currentSegment: zod
-            .number()
-            .optional()
-            .describe("Current active waypoint segment index (0-based)"),
-        activeScenario: zod
-            .string()
-            .optional()
-            .describe("Currently active injected emergency scenario, if any"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp (ISO-8601 UTC)"),
-        lastModifiedOn: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Last update timestamp (ISO-8601 UTC)"),
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
     })
     .describe("Details of a virtual flight simulation session");
 
@@ -242,6 +227,40 @@ export const injectScenarioResponse = zod
     .describe("Result of injecting an emergency scenario into a simulation session");
 
 /**
+ * Clears active emergency scenario and restores normal cruise flight.
+ * @summary Clear active emergency scenario
+ */
+export const clearScenarioParams = zod.object({
+    id: zod.string().describe("Simulation session UUID"),
+});
+
+export const clearScenarioResponse = zod
+    .object({
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
+    })
+    .describe("Details of a virtual flight simulation session");
+
+/**
  * Turns on virtual hardware power, immediately sends heartbeat to connectivity, and starts periodic 10s keepalive pulse.
  * @summary Power ON device in simulation
  */
@@ -280,42 +299,27 @@ export const updateTimeScaleBody = zod
 
 export const updateTimeScaleResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique simulation session ID"),
-        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
-        droneId: zod.string().optional().describe("Drone hardware ID"),
-        status: zod
-            .enum(["running", "paused", "stopped", "completed"])
-            .optional()
-            .describe("Current lifecycle status: running, paused, stopped, completed"),
-        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-        timeScale: zod.number().optional().describe("Current time-scale acceleration factor"),
-        currentLat: zod.number().optional().describe("Current latitude in WGS84 degrees"),
-        currentLon: zod.number().optional().describe("Current longitude in WGS84 degrees"),
-        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-        currentHeading: zod.number().optional().describe("Current heading in degrees (0-360)"),
-        currentBattery: zod.number().optional().describe("Current battery percentage (0-100%)"),
-        progress: zod
-            .number()
-            .optional()
-            .describe("Trajectory completion progress percentage (0-100%)"),
-        totalDistance: zod.number().optional().describe("Total trajectory distance in meters"),
-        traveledDistance: zod
-            .number()
-            .optional()
-            .describe("Total distance traveled so far in meters"),
-        currentSegment: zod
-            .number()
-            .optional()
-            .describe("Current active waypoint segment index (0-based)"),
-        activeScenario: zod
-            .string()
-            .optional()
-            .describe("Currently active injected emergency scenario, if any"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp (ISO-8601 UTC)"),
-        lastModifiedOn: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Last update timestamp (ISO-8601 UTC)"),
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
     })
     .describe("Details of a virtual flight simulation session");
 
@@ -329,42 +333,27 @@ export const resumeSessionParams = zod.object({
 
 export const resumeSessionResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique simulation session ID"),
-        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
-        droneId: zod.string().optional().describe("Drone hardware ID"),
-        status: zod
-            .enum(["running", "paused", "stopped", "completed"])
-            .optional()
-            .describe("Current lifecycle status: running, paused, stopped, completed"),
-        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-        timeScale: zod.number().optional().describe("Current time-scale acceleration factor"),
-        currentLat: zod.number().optional().describe("Current latitude in WGS84 degrees"),
-        currentLon: zod.number().optional().describe("Current longitude in WGS84 degrees"),
-        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-        currentHeading: zod.number().optional().describe("Current heading in degrees (0-360)"),
-        currentBattery: zod.number().optional().describe("Current battery percentage (0-100%)"),
-        progress: zod
-            .number()
-            .optional()
-            .describe("Trajectory completion progress percentage (0-100%)"),
-        totalDistance: zod.number().optional().describe("Total trajectory distance in meters"),
-        traveledDistance: zod
-            .number()
-            .optional()
-            .describe("Total distance traveled so far in meters"),
-        currentSegment: zod
-            .number()
-            .optional()
-            .describe("Current active waypoint segment index (0-based)"),
-        activeScenario: zod
-            .string()
-            .optional()
-            .describe("Currently active injected emergency scenario, if any"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp (ISO-8601 UTC)"),
-        lastModifiedOn: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Last update timestamp (ISO-8601 UTC)"),
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
     })
     .describe("Details of a virtual flight simulation session");
 
@@ -378,42 +367,27 @@ export const pauseSessionParams = zod.object({
 
 export const pauseSessionResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique simulation session ID"),
-        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
-        droneId: zod.string().optional().describe("Drone hardware ID"),
-        status: zod
-            .enum(["running", "paused", "stopped", "completed"])
-            .optional()
-            .describe("Current lifecycle status: running, paused, stopped, completed"),
-        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-        timeScale: zod.number().optional().describe("Current time-scale acceleration factor"),
-        currentLat: zod.number().optional().describe("Current latitude in WGS84 degrees"),
-        currentLon: zod.number().optional().describe("Current longitude in WGS84 degrees"),
-        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-        currentHeading: zod.number().optional().describe("Current heading in degrees (0-360)"),
-        currentBattery: zod.number().optional().describe("Current battery percentage (0-100%)"),
-        progress: zod
-            .number()
-            .optional()
-            .describe("Trajectory completion progress percentage (0-100%)"),
-        totalDistance: zod.number().optional().describe("Total trajectory distance in meters"),
-        traveledDistance: zod
-            .number()
-            .optional()
-            .describe("Total distance traveled so far in meters"),
-        currentSegment: zod
-            .number()
-            .optional()
-            .describe("Current active waypoint segment index (0-based)"),
-        activeScenario: zod
-            .string()
-            .optional()
-            .describe("Currently active injected emergency scenario, if any"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp (ISO-8601 UTC)"),
-        lastModifiedOn: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Last update timestamp (ISO-8601 UTC)"),
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
     })
     .describe("Details of a virtual flight simulation session");
 
@@ -427,42 +401,27 @@ export const getSessionByIdParams = zod.object({
 
 export const getSessionByIdResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique simulation session ID"),
-        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
-        droneId: zod.string().optional().describe("Drone hardware ID"),
-        status: zod
-            .enum(["running", "paused", "stopped", "completed"])
-            .optional()
-            .describe("Current lifecycle status: running, paused, stopped, completed"),
-        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-        timeScale: zod.number().optional().describe("Current time-scale acceleration factor"),
-        currentLat: zod.number().optional().describe("Current latitude in WGS84 degrees"),
-        currentLon: zod.number().optional().describe("Current longitude in WGS84 degrees"),
-        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-        currentHeading: zod.number().optional().describe("Current heading in degrees (0-360)"),
-        currentBattery: zod.number().optional().describe("Current battery percentage (0-100%)"),
-        progress: zod
-            .number()
-            .optional()
-            .describe("Trajectory completion progress percentage (0-100%)"),
-        totalDistance: zod.number().optional().describe("Total trajectory distance in meters"),
-        traveledDistance: zod
-            .number()
-            .optional()
-            .describe("Total distance traveled so far in meters"),
-        currentSegment: zod
-            .number()
-            .optional()
-            .describe("Current active waypoint segment index (0-based)"),
-        activeScenario: zod
-            .string()
-            .optional()
-            .describe("Currently active injected emergency scenario, if any"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp (ISO-8601 UTC)"),
-        lastModifiedOn: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Last update timestamp (ISO-8601 UTC)"),
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
     })
     .describe("Details of a virtual flight simulation session");
 
@@ -506,42 +465,27 @@ export const getSessionEventsResponse = zod.array(getSessionEventsResponseItem);
  */
 export const getActiveSessionsResponseItem = zod
     .object({
-        id: zod.string().optional().describe("Unique simulation session ID"),
-        flightId: zod.string().optional().describe("Associated flight plan UUID identifier"),
-        droneId: zod.string().optional().describe("Drone hardware ID"),
-        status: zod
-            .enum(["running", "paused", "stopped", "completed"])
-            .optional()
-            .describe("Current lifecycle status: running, paused, stopped, completed"),
-        speed: zod.number().optional().describe("Current simulated speed in m/s"),
-        timeScale: zod.number().optional().describe("Current time-scale acceleration factor"),
-        currentLat: zod.number().optional().describe("Current latitude in WGS84 degrees"),
-        currentLon: zod.number().optional().describe("Current longitude in WGS84 degrees"),
-        currentAlt: zod.number().optional().describe("Current altitude in meters"),
-        currentHeading: zod.number().optional().describe("Current heading in degrees (0-360)"),
-        currentBattery: zod.number().optional().describe("Current battery percentage (0-100%)"),
-        progress: zod
-            .number()
-            .optional()
-            .describe("Trajectory completion progress percentage (0-100%)"),
-        totalDistance: zod.number().optional().describe("Total trajectory distance in meters"),
-        traveledDistance: zod
-            .number()
-            .optional()
-            .describe("Total distance traveled so far in meters"),
-        currentSegment: zod
-            .number()
-            .optional()
-            .describe("Current active waypoint segment index (0-based)"),
-        activeScenario: zod
-            .string()
-            .optional()
-            .describe("Currently active injected emergency scenario, if any"),
-        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp (ISO-8601 UTC)"),
-        lastModifiedOn: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Last update timestamp (ISO-8601 UTC)"),
+        id: zod.string().optional(),
+        flightId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        status: zod.enum(["running", "paused", "stopped", "completed"]).optional(),
+        speed: zod.number().optional(),
+        timeScale: zod.number().optional(),
+        currentLat: zod.number().optional(),
+        currentLon: zod.number().optional(),
+        currentAlt: zod.number().optional(),
+        currentHeading: zod.number().optional(),
+        currentBattery: zod.number().optional(),
+        progress: zod.number().optional(),
+        totalDistance: zod.number().optional(),
+        traveledDistance: zod.number().optional(),
+        currentSegment: zod.number().optional(),
+        activeScenario: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        missionId: zod.string().optional(),
+        flightPhase: zod.string().optional(),
+        tickRate: zod.number().optional(),
     })
     .describe("Details of a virtual flight simulation session");
 export const getActiveSessionsResponse = zod.array(getActiveSessionsResponseItem);

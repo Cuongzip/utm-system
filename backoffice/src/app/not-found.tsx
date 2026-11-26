@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Home, Compass } from "lucide-react";
-import { ChamferCard, ChamferButton } from "@/components/ui";
+import { ChamferCard } from "@/components/ui";
 
 export default function NotFound() {
     return (
@@ -26,11 +26,12 @@ export default function NotFound() {
                         </p>
 
                         <div className="flex flex-wrap items-center justify-center gap-3 w-full">
-                            <Link href="/dashboard">
-                                <ChamferButton size="sm" variant="dark" className="px-4 font-bold">
-                                    <Home className="w-3.5 h-3.5 mr-1" />
-                                    Back to Dashboard
-                                </ChamferButton>
+                            <Link
+                                href="/dashboard"
+                                className="inline-flex items-center justify-center gap-1.5 h-8 px-4 text-xs font-bold chamfer-sm bg-[var(--color-border-dark)] text-white hover:bg-[#1e293b] transition-colors"
+                            >
+                                <Home className="w-3.5 h-3.5" />
+                                <span>Back to Dashboard</span>
                             </Link>
                         </div>
                     </div>

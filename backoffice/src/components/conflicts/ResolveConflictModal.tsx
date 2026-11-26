@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ShieldCheck } from "lucide-react";
-import { Modal, CustomSelect, FormInput } from "@/components/ui";
+import React, { useState } from "react";
+import { Compass, Check, AlertTriangle } from "lucide-react";
+import { Modal, CustomSelect, FormInput, Skeleton, TacticalCallout } from "@/components/ui";
+import { useConflictAdvice } from "@/hooks";
 import { validateSchema } from "@/utils";
 import { resolveConflictBody } from "@/generated/conflict";
 import {
@@ -10,6 +11,7 @@ import {
     RESOLUTION_STRATEGY,
     type Conflict,
     type ResolveConflictPayload,
+    type ResolutionAdviceOption,
     type ResolutionStrategy,
 } from "@/types";
 
@@ -26,35 +28,57 @@ const STRATEGY_OPTIONS = RESOLUTION_STRATEGIES.map((strategy) => ({
     label: strategy.replace(/_/g, " ").toUpperCase(),
 }));
 
-export function ResolveConflictModal({
-    isOpen,
+function matchResolutionStrategy(raw?: string): ResolutionStrategy {
+    if (!raw) return RESOLUTION_STRATEGY.ALTITUDE_CHANGE;
+    const normalized = raw.toLowerCase();
+    const matched = RESOLUTION_STRATEGIES.find((s) => s.toLowerCase() === normalized);
+    return matched ?? RESOLUTION_STRATEGY.ALTITUDE_CHANGE;
+}
+
+interface ResolveConflictModalBodyProps {
+    conflict: Conflict;
+    onClose: () => void;
+    onResolve: (id: string, payload: ResolveConflictPayload) => Promise<void> | void;
+    isSubmitting: boolean;
+}
+
+function ResolveConflictModalBody({
     conflict,
     onClose,
     onResolve,
-    isSubmitting = false,
-}: ResolveConflictModalProps) {
+    isSubmitting,
+}: ResolveConflictModalBodyProps) {
     const [strategy, setStrategy] = useState<ResolutionStrategy>(
         RESOLUTION_STRATEGY.ALTITUDE_CHANGE
     );
     const [notes, setNotes] = useState("");
     const [targetAltitudeM, setTargetAltitudeM] = useState<string>("");
     const [targetSpeed, setTargetSpeed] = useState<string>("");
+    const [selectedAdviceRank, setSelectedAdviceRank] = useState<number | null>(null);
 
-    useEffect(() => {
-        if (isOpen) {
-            setStrategy(RESOLUTION_STRATEGY.ALTITUDE_CHANGE);
-            setNotes("");
-            setTargetAltitudeM("");
-            setTargetSpeed("");
-        }
-    }, [isOpen]);
-
-    if (!conflict) return null;
+    const { data: advice, isLoading: adviceLoading } = useConflictAdvice(
+        conflict.id,
+        Boolean(conflict.id)
+    );
 
     const isAltitudeStrategy =
         strategy === RESOLUTION_STRATEGY.ALTITUDE_CHANGE ||
         strategy === RESOLUTION_STRATEGY.DIVERT_ALTITUDE;
     const isSpeedStrategy = strategy === RESOLUTION_STRATEGY.SPEED_ADJUSTMENT;
+
+    const applyAdviceOption = (option: ResolutionAdviceOption) => {
+        const mappedStrategy = matchResolutionStrategy(option.strategy);
+        setStrategy(mappedStrategy);
+        setSelectedAdviceRank(option.rank);
+        setNotes(option.rationale || "");
+
+        const actions = option.recommendedActions || {};
+        const altCandidate = actions.targetAltitudeM ?? actions.altitudeM ?? actions.newAltitudeM;
+        setTargetAltitudeM(altCandidate != null ? String(altCandidate) : "");
+
+        const speedCandidate = actions.targetSpeed ?? actions.speedMs ?? actions.targetSpeedMs;
+        setTargetSpeed(speedCandidate != null ? String(speedCandidate) : "");
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -85,89 +109,187 @@ export function ResolveConflictModal({
         ? conflict.conflictType.replace(/_/g, " ").toUpperCase()
         : "AIRSPACE CONFLICT";
 
+    const adviceOptions = advice?.options
+        ? [...advice.options].sort((a, b) => a.rank - b.rank)
+        : [];
+
     return (
         <Modal
-            isOpen={isOpen}
+            isOpen
             onClose={onClose}
             title="Resolve Airspace Conflict"
-            icon={<ShieldCheck className="w-5 h-5 text-emerald-500" />}
             maxWidth="520px"
             onSubmit={handleSubmit}
             loading={isSubmitting}
             submitText="Apply Resolution"
             loadingText="Applying Resolution..."
         >
-            <div className="space-y-4 text-xs">
-                <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1.5 font-mono">
-                    <div className="flex justify-between items-center text-slate-800 font-bold">
-                        <span>{conflictTitle}</span>
-                        <span className="text-[11px] text-slate-500 uppercase">
-                            ID: {conflict.id.slice(0, 8)}
+            <TacticalCallout
+                tone="warning"
+                icon={AlertTriangle}
+                title={conflictTitle}
+                description={conflict.description}
+                rightSlot={
+                    <span className="text-[11px] font-mono text-slate-500 uppercase">
+                        CNF-{conflict.id.slice(0, 6).toUpperCase()}
+                    </span>
+                }
+            />
+
+            {(adviceLoading || adviceOptions.length > 0) && (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-800">
+                            <Compass className="w-3.5 h-3.5 text-slate-600" />
+                            <span>Tactical Advisor</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-slate-500 uppercase">
+                            Select maneuver
                         </span>
                     </div>
-                    {conflict.description && (
-                        <p className="text-[11px] text-slate-600 font-sans leading-relaxed">
-                            {conflict.description}
-                        </p>
+
+                    {adviceLoading ? (
+                        <div
+                            role="status"
+                            aria-busy="true"
+                            aria-label="Computing separation maneuvers"
+                            className="space-y-1.5"
+                        >
+                            {Array.from({ length: 2 }).map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className="p-2.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] flex flex-col gap-1.5"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <Skeleton className="h-3.5 w-36" />
+                                        <Skeleton className="h-3 w-20" />
+                                    </div>
+                                    <Skeleton className="h-3 w-56" />
+                                </div>
+                            ))}
+                            <span className="sr-only">Computing separation maneuvers...</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {adviceOptions.slice(0, 3).map((opt) => {
+                                const isSelected = selectedAdviceRank === opt.rank;
+                                const isRecommended = opt.rank === 1;
+                                return (
+                                    <button
+                                        key={opt.rank}
+                                        type="button"
+                                        onClick={() => applyAdviceOption(opt)}
+                                        className={`w-full text-left p-2.5 rounded-md border transition-colors cursor-pointer text-xs ${
+                                            isSelected
+                                                ? "border-[var(--color-border-dark)] bg-[var(--color-surface-card)]"
+                                                : "border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-subtle)]"
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900">
+                                                {isSelected && (
+                                                    <Check className="w-3.5 h-3.5 text-slate-900 shrink-0" />
+                                                )}
+                                                <span>
+                                                    {opt.strategy.replace(/_/g, " ").toUpperCase()}
+                                                </span>
+                                                {isRecommended && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px]">
+                                                        RECOMMENDED
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="font-mono text-[11px] text-slate-500 shrink-0 tabular-nums">
+                                                +{Math.round(opt.expectedSeparationGainM)}m sep
+                                                {opt.estimatedDelaySeconds > 0
+                                                    ? ` · +${opt.estimatedDelaySeconds}s`
+                                                    : ""}
+                                            </span>
+                                        </div>
+                                        {opt.rationale && (
+                                            <p className="mt-1 text-[11px] text-slate-600 leading-snug">
+                                                {opt.rationale}
+                                            </p>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
+            )}
 
-                <div className="form-group">
-                    <label className="form-label" htmlFor="resolution-strategy">
-                        RESOLUTION STRATEGY *
-                    </label>
-                    <CustomSelect
-                        value={strategy}
-                        onValueChange={(val: string) => setStrategy(val as ResolutionStrategy)}
-                        options={STRATEGY_OPTIONS}
-                        placeholder="Select strategy..."
-                    />
-                </div>
+            <div className="form-group">
+                <label className="form-label" htmlFor="resolution-strategy">
+                    Resolution Strategy <span className="text-red-500">*</span>
+                </label>
+                <CustomSelect
+                    id="resolution-strategy"
+                    value={strategy}
+                    onValueChange={(val: string) => {
+                        setStrategy(val as ResolutionStrategy);
+                        setSelectedAdviceRank(null);
+                    }}
+                    options={STRATEGY_OPTIONS}
+                    placeholder="Select strategy..."
+                />
+            </div>
 
-                {isAltitudeStrategy && (
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="target-altitude">
-                            TARGET ALTITUDE (METERS MSL)
-                        </label>
-                        <FormInput
-                            id="target-altitude"
-                            type="number"
-                            value={targetAltitudeM}
-                            onChange={(e) => setTargetAltitudeM(e.target.value)}
-                            placeholder="e.g. 150"
-                        />
-                    </div>
-                )}
+            {isAltitudeStrategy && (
+                <FormInput
+                    id="target-altitude"
+                    label="Target Altitude (m MSL)"
+                    type="number"
+                    value={targetAltitudeM}
+                    onChange={(e) => setTargetAltitudeM(e.target.value)}
+                    placeholder="e.g. 150"
+                />
+            )}
 
-                {isSpeedStrategy && (
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="target-speed">
-                            TARGET SPEED (M/S)
-                        </label>
-                        <FormInput
-                            id="target-speed"
-                            type="number"
-                            value={targetSpeed}
-                            onChange={(e) => setTargetSpeed(e.target.value)}
-                            placeholder="e.g. 12"
-                        />
-                    </div>
-                )}
+            {isSpeedStrategy && (
+                <FormInput
+                    id="target-speed"
+                    label="Target Speed (m/s)"
+                    type="number"
+                    value={targetSpeed}
+                    onChange={(e) => setTargetSpeed(e.target.value)}
+                    placeholder="e.g. 12"
+                />
+            )}
 
-                <div className="form-group">
-                    <label className="form-label" htmlFor="resolution-notes">
-                        TACTICAL DIRECTIVES & OPERATOR NOTES
-                    </label>
-                    <textarea
-                        id="resolution-notes"
-                        rows={3}
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Specify avoidance vector, clearance rationale, or ATC instructions..."
-                        className="form-input resize-none"
-                    />
-                </div>
+            <div className="form-group">
+                <label className="form-label" htmlFor="resolution-notes">
+                    Operator Notes
+                </label>
+                <textarea
+                    id="resolution-notes"
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Specify avoidance vector, clearance rationale, or ATC instructions..."
+                    className="form-input resize-none"
+                />
             </div>
         </Modal>
+    );
+}
+
+export function ResolveConflictModal({
+    isOpen,
+    conflict,
+    onClose,
+    onResolve,
+    isSubmitting = false,
+}: ResolveConflictModalProps) {
+    if (!isOpen || !conflict) return null;
+
+    return (
+        <ResolveConflictModalBody
+            key={conflict.id}
+            conflict={conflict}
+            onClose={onClose}
+            onResolve={onResolve}
+            isSubmitting={isSubmitting}
+        />
     );
 }

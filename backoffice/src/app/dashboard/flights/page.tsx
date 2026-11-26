@@ -1,29 +1,52 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
-import { ChamferButton, PageHeader, TableFilterBar, type SelectOption } from "@/components/ui";
-import { FlightsTable } from "@/components/flights";
+import {
+    ChamferButton,
+    PageHeader,
+    TableFilterBar,
+    ErrorState,
+    type SelectOption,
+} from "@/components/ui";
+import { FlightsTable, PreFlightBriefingModal } from "@/components/flights";
 import { flightService } from "@/services/flightService";
-import { useCrudList, useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
+import { useCrudList, useHubsAll, useDronesAll, usePermissions, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createStatusOptions } from "@/utils";
-import { FLIGHT_STATUSES, type Flight } from "@/types";
+import { ACTIVE_FLIGHT_STATUSES, FLIGHT_STATUS, FLIGHT_STATUSES, type Flight } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = createStatusOptions(FLIGHT_STATUSES);
 
+function flightStatusPriority(status?: string): number {
+    const s = (status || "").toLowerCase();
+    if (s === FLIGHT_STATUS.ACTIVE) return 0;
+    if (ACTIVE_FLIGHT_STATUSES.includes(s as (typeof ACTIVE_FLIGHT_STATUSES)[number])) return 1;
+    if (
+        s === FLIGHT_STATUS.PLANNED ||
+        s === FLIGHT_STATUS.SCHEDULED ||
+        s === FLIGHT_STATUS.AUTHORIZED
+    ) {
+        return 2;
+    }
+    return 3;
+}
+
 export default function FlightsPage() {
     const router = useRouter();
+    const { canAuthorizeFlight } = usePermissions();
     const { data: hubs = [] } = useHubsAll();
     const { data: drones = [] } = useDronesAll();
+    const [briefingFlight, setBriefingFlight] = useState<Flight | null>(null);
 
     const fetchFlights = useCallback(() => flightService.getFlights({ limit: 0 }), []);
 
     const {
         items: flights,
         loading,
+        isError,
         refresh: fetchData,
         highlightedId: highlightedFlightId,
     } = useCrudList<Flight>({
@@ -87,30 +110,46 @@ export default function FlightsPage() {
     });
 
     const [searchQuery, setSearchQuery] = useState("");
+    const deferredSearch = useDeferredValue(searchQuery);
     const [statusFilter, setStatusFilter] = useState("all");
 
+    const hasFilters = Boolean(searchQuery.trim()) || statusFilter !== "all";
+
+    const clearFilters = useCallback(() => {
+        setSearchQuery("");
+        setStatusFilter("all");
+    }, []);
+
     const filteredFlights = useMemo(() => {
-        const query = searchQuery.toLowerCase().trim();
+        const query = deferredSearch.toLowerCase().trim();
         const status = statusFilter.toLowerCase();
-        return flights.filter((f) => {
-            const depHubName = (f.departureHubId ? hubMap.get(f.departureHubId) : "") || "";
-            const arrHubName = (f.arrivalHubId ? hubMap.get(f.arrivalHubId) : "") || "";
-            const droneName = (f.droneId ? droneMap.get(f.droneId) : "") || "";
+        return [...flights]
+            .filter((f) => {
+                const depHubName = (f.departureHubId ? hubMap.get(f.departureHubId) : "") || "";
+                const arrHubName = (f.arrivalHubId ? hubMap.get(f.arrivalHubId) : "") || "";
+                const droneName = (f.droneId ? droneMap.get(f.droneId) : "") || "";
 
-            const matchesSearch =
-                !query ||
-                (f.flightNumber || "").toLowerCase().includes(query) ||
-                (f.pilotId || "").toLowerCase().includes(query) ||
-                depHubName.toLowerCase().includes(query) ||
-                arrHubName.toLowerCase().includes(query) ||
-                droneName.toLowerCase().includes(query);
+                const matchesSearch =
+                    !query ||
+                    (f.flightNumber || "").toLowerCase().includes(query) ||
+                    (f.pilotId || "").toLowerCase().includes(query) ||
+                    depHubName.toLowerCase().includes(query) ||
+                    arrHubName.toLowerCase().includes(query) ||
+                    droneName.toLowerCase().includes(query);
 
-            const fStatus = (f.status || "").toLowerCase();
-            const matchesStatus = status === "all" || fStatus === status;
+                const fStatus = (f.status || "").toLowerCase();
+                const matchesStatus = status === "all" || fStatus === status;
 
-            return matchesSearch && matchesStatus;
-        });
-    }, [flights, searchQuery, statusFilter, hubMap, droneMap]);
+                return matchesSearch && matchesStatus;
+            })
+            .sort((a, b) => {
+                const prio = flightStatusPriority(a.status) - flightStatusPriority(b.status);
+                if (prio !== 0) return prio;
+                const tA = new Date(a.scheduledDeparture || a.actualDeparture || 0).getTime();
+                const tB = new Date(b.scheduledDeparture || b.actualDeparture || 0).getTime();
+                return tB - tA;
+            });
+    }, [flights, deferredSearch, statusFilter, hubMap, droneMap]);
 
     const handleSelectFlight = (flight: Flight | null) => {
         if (flight?.id) {
@@ -119,7 +158,7 @@ export default function FlightsPage() {
     };
 
     return (
-        <div className="p-8 flex flex-col gap-6 w-full">
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
             <PageHeader title="FLIGHTS">
                 <ChamferButton variant="outline" size="sm" clip="xs" onClick={fetchData}>
                     <RotateCw className="w-3.5 h-3.5 text-slate-500" />
@@ -139,24 +178,46 @@ export default function FlightsPage() {
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Search flights..."
+                searchPlaceholder="Search flight number, drone, or hub..."
                 statusFilter={statusFilter}
                 onStatusFilterChange={setStatusFilter}
                 statusOptions={STATUS_OPTIONS}
+                onClearFilters={clearFilters}
+                totalCount={flights.length}
+                filteredCount={filteredFlights.length}
             />
 
-            <FlightsTable
-                flights={filteredFlights}
-                loading={loading}
-                selectedFlightId={highlightedFlightId}
-                onSelectFlight={handleSelectFlight}
-                onAuthorizeFlight={authorizeFlightMutation.mutate}
-                onStartFlight={startFlightMutation.mutate}
-                onCompleteFlight={completeFlightMutation.mutate}
-                onAbortFlight={abortFlightMutation.mutate}
-                onNewFlight={() => router.push("/dashboard/flights/new")}
-                hubMap={hubMap}
-                droneMap={droneMap}
+            {isError && flights.length === 0 ? (
+                <ErrorState
+                    title="Unable to load flights"
+                    description="The Flight Service could not be reached. Please try again."
+                    onRetry={fetchData}
+                />
+            ) : (
+                <FlightsTable
+                    flights={filteredFlights}
+                    loading={loading}
+                    canAuthorize={canAuthorizeFlight}
+                    selectedFlightId={highlightedFlightId}
+                    hasFilters={hasFilters}
+                    onClearFilters={clearFilters}
+                    onSelectFlight={handleSelectFlight}
+                    onOpenBriefing={setBriefingFlight}
+                    onAuthorizeFlight={authorizeFlightMutation.mutate}
+                    onStartFlight={startFlightMutation.mutate}
+                    onCompleteFlight={completeFlightMutation.mutate}
+                    onAbortFlight={abortFlightMutation.mutate}
+                    onNewFlight={() => router.push("/dashboard/flights/new")}
+                    hubMap={hubMap}
+                    droneMap={droneMap}
+                />
+            )}
+
+            <PreFlightBriefingModal
+                isOpen={Boolean(briefingFlight)}
+                flightId={briefingFlight?.id}
+                flightNumber={briefingFlight?.flightNumber}
+                onClose={() => setBriefingFlight(null)}
             />
         </div>
     );

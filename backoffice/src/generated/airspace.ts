@@ -21,21 +21,35 @@ export const getZoneByIdResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 
 export const getZoneByIdResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
+        id: zod.string().optional(),
         code: zod
             .string()
             .min(getZoneByIdResponseCodeMin)
             .max(getZoneByIdResponseCodeMax)
             .regex(getZoneByIdResponseCodeRegExp)
-            .optional()
-            .describe("Airspace zone business tracking code"),
-        hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
-        name: zod.string().min(1).optional().describe("Name of the airspace zone"),
+            .optional(),
+        hubId: zod.string().optional(),
+        name: zod.string().min(1).optional(),
         zoneType: zod
-            .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
-            .optional()
-            .describe("Classification type: no_fly_zone | restricted | hub_corridor | warning"),
-        altitudeCeiling: zod.number().optional().describe("Altitude ceiling limit in meters (m)"),
+            .enum([
+                "no_fly_zone",
+                "prohibited",
+                "restricted",
+                "controlled",
+                "hub_corridor",
+                "hub_zone",
+                "warning",
+                "temporary_restriction",
+                "emergency_exclusion",
+            ])
+            .optional(),
+        altitudeCeiling: zod.number().optional(),
+        altitudeFloor: zod.number().optional(),
+        effectiveStart: zod.iso.datetime({}).optional(),
+        effectiveEnd: zod.iso.datetime({}).optional(),
+        priority: zod.number().optional(),
+        rules: zod.record(zod.string(), zod.any()).optional(),
+        schedule: zod.record(zod.string(), zod.any()).optional(),
         geometry: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -48,18 +62,12 @@ export const getZoneByIdResponse = zod
             })
             .optional()
             .describe("GeoJSON Polygon representation for 2D/3D airspace spatial boundary"),
-        status: zod
-            .enum(["active", "inactive"])
-            .optional()
-            .describe("Operational status: active | inactive"),
-        description: zod
-            .string()
-            .optional()
-            .describe("Detailed description, legal basis, or reason for restrictions"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this zone"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod.string().optional().describe("Username who last modified this zone"),
+        status: zod.enum(["active", "inactive"]).optional(),
+        description: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and spatial parameters of an Airspace Zone / Geofence");
 
@@ -75,23 +83,28 @@ export const updateZoneBodyNameMax = 255;
 
 export const updateZoneBody = zod
     .object({
-        name: zod
-            .string()
-            .min(1)
-            .max(updateZoneBodyNameMax)
-            .optional()
-            .describe("Updated name of the airspace zone"),
-        hubId: zod.string().optional().describe("Updated associated Hub ID"),
+        name: zod.string().min(1).max(updateZoneBodyNameMax).optional(),
+        hubId: zod.string().optional(),
         zoneType: zod
-            .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
-            .optional()
-            .describe(
-                "Updated classification type: no_fly_zone | restricted | hub_corridor | warning"
-            ),
-        altitudeCeiling: zod
-            .number()
-            .optional()
-            .describe("Updated altitude ceiling limit in meters (m)"),
+            .enum([
+                "no_fly_zone",
+                "prohibited",
+                "restricted",
+                "controlled",
+                "hub_corridor",
+                "hub_zone",
+                "warning",
+                "temporary_restriction",
+                "emergency_exclusion",
+            ])
+            .optional(),
+        altitudeCeiling: zod.number().optional(),
+        altitudeFloor: zod.number().optional(),
+        effectiveStart: zod.iso.datetime({}).optional(),
+        effectiveEnd: zod.iso.datetime({}).optional(),
+        priority: zod.number().optional(),
+        rules: zod.record(zod.string(), zod.any()).optional(),
+        schedule: zod.record(zod.string(), zod.any()).optional(),
         geometry: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -104,14 +117,8 @@ export const updateZoneBody = zod
             })
             .optional()
             .describe("GeoJSON Polygon representation for 2D/3D airspace spatial boundary"),
-        status: zod
-            .enum(["active", "inactive"])
-            .optional()
-            .describe("Updated operational status: active | inactive"),
-        description: zod
-            .string()
-            .optional()
-            .describe("Updated detailed description or operational constraints"),
+        status: zod.enum(["active", "inactive"]).optional(),
+        description: zod.string().optional(),
     })
     .describe("Request payload for updating an existing Airspace Zone / Geofence");
 
@@ -121,21 +128,35 @@ export const updateZoneResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 
 export const updateZoneResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the airspace zone"),
+        id: zod.string().optional(),
         code: zod
             .string()
             .min(updateZoneResponseCodeMin)
             .max(updateZoneResponseCodeMax)
             .regex(updateZoneResponseCodeRegExp)
-            .optional()
-            .describe("Airspace zone business tracking code"),
-        hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
-        name: zod.string().min(1).optional().describe("Name of the airspace zone"),
+            .optional(),
+        hubId: zod.string().optional(),
+        name: zod.string().min(1).optional(),
         zoneType: zod
-            .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
-            .optional()
-            .describe("Classification type: no_fly_zone | restricted | hub_corridor | warning"),
-        altitudeCeiling: zod.number().optional().describe("Altitude ceiling limit in meters (m)"),
+            .enum([
+                "no_fly_zone",
+                "prohibited",
+                "restricted",
+                "controlled",
+                "hub_corridor",
+                "hub_zone",
+                "warning",
+                "temporary_restriction",
+                "emergency_exclusion",
+            ])
+            .optional(),
+        altitudeCeiling: zod.number().optional(),
+        altitudeFloor: zod.number().optional(),
+        effectiveStart: zod.iso.datetime({}).optional(),
+        effectiveEnd: zod.iso.datetime({}).optional(),
+        priority: zod.number().optional(),
+        rules: zod.record(zod.string(), zod.any()).optional(),
+        schedule: zod.record(zod.string(), zod.any()).optional(),
         geometry: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -148,18 +169,12 @@ export const updateZoneResponse = zod
             })
             .optional()
             .describe("GeoJSON Polygon representation for 2D/3D airspace spatial boundary"),
-        status: zod
-            .enum(["active", "inactive"])
-            .optional()
-            .describe("Operational status: active | inactive"),
-        description: zod
-            .string()
-            .optional()
-            .describe("Detailed description, legal basis, or reason for restrictions"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this zone"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod.string().optional().describe("Username who last modified this zone"),
+        status: zod.enum(["active", "inactive"]).optional(),
+        description: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and spatial parameters of an Airspace Zone / Geofence");
 
@@ -202,32 +217,35 @@ export const getAllZonesResponse = zod
             .array(
                 zod
                     .object({
-                        id: zod
-                            .string()
-                            .optional()
-                            .describe("Unique UUID identifier of the airspace zone"),
+                        id: zod.string().optional(),
                         code: zod
                             .string()
                             .min(getAllZonesResponseItemsItemCodeMin)
                             .max(getAllZonesResponseItemsItemCodeMax)
                             .regex(getAllZonesResponseItemsItemCodeRegExp)
-                            .optional()
-                            .describe("Airspace zone business tracking code"),
-                        hubId: zod
-                            .string()
-                            .optional()
-                            .describe("Associated Hub ID if tied to a vertiport station"),
-                        name: zod.string().min(1).optional().describe("Name of the airspace zone"),
+                            .optional(),
+                        hubId: zod.string().optional(),
+                        name: zod.string().min(1).optional(),
                         zoneType: zod
-                            .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
-                            .optional()
-                            .describe(
-                                "Classification type: no_fly_zone | restricted | hub_corridor | warning"
-                            ),
-                        altitudeCeiling: zod
-                            .number()
-                            .optional()
-                            .describe("Altitude ceiling limit in meters (m)"),
+                            .enum([
+                                "no_fly_zone",
+                                "prohibited",
+                                "restricted",
+                                "controlled",
+                                "hub_corridor",
+                                "hub_zone",
+                                "warning",
+                                "temporary_restriction",
+                                "emergency_exclusion",
+                            ])
+                            .optional(),
+                        altitudeCeiling: zod.number().optional(),
+                        altitudeFloor: zod.number().optional(),
+                        effectiveStart: zod.iso.datetime({}).optional(),
+                        effectiveEnd: zod.iso.datetime({}).optional(),
+                        priority: zod.number().optional(),
+                        rules: zod.record(zod.string(), zod.any()).optional(),
+                        schedule: zod.record(zod.string(), zod.any()).optional(),
                         geometry: zod
                             .object({
                                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -242,32 +260,12 @@ export const getAllZonesResponse = zod
                             .describe(
                                 "GeoJSON Polygon representation for 2D/3D airspace spatial boundary"
                             ),
-                        status: zod
-                            .enum(["active", "inactive"])
-                            .optional()
-                            .describe("Operational status: active | inactive"),
-                        description: zod
-                            .string()
-                            .optional()
-                            .describe(
-                                "Detailed description, legal basis, or reason for restrictions"
-                            ),
-                        createdOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Record creation timestamp"),
-                        createdBy: zod
-                            .string()
-                            .optional()
-                            .describe("Username who created this zone"),
-                        lastModifiedOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Last modification timestamp"),
-                        lastModifiedBy: zod
-                            .string()
-                            .optional()
-                            .describe("Username who last modified this zone"),
+                        status: zod.enum(["active", "inactive"]).optional(),
+                        description: zod.string().optional(),
+                        createdOn: zod.iso.datetime({}).optional(),
+                        createdBy: zod.string().optional(),
+                        lastModifiedOn: zod.iso.datetime({}).optional(),
+                        lastModifiedBy: zod.string().optional(),
                     })
                     .describe(
                         "Detailed profile and spatial parameters of an Airspace Zone / Geofence"
@@ -288,6 +286,8 @@ export const createZoneBodyCodeMin = 3;
 export const createZoneBodyCodeMax = 50;
 export const createZoneBodyCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const createZoneBodyAltitudeCeilingDefault = 120.0;
+export const createZoneBodyAltitudeFloorDefault = 0.0;
+export const createZoneBodyPriorityDefault = 0;
 export const createZoneBodyStatusDefault = "active";
 
 export const createZoneBody = zod
@@ -306,13 +306,20 @@ export const createZoneBody = zod
             .describe(
                 "Airspace zone business tracking code (e.g. ASZ-A1B2). If omitted, system auto-generates."
             ),
-        hubId: zod
-            .string()
-            .optional()
-            .describe("Associated Hub ID if tied to a vertiport station (null for general zones)"),
+        hubId: zod.string().optional().describe("Associated Hub ID if tied to a vertiport station"),
         zoneType: zod
-            .enum(["no_fly_zone", "restricted", "hub_corridor", "warning"])
-            .describe("Classification type: no_fly_zone | restricted | hub_corridor | warning"),
+            .enum([
+                "no_fly_zone",
+                "prohibited",
+                "restricted",
+                "controlled",
+                "hub_corridor",
+                "hub_zone",
+                "warning",
+                "temporary_restriction",
+                "emergency_exclusion",
+            ])
+            .describe("Classification type"),
         geometry: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -328,6 +335,26 @@ export const createZoneBody = zod
             .number()
             .default(createZoneBodyAltitudeCeilingDefault)
             .describe("Altitude ceiling limit in meters (m)"),
+        altitudeFloor: zod
+            .number()
+            .default(createZoneBodyAltitudeFloorDefault)
+            .describe("Altitude floor limit in meters (m)"),
+        effectiveStart: zod.iso.datetime({}).optional().describe("Optional effective start time"),
+        effectiveEnd: zod.iso.datetime({}).optional().describe("Optional effective end time"),
+        priority: zod
+            .number()
+            .optional()
+            .describe("Zone precedence priority (higher wins when overlapping)"),
+        rules: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe(
+                "Operational rules JSON (maxSpeed, requiresAuthorization, allowedOrganizations, etc.)"
+            ),
+        schedule: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Recurring active schedule JSON"),
         status: zod
             .enum(["active", "inactive"])
             .default(createZoneBodyStatusDefault)
@@ -380,17 +407,14 @@ export const checkPointResponse = zod
             .array(
                 zod
                     .object({
-                        zoneId: zod
-                            .string()
-                            .optional()
-                            .describe("ID of the conflicted airspace zone"),
-                        name: zod
-                            .string()
-                            .min(1)
-                            .optional()
-                            .describe("Name of the conflicted airspace zone"),
-                        zoneType: zod.string().optional().describe("Zone classification type"),
-                        reason: zod.string().optional().describe("Reason describing the violation"),
+                        zoneId: zod.string().optional(),
+                        name: zod.string().min(1).optional(),
+                        zoneType: zod.string().optional(),
+                        altitudeFloor: zod.number().optional(),
+                        altitudeCeiling: zod.number().optional(),
+                        source: zod.string().optional(),
+                        severity: zod.string().optional(),
+                        reason: zod.string().optional(),
                     })
                     .describe("Airspace zone violation details")
             )
@@ -463,25 +487,13 @@ export const checkPathResponse = zod
             .array(
                 zod
                     .object({
-                        zoneId: zod
-                            .string()
-                            .optional()
-                            .describe("ID of the conflicted airspace zone"),
-                        name: zod
-                            .string()
-                            .min(1)
-                            .optional()
-                            .describe("Name of the conflicted airspace zone"),
-                        zoneType: zod
-                            .string()
-                            .optional()
-                            .describe(
-                                "Zone classification type: no_fly_zone | restricted | hub_corridor | warning"
-                            ),
-                        altitudeCeiling: zod
-                            .number()
-                            .optional()
-                            .describe("Altitude ceiling limit in meters (m)"),
+                        zoneId: zod.string().optional(),
+                        name: zod.string().min(1).optional(),
+                        zoneType: zod.string().optional(),
+                        altitudeFloor: zod.number().optional(),
+                        altitudeCeiling: zod.number().optional(),
+                        source: zod.string().optional(),
+                        severity: zod.string().optional(),
                         conflictPoint: zod
                             .object({
                                 lat: zod
@@ -501,22 +513,9 @@ export const checkPathResponse = zod
                             })
                             .optional()
                             .describe("3D coordinate waypoint point for path checking"),
-                        segmentIndex: zod
-                            .number()
-                            .optional()
-                            .describe(
-                                "Index of the trajectory segment where conflict was detected (0-based)"
-                            ),
-                        distanceFromStartM: zod
-                            .number()
-                            .optional()
-                            .describe(
-                                "Approximate distance along trajectory from origin in meters (m)"
-                            ),
-                        reason: zod
-                            .string()
-                            .optional()
-                            .describe("Explanatory reason describing the violation"),
+                        segmentIndex: zod.number().optional(),
+                        distanceFromStartM: zod.number().optional(),
+                        reason: zod.string().optional(),
                     })
                     .describe("Conflict detail along a sampled flight trajectory")
             )

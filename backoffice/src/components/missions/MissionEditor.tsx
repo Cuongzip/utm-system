@@ -2,16 +2,23 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ArrowLeft, Save, Loader2, Play } from "lucide-react";
 import { SplitMapLayout, ChamferButton, StatusBadge } from "@/components/ui";
 import {
     MissionMapEditor,
     MissionFormSidebar,
+    ExecuteMissionModal,
     useMissionWaypoints,
     waypointsValidationSchema,
     sanitizeWaypointForApi,
+    syncMissionWaypoints,
     determineActiveTabFromErrors,
 } from "@/components/missions";
+import { extractIntermediateWaypoints } from "@/components/waypoints";
+import { QUERY_KEYS } from "@/hooks";
+import { missionService } from "@/services/missionService";
 import { clearFieldError, validateSchema, parseApiError } from "@/utils";
 import { createMissionBody, updateMissionBody } from "@/generated/mission";
 import type {
@@ -26,9 +33,11 @@ import type {
 import {
     getInitialMissionFormPayload,
     DEFAULT_MISSION_STATUS,
+    EXECUTABLE_MISSION_STATUSES,
     MISSION_STATUS,
     MISSION_SCHEDULE_TYPE,
-    WAYPOINT_ACTION_TYPE,
+    STOPOVER_TYPE,
+    HUB_STATUS,
 } from "@/types";
 
 export interface MissionSaveData {
@@ -56,9 +65,11 @@ export function MissionEditor({
     loading = false,
 }: MissionEditorProps) {
     const router = useRouter();
+    const queryClient = useQueryClient();
 
     const [submitting, setSubmitting] = useState(false);
-    const [droneId, setDroneId] = useState("");
+    const [droneId, setDroneId] = useState(initialData?.droneId || "");
+    const [isExecuteOpen, setIsExecuteOpen] = useState(false);
 
     const [formData, setFormData] = useState<MissionFormPayload>(() =>
         getInitialMissionFormPayload(initialData)
@@ -77,17 +88,24 @@ export function MissionEditor({
 
     useEffect(() => {
         setFormData(getInitialMissionFormPayload(initialData));
+        setDroneId(initialData?.droneId || "");
     }, [initialData]);
 
+    const activeHubs = useMemo(
+        () => hubs.filter((h) => (h.status || "").toLowerCase() !== HUB_STATUS.INACTIVE),
+        [hubs]
+    );
+
     useEffect(() => {
-        if (mode === "create" && hubs.length > 0) {
+        const pool = activeHubs.length > 0 ? activeHubs : hubs;
+        if (mode === "create" && pool.length > 0) {
             setFormData((prev) => ({
                 ...prev,
-                departureHubId: prev.departureHubId || hubs[0].id,
-                arrivalHubId: prev.arrivalHubId || (hubs.length > 1 ? hubs[1].id : hubs[0].id),
+                departureHubId: prev.departureHubId || pool[0].id,
+                arrivalHubId: prev.arrivalHubId || (pool.length > 1 ? pool[1].id : pool[0].id),
             }));
         }
-    }, [mode, hubs]);
+    }, [mode, hubs, activeHubs]);
 
     const handleFormChange = <K extends keyof MissionFormPayload>(
         field: K,
@@ -120,12 +138,14 @@ export function MissionEditor({
 
     const {
         waypoints,
+        setWaypoints,
         selectedWaypointId,
         setSelectedWaypointId,
         selectedWaypoint,
         defaultAltitude,
         setDefaultAltitude,
         handleAddWaypoint,
+        handleAddHubWaypoint,
         handleUpdateWaypoint,
         handleDeleteWaypoint,
         handleSelectWaypoint,
@@ -143,6 +163,64 @@ export function MissionEditor({
         onClearWaypointErrors,
     });
 
+    const autoPlanHubsMutation = useMutation({
+        mutationFn: async () => {
+            if (!initialData?.id) {
+                throw new Error("Save the mission first before auto-planning stopover hubs");
+            }
+            const normalizedWaypoints = waypoints.map((wp, idx) => ({
+                ...wp,
+                sequence: idx + 1,
+            }));
+            await syncMissionWaypoints(
+                initialData.id,
+                initialData.waypoints ?? [],
+                normalizedWaypoints,
+                defaultAltitude,
+                selectedDepartureHub,
+                selectedArrivalHub
+            );
+            return missionService.autoPlanHubs(initialData.id, {
+                droneId: droneId || undefined,
+                preferredStopoverType: STOPOVER_TYPE.RECHARGE,
+                persist: true,
+            });
+        },
+        onSuccess: (result) => {
+            if (Array.isArray(result.waypoints)) {
+                setWaypoints(
+                    extractIntermediateWaypoints(
+                        result.waypoints as Waypoint[],
+                        selectedDepartureHub,
+                        selectedArrivalHub
+                    )
+                );
+                setSelectedWaypointId(null);
+            }
+            if (initialData?.id) {
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.missionDetail(initialData.id),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.missionExecutionPlan(initialData.id),
+                });
+            }
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
+            const inserted = result.insertedHubCount ?? 0;
+            const legs = result.plannedLegCount ?? 1;
+            if (inserted > 0) {
+                toast.success(
+                    `Inserted ${inserted} charging HUB stopover${inserted > 1 ? "s" : ""} across ${legs} flight legs`
+                );
+            } else {
+                toast.success(
+                    `Route fits within battery range (${legs} flight leg${legs > 1 ? "s" : ""})`
+                );
+            }
+        },
+        meta: { defaultErrorMessage: "Failed to auto-plan stopover hubs" },
+    });
+
     const handleSave = async () => {
         if (isReadOnly) return;
 
@@ -157,6 +235,7 @@ export function MissionEditor({
             description: formData.description?.trim() || undefined,
             departureHubId: formData.departureHubId,
             arrivalHubId: formData.arrivalHubId || formData.departureHubId,
+            droneId: droneId || undefined,
             scheduleType: formData.scheduleType,
             scheduledAt: scheduledIso,
         };
@@ -175,36 +254,13 @@ export function MissionEditor({
             }
         }
 
-        const fullWaypointsList: Waypoint[] = [
-            ...(selectedDepartureHub?.location
-                ? [
-                      {
-                          name: `Departure: ${selectedDepartureHub.name || selectedDepartureHub.code || "Hub"}`,
-                          latitude: selectedDepartureHub.location.latitude,
-                          longitude: selectedDepartureHub.location.longitude,
-                          altitude: selectedDepartureHub.altitudeMsl ?? 0,
-                          actions: { type: WAYPOINT_ACTION_TYPE.TAKEOFF },
-                      },
-                  ]
-                : []),
-            ...waypoints.map((wp) => ({
-                ...wp,
-            })),
-            ...(selectedArrivalHub?.location
-                ? [
-                      {
-                          name: `Arrival: ${selectedArrivalHub.name || selectedArrivalHub.code || "Hub"}`,
-                          latitude: selectedArrivalHub.location.latitude,
-                          longitude: selectedArrivalHub.location.longitude,
-                          altitude: selectedArrivalHub.altitudeMsl ?? 0,
-                          actions: { type: WAYPOINT_ACTION_TYPE.LAND },
-                      },
-                  ]
-                : []),
-        ].map((wp, idx) => ({ ...wp, sequence: idx + 1 }));
+        const routeWaypoints: Waypoint[] = waypoints.map((wp, idx) => ({
+            ...wp,
+            sequence: idx + 1,
+        }));
 
         const waypointValidation = validateSchema(waypointsValidationSchema, {
-            waypoints: fullWaypointsList.map((w) => sanitizeWaypointForApi(w, defaultAltitude)),
+            waypoints: routeWaypoints.map((w) => sanitizeWaypointForApi(w, defaultAltitude)),
         });
 
         if (
@@ -234,7 +290,7 @@ export function MissionEditor({
         try {
             await onSave({
                 payload: validation.data as CreateMissionPayload | UpdateMissionPayload,
-                waypoints: fullWaypointsList,
+                waypoints: routeWaypoints,
                 defaultAltitude,
                 droneId: droneId || undefined,
             });
@@ -256,6 +312,18 @@ export function MissionEditor({
         }
     };
 
+    const canExecute = Boolean(
+        mode === "edit" &&
+        initialData?.status &&
+        EXECUTABLE_MISSION_STATUSES.has(initialData.status)
+    );
+    const isReExecute = Boolean(
+        initialData?.status &&
+        (initialData.status === MISSION_STATUS.COMPLETED ||
+            initialData.status === MISSION_STATUS.ABORTED ||
+            initialData.status === MISSION_STATUS.FAILED)
+    );
+
     const pageTitle =
         mode === "create"
             ? "NEW MISSION"
@@ -264,86 +332,121 @@ export function MissionEditor({
               : `EDIT MISSION: ${initialData?.name || ""}`;
 
     return (
-        <SplitMapLayout
-            title={pageTitle}
-            badges={
-                mode === "edit" ? (
-                    <StatusBadge status={initialData?.status ?? DEFAULT_MISSION_STATUS} showDot />
-                ) : null
-            }
-            headerActions={
-                <div className="flex items-center gap-3">
-                    <ChamferButton
-                        variant="outline"
-                        size="sm"
-                        clip="xs"
-                        onClick={() => router.push("/dashboard/missions")}
-                        disabled={submitting}
-                    >
-                        <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Cancel</span>
-                    </ChamferButton>
-
-                    {!isReadOnly && (
+        <>
+            <SplitMapLayout
+                title={pageTitle}
+                badges={
+                    mode === "edit" ? (
+                        <StatusBadge
+                            status={initialData?.status ?? DEFAULT_MISSION_STATUS}
+                            showDot
+                        />
+                    ) : null
+                }
+                headerActions={
+                    <div className="flex items-center gap-3">
                         <ChamferButton
-                            variant="dark"
+                            variant="outline"
                             size="sm"
-                            clip="sm"
-                            onClick={handleSave}
-                            disabled={submitting || loading}
+                            clip="xs"
+                            onClick={() => router.push("/dashboard/missions")}
+                            disabled={submitting}
                         >
-                            {submitting ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                            ) : (
-                                <Save className="w-4 h-4 text-white" />
-                            )}
-                            <span>{mode === "create" ? "Save Mission" : "Update Mission"}</span>
+                            <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{isReadOnly ? "Back" : "Cancel"}</span>
                         </ChamferButton>
-                    )}
-                </div>
-            }
-            mapContent={
-                <MissionMapEditor
-                    waypoints={waypoints}
-                    selectedWaypointId={selectedWaypointId}
-                    defaultAltitude={defaultAltitude}
-                    onDefaultAltitudeChange={setDefaultAltitude}
-                    departureHub={selectedDepartureHub}
-                    arrivalHub={selectedArrivalHub}
-                    onAddWaypoint={handleAddWaypoint}
-                    onMoveWaypoint={handleMoveWaypoint}
-                    onSelectWaypoint={handleSelectWaypoint}
-                    onUndoWaypoint={handleUndoWaypoint}
-                    onClearWaypoints={handleClearWaypoints}
-                    onGenerateHubToHub={handleGenerateHubToHub}
-                    isReadOnly={isReadOnly}
-                    className="h-full"
-                />
-            }
-            sidebarContent={
-                <MissionFormSidebar
-                    formData={formData}
-                    onFormChange={handleFormChange}
-                    droneId={droneId}
-                    onDroneIdChange={setDroneId}
-                    drones={drones}
-                    hubs={hubs}
-                    departureHub={selectedDepartureHub}
-                    arrivalHub={selectedArrivalHub}
-                    waypoints={waypoints}
-                    selectedWaypoint={selectedWaypoint}
-                    onSelectWaypoint={handleSelectWaypoint}
-                    onUpdateWaypoint={handleUpdateWaypoint}
-                    onDeleteWaypoint={handleDeleteWaypoint}
-                    onMoveWaypointOrder={handleMoveWaypointOrder}
-                    activeTab={activeSidebarTab}
-                    onTabChange={setActiveSidebarTab}
-                    isEdit={mode === "edit"}
-                    isReadOnly={isReadOnly}
-                    fieldErrors={fieldErrors}
-                    onClearFieldError={handleClearFieldError}
-                />
-            }
-        />
+
+                        {canExecute && (
+                            <ChamferButton
+                                variant="outline"
+                                size="sm"
+                                clip="xs"
+                                onClick={() => setIsExecuteOpen(true)}
+                                disabled={submitting || loading}
+                            >
+                                <Play className="w-3.5 h-3.5 text-slate-700" />
+                                <span>
+                                    {isReExecute ? "Re-Execute Mission" : "Execute Mission"}
+                                </span>
+                            </ChamferButton>
+                        )}
+
+                        {!isReadOnly && (
+                            <ChamferButton
+                                variant="dark"
+                                size="sm"
+                                clip="sm"
+                                onClick={handleSave}
+                                disabled={submitting || loading}
+                            >
+                                {submitting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                ) : (
+                                    <Save className="w-4 h-4 text-white" />
+                                )}
+                                <span>{mode === "create" ? "Save Mission" : "Update Mission"}</span>
+                            </ChamferButton>
+                        )}
+                    </div>
+                }
+                mapContent={
+                    <MissionMapEditor
+                        waypoints={waypoints}
+                        selectedWaypointId={selectedWaypointId}
+                        defaultAltitude={defaultAltitude}
+                        onDefaultAltitudeChange={setDefaultAltitude}
+                        departureHub={selectedDepartureHub}
+                        arrivalHub={selectedArrivalHub}
+                        onAddWaypoint={handleAddWaypoint}
+                        onMoveWaypoint={handleMoveWaypoint}
+                        onSelectWaypoint={handleSelectWaypoint}
+                        onUndoWaypoint={handleUndoWaypoint}
+                        onClearWaypoints={handleClearWaypoints}
+                        onGenerateHubToHub={handleGenerateHubToHub}
+                        isReadOnly={isReadOnly}
+                        className="h-full"
+                    />
+                }
+                sidebarContent={
+                    <MissionFormSidebar
+                        missionId={initialData?.id}
+                        formData={formData}
+                        onFormChange={handleFormChange}
+                        droneId={droneId}
+                        onDroneIdChange={setDroneId}
+                        drones={drones}
+                        hubs={hubs}
+                        departureHub={selectedDepartureHub}
+                        arrivalHub={selectedArrivalHub}
+                        waypoints={waypoints}
+                        selectedWaypoint={selectedWaypoint}
+                        onSelectWaypoint={handleSelectWaypoint}
+                        onAddHubWaypoint={handleAddHubWaypoint}
+                        onUpdateWaypoint={handleUpdateWaypoint}
+                        onDeleteWaypoint={handleDeleteWaypoint}
+                        onMoveWaypointOrder={handleMoveWaypointOrder}
+                        activeTab={activeSidebarTab}
+                        onTabChange={setActiveSidebarTab}
+                        isEdit={mode === "edit"}
+                        isReadOnly={isReadOnly}
+                        onAutoPlanHubs={
+                            mode === "edit" && initialData?.id && !isReadOnly
+                                ? () => autoPlanHubsMutation.mutate()
+                                : undefined
+                        }
+                        isAutoPlanning={autoPlanHubsMutation.isPending}
+                        fieldErrors={fieldErrors}
+                        onClearFieldError={handleClearFieldError}
+                    />
+                }
+            />
+
+            <ExecuteMissionModal
+                isOpen={isExecuteOpen}
+                mission={initialData ?? null}
+                defaultDroneId={droneId || undefined}
+                onClose={() => setIsExecuteOpen(false)}
+            />
+        </>
     );
 }

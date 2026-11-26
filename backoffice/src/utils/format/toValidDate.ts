@@ -1,5 +1,6 @@
 export function toValidDate(val?: string | Date | number | null): Date | null {
     if (!val) return null;
-    const d = val instanceof Date ? val : new Date(val);
+    const normalized = typeof val === "string" ? val.replace(/\[[^\]]+\]$/, "") : val;
+    const d = normalized instanceof Date ? normalized : new Date(normalized);
     return !isNaN(d.getTime()) ? d : null;
 }

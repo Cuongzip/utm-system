@@ -20,9 +20,14 @@ export const AIRSPACE_ZONE_STATUSES = updateZoneBody.shape.status.unwrap().optio
 
 export const AIRSPACE_ZONE_TYPE = {
     NO_FLY_ZONE: "no_fly_zone",
+    PROHIBITED: "prohibited",
     RESTRICTED: "restricted",
+    CONTROLLED: "controlled",
     HUB_CORRIDOR: "hub_corridor",
+    HUB_ZONE: "hub_zone",
     WARNING: "warning",
+    TEMPORARY_RESTRICTION: "temporary_restriction",
+    EMERGENCY_EXCLUSION: "emergency_exclusion",
 } as const satisfies Record<string, AirspaceZoneType>;
 
 export const DEFAULT_AIRSPACE_ZONE_TYPE: AirspaceZoneType = AIRSPACE_ZONE_TYPE.NO_FLY_ZONE;
@@ -36,9 +41,14 @@ export const DEFAULT_AIRSPACE_ZONE_STATUS: AirspaceZoneStatus = AIRSPACE_ZONE_ST
 
 export const AIRSPACE_ZONE_TYPE_LABELS: Record<AirspaceZoneType, string> = {
     [AIRSPACE_ZONE_TYPE.NO_FLY_ZONE]: "No-Fly Zone (NFZ)",
+    [AIRSPACE_ZONE_TYPE.PROHIBITED]: "Prohibited Airspace",
     [AIRSPACE_ZONE_TYPE.RESTRICTED]: "Restricted Airspace",
+    [AIRSPACE_ZONE_TYPE.CONTROLLED]: "Controlled Airspace",
     [AIRSPACE_ZONE_TYPE.HUB_CORRIDOR]: "Hub Corridor",
+    [AIRSPACE_ZONE_TYPE.HUB_ZONE]: "Hub Zone",
     [AIRSPACE_ZONE_TYPE.WARNING]: "Advisory / Warning",
+    [AIRSPACE_ZONE_TYPE.TEMPORARY_RESTRICTION]: "Temporary Restriction",
+    [AIRSPACE_ZONE_TYPE.EMERGENCY_EXCLUSION]: "Emergency Exclusion",
 };
 
 export const AIRSPACE_ZONE_STATUS_LABELS: Record<AirspaceZoneStatus, string> = {
@@ -56,7 +66,10 @@ export function getInitialAirspaceFormPayload(
         name: initialData?.name || "",
         zoneType: initialData?.zoneType || AIRSPACE_ZONE_TYPES[0],
         status: initialData?.status || AIRSPACE_ZONE_STATUSES[0],
+        altitudeFloor: initialData?.altitudeFloor ?? 0,
         altitudeCeiling: initialData?.altitudeCeiling ?? 120,
+        effectiveStart: initialData?.effectiveStart ? initialData.effectiveStart.slice(0, 16) : "",
+        effectiveEnd: initialData?.effectiveEnd ? initialData.effectiveEnd.slice(0, 16) : "",
         hubId: initialData?.hubId || "",
         description: initialData?.description || "",
     };

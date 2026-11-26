@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
-import type { Viewer } from "cesium";
-import { Loader2 } from "lucide-react";
+import type { ImageryProvider, ScreenSpaceEventHandler, Viewer } from "cesium";
 import { CesiumContext } from "./CesiumContext";
 import { getCesium } from "./cesiumLoader";
 import type { MapMode, ImageryType } from "./types";
@@ -18,32 +17,47 @@ export interface BaseCesiumMapProps {
     mode?: MapMode;
     layerType?: ImageryType;
     onEntityClick?: (entityId: string) => void;
+    onMapClick?: (coords: { latitude: number; longitude: number }) => void;
+    pickMode?: boolean;
     children?: React.ReactNode;
 }
 
+const HIDE_TOOLBAR = true;
+const DRAG_THRESHOLD_PX = 5;
+
 const DEFAULT_COORDINATES = {
-    lng: 108.2208,
-    lat: 16.0544,
-    height: 45000.0,
+    lng: 106.7009,
+    lat: 10.7769,
+    height: 35000.0,
 };
 
 export function BaseCesiumMap({
     mode = "2d",
     layerType = "satellite",
     onEntityClick,
+    onMapClick,
+    pickMode = false,
     children,
 }: BaseCesiumMapProps) {
-    const hideToolbar = true;
-    const initialCoordinates = DEFAULT_COORDINATES;
     const containerRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<Viewer | null>(null);
     const [viewer, setViewer] = useState<Viewer | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [mapError, setMapError] = useState<string | null>(null);
     const onEntityClickRef = useRef(onEntityClick);
+    const onMapClickRef = useRef(onMapClick);
+    const pickModeRef = useRef(pickMode);
+    const modeRef = useRef(mode);
+    const layerTypeRef = useRef(layerType);
+    const appliedModeRef = useRef<MapMode | null>(null);
+    const appliedLayerTypeRef = useRef<ImageryType | null>(null);
 
     useLayoutEffect(() => {
         onEntityClickRef.current = onEntityClick;
+        onMapClickRef.current = onMapClick;
+        pickModeRef.current = pickMode;
+        modeRef.current = mode;
+        layerTypeRef.current = layerType;
     });
 
     useEffect(() => {
@@ -60,13 +74,16 @@ export function BaseCesiumMap({
 
                 Cesium.Ion.defaultAccessToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
 
-                let baseImageryProvider: any;
-                if (layerType === "satellite") {
+                const initialLayer = layerTypeRef.current;
+                const initialMode = modeRef.current;
+
+                let baseImageryProvider: ImageryProvider;
+                if (initialLayer === "satellite") {
                     baseImageryProvider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
                         "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
                         { enablePickFeatures: false }
                     );
-                } else if (layerType === "carto") {
+                } else if (initialLayer === "carto") {
                     baseImageryProvider = new Cesium.UrlTemplateImageryProvider({
                         url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
                         subdomains: ["a", "b", "c", "d"],
@@ -79,7 +96,8 @@ export function BaseCesiumMap({
                 }
 
                 activeViewer = new Cesium.Viewer(containerRef.current, {
-                    sceneMode: mode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D,
+                    sceneMode:
+                        initialMode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D,
                     baseLayer: new Cesium.ImageryLayer(baseImageryProvider),
                     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
                     creditContainer: document.createElement("div"),
@@ -87,8 +105,8 @@ export function BaseCesiumMap({
                     maximumRenderTimeChange: Infinity,
                     animation: false,
                     timeline: false,
-                    fullscreenButton: !hideToolbar,
-                    homeButton: !hideToolbar,
+                    fullscreenButton: !HIDE_TOOLBAR,
+                    homeButton: !HIDE_TOOLBAR,
                     sceneModePicker: false,
                     baseLayerPicker: false,
                     navigationHelpButton: false,
@@ -110,7 +128,7 @@ export function BaseCesiumMap({
                 activeViewer.resolutionScale = 1.0;
                 activeViewer.scene.globe.depthTestAgainstTerrain = false;
 
-                if (mode === "2d") {
+                if (initialMode === "2d") {
                     activeViewer.scene.fog.enabled = false;
                     activeViewer.scene.globe.showGroundAtmosphere = false;
                     if (activeViewer.scene.sun) activeViewer.scene.sun.show = false;
@@ -119,15 +137,56 @@ export function BaseCesiumMap({
 
                 activeViewer.camera.setView({
                     destination: Cesium.Cartesian3.fromDegrees(
-                        initialCoordinates.lng,
-                        initialCoordinates.lat,
-                        initialCoordinates.height ?? 2500000.0
+                        DEFAULT_COORDINATES.lng,
+                        DEFAULT_COORDINATES.lat,
+                        DEFAULT_COORDINATES.height
                     ),
                 });
 
+                let dragStartPos: { x: number; y: number } | null = null;
+                let hasMovedDuringClick = false;
+
                 const inputHandler = new Cesium.ScreenSpaceEventHandler(activeViewer.scene.canvas);
-                inputHandler.setInputAction((click: any) => {
+                inputHandler.setInputAction((event: ScreenSpaceEventHandler.PositionedEvent) => {
+                    hasMovedDuringClick = false;
+                    dragStartPos = { x: event.position.x, y: event.position.y };
+                }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+                inputHandler.setInputAction((movement: ScreenSpaceEventHandler.MotionEvent) => {
+                    if (
+                        dragStartPos &&
+                        Math.hypot(
+                            movement.endPosition.x - dragStartPos.x,
+                            movement.endPosition.y - dragStartPos.y
+                        ) > DRAG_THRESHOLD_PX
+                    ) {
+                        hasMovedDuringClick = true;
+                    }
+                }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+                inputHandler.setInputAction(() => {
+                    dragStartPos = null;
+                }, Cesium.ScreenSpaceEventType.LEFT_UP);
+                inputHandler.setInputAction((click: ScreenSpaceEventHandler.PositionedEvent) => {
                     if (!activeViewer || activeViewer.isDestroyed()) return;
+                    if (hasMovedDuringClick) {
+                        hasMovedDuringClick = false;
+                        return;
+                    }
+                    if (pickModeRef.current && onMapClickRef.current) {
+                        const cartesian = activeViewer.camera.pickEllipsoid(
+                            click.position,
+                            activeViewer.scene.globe.ellipsoid
+                        );
+                        if (cartesian) {
+                            const carto = Cesium.Cartographic.fromCartesian(cartesian);
+                            onMapClickRef.current({
+                                latitude: Number(Cesium.Math.toDegrees(carto.latitude).toFixed(6)),
+                                longitude: Number(
+                                    Cesium.Math.toDegrees(carto.longitude).toFixed(6)
+                                ),
+                            });
+                        }
+                        return;
+                    }
                     const picked = activeViewer.scene.pick(click.position);
                     if (Cesium.defined(picked) && picked.id && picked.id.id) {
                         onEntityClickRef.current?.(picked.id.id);
@@ -146,6 +205,8 @@ export function BaseCesiumMap({
                     resizeObserver.observe(containerRef.current);
                 }
 
+                appliedModeRef.current = initialMode;
+                appliedLayerTypeRef.current = initialLayer;
                 viewerRef.current = activeViewer;
                 setViewer(activeViewer);
                 setIsLoaded(true);
@@ -175,62 +236,105 @@ export function BaseCesiumMap({
     }, []);
 
     useEffect(() => {
-        const v = viewerRef.current || viewer;
+        const v = viewerRef.current;
         if (!v || !isLoaded || v.isDestroyed()) return;
+        v.scene.canvas.style.cursor = pickMode ? "crosshair" : "default";
+        return () => {
+            if (v && !v.isDestroyed()) {
+                v.scene.canvas.style.cursor = "default";
+            }
+        };
+    }, [pickMode, isLoaded]);
+
+    useEffect(() => {
+        const v = viewerRef.current;
+        if (!v || !isLoaded || v.isDestroyed()) return;
+        if (appliedModeRef.current === mode) return;
+
+        let removeMorphListener: (() => void) | undefined;
 
         async function updateSceneMode() {
             const Cesium = await getCesium();
-            if (!v || v.isDestroyed()) return;
+            const currentViewer = viewerRef.current;
+            if (!currentViewer || currentViewer.isDestroyed()) return;
 
             const targetMode = mode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D;
+            appliedModeRef.current = mode;
 
-            if (v.scene.mode !== targetMode) {
-                const carto = v.camera.positionCartographic;
-                const targetLng = carto
+            if (currentViewer.scene.mode !== targetMode) {
+                const carto = currentViewer.camera.positionCartographic;
+                const hasValidCarto =
+                    carto &&
+                    Number.isFinite(carto.latitude) &&
+                    Number.isFinite(carto.longitude) &&
+                    (Math.abs(carto.latitude) > 0.0001 || Math.abs(carto.longitude) > 0.0001);
+                const targetLng = hasValidCarto
                     ? Cesium.Math.toDegrees(carto.longitude)
-                    : initialCoordinates.lng;
-                const targetLat = carto
+                    : DEFAULT_COORDINATES.lng;
+                const targetLat = hasValidCarto
                     ? Cesium.Math.toDegrees(carto.latitude)
-                    : initialCoordinates.lat;
-                const targetHeight = carto
-                    ? Math.max(carto.height, 1200)
-                    : (initialCoordinates.height ?? 45000);
+                    : DEFAULT_COORDINATES.lat;
+                const targetHeight = hasValidCarto
+                    ? Math.min(Math.max(carto.height, 1200), 120000)
+                    : DEFAULT_COORDINATES.height;
+
+                const applyRestoredView = () => {
+                    if (currentViewer.isDestroyed()) return;
+                    currentViewer.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(
+                            targetLng,
+                            targetLat,
+                            targetHeight
+                        ),
+                    });
+                    currentViewer.scene.requestRender();
+                };
+
+                removeMorphListener = currentViewer.scene.morphComplete.addEventListener(() => {
+                    removeMorphListener?.();
+                    removeMorphListener = undefined;
+                    applyRestoredView();
+                });
 
                 if (targetMode === Cesium.SceneMode.SCENE2D) {
-                    v.scene.fog.enabled = false;
-                    v.scene.globe.showGroundAtmosphere = false;
-                    if (v.scene.sun) v.scene.sun.show = false;
-                    if (v.scene.moon) v.scene.moon.show = false;
-                    v.scene.morphTo2D(0);
+                    currentViewer.scene.fog.enabled = false;
+                    currentViewer.scene.globe.showGroundAtmosphere = false;
+                    if (currentViewer.scene.sun) currentViewer.scene.sun.show = false;
+                    if (currentViewer.scene.moon) currentViewer.scene.moon.show = false;
+                    currentViewer.scene.morphTo2D(0);
                 } else {
-                    v.scene.fog.enabled = true;
-                    v.scene.globe.showGroundAtmosphere = true;
-                    if (v.scene.sun) v.scene.sun.show = true;
-                    if (v.scene.moon) v.scene.moon.show = true;
-                    v.scene.morphTo3D(0);
+                    currentViewer.scene.fog.enabled = true;
+                    currentViewer.scene.globe.showGroundAtmosphere = true;
+                    if (currentViewer.scene.sun) currentViewer.scene.sun.show = true;
+                    if (currentViewer.scene.moon) currentViewer.scene.moon.show = true;
+                    currentViewer.scene.morphTo3D(0);
                 }
 
-                v.camera.setView({
-                    destination: Cesium.Cartesian3.fromDegrees(targetLng, targetLat, targetHeight),
-                });
-                v.scene.requestRender();
+                applyRestoredView();
             }
         }
 
         updateSceneMode();
-    }, [mode, isLoaded, viewer, initialCoordinates]);
+
+        return () => {
+            removeMorphListener?.();
+        };
+    }, [mode, isLoaded]);
 
     useEffect(() => {
-        const v = viewerRef.current || viewer;
+        const v = viewerRef.current;
         if (!v || !isLoaded || v.isDestroyed()) return;
+        if (appliedLayerTypeRef.current === layerType) return;
 
         async function updateImagery() {
             const Cesium = await getCesium();
-            if (!v || v.isDestroyed()) return;
+            const currentViewer = viewerRef.current;
+            if (!currentViewer || currentViewer.isDestroyed()) return;
 
-            v.imageryLayers.removeAll();
+            appliedLayerTypeRef.current = layerType;
+            currentViewer.imageryLayers.removeAll();
 
-            let provider: any;
+            let provider: ImageryProvider;
             if (layerType === "satellite") {
                 provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
                     "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
@@ -248,14 +352,14 @@ export function BaseCesiumMap({
                 );
             }
 
-            if (!v.isDestroyed()) {
-                v.imageryLayers.addImageryProvider(provider);
-                v.scene.requestRender();
+            if (!currentViewer.isDestroyed()) {
+                currentViewer.imageryLayers.addImageryProvider(provider);
+                currentViewer.scene.requestRender();
             }
         }
 
         updateImagery();
-    }, [layerType, isLoaded, viewer]);
+    }, [layerType, isLoaded]);
 
     return (
         <CesiumContext.Provider value={{ viewer, isLoaded }}>
@@ -266,11 +370,25 @@ export function BaseCesiumMap({
                 />
 
                 {!isLoaded && !mapError && (
-                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-slate-900/80 text-white backdrop-blur-xs">
-                        <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-                        <span className="text-xs font-mono font-medium tracking-wide">
-                            Loading map...
-                        </span>
+                    <div
+                        role="status"
+                        aria-busy="true"
+                        aria-label="Loading map"
+                        className="absolute inset-0 z-30 bg-slate-900/95 p-4 flex flex-col justify-between overflow-hidden"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="h-7 w-20 rounded bg-slate-800 animate-pulse" />
+                            <div className="flex items-center gap-2">
+                                <div className="h-7 w-24 rounded bg-slate-800 animate-pulse" />
+                                <div className="h-7 w-7 rounded bg-slate-800 animate-pulse" />
+                            </div>
+                        </div>
+                        <div className="flex-1 my-4 rounded border border-slate-800/80 bg-slate-800/40 animate-pulse" />
+                        <div className="flex items-center justify-between">
+                            <div className="h-5 w-32 rounded bg-slate-800 animate-pulse" />
+                            <div className="h-5 w-24 rounded bg-slate-800 animate-pulse" />
+                        </div>
+                        <span className="sr-only">Loading map...</span>
                     </div>
                 )}
 

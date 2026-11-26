@@ -21,42 +21,41 @@ export const getOrganizationByIdResponseRegistrationNumberRegExp = new RegExp("^
 
 export const getOrganizationByIdResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the organization"),
-        name: zod.string().min(1).optional().describe("Legal / operational organization name"),
+        id: zod.string().optional(),
+        name: zod.string().min(1).optional(),
         type: zod
-            .enum(["operator", "authority", "enterprise"])
-            .optional()
-            .describe("Organization category / type"),
+            .enum([
+                "operator",
+                "partner",
+                "regulatory",
+                "service_provider",
+                "authority",
+                "enterprise",
+            ])
+            .optional(),
         registrationNumber: zod
             .string()
             .min(getOrganizationByIdResponseRegistrationNumberMin)
             .max(getOrganizationByIdResponseRegistrationNumberMax)
             .regex(getOrganizationByIdResponseRegistrationNumberRegExp)
-            .optional()
-            .describe("Business registration number / license code"),
-        contactInfo: zod
-            .string()
-            .optional()
-            .describe("Contact details such as email, phone, physical address"),
+            .optional(),
+        contactInfo: zod.string().optional(),
+        address: zod.record(zod.string(), zod.any()).optional(),
+        authorizedAirspace: zod.record(zod.string(), zod.any()).optional(),
+        certifications: zod.record(zod.string(), zod.any()).optional(),
+        insuranceInfo: zod.record(zod.string(), zod.any()).optional(),
         status: zod
-            .enum(["active", "suspended", "inactive"])
-            .optional()
-            .describe("Operational status"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod
-            .string()
-            .optional()
-            .describe("Identity that created this organization record"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Identity that last modified this organization record"),
+            .enum(["active", "suspended", "inactive", "pending", "pending_verification"])
+            .optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and operational data of an Organization");
 
 /**
- * Update information and operational status of an existing organization.
+ * Update information and operational status of an existing organization. Requires admin role.
  * @summary Update Organization
  */
 export const updateOrganizationParams = zod.object({
@@ -67,24 +66,15 @@ export const updateOrganizationBodyNameMax = 255;
 
 export const updateOrganizationBody = zod
     .object({
-        name: zod
-            .string()
-            .min(1)
-            .max(updateOrganizationBodyNameMax)
-            .optional()
-            .describe("Legal / operational organization name"),
-        type: zod
-            .enum(["operator", "authority", "enterprise"])
-            .optional()
-            .describe("Organization category / type"),
-        contactInfo: zod
-            .string()
-            .optional()
-            .describe("Contact details such as email, phone, physical address"),
+        name: zod.string().min(1).max(updateOrganizationBodyNameMax).optional(),
+        contactInfo: zod.string().optional(),
+        address: zod.record(zod.string(), zod.any()).optional(),
+        authorizedAirspace: zod.record(zod.string(), zod.any()).optional(),
+        certifications: zod.record(zod.string(), zod.any()).optional(),
+        insuranceInfo: zod.record(zod.string(), zod.any()).optional(),
         status: zod
-            .enum(["active", "suspended", "inactive"])
-            .optional()
-            .describe("Operational status of the organization"),
+            .enum(["active", "suspended", "inactive", "pending", "pending_verification"])
+            .optional(),
     })
     .describe("Request payload for updating an existing Organization");
 
@@ -94,37 +84,36 @@ export const updateOrganizationResponseRegistrationNumberRegExp = new RegExp("^[
 
 export const updateOrganizationResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the organization"),
-        name: zod.string().min(1).optional().describe("Legal / operational organization name"),
+        id: zod.string().optional(),
+        name: zod.string().min(1).optional(),
         type: zod
-            .enum(["operator", "authority", "enterprise"])
-            .optional()
-            .describe("Organization category / type"),
+            .enum([
+                "operator",
+                "partner",
+                "regulatory",
+                "service_provider",
+                "authority",
+                "enterprise",
+            ])
+            .optional(),
         registrationNumber: zod
             .string()
             .min(updateOrganizationResponseRegistrationNumberMin)
             .max(updateOrganizationResponseRegistrationNumberMax)
             .regex(updateOrganizationResponseRegistrationNumberRegExp)
-            .optional()
-            .describe("Business registration number / license code"),
-        contactInfo: zod
-            .string()
-            .optional()
-            .describe("Contact details such as email, phone, physical address"),
+            .optional(),
+        contactInfo: zod.string().optional(),
+        address: zod.record(zod.string(), zod.any()).optional(),
+        authorizedAirspace: zod.record(zod.string(), zod.any()).optional(),
+        certifications: zod.record(zod.string(), zod.any()).optional(),
+        insuranceInfo: zod.record(zod.string(), zod.any()).optional(),
         status: zod
-            .enum(["active", "suspended", "inactive"])
-            .optional()
-            .describe("Operational status"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod
-            .string()
-            .optional()
-            .describe("Identity that created this organization record"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Identity that last modified this organization record"),
+            .enum(["active", "suspended", "inactive", "pending", "pending_verification"])
+            .optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and operational data of an Organization");
 
@@ -146,11 +135,11 @@ export const getOrganizationsQueryOffsetDefault = 0;
 export const getOrganizationsQueryParams = zod.object({
     search: zod.string().optional().describe("Search term for company name or registration number"),
     type: zod
-        .enum(["operator", "authority", "enterprise"])
+        .enum(["operator", "partner", "regulatory", "service_provider", "authority", "enterprise"])
         .optional()
         .describe("Filter by organization type (operator, authority, enterprise)"),
     status: zod
-        .enum(["active", "suspended", "inactive"])
+        .enum(["active", "suspended", "inactive", "pending", "pending_verification"])
         .optional()
         .describe("Filter by status (active, suspended, inactive)"),
     limit: zod
@@ -172,50 +161,42 @@ export const getOrganizationsResponse = zod
             .array(
                 zod
                     .object({
-                        id: zod
-                            .string()
-                            .optional()
-                            .describe("Unique UUID identifier of the organization"),
-                        name: zod
-                            .string()
-                            .min(1)
-                            .optional()
-                            .describe("Legal / operational organization name"),
+                        id: zod.string().optional(),
+                        name: zod.string().min(1).optional(),
                         type: zod
-                            .enum(["operator", "authority", "enterprise"])
-                            .optional()
-                            .describe("Organization category / type"),
+                            .enum([
+                                "operator",
+                                "partner",
+                                "regulatory",
+                                "service_provider",
+                                "authority",
+                                "enterprise",
+                            ])
+                            .optional(),
                         registrationNumber: zod
                             .string()
                             .min(getOrganizationsResponseItemsItemRegistrationNumberMin)
                             .max(getOrganizationsResponseItemsItemRegistrationNumberMax)
                             .regex(getOrganizationsResponseItemsItemRegistrationNumberRegExp)
-                            .optional()
-                            .describe("Business registration number / license code"),
-                        contactInfo: zod
-                            .string()
-                            .optional()
-                            .describe("Contact details such as email, phone, physical address"),
+                            .optional(),
+                        contactInfo: zod.string().optional(),
+                        address: zod.record(zod.string(), zod.any()).optional(),
+                        authorizedAirspace: zod.record(zod.string(), zod.any()).optional(),
+                        certifications: zod.record(zod.string(), zod.any()).optional(),
+                        insuranceInfo: zod.record(zod.string(), zod.any()).optional(),
                         status: zod
-                            .enum(["active", "suspended", "inactive"])
-                            .optional()
-                            .describe("Operational status"),
-                        createdOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Record creation timestamp"),
-                        createdBy: zod
-                            .string()
-                            .optional()
-                            .describe("Identity that created this organization record"),
-                        lastModifiedOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Last modification timestamp"),
-                        lastModifiedBy: zod
-                            .string()
-                            .optional()
-                            .describe("Identity that last modified this organization record"),
+                            .enum([
+                                "active",
+                                "suspended",
+                                "inactive",
+                                "pending",
+                                "pending_verification",
+                            ])
+                            .optional(),
+                        createdOn: zod.iso.datetime({}).optional(),
+                        createdBy: zod.string().optional(),
+                        lastModifiedOn: zod.iso.datetime({}).optional(),
+                        lastModifiedBy: zod.string().optional(),
                     })
                     .describe("Detailed profile and operational data of an Organization")
             )
@@ -236,26 +217,25 @@ export const createOrganizationBodyRegistrationNumberRegExp = new RegExp("^[A-Za
 
 export const createOrganizationBody = zod
     .object({
-        name: zod
-            .string()
-            .min(1)
-            .max(createOrganizationBodyNameMax)
-            .describe("Legal / operational organization name"),
-        type: zod
-            .enum(["operator", "authority", "enterprise"])
-            .describe("Organization category / type"),
+        name: zod.string().min(1).max(createOrganizationBodyNameMax),
+        type: zod.enum([
+            "operator",
+            "partner",
+            "regulatory",
+            "service_provider",
+            "authority",
+            "enterprise",
+        ]),
         registrationNumber: zod
             .string()
             .min(createOrganizationBodyRegistrationNumberMin)
             .max(createOrganizationBodyRegistrationNumberMax)
             .regex(createOrganizationBodyRegistrationNumberRegExp)
-            .optional()
-            .describe(
-                "Business registration number / license code. If omitted or blank, a unique code will be auto-generated (e.g. ORG-YYYY-XXXX)."
-            ),
-        contactInfo: zod
-            .string()
-            .optional()
-            .describe("Contact details such as email, phone, physical address"),
+            .optional(),
+        contactInfo: zod.string().optional(),
+        address: zod.record(zod.string(), zod.any()).optional(),
+        authorizedAirspace: zod.record(zod.string(), zod.any()).optional(),
+        certifications: zod.record(zod.string(), zod.any()).optional(),
+        insuranceInfo: zod.record(zod.string(), zod.any()).optional(),
     })
     .describe("Request payload for registering a new Organization");

@@ -8,9 +8,22 @@
 import zod from "zod";
 
 /**
- * Push instantaneous telemetry packet (lat, lon, alt, speed, heading, battery) into system.
+ * Push instantaneous telemetry packet (lat, lon, alt, speed, heading, battery, health) into system.
  * @summary Ingest drone telemetry data
  */
+export const ingestTelemetryBodyLatitudeMin = -90;
+export const ingestTelemetryBodyLatitudeMax = 90;
+export const ingestTelemetryBodyLongitudeMin = -180;
+export const ingestTelemetryBodyLongitudeMax = 180;
+export const ingestTelemetryBodyBatteryPercentageMin = 0;
+export const ingestTelemetryBodyBatteryPercentageMax = 100;
+export const ingestTelemetryBodyFlightModeMin = 0;
+export const ingestTelemetryBodyFlightModeMax = 50;
+export const ingestTelemetryBodySystemStatusMin = 0;
+export const ingestTelemetryBodySystemStatusMax = 50;
+export const ingestTelemetryBodySourceMin = 0;
+export const ingestTelemetryBodySourceMax = 50;
+
 export const ingestTelemetryBody = zod
     .object({
         droneId: zod.string().min(1).describe("Unique identifier of the reporting drone"),
@@ -18,20 +31,174 @@ export const ingestTelemetryBody = zod
             .string()
             .optional()
             .describe("Associated flight operation ID if drone is in mission"),
-        latitude: zod.number().describe("Instantaneous WGS84 Latitude"),
-        longitude: zod.number().describe("Instantaneous WGS84 Longitude"),
+        latitude: zod
+            .number()
+            .min(ingestTelemetryBodyLatitudeMin)
+            .max(ingestTelemetryBodyLatitudeMax)
+            .describe("Instantaneous WGS84 Latitude"),
+        longitude: zod
+            .number()
+            .min(ingestTelemetryBodyLongitudeMin)
+            .max(ingestTelemetryBodyLongitudeMax)
+            .describe("Instantaneous WGS84 Longitude"),
         altitude: zod.number().describe("Current altitude above mean sea level in meters (m)"),
         speed: zod.number().optional().describe("Current ground speed in meters per second (m/s)"),
-        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360°)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
         pitch: zod.number().optional().describe("Pitch angle in degrees"),
         roll: zod.number().optional().describe("Roll angle in degrees"),
         yaw: zod.number().optional().describe("Yaw angle in degrees"),
         batteryPercentage: zod
             .number()
+            .min(ingestTelemetryBodyBatteryPercentageMin)
+            .max(ingestTelemetryBodyBatteryPercentageMax)
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
+        recordedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe(
+                "Device/simulator capture timestamp (ISO-8601 UTC). Defaults to server receive time if omitted."
+            ),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod
+            .number()
+            .optional()
+            .describe("Vertical climb/descent rate in m/s (positive up)"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate in Watts or Amps"),
+        signalStrength: zod
+            .number()
+            .optional()
+            .describe("C2 radio link signal strength (RSSI dBm or 0-100%)"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod
+            .string()
+            .min(ingestTelemetryBodyFlightModeMin)
+            .max(ingestTelemetryBodyFlightModeMax)
+            .optional()
+            .describe("Autopilot flight mode (e.g., AUTO, GUIDED, LOITER, RTL)"),
+        systemStatus: zod
+            .string()
+            .min(ingestTelemetryBodySystemStatusMin)
+            .max(ingestTelemetryBodySystemStatusMax)
+            .optional()
+            .describe("MAVLink/system health status (e.g., ACTIVE, STANDBY, CRITICAL)"),
+        source: zod
+            .string()
+            .min(ingestTelemetryBodySourceMin)
+            .max(ingestTelemetryBodySourceMax)
+            .optional()
+            .describe("Telemetry origin source (e.g., MAVLINK, SIMULATOR, REMOTE_ID)"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod
+            .array(zod.string())
+            .optional()
+            .describe("Active onboard warning codes/messages"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard error codes/messages"),
     })
     .describe("Payload for ingesting high-frequency drone telemetry data");
+
+/**
+ * Ingest multiple telemetry packets in a single batch write and broadcast updates.
+ * @summary Batch ingest drone telemetry data
+ */
+export const ingestTelemetryBatchBodyLatitudeMin = -90;
+export const ingestTelemetryBatchBodyLatitudeMax = 90;
+export const ingestTelemetryBatchBodyLongitudeMin = -180;
+export const ingestTelemetryBatchBodyLongitudeMax = 180;
+export const ingestTelemetryBatchBodyBatteryPercentageMin = 0;
+export const ingestTelemetryBatchBodyBatteryPercentageMax = 100;
+export const ingestTelemetryBatchBodyFlightModeMin = 0;
+export const ingestTelemetryBatchBodyFlightModeMax = 50;
+export const ingestTelemetryBatchBodySystemStatusMin = 0;
+export const ingestTelemetryBatchBodySystemStatusMax = 50;
+export const ingestTelemetryBatchBodySourceMin = 0;
+export const ingestTelemetryBatchBodySourceMax = 50;
+
+export const ingestTelemetryBatchBodyItem = zod
+    .object({
+        droneId: zod.string().min(1).describe("Unique identifier of the reporting drone"),
+        flightId: zod
+            .string()
+            .optional()
+            .describe("Associated flight operation ID if drone is in mission"),
+        latitude: zod
+            .number()
+            .min(ingestTelemetryBatchBodyLatitudeMin)
+            .max(ingestTelemetryBatchBodyLatitudeMax)
+            .describe("Instantaneous WGS84 Latitude"),
+        longitude: zod
+            .number()
+            .min(ingestTelemetryBatchBodyLongitudeMin)
+            .max(ingestTelemetryBatchBodyLongitudeMax)
+            .describe("Instantaneous WGS84 Longitude"),
+        altitude: zod.number().describe("Current altitude above mean sea level in meters (m)"),
+        speed: zod.number().optional().describe("Current ground speed in meters per second (m/s)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
+        pitch: zod.number().optional().describe("Pitch angle in degrees"),
+        roll: zod.number().optional().describe("Roll angle in degrees"),
+        yaw: zod.number().optional().describe("Yaw angle in degrees"),
+        batteryPercentage: zod
+            .number()
+            .min(ingestTelemetryBatchBodyBatteryPercentageMin)
+            .max(ingestTelemetryBatchBodyBatteryPercentageMax)
+            .optional()
+            .describe("Remaining battery percentage (0-100%)"),
+        recordedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe(
+                "Device/simulator capture timestamp (ISO-8601 UTC). Defaults to server receive time if omitted."
+            ),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod
+            .number()
+            .optional()
+            .describe("Vertical climb/descent rate in m/s (positive up)"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate in Watts or Amps"),
+        signalStrength: zod
+            .number()
+            .optional()
+            .describe("C2 radio link signal strength (RSSI dBm or 0-100%)"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod
+            .string()
+            .min(ingestTelemetryBatchBodyFlightModeMin)
+            .max(ingestTelemetryBatchBodyFlightModeMax)
+            .optional()
+            .describe("Autopilot flight mode (e.g., AUTO, GUIDED, LOITER, RTL)"),
+        systemStatus: zod
+            .string()
+            .min(ingestTelemetryBatchBodySystemStatusMin)
+            .max(ingestTelemetryBatchBodySystemStatusMax)
+            .optional()
+            .describe("MAVLink/system health status (e.g., ACTIVE, STANDBY, CRITICAL)"),
+        source: zod
+            .string()
+            .min(ingestTelemetryBatchBodySourceMin)
+            .max(ingestTelemetryBatchBodySourceMax)
+            .optional()
+            .describe("Telemetry origin source (e.g., MAVLINK, SIMULATOR, REMOTE_ID)"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod
+            .array(zod.string())
+            .optional()
+            .describe("Active onboard warning codes/messages"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard error codes/messages"),
+    })
+    .describe("Payload for ingesting high-frequency drone telemetry data");
+export const ingestTelemetryBatchBody = zod.array(ingestTelemetryBatchBodyItem);
 
 /**
  * Retrieve historical trajectory breadcrumbs for a specific flight with optional time range.
@@ -53,9 +220,12 @@ export const getFlightTelemetryHistoryResponseItem = zod
         flightId: zod.string().optional().describe("Associated flight operation ID"),
         latitude: zod.number().optional().describe("Instantaneous WGS84 Latitude"),
         longitude: zod.number().optional().describe("Instantaneous WGS84 Longitude"),
-        altitude: zod.number().optional().describe("Current altitude in meters (m)"),
+        altitude: zod
+            .number()
+            .optional()
+            .describe("Current altitude above mean sea level in meters (m)"),
         speed: zod.number().optional().describe("Ground speed in meters per second (m/s)"),
-        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360°)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
         pitch: zod.number().optional().describe("Pitch angle in degrees"),
         roll: zod.number().optional().describe("Roll angle in degrees"),
         yaw: zod.number().optional().describe("Yaw angle in degrees"),
@@ -64,6 +234,23 @@ export const getFlightTelemetryHistoryResponseItem = zod
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
         timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod.number().optional().describe("Vertical climb/descent rate in m/s"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate"),
+        signalStrength: zod.number().optional().describe("C2 radio link signal strength"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod.string().optional().describe("Autopilot flight mode"),
+        systemStatus: zod.string().optional().describe("System health status"),
+        source: zod.string().optional().describe("Telemetry origin source"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod.array(zod.string()).optional().describe("Active onboard warnings"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard errors"),
     })
     .describe("Telemetry record representation");
 export const getFlightTelemetryHistoryResponse = zod.array(getFlightTelemetryHistoryResponseItem);
@@ -83,9 +270,12 @@ export const getLatestFlightTelemetryResponse = zod
         flightId: zod.string().optional().describe("Associated flight operation ID"),
         latitude: zod.number().optional().describe("Instantaneous WGS84 Latitude"),
         longitude: zod.number().optional().describe("Instantaneous WGS84 Longitude"),
-        altitude: zod.number().optional().describe("Current altitude in meters (m)"),
+        altitude: zod
+            .number()
+            .optional()
+            .describe("Current altitude above mean sea level in meters (m)"),
         speed: zod.number().optional().describe("Ground speed in meters per second (m/s)"),
-        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360°)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
         pitch: zod.number().optional().describe("Pitch angle in degrees"),
         roll: zod.number().optional().describe("Roll angle in degrees"),
         yaw: zod.number().optional().describe("Yaw angle in degrees"),
@@ -94,6 +284,23 @@ export const getLatestFlightTelemetryResponse = zod
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
         timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod.number().optional().describe("Vertical climb/descent rate in m/s"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate"),
+        signalStrength: zod.number().optional().describe("C2 radio link signal strength"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod.string().optional().describe("Autopilot flight mode"),
+        systemStatus: zod.string().optional().describe("System health status"),
+        source: zod.string().optional().describe("Telemetry origin source"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod.array(zod.string()).optional().describe("Active onboard warnings"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard errors"),
     })
     .describe("Telemetry record representation");
 
@@ -117,9 +324,12 @@ export const getDroneTelemetryHistoryResponseItem = zod
         flightId: zod.string().optional().describe("Associated flight operation ID"),
         latitude: zod.number().optional().describe("Instantaneous WGS84 Latitude"),
         longitude: zod.number().optional().describe("Instantaneous WGS84 Longitude"),
-        altitude: zod.number().optional().describe("Current altitude in meters (m)"),
+        altitude: zod
+            .number()
+            .optional()
+            .describe("Current altitude above mean sea level in meters (m)"),
         speed: zod.number().optional().describe("Ground speed in meters per second (m/s)"),
-        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360°)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
         pitch: zod.number().optional().describe("Pitch angle in degrees"),
         roll: zod.number().optional().describe("Roll angle in degrees"),
         yaw: zod.number().optional().describe("Yaw angle in degrees"),
@@ -128,6 +338,23 @@ export const getDroneTelemetryHistoryResponseItem = zod
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
         timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod.number().optional().describe("Vertical climb/descent rate in m/s"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate"),
+        signalStrength: zod.number().optional().describe("C2 radio link signal strength"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod.string().optional().describe("Autopilot flight mode"),
+        systemStatus: zod.string().optional().describe("System health status"),
+        source: zod.string().optional().describe("Telemetry origin source"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod.array(zod.string()).optional().describe("Active onboard warnings"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard errors"),
     })
     .describe("Telemetry record representation");
 export const getDroneTelemetryHistoryResponse = zod.array(getDroneTelemetryHistoryResponseItem);
@@ -147,9 +374,12 @@ export const getLatestDroneTelemetryResponse = zod
         flightId: zod.string().optional().describe("Associated flight operation ID"),
         latitude: zod.number().optional().describe("Instantaneous WGS84 Latitude"),
         longitude: zod.number().optional().describe("Instantaneous WGS84 Longitude"),
-        altitude: zod.number().optional().describe("Current altitude in meters (m)"),
+        altitude: zod
+            .number()
+            .optional()
+            .describe("Current altitude above mean sea level in meters (m)"),
         speed: zod.number().optional().describe("Ground speed in meters per second (m/s)"),
-        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360°)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
         pitch: zod.number().optional().describe("Pitch angle in degrees"),
         roll: zod.number().optional().describe("Roll angle in degrees"),
         yaw: zod.number().optional().describe("Yaw angle in degrees"),
@@ -158,5 +388,68 @@ export const getLatestDroneTelemetryResponse = zod
             .optional()
             .describe("Remaining battery percentage (0-100%)"),
         timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod.number().optional().describe("Vertical climb/descent rate in m/s"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate"),
+        signalStrength: zod.number().optional().describe("C2 radio link signal strength"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod.string().optional().describe("Autopilot flight mode"),
+        systemStatus: zod.string().optional().describe("System health status"),
+        source: zod.string().optional().describe("Telemetry origin source"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod.array(zod.string()).optional().describe("Active onboard warnings"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard errors"),
     })
     .describe("Telemetry record representation");
+
+/**
+ * Returns latest telemetry snapshots across active drones from cache, falling back to DB records within the last 5 minutes.
+ * @summary Get active drone telemetry snapshots
+ */
+export const getActiveTelemetryResponseItem = zod
+    .object({
+        id: zod.string().optional().describe("Unique ID of the telemetry record"),
+        droneId: zod.string().optional().describe("Unique identifier of the reporting drone"),
+        flightId: zod.string().optional().describe("Associated flight operation ID"),
+        latitude: zod.number().optional().describe("Instantaneous WGS84 Latitude"),
+        longitude: zod.number().optional().describe("Instantaneous WGS84 Longitude"),
+        altitude: zod
+            .number()
+            .optional()
+            .describe("Current altitude above mean sea level in meters (m)"),
+        speed: zod.number().optional().describe("Ground speed in meters per second (m/s)"),
+        heading: zod.number().optional().describe("Compass heading angle in degrees (0-360)"),
+        pitch: zod.number().optional().describe("Pitch angle in degrees"),
+        roll: zod.number().optional().describe("Roll angle in degrees"),
+        yaw: zod.number().optional().describe("Yaw angle in degrees"),
+        batteryPercentage: zod
+            .number()
+            .optional()
+            .describe("Remaining battery percentage (0-100%)"),
+        timestamp: zod.iso.datetime({}).optional().describe("Telemetry record timestamp"),
+        altitudeAgl: zod.number().optional().describe("Altitude above ground level in meters (m)"),
+        verticalSpeed: zod.number().optional().describe("Vertical climb/descent rate in m/s"),
+        batteryVoltage: zod.number().optional().describe("Battery pack voltage in Volts (V)"),
+        batteryTemperature: zod.number().optional().describe("Battery cell temperature in Celsius"),
+        batteryDischargeRate: zod
+            .number()
+            .optional()
+            .describe("Instantaneous battery discharge rate"),
+        signalStrength: zod.number().optional().describe("C2 radio link signal strength"),
+        gpsHdop: zod.number().optional().describe("GPS horizontal dilution of precision (HDOP)"),
+        gpsSatellites: zod.number().optional().describe("Number of locked GPS/GNSS satellites"),
+        flightMode: zod.string().optional().describe("Autopilot flight mode"),
+        systemStatus: zod.string().optional().describe("System health status"),
+        source: zod.string().optional().describe("Telemetry origin source"),
+        motorRpm: zod.array(zod.number()).optional().describe("Per-motor rotational speed in RPM"),
+        warnings: zod.array(zod.string()).optional().describe("Active onboard warnings"),
+        errors: zod.array(zod.string()).optional().describe("Active onboard errors"),
+    })
+    .describe("Telemetry record representation");
+export const getActiveTelemetryResponse = zod.array(getActiveTelemetryResponseItem);

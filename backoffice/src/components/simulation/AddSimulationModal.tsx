@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Path, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput, type SelectOption } from "@/components/ui";
 import { useFlightsAll, useDronesAll } from "@/hooks";
@@ -37,23 +37,24 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
         [drones]
     );
 
-    const flightOptions: SelectOption[] = useMemo(() => {
-        return [
-            { value: "", label: "Select a flight plan to simulate..." },
-            ...flights.map((flight) => {
-                const flightLabel = flight.flightNumber || flight.id;
+    const flightOptions: SelectOption[] = useMemo(
+        () =>
+            flights.map((flight) => {
+                const flightLabel =
+                    flight.flightNumber || `FLT-${flight.id.slice(0, 8).toUpperCase()}`;
                 const statusLabel = flight.status ? `(${flight.status})` : "";
                 const droneReg = flight.droneId
-                    ? droneMap.get(flight.droneId) || flight.droneId
+                    ? droneMap.get(flight.droneId) ||
+                      `DRN-${flight.droneId.slice(0, 8).toUpperCase()}`
                     : null;
-                const droneLabel = droneReg ? `• Drone: ${droneReg}` : "";
+                const droneLabel = droneReg ? `· ${droneReg}` : "";
                 return {
                     label: `${flightLabel} ${statusLabel} ${droneLabel}`.trim(),
                     value: flight.id,
                 };
             }),
-        ];
-    }, [flights, droneMap]);
+        [flights, droneMap]
+    );
 
     const {
         register,
@@ -63,7 +64,9 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
         setError,
         formState: { errors },
     } = useForm<CreateSimulationSessionPayload>({
-        resolver: zodResolver(createSessionBody) as any,
+        resolver: zodResolver(
+            createSessionBody
+        ) as unknown as Resolver<CreateSimulationSessionPayload>,
         defaultValues: DEFAULT_FORM_VALUES,
     });
 
@@ -88,7 +91,7 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
             const parsed = parseApiError(err, "Failed to launch simulation");
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
-                    setError(field as any, { message: msg });
+                    setError(field as Path<CreateSimulationSessionPayload>, { message: msg });
                 });
             }
         } finally {
@@ -115,13 +118,14 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
                     control={control}
                     render={({ field }) => (
                         <CustomSelect
+                            id="flightId"
                             value={field.value || ""}
                             onValueChange={field.onChange}
                             options={flightOptions}
                             placeholder={
                                 flightsLoading
                                     ? "Loading flight plans..."
-                                    : "Select a flight plan to simulate"
+                                    : "Select a flight plan to simulate..."
                             }
                             disabled={loading || flightsLoading}
                             error={Boolean(errors.flightId)}
@@ -129,16 +133,14 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
                     )}
                 />
                 {errors.flightId?.message && (
-                    <span className="text-xs text-red-500 mt-1 block">
-                        {errors.flightId.message}
-                    </span>
+                    <span className="form-error-msg">{errors.flightId.message}</span>
                 )}
             </div>
 
-            <div className="form-row-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <FormInput
                     id="speed"
-                    label="Cruising Speed (m/s)"
+                    label="Speed (m/s)"
                     type="number"
                     step="0.5"
                     min="1"
@@ -149,7 +151,7 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
 
                 <FormInput
                     id="timeScale"
-                    label="Time-Scale Multiplier (0.1x - 20x)"
+                    label="Time Scale (x)"
                     type="number"
                     step="0.5"
                     min="0.1"
@@ -158,19 +160,19 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
                     error={errors.timeScale?.message}
                     {...register("timeScale", { valueAsNumber: true })}
                 />
-            </div>
 
-            <FormInput
-                id="startBattery"
-                label="Initial Battery (%)"
-                type="number"
-                step="1"
-                min="10"
-                max="100"
-                placeholder="100"
-                error={errors.startBattery?.message}
-                {...register("startBattery", { valueAsNumber: true })}
-            />
+                <FormInput
+                    id="startBattery"
+                    label="Initial Battery (%)"
+                    type="number"
+                    step="1"
+                    min="10"
+                    max="100"
+                    placeholder="100"
+                    error={errors.startBattery?.message}
+                    {...register("startBattery", { valueAsNumber: true })}
+                />
+            </div>
         </Modal>
     );
 }

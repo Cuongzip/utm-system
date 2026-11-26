@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Clock, CheckCircle2, Activity } from "lucide-react";
-import { MetricCard } from "@/components/ui";
+import { KpiStrip, type KpiItem } from "@/components/ui";
 
 export interface EmergencyKpiMetrics {
     activeCount: number;
@@ -18,53 +18,39 @@ export function EmergencyKpiStrip({
     avgResponseTime,
     isLoading = false,
 }: EmergencyKpiMetrics) {
-    const kpiCards = [
+    const items: KpiItem[] = [
         {
             id: "active-emergencies",
-            title: "ACTIVE EMERGENCIES",
-            value: isLoading ? "--" : String(activeCount).padStart(2, "0"),
-            subValue: activeCount > 0 ? "ACTION REQUIRED" : "ALL CLEAR",
+            label: "Active Incidents",
+            value: activeCount,
+            subValue: activeCount > 0 ? "Action required" : "All clear",
             icon: AlertTriangle,
-            iconClassName: activeCount > 0 ? "text-rose-600" : "text-slate-400",
+            iconClassName: activeCount > 0 ? "text-red-600" : undefined,
+            statusDot: activeCount > 0 ? "critical" : undefined,
         },
         {
             id: "pending-confirmation",
-            title: "PENDING CONFIRMATION",
-            value: isLoading ? "--" : String(pendingCount).padStart(2, "0"),
-            subValue: pendingCount > 0 ? "AWAITING OPERATOR" : "NONE",
+            label: "Pending Confirmation",
+            value: pendingCount,
+            subValue: pendingCount > 0 ? "Awaiting operator" : "None",
             icon: Clock,
-            iconClassName: pendingCount > 0 ? "text-amber-600" : "text-slate-400",
+            iconClassName: pendingCount > 0 ? "text-amber-600" : undefined,
         },
         {
-            id: "resolved-today",
-            title: "RESOLVED TODAY",
-            value: isLoading ? "--" : String(resolvedCount).padStart(2, "0"),
-            subValue: "INCIDENTS",
+            id: "resolved",
+            label: "Resolved",
+            value: resolvedCount,
+            subValue: "Total closed",
             icon: CheckCircle2,
-            iconClassName: "text-slate-400",
         },
         {
             id: "avg-response-time",
-            title: "AVG RESPONSE TIME",
-            value: isLoading ? "--" : `${avgResponseTime}s`,
-            subValue: "AVG DURATION",
+            label: "Avg Response Time",
+            value: `${avgResponseTime}s`,
+            subValue: "Detection to action",
             icon: Activity,
-            iconClassName: "text-slate-400",
         },
     ];
 
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
-            {kpiCards.map((card) => (
-                <MetricCard
-                    key={card.id}
-                    title={card.title}
-                    value={card.value}
-                    subValue={card.subValue}
-                    icon={card.icon}
-                    iconClassName={card.iconClassName}
-                />
-            ))}
-        </div>
-    );
+    return <KpiStrip items={items} loading={isLoading} columns={4} />;
 }

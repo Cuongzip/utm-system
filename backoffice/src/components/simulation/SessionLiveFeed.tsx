@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Copy, Check, ExternalLink, ScrollText, Satellite } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
+    EmptyState,
+    UnderlineTabs,
     Table,
     TableHeader,
     TableBody,
     TableRow,
     TableHead,
     TableCell,
+    type UnderlineTabItem,
 } from "@/components/ui";
 import { useTelemetryStream } from "@/hooks/useStomp";
-import { useSimulationEvents } from "@/hooks";
+import { useSimulationEvents, useFlightsAll, useDronesAll } from "@/hooks";
 import { toast } from "sonner";
 import { formatTime, formatCoordinates, formatAltitude } from "@/utils";
 import {
@@ -32,8 +35,11 @@ type TabType = "telemetry" | "events" | "specs";
 
 export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     const [activeTab, setActiveTab] = useState<TabType>("telemetry");
-    const [records, setRecords] = useState<TelemetryRecord[]>([]);
+    const [wsRecords, setWsRecords] = useState<TelemetryRecord[]>([]);
     const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const { data: flights = [] } = useFlightsAll();
+    const { data: drones = [] } = useDronesAll();
 
     const normStatus = String(session.status || "").toLowerCase();
     const isRunning = normStatus === SIMULATION_STATUS.RUNNING;
@@ -43,45 +49,43 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     const handleIncomingRecord = useCallback(
         (rec: TelemetryRecord) => {
             if (!rec || isC2Lost) return;
-            setRecords((prev) => [rec, ...prev.slice(0, 49)]);
+            setWsRecords((prev) => [rec, ...prev.slice(0, 49)]);
         },
         [isC2Lost]
     );
 
     useTelemetryStream(handleIncomingRecord, session.flightId, isRunning && !isC2Lost);
 
-    useEffect(() => {
-        if (isC2Lost) return;
-
-        if (session.currentLat != null && session.currentLon != null) {
-            const snap: TelemetryRecord = {
-                id: `snap-${Date.now()}`,
-                flightId: session.flightId,
-                droneId: session.droneId,
-                latitude: session.currentLat,
-                longitude: session.currentLon,
-                altitude: session.currentAlt ?? 0,
-                speed: session.speed ?? 0,
-                heading: session.currentHeading ?? 0,
-                batteryPercentage: session.currentBattery ?? 100,
-                timestamp: new Date().toISOString(),
-            };
-
-            setRecords((prev) => {
-                if (prev.length === 0) return [snap];
-                const latest = prev[0];
-                if (
-                    Math.abs((latest.latitude ?? 0) - (session.currentLat ?? 0)) < 1e-6 &&
-                    Math.abs((latest.longitude ?? 0) - (session.currentLon ?? 0)) < 1e-6 &&
-                    Math.abs((latest.batteryPercentage ?? 0) - (session.currentBattery ?? 0)) < 1e-2
-                ) {
-                    return prev;
-                }
-                return [snap, ...prev.slice(0, 49)];
-            });
+    const records = useMemo<TelemetryRecord[]>(() => {
+        if (isC2Lost || session.currentLat == null || session.currentLon == null) {
+            return wsRecords;
         }
+        const latest = wsRecords[0];
+        if (
+            latest &&
+            Math.abs((latest.latitude ?? 0) - session.currentLat) < 1e-6 &&
+            Math.abs((latest.longitude ?? 0) - session.currentLon) < 1e-6 &&
+            Math.abs((latest.batteryPercentage ?? 0) - (session.currentBattery ?? 100)) < 1e-2
+        ) {
+            return wsRecords;
+        }
+        const snap: TelemetryRecord = {
+            id: `snap-${session.lastModifiedOn || session.id}`,
+            flightId: session.flightId,
+            droneId: session.droneId,
+            latitude: session.currentLat,
+            longitude: session.currentLon,
+            altitude: session.currentAlt ?? 0,
+            speed: session.speed ?? 0,
+            heading: session.currentHeading ?? 0,
+            batteryPercentage: session.currentBattery ?? 100,
+            timestamp: session.lastModifiedOn || session.createdOn,
+        };
+        return [snap, ...wsRecords.slice(0, 49)];
     }, [
+        wsRecords,
         isC2Lost,
+        session.id,
         session.currentLat,
         session.currentLon,
         session.currentAlt,
@@ -90,6 +94,8 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
         session.currentBattery,
         session.flightId,
         session.droneId,
+        session.lastModifiedOn,
+        session.createdOn,
     ]);
 
     const { data: events = [] } = useSimulationEvents(session.id, isRunning);
@@ -112,90 +118,57 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
         "Awaiting GNSS fix"
     );
 
+    const resolvedFlight = useMemo(
+        () => (session.flightId ? flights.find((f) => f.id === session.flightId) : undefined),
+        [flights, session.flightId]
+    );
+    const effectiveDroneId = session.droneId || resolvedFlight?.droneId;
+    const resolvedDroneLabel = useMemo(() => {
+        if (!effectiveDroneId) return null;
+        const found = drones.find((d) => d.id === effectiveDroneId);
+        return (
+            found?.registrationNumber ||
+            found?.model ||
+            `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
+        );
+    }, [drones, effectiveDroneId]);
+
+    const tabs: readonly UnderlineTabItem<TabType>[] = [
+        { id: "telemetry", label: "Live Telemetry", count: records.length },
+        { id: "events", label: "Activity Log", count: events.length },
+        { id: "specs", label: "Session Specs" },
+    ];
+
     return (
-        <div className="flex flex-col gap-3 w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-2">
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("telemetry")}
-                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
-                            activeTab === "telemetry"
-                                ? "bg-white text-slate-900 shadow-xs"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                        }`}
-                    >
-                        <span>Telemetry</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("events")}
-                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
-                            activeTab === "events"
-                                ? "bg-white text-slate-900 shadow-xs"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                        }`}
-                    >
-                        <span>Activity Log</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("specs")}
-                        className={`px-3 py-1.5 text-xs font-mono font-bold rounded-md transition-all cursor-pointer ${
-                            activeTab === "specs"
-                                ? "bg-white text-slate-900 shadow-xs"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                        }`}
-                    >
-                        <span>Specs</span>
-                    </button>
-                </div>
-            </div>
+        <div className="flex flex-col gap-4 w-full">
+            <UnderlineTabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                ariaLabel="Simulation session data"
+            />
 
             <ChamferCard size="lg" className="w-full">
                 {activeTab === "telemetry" && (
                     <div className="p-0">
                         {records.length === 0 ? (
-                            <div className="p-8 flex flex-col items-center justify-center text-center">
-                                <Satellite className="w-8 h-8 text-slate-300 mb-2 animate-pulse" />
-                                <p className="text-xs font-mono text-slate-500">
-                                    Awaiting telemetry broadcast packets...
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">
-                                    Packets streamed via WebSocket topic /topic/telemetry/flight/
-                                    {session.flightId} will appear in real time.
-                                </p>
-                            </div>
+                            <EmptyState
+                                compact
+                                icon={Satellite}
+                                title="Awaiting Telemetry Packets"
+                                description="Live position, altitude, heading, and battery samples appear here while the simulation is running."
+                            />
                         ) : (
                             <Table fixed={false} wrapperClassName="max-h-[420px] overflow-y-auto">
                                 <TableHeader className="sticky top-0 bg-slate-50 z-10 border-b border-slate-200">
                                     <TableRow>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            TIME
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            COORDINATES (LAT, LON)
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            ALTITUDE
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            SPEED
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            HEADING
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            BATTERY
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase">
-                                            TARGET DRONE
-                                        </TableHead>
-                                        <TableHead className="font-mono text-[11px] uppercase text-right">
-                                            FEED
-                                        </TableHead>
+                                        <TableHead>TIME</TableHead>
+                                        <TableHead>COORDINATES (LAT, LON)</TableHead>
+                                        <TableHead>ALTITUDE</TableHead>
+                                        <TableHead>SPEED</TableHead>
+                                        <TableHead>HEADING</TableHead>
+                                        <TableHead>BATTERY</TableHead>
+                                        <TableHead align="right">STREAM</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody className="divide-y divide-slate-100 font-mono text-xs">
@@ -219,24 +192,24 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                 key={rec.id || index}
                                                 className={`transition-colors hover:bg-slate-50 ${isFirst ? "bg-slate-50/80" : ""}`}
                                             >
-                                                <TableCell className="font-semibold text-slate-500 whitespace-nowrap">
+                                                <TableCell mono muted>
                                                     {formatTime(
                                                         rec.timestamp ?? new Date().toISOString()
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="font-medium text-slate-800 whitespace-nowrap">
+                                                <TableCell mono darkText>
                                                     {coords}
                                                 </TableCell>
-                                                <TableCell className="text-slate-700 whitespace-nowrap">
+                                                <TableCell mono darkText>
                                                     {alt}
                                                 </TableCell>
-                                                <TableCell className="text-slate-700 whitespace-nowrap">
+                                                <TableCell mono darkText>
                                                     {spd}
                                                 </TableCell>
-                                                <TableCell className="text-slate-700 whitespace-nowrap">
+                                                <TableCell mono darkText>
                                                     {hdg}
                                                 </TableCell>
-                                                <TableCell className="font-bold text-slate-800 whitespace-nowrap">
+                                                <TableCell mono bold>
                                                     <span
                                                         className={
                                                             (rec.batteryPercentage ?? 100) < 20
@@ -250,14 +223,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                         {bat}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="text-slate-500 whitespace-nowrap">
-                                                    {rec.droneId
-                                                        ? `${rec.droneId.slice(0, 8)}...`
-                                                        : session.droneId
-                                                          ? `${session.droneId.slice(0, 8)}...`
-                                                          : "—"}
-                                                </TableCell>
-                                                <TableCell className="text-right whitespace-nowrap">
+                                                <TableCell align="right">
                                                     {isFirst ? (
                                                         <StatusBadge
                                                             status="live"
@@ -265,8 +231,8 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                             dotShape="circle"
                                                         />
                                                     ) : (
-                                                        <span className="text-[10px] text-slate-400">
-                                                            HISTORIC
+                                                        <span className="text-[10px] font-mono text-slate-400">
+                                                            SAMPLE
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -282,16 +248,12 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                 {activeTab === "events" && (
                     <div className="p-4">
                         {events.length === 0 ? (
-                            <div className="py-8 flex flex-col items-center justify-center text-center">
-                                <ScrollText className="w-8 h-8 text-slate-300 mb-2" />
-                                <p className="text-xs font-mono text-slate-500">
-                                    No incident events recorded yet.
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">
-                                    Injection actions, warnings, and lifecycle transitions will
-                                    appear here in real time.
-                                </p>
-                            </div>
+                            <EmptyState
+                                compact
+                                icon={ScrollText}
+                                title="No Activity Events Recorded"
+                                description="Fault injections, warnings, and session lifecycle transitions appear here in real time."
+                            />
                         ) : (
                             <div className="flex flex-col divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
                                 {[...events].reverse().map((evt, idx) => {
@@ -302,7 +264,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                             className="py-2.5 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/80 transition-colors"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs font-mono font-semibold text-slate-400 shrink-0">
+                                                <span className="text-xs font-mono font-semibold text-slate-400 shrink-0 tabular-nums">
                                                     {timeStr}
                                                 </span>
                                                 <StatusBadge
@@ -343,12 +305,12 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                     <>
                                         <Link
                                             href={`/dashboard/flights/${session.flightId}`}
-                                            className="font-bold text-slate-800 hover:text-cyan-600 hover:underline transition-colors flex items-center gap-1"
+                                            className="font-bold text-slate-800 hover:text-slate-600 hover:underline transition-colors flex items-center gap-1"
                                             title={session.flightId}
                                         >
                                             <span>
-                                                {session.flightId.slice(0, 8)}...
-                                                {session.flightId.slice(-6)}
+                                                {resolvedFlight?.flightNumber ||
+                                                    `FLT-${session.flightId.slice(0, 8).toUpperCase()}`}
                                             </span>
                                             <ExternalLink className="w-3 h-3 text-slate-400" />
                                         </Link>
@@ -357,8 +319,9 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                             onClick={() =>
                                                 handleCopy(session.flightId || "", "Flight Plan ID")
                                             }
-                                            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                                            title="Copy full UUID"
+                                            className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                            title="Copy Flight Plan UUID"
+                                            aria-label="Copy Flight Plan ID"
                                         >
                                             {copiedField === "Flight Plan ID" ? (
                                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -375,30 +338,25 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
 
                         <div className="py-2.5 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                TARGET HARDWARE DRONE
+                                TARGET AIRCRAFT
                             </span>
                             <div className="flex items-center gap-2">
-                                {session.droneId ? (
+                                {effectiveDroneId ? (
                                     <>
                                         <Link
                                             href="/dashboard/drones"
-                                            className="font-bold text-slate-800 hover:text-cyan-600 hover:underline transition-colors flex items-center gap-1"
-                                            title={session.droneId}
+                                            className="font-bold text-slate-800 hover:text-slate-600 hover:underline transition-colors flex items-center gap-1"
+                                            title={effectiveDroneId}
                                         >
-                                            <span>
-                                                {session.droneId.length > 18
-                                                    ? `${session.droneId.slice(0, 8)}...${session.droneId.slice(-6)}`
-                                                    : session.droneId}
-                                            </span>
+                                            <span>{resolvedDroneLabel}</span>
                                             <ExternalLink className="w-3 h-3 text-slate-400" />
                                         </Link>
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                handleCopy(session.droneId || "", "Drone ID")
-                                            }
-                                            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                                            title="Copy full UUID"
+                                            onClick={() => handleCopy(effectiveDroneId, "Drone ID")}
+                                            className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                            title="Copy Drone UUID"
+                                            aria-label="Copy Drone ID"
                                         >
                                             {copiedField === "Drone ID" ? (
                                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -423,8 +381,9 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                     <button
                                         type="button"
                                         onClick={() => handleCopy(latLonText, "Coordinates")}
-                                        className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                                        className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                                         title="Copy Coordinates"
+                                        aria-label="Copy Coordinates"
                                     >
                                         {copiedField === "Coordinates" ? (
                                             <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -449,7 +408,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                             </span>
                         </div>
 
-                        <div className="py-2.5 flex items-center justify-between gap-3">
+                        <div className="py-2.5 last:pb-0 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                                 TIME SCALE
                             </span>

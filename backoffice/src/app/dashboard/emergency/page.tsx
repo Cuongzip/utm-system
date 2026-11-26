@@ -1,26 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/ui";
-import { ShieldCheck } from "lucide-react";
+import { PageHeader, Switch, ChamferButton, ErrorState } from "@/components/ui";
+import { ShieldCheck, Clock, Sliders } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     EmergencyKpiStrip,
     ActiveIncidentsList,
-    EmergencyProtocolsStrip,
+    EmergencyNavTabs,
     IncidentDetailsModal,
-    IncidentHistoryModal,
-    TrendAnalysisModal,
     ResponseProtocolsModal,
-    EMERGENCY_MODAL_TABS,
-    type EmergencyProtocolType,
+    EmergencyConfirmationModal,
 } from "@/components/emergency";
 import {
     QUERY_KEYS,
     useEmergencyActiveIncidents,
+    useEmergencyPendingConfirmations,
     useEmergencyStats,
     useEmergencyConfig,
+    usePermissions,
 } from "@/hooks";
 import { emergencyService } from "@/services/emergencyService";
 import {
@@ -34,14 +33,22 @@ import {
 
 export default function EmergencyResponsePage() {
     const queryClient = useQueryClient();
+    const { canManageEmergencyProtocols } = usePermissions();
 
-    const { data: activeIncidents = [], isLoading: isLoadingActive } =
-        useEmergencyActiveIncidents();
+    const {
+        data: activeIncidents = [],
+        isLoading: isLoadingActive,
+        isError: isActiveError,
+        refetch: refetchActive,
+    } = useEmergencyActiveIncidents();
+    const { data: pendingConfirmations = [] } = useEmergencyPendingConfirmations();
     const { data: stats, isLoading: isLoadingStats } = useEmergencyStats();
     const { data: systemConfig } = useEmergencyConfig();
 
     const [selectedIncident, setSelectedIncident] = useState<EmergencyIncidentVm | null>(null);
-    const [activeProtocol, setActiveProtocol] = useState<EmergencyProtocolType | null>(null);
+    const [protocolsOpen, setProtocolsOpen] = useState(false);
+    const [dismissedPendingIds, setDismissedPendingIds] = useState<Set<string>>(() => new Set());
+    const [manualConfirmationOpen, setManualConfirmationOpen] = useState(false);
 
     const isSupervisedMode =
         (systemConfig?.mode ?? DEFAULT_OPERATION_MODE) === OPERATION_MODE.SUPERVISED;
@@ -68,15 +75,29 @@ export default function EmergencyResponsePage() {
             emergencyService.confirmIncident(id, { approved }),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyPending });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
             if (variables.approved) {
                 toast.success("Failsafe action confirmed and dispatched to target drone");
             } else {
-                toast.success("Incident resolved and safety separation logged");
+                toast.success("Failsafe action rejected and incident closed");
             }
         },
         meta: { defaultErrorMessage: "Failed to process emergency incident action" },
+    });
+
+    const resolveMutation = useMutation({
+        mutationFn: ({ id, resolutionNotes }: { id: string; resolutionNotes?: string }) =>
+            emergencyService.resolveIncident(id, { resolutionNotes }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyPending });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
+            toast.success("Emergency incident resolved");
+        },
+        meta: { defaultErrorMessage: "Failed to resolve emergency incident" },
     });
 
     const handleToggleSupervisedMode = () => {
@@ -88,6 +109,27 @@ export default function EmergencyResponsePage() {
 
     const handleConfirmAction = (id: string, approved: boolean) => {
         confirmMutation.mutate({ id, approved });
+    };
+
+    const handleResolveIncident = (id: string, resolutionNotes?: string) => {
+        resolveMutation.mutate({ id, resolutionNotes });
+    };
+
+    const hasUndismissedPending = pendingConfirmations.some(
+        (p) => !dismissedPendingIds.has(p.incidentId)
+    );
+    const isConfirmationModalOpen =
+        pendingConfirmations.length > 0 && (manualConfirmationOpen || hasUndismissedPending);
+
+    const handleDismissConfirmationModal = () => {
+        setManualConfirmationOpen(false);
+        setDismissedPendingIds((prev) => {
+            const next = new Set(prev);
+            for (const p of pendingConfirmations) {
+                next.add(p.incidentId);
+            }
+            return next;
+        });
     };
 
     const activeCount = activeIncidents.filter(
@@ -102,39 +144,47 @@ export default function EmergencyResponsePage() {
     const avgResponseTime = Math.round(stats?.avgResponseTimeSeconds ?? 0);
 
     return (
-        <div className="p-8 flex flex-col gap-6 w-full">
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
             <PageHeader title="EMERGENCY RESPONSE">
-                <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isSupervisedMode}
-                    disabled={setModeMutation.isPending}
-                    onClick={handleToggleSupervisedMode}
-                    className="rounded-lg flex items-center gap-3 px-3.5 py-1.5 bg-[var(--color-surface-panel)] border border-[var(--color-border-default)] hover:border-[var(--color-border-strong)] transition-all cursor-pointer select-none disabled:opacity-50"
+                {pendingConfirmations.length > 0 && (
+                    <ChamferButton
+                        variant="dark"
+                        size="sm"
+                        onClick={() => setManualConfirmationOpen(true)}
+                    >
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Review Pending ({pendingConfirmations.length})</span>
+                    </ChamferButton>
+                )}
+
+                <ChamferButton variant="outline" size="sm" onClick={() => setProtocolsOpen(true)}>
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>Protocols</span>
+                </ChamferButton>
+
+                <div
+                    className="rounded-md flex items-center gap-3 px-3.5 py-1.5 bg-[var(--color-surface-panel)] border border-[var(--color-border-default)] select-none"
                     title="Toggle Operator Supervised Mode"
                 >
                     <div className="flex items-center gap-2">
                         <ShieldCheck
-                            className={`w-4 h-4 ${isSupervisedMode ? "text-emerald-600" : "text-slate-400"}`}
+                            className={`w-4 h-4 ${isSupervisedMode ? "text-slate-700" : "text-slate-400"}`}
                         />
                         <span className="text-xs font-mono font-bold text-slate-800">
                             Supervised Mode
                         </span>
                     </div>
 
-                    <div
-                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
-                            isSupervisedMode ? "bg-emerald-600" : "bg-slate-300"
-                        }`}
-                    >
-                        <div
-                            className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                                isSupervisedMode ? "translate-x-4" : "translate-x-0"
-                            }`}
-                        />
-                    </div>
-                </button>
+                    <Switch
+                        checked={isSupervisedMode}
+                        disabled={!canManageEmergencyProtocols || setModeMutation.isPending}
+                        onCheckedChange={() => handleToggleSupervisedMode()}
+                        aria-label="Toggle Operator Supervised Mode"
+                    />
+                </div>
             </PageHeader>
+
+            <EmergencyNavTabs />
 
             <EmergencyKpiStrip
                 activeCount={activeCount}
@@ -144,34 +194,41 @@ export default function EmergencyResponsePage() {
                 isLoading={isLoadingActive || isLoadingStats}
             />
 
-            <ActiveIncidentsList
-                incidents={activeIncidents}
-                onSelectIncident={setSelectedIncident}
-                onConfirmAction={handleConfirmAction}
-            />
+            {isActiveError && activeIncidents.length === 0 ? (
+                <ErrorState
+                    title="Unable to load active emergency incidents"
+                    description="The Emergency Service did not respond. Retry immediately to restore safety monitoring."
+                    onRetry={() => refetchActive()}
+                />
+            ) : (
+                <ActiveIncidentsList
+                    incidents={activeIncidents}
+                    pendingConfirmations={pendingConfirmations}
+                    onSelectIncident={setSelectedIncident}
+                    onConfirmAction={handleConfirmAction}
+                />
+            )}
 
-            <EmergencyProtocolsStrip onSelectProtocol={setActiveProtocol} />
+            <EmergencyConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                pendingConfirmations={pendingConfirmations}
+                onClose={handleDismissConfirmationModal}
+                onConfirmAction={handleConfirmAction}
+                submitting={confirmMutation.isPending}
+            />
 
             <IncidentDetailsModal
                 isOpen={Boolean(selectedIncident)}
                 incident={selectedIncident}
                 onClose={() => setSelectedIncident(null)}
                 onConfirmAction={handleConfirmAction}
-            />
-
-            <IncidentHistoryModal
-                isOpen={activeProtocol === EMERGENCY_MODAL_TABS.HISTORY}
-                onClose={() => setActiveProtocol(null)}
-            />
-
-            <TrendAnalysisModal
-                isOpen={activeProtocol === EMERGENCY_MODAL_TABS.TRENDS}
-                onClose={() => setActiveProtocol(null)}
+                onResolveIncident={handleResolveIncident}
             />
 
             <ResponseProtocolsModal
-                isOpen={activeProtocol === EMERGENCY_MODAL_TABS.PROTOCOLS}
-                onClose={() => setActiveProtocol(null)}
+                isOpen={protocolsOpen}
+                onClose={() => setProtocolsOpen(false)}
+                canManageProtocols={canManageEmergencyProtocols}
             />
         </div>
     );

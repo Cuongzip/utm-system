@@ -4,6 +4,7 @@ import { useState } from "react";
 import { User, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks";
+import { getPrimaryDisplayRole } from "@/utils";
 
 export function AuthenticationInfo() {
     const { data: user } = useCurrentUser();
@@ -12,7 +13,7 @@ export function AuthenticationInfo() {
     const handleLogout = () => {
         if (isLoggingOut) return;
         setIsLoggingOut(true);
-        toast.success("Logged out successfully. Redirecting...");
+        toast.success("Logged out successfully. Redirecting…");
         setTimeout(() => {
             window.location.href = "/logout";
         }, 600);
@@ -22,7 +23,7 @@ export function AuthenticationInfo() {
         return null;
     }
 
-    const primaryRole = user.roles?.[0]?.toUpperCase() ?? "USER";
+    const primaryRole = getPrimaryDisplayRole(user.roles);
 
     return (
         <div className="px-3.5 py-3 border-t border-slate-200 bg-slate-50/70 text-xs">
@@ -51,7 +52,7 @@ export function AuthenticationInfo() {
                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
                 >
                     {isLoggingOut ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
                     ) : (
                         <LogOut className="w-3.5 h-3.5" />
                     )}

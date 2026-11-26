@@ -108,7 +108,7 @@ export function AirspaceBoundaryTab({
             </div>
 
             {(fieldErrors.geometry || fieldErrors["geometry.coordinates"]) && (
-                <div className="p-2.5 rounded bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                     <span>{fieldErrors.geometry || fieldErrors["geometry.coordinates"]}</span>
                 </div>
@@ -117,7 +117,7 @@ export function AirspaceBoundaryTab({
             {geometryMode === GEOMETRY_MODE.RADIUS ? (
                 <div className="space-y-4">
                     <div className="p-2.5 bg-[var(--color-surface-card)] rounded border border-[var(--color-border-default)] text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-cyan-500 shrink-0" />
+                        <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
                         <span>Click anywhere on the map to place center point.</span>
                     </div>
 
@@ -160,7 +160,7 @@ export function AirspaceBoundaryTab({
                             step="50"
                             value={radiusMeters}
                             onChange={(e) => onRadiusChange(Number(e.target.value))}
-                            className="w-full accent-cyan-600 cursor-pointer"
+                            className="w-full accent-slate-700 cursor-pointer"
                         />
                     </div>
                 </div>

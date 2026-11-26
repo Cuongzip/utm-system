@@ -20,9 +20,11 @@ export function AirspaceInteractionController({
     const onCenterChangeRef = useRef(onCenterChange);
     const onAddPolygonPointRef = useRef(onAddPolygonPoint);
 
-    modeRef.current = geometryMode;
-    onCenterChangeRef.current = onCenterChange;
-    onAddPolygonPointRef.current = onAddPolygonPoint;
+    useEffect(() => {
+        modeRef.current = geometryMode;
+        onCenterChangeRef.current = onCenterChange;
+        onAddPolygonPointRef.current = onAddPolygonPoint;
+    }, [geometryMode, onCenterChange, onAddPolygonPoint]);
 
     const hasMovedRef = useRef(false);
     const startPosRef = useRef<{ x: number; y: number } | null>(null);

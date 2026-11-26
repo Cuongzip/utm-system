@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
+import {
+    CustomSelect,
+    FormInput,
+    AutoGenInput,
+    DateTimePicker,
+    type SelectOption,
+} from "@/components/ui";
 import {
     type AirspaceZoneType,
     type AirspaceZoneStatus,
@@ -11,6 +17,7 @@ import {
     AIRSPACE_ZONE_STATUSES,
     AIRSPACE_ZONE_TYPE_LABELS,
     AIRSPACE_ZONE_STATUS_LABELS,
+    HUB_STATUS,
 } from "@/types";
 
 export interface AirspaceDetailsTabProps {
@@ -43,16 +50,21 @@ export function AirspaceDetailsTab({
     fieldErrors = {},
     onClearFieldError,
 }: AirspaceDetailsTabProps) {
-    const hubOptions: SelectOption[] = useMemo(
-        () => [
+    const hubOptions: SelectOption[] = useMemo(() => {
+        const sorted = [...hubs].sort((a, b) => {
+            const aInact = (a.status || "").toLowerCase() === HUB_STATUS.INACTIVE ? 1 : 0;
+            const bInact = (b.status || "").toLowerCase() === HUB_STATUS.INACTIVE ? 1 : 0;
+            if (aInact !== bInact) return aInact - bInact;
+            return (a.code || "").localeCompare(b.code || "");
+        });
+        return [
             { value: "", label: "None (General Airspace)" },
-            ...hubs.map((h) => ({
+            ...sorted.map((h) => ({
                 value: h.id,
                 label: h.name ? `${h.name} (${h.code || "HUB"})` : h.id,
             })),
-        ],
-        [hubs]
-    );
+        ];
+    }, [hubs]);
 
     return (
         <div className="space-y-4">
@@ -61,7 +73,7 @@ export function AirspaceDetailsTab({
                 label="Code"
                 showAutoGen={!isEdit}
                 disabled={isEdit}
-                required
+                required={!isEdit}
                 manualPlaceholder="e.g. ASZ-SGN01"
                 value={formData.code ?? ""}
                 onChange={(e) => {
@@ -85,10 +97,11 @@ export function AirspaceDetailsTab({
             />
 
             <div className="form-group">
-                <label className="form-label">
+                <label className="form-label" htmlFor="airspaceZoneType">
                     Classification Type <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
+                    id="airspaceZoneType"
                     value={formData.zoneType}
                     onValueChange={(val: string) => {
                         onFormChange("zoneType", val as AirspaceZoneType);
@@ -99,8 +112,11 @@ export function AirspaceDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Operational Status</label>
+                <label className="form-label" htmlFor="airspaceStatus">
+                    Operational Status
+                </label>
                 <CustomSelect
+                    id="airspaceStatus"
                     value={formData.status}
                     onValueChange={(val: string) => {
                         onFormChange("status", val as AirspaceZoneStatus);
@@ -111,8 +127,11 @@ export function AirspaceDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Associated Vertiport Hub</label>
+                <label className="form-label" htmlFor="airspaceHub">
+                    Associated Vertiport Hub
+                </label>
                 <CustomSelect
+                    id="airspaceHub"
                     value={formData.hubId ?? ""}
                     onValueChange={(val: string) => {
                         onFormChange("hubId", val);
@@ -120,26 +139,72 @@ export function AirspaceDetailsTab({
                     }}
                     options={hubOptions}
                 />
-                <span className="text-[11px] text-[var(--color-text-muted)]">
-                    Optional: associate this restriction sector with a hub station.
-                </span>
             </div>
 
-            <FormInput
-                id="altitudeCeiling"
-                label="Altitude Ceiling Limit (m)"
-                required
-                type="number"
-                min={10}
-                max={5000}
-                className="font-mono"
-                value={formData.altitudeCeiling ?? 120}
-                onChange={(e) => {
-                    onFormChange("altitudeCeiling", Number(e.target.value));
-                    onClearFieldError("altitudeCeiling");
-                }}
-                error={fieldErrors.altitudeCeiling}
-            />
+            <div className="form-row-2">
+                <FormInput
+                    id="altitudeFloor"
+                    label="Floor (m)"
+                    type="number"
+                    min={0}
+                    max={4999}
+                    className="font-mono"
+                    value={formData.altitudeFloor ?? 0}
+                    onChange={(e) => {
+                        onFormChange("altitudeFloor", Number(e.target.value));
+                        onClearFieldError("altitudeFloor");
+                    }}
+                    error={fieldErrors.altitudeFloor}
+                />
+
+                <FormInput
+                    id="altitudeCeiling"
+                    label="Ceiling (m)"
+                    required
+                    type="number"
+                    min={10}
+                    max={5000}
+                    className="font-mono"
+                    value={formData.altitudeCeiling ?? 120}
+                    onChange={(e) => {
+                        onFormChange("altitudeCeiling", Number(e.target.value));
+                        onClearFieldError("altitudeCeiling");
+                    }}
+                    error={fieldErrors.altitudeCeiling}
+                />
+            </div>
+
+            <div className="form-group">
+                <label className="form-label">Effective Start (Optional)</label>
+                <DateTimePicker
+                    value={formData.effectiveStart ?? ""}
+                    onChange={(val) => {
+                        onFormChange("effectiveStart", val);
+                        onClearFieldError("effectiveStart");
+                    }}
+                    placeholder="Select start date & time..."
+                    error={Boolean(fieldErrors.effectiveStart)}
+                />
+                {fieldErrors.effectiveStart && (
+                    <span className="form-error-msg">{fieldErrors.effectiveStart}</span>
+                )}
+            </div>
+
+            <div className="form-group">
+                <label className="form-label">Effective End (Optional)</label>
+                <DateTimePicker
+                    value={formData.effectiveEnd ?? ""}
+                    onChange={(val) => {
+                        onFormChange("effectiveEnd", val);
+                        onClearFieldError("effectiveEnd");
+                    }}
+                    placeholder="Select end date & time..."
+                    error={Boolean(fieldErrors.effectiveEnd)}
+                />
+                {fieldErrors.effectiveEnd && (
+                    <span className="form-error-msg">{fieldErrors.effectiveEnd}</span>
+                )}
+            </div>
 
             <div className="form-group">
                 <label className="form-label" htmlFor="zoneDesc">

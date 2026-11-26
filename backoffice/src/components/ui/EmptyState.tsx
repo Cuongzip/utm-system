@@ -4,19 +4,31 @@ import React from "react";
 import { cn } from "@/lib";
 import { ChamferButton } from "./ChamferButton";
 
+export interface EmptyStateAction {
+    label: string;
+    onClick: () => void;
+    icon?: React.ComponentType<{ className?: string }>;
+    variant?: "outline" | "chamfer";
+}
+
 export interface EmptyStateProps {
     icon?: React.ComponentType<{ className?: string }>;
     title: string;
     description?: string;
-    action?: {
-        label: string;
-        onClick: () => void;
-        icon?: React.ComponentType<{ className?: string }>;
-        variant?: "outline" | "chamfer";
-    };
+    action?: EmptyStateAction | React.ReactNode;
     className?: string;
     compact?: boolean;
     children?: React.ReactNode;
+}
+
+function isActionDescriptor(action: EmptyStateProps["action"]): action is EmptyStateAction {
+    return (
+        typeof action === "object" &&
+        action !== null &&
+        !React.isValidElement(action) &&
+        "label" in action &&
+        "onClick" in action
+    );
 }
 
 export function EmptyState({
@@ -28,8 +40,6 @@ export function EmptyState({
     compact = false,
     children,
 }: EmptyStateProps) {
-    const ActionIcon = action?.icon;
-
     return (
         <div
             className={cn(
@@ -69,27 +79,31 @@ export function EmptyState({
                 </p>
             )}
             {action &&
-                (action.variant === "chamfer" ? (
-                    <ChamferButton
-                        size="sm"
-                        variant="dark"
-                        onClick={action.onClick}
-                        className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
-                    >
-                        {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-white" />}
-                        <span>{action.label}</span>
-                    </ChamferButton>
+                (isActionDescriptor(action) ? (
+                    action.variant === "chamfer" ? (
+                        <ChamferButton
+                            size="sm"
+                            variant="dark"
+                            onClick={action.onClick}
+                            className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
+                        >
+                            {action.icon && <action.icon className="w-3.5 h-3.5 text-white" />}
+                            <span>{action.label}</span>
+                        </ChamferButton>
+                    ) : (
+                        <ChamferButton
+                            size="sm"
+                            variant="outline"
+                            clip="xs"
+                            onClick={action.onClick}
+                            className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
+                        >
+                            {action.icon && <action.icon className="w-3.5 h-3.5 text-slate-600" />}
+                            <span>{action.label}</span>
+                        </ChamferButton>
+                    )
                 ) : (
-                    <ChamferButton
-                        size="sm"
-                        variant="outline"
-                        clip="xs"
-                        onClick={action.onClick}
-                        className="mt-3.5 inline-flex items-center gap-1.5 font-mono text-xs cursor-pointer"
-                    >
-                        {ActionIcon && <ActionIcon className="w-3.5 h-3.5 text-slate-600" />}
-                        <span>{action.label}</span>
-                    </ChamferButton>
+                    <div className="mt-3.5">{action}</div>
                 ))}
             {children}
         </div>

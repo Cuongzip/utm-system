@@ -19,16 +19,20 @@ export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.
         const generatedId = React.useId();
         const switchId = id || generatedId;
 
+        const accessibleLabel =
+            props["aria-label"] ?? (typeof label === "string" ? label : undefined);
+
         const switchElement = (
             <SwitchPrimitives.Root
                 id={switchId}
                 ref={ref}
                 disabled={disabled}
+                aria-label={accessibleLabel}
                 className={cn(
                     "peer inline-flex h-[20px] w-[38px] shrink-0 cursor-pointer items-center p-[2px] transition-colors",
                     "bg-[#1e293b] border border-[#334155] hover:border-slate-500",
                     "data-[state=checked]:bg-slate-900 data-[state=unchecked]:bg-slate-800/90",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus-visible:ring-offset-1",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 focus-visible:ring-offset-1",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                     className
                 )}

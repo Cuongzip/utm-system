@@ -58,7 +58,10 @@ export function AirspaceFormSidebar({
         fieldErrors.code ||
         fieldErrors.name ||
         fieldErrors.zoneType ||
+        fieldErrors.altitudeFloor ||
         fieldErrors.altitudeCeiling ||
+        fieldErrors.effectiveStart ||
+        fieldErrors.effectiveEnd ||
         fieldErrors.status
     );
 

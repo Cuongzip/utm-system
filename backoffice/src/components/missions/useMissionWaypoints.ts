@@ -2,7 +2,15 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import { WAYPOINT_ACTION_TYPE, type Waypoint, type Hub } from "@/types";
+import {
+    STOPOVER_DEFAULT_GROUND_TIME,
+    STOPOVER_TYPE,
+    WAYPOINT_ACTION_TYPE,
+    WAYPOINT_TYPE,
+    type Hub,
+    type StopoverType,
+    type Waypoint,
+} from "@/types";
 import { useWaypointManager } from "@/hooks/useWaypointManager";
 import { extractIntermediateWaypoints } from "@/components/waypoints";
 
@@ -61,6 +69,7 @@ export function useMissionWaypoints({
                 tempId: `wp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 sequence: seqNum,
                 name: `Waypoint ${seqNum}`,
+                waypointType: WAYPOINT_TYPE.COORDINATE,
                 latitude: lat,
                 longitude: lng,
                 altitude: altitude ?? defaultAltitude,
@@ -77,6 +86,35 @@ export function useMissionWaypoints({
             onClearWaypointErrors,
             setWaypoints,
         ]
+    );
+
+    const handleAddHubWaypoint = useCallback(
+        (hub: Hub, stopoverType: StopoverType = STOPOVER_TYPE.RECHARGE) => {
+            if (isReadOnly) return;
+            if (hub.location?.latitude === undefined || hub.location?.longitude === undefined) {
+                toast.error("Selected hub does not have valid coordinates");
+                return;
+            }
+            const resolvedStopover =
+                stopoverType === STOPOVER_TYPE.NONE ? STOPOVER_TYPE.RECHARGE : stopoverType;
+            const seqNum = (departureHub ? 2 : 1) + waypoints.length;
+            const newWp: Waypoint = {
+                tempId: `wp-hub-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                sequence: seqNum,
+                name: hub.name || hub.code || `Hub Stopover ${seqNum}`,
+                waypointType: WAYPOINT_TYPE.HUB,
+                hubId: hub.id,
+                latitude: hub.location.latitude,
+                longitude: hub.location.longitude,
+                altitude: 0,
+                stopoverType: resolvedStopover,
+                groundTimeMinutes: STOPOVER_DEFAULT_GROUND_TIME[resolvedStopover],
+            };
+            setWaypoints((prev) => [...prev, newWp]);
+            onClearWaypointErrors?.();
+            toast.success(`Added HUB stopover at ${hub.code || hub.name}`);
+        },
+        [isReadOnly, departureHub, waypoints.length, onClearWaypointErrors, setWaypoints]
     );
 
     const handleUpdateWaypoint = useCallback(
@@ -99,6 +137,9 @@ export function useMissionWaypoints({
             setWaypoints((prev) =>
                 prev.map((wp) => {
                     if (matchesId(wp, wpId)) {
+                        if (wp.hubId || wp.waypointType === WAYPOINT_TYPE.HUB) {
+                            return wp;
+                        }
                         return { ...wp, latitude: lat, longitude: lng };
                     }
                     return wp;
@@ -131,6 +172,7 @@ export function useMissionWaypoints({
         defaultAltitude,
         setDefaultAltitude,
         handleAddWaypoint,
+        handleAddHubWaypoint,
         handleUpdateWaypoint,
         handleDeleteWaypoint,
         handleSelectWaypoint,

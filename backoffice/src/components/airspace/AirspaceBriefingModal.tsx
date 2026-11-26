@@ -1,37 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
-import { Modal, ChamferButton, StatusBadge, FormInput } from "@/components/ui";
+import {
+    Modal,
+    ChamferButton,
+    StatusBadge,
+    FormInput,
+    CustomSelect,
+    TacticalCallout,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+} from "@/components/ui";
+import { useHubsAll } from "@/hooks";
 import { formatCoordinates, formatAltitude, formatNullable, validateSchema } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
 import { checkPathBody } from "@/generated/airspace";
 import type { CheckPathPayload, CheckPathResult, PathPoint } from "@/types";
-import { DEFAULT_AIRSPACE_ZONE_TYPE } from "@/types";
+import { DEFAULT_AIRSPACE_ZONE_TYPE, HUB_STATUS } from "@/types";
 
 interface AirspaceBriefingModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const PRESET_ROUTES = [
-    {
-        name: "SGN Airport to Thu Thiem Hub",
-        start: { lat: 10.8185, lon: 106.6588, alt: 100 },
-        end: { lat: 10.7715, lon: 106.7214, alt: 120 },
-    },
-    {
-        name: "District 1 High-Density Test",
-        start: { lat: 10.7769, lon: 106.7009, alt: 80 },
-        end: { lat: 10.785, lon: 106.698, alt: 120 },
-    },
-    {
-        name: "Da Nang Han River Transit",
-        start: { lat: 16.0544, lon: 108.2022, alt: 100 },
-        end: { lat: 16.08, lon: 108.235, alt: 100 },
-    },
-];
 
 function WaypointInputs({
     title,
@@ -45,12 +41,6 @@ function WaypointInputs({
     const [latStr, setLatStr] = useState(() => String(point.lat ?? ""));
     const [lonStr, setLonStr] = useState(() => String(point.lon ?? ""));
     const [altStr, setAltStr] = useState(() => String(point.alt ?? ""));
-
-    useEffect(() => {
-        setLatStr(String(point.lat ?? ""));
-        setLonStr(String(point.lon ?? ""));
-        setAltStr(String(point.alt ?? ""));
-    }, [point.lat, point.lon, point.alt]);
 
     const handleFieldChange =
         (field: keyof PathPoint, setStr: (s: string) => void) =>
@@ -74,8 +64,8 @@ function WaypointInputs({
     const prefix = title.toLowerCase().replace(/\s+/g, "-");
 
     return (
-        <div className="p-3 bg-slate-50 rounded-[6px] border border-slate-200 flex flex-col gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+        <div className="p-3 bg-slate-50 rounded-md border border-slate-200 flex flex-col gap-2">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-600">
                 {title}
             </span>
             <div className="grid grid-cols-3 gap-2">
@@ -118,28 +108,81 @@ function WaypointInputs({
 }
 
 export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModalProps) {
+    const { data: hubs = [] } = useHubsAll();
+    const [originHubId, setOriginHubId] = useState("");
+    const [destHubId, setDestHubId] = useState("");
     const [start, setStart] = useState<PathPoint>({ lat: 10.8185, lon: 106.6588, alt: 100 });
     const [end, setEnd] = useState<PathPoint>({ lat: 10.7715, lon: 106.7214, alt: 120 });
+    const [coordVersion, setCoordVersion] = useState(0);
     const [spacingM, setSpacingM] = useState<number>(200);
     const [spacingStr, setSpacingStr] = useState<string>("200");
+    const [validationError, setValidationError] = useState<string | null>(null);
     const [checkResult, setCheckResult] = useState<CheckPathResult | null>(null);
+
+    const activeHubs = useMemo(
+        () =>
+            hubs.filter(
+                (h) =>
+                    (h.status || "").toLowerCase() !== HUB_STATUS.INACTIVE &&
+                    h.location?.latitude != null &&
+                    h.location?.longitude != null
+            ),
+        [hubs]
+    );
+
+    const hubOptions = useMemo(
+        () =>
+            activeHubs.map((h) => ({
+                value: h.id,
+                label: `${h.code ? `${h.code} — ` : ""}${h.name}`,
+            })),
+        [activeHubs]
+    );
 
     const checkMutation = useMutation({
         mutationFn: (payload: CheckPathPayload) => airspaceService.checkPath(payload),
-        onSuccess: (data) => setCheckResult(data),
+        onSuccess: (data) => {
+            setValidationError(null);
+            setCheckResult(data);
+        },
         meta: { defaultErrorMessage: "Failed to perform airspace pre-flight check" },
     });
 
     const updateWaypoint =
         (setter: React.Dispatch<React.SetStateAction<PathPoint>>) =>
         (field: keyof PathPoint, val: number) => {
+            setValidationError(null);
             setter((prev) => ({ ...prev, [field]: val }));
         };
 
-    const loadPreset = (preset: (typeof PRESET_ROUTES)[0]) => {
-        setStart({ ...preset.start });
-        setEnd({ ...preset.end });
-        setCheckResult(null);
+    const handleSelectOriginHub = (id: string) => {
+        setOriginHubId(id);
+        const hub = activeHubs.find((h) => h.id === id);
+        if (hub?.location) {
+            setStart((prev) => ({
+                lat: Number(hub.location!.latitude.toFixed(5)),
+                lon: Number(hub.location!.longitude.toFixed(5)),
+                alt: prev.alt ?? 100,
+            }));
+            setCoordVersion((v) => v + 1);
+            setCheckResult(null);
+            setValidationError(null);
+        }
+    };
+
+    const handleSelectDestHub = (id: string) => {
+        setDestHubId(id);
+        const hub = activeHubs.find((h) => h.id === id);
+        if (hub?.location) {
+            setEnd((prev) => ({
+                lat: Number(hub.location!.latitude.toFixed(5)),
+                lon: Number(hub.location!.longitude.toFixed(5)),
+                alt: prev.alt ?? 120,
+            }));
+            setCoordVersion((v) => v + 1);
+            setCheckResult(null);
+            setValidationError(null);
+        }
     };
 
     const handleRunCheck = () => {
@@ -147,12 +190,19 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
             points: [start, end],
             spacingM: spacingM ?? 200,
         });
-        if (!validation.success) return;
+        if (!validation.success) {
+            const firstMsg =
+                Object.values(validation.errors)[0] || "Invalid trajectory coordinates.";
+            setValidationError(firstMsg);
+            return;
+        }
+        setValidationError(null);
         checkMutation.mutate(validation.data);
     };
 
     const handleClose = () => {
         setCheckResult(null);
+        setValidationError(null);
         onClose();
     };
 
@@ -166,79 +216,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
             title="Pre-Flight Airspace Check"
             maxWidth="620px"
             footer={
-                <ChamferButton
-                    variant="outline"
-                    size="sm"
-                    clip="xs"
-                    type="button"
-                    onClick={handleClose}
-                >
-                    Close
-                </ChamferButton>
-            }
-        >
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-slate-500">Quick Presets:</span>
-                    {PRESET_ROUTES.map((p) => (
-                        <button
-                            key={p.name}
-                            type="button"
-                            onClick={() => loadPreset(p)}
-                            className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[4px] border border-slate-300 transition-colors cursor-pointer"
-                        >
-                            {p.name}
-                        </button>
-                    ))}
-                </div>
-
-                <WaypointInputs
-                    title="Start Waypoint"
-                    point={start}
-                    onChange={updateWaypoint(setStart)}
-                />
-
-                <WaypointInputs
-                    title="Destination Waypoint"
-                    point={end}
-                    onChange={updateWaypoint(setEnd)}
-                />
-
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <label
-                            htmlFor="briefing-sample-spacing"
-                            className="text-xs font-semibold text-slate-600"
-                        >
-                            Sample Spacing:
-                        </label>
-                        <div className="w-20">
-                            <FormInput
-                                id="briefing-sample-spacing"
-                                type="number"
-                                min="10"
-                                max="5000"
-                                value={spacingStr}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setSpacingStr(val);
-                                    const parsed = parseInt(val, 10);
-                                    if (!isNaN(parsed) && parsed > 0) {
-                                        setSpacingM(parsed);
-                                    }
-                                }}
-                                onBlur={() => {
-                                    const parsed = parseInt(spacingStr, 10);
-                                    if (isNaN(parsed) || parsed <= 0) {
-                                        setSpacingStr(String(spacingM ?? 200));
-                                    }
-                                }}
-                                className="font-mono text-xs py-1 px-2"
-                            />
-                        </div>
-                        <span className="text-xs text-slate-500">meters</span>
-                    </div>
-
+                <div className="flex items-center justify-between w-full gap-2">
                     <ChamferButton
                         type="button"
                         variant="dark"
@@ -256,81 +234,157 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             {checkMutation.isPending ? "Checking Path..." : "Run Airspace Check"}
                         </span>
                     </ChamferButton>
+
+                    <ChamferButton
+                        variant="outline"
+                        size="sm"
+                        clip="xs"
+                        type="button"
+                        onClick={handleClose}
+                    >
+                        Close
+                    </ChamferButton>
+                </div>
+            }
+        >
+            <div className="flex flex-col gap-4">
+                {hubOptions.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="form-group">
+                            <label htmlFor="briefing-origin-hub" className="form-label">
+                                Origin Vertiport
+                            </label>
+                            <CustomSelect
+                                id="briefing-origin-hub"
+                                value={originHubId}
+                                onValueChange={handleSelectOriginHub}
+                                options={hubOptions}
+                                placeholder="Select departure hub..."
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="briefing-dest-hub" className="form-label">
+                                Destination Vertiport
+                            </label>
+                            <CustomSelect
+                                id="briefing-dest-hub"
+                                value={destHubId}
+                                onValueChange={handleSelectDestHub}
+                                options={hubOptions}
+                                placeholder="Select arrival hub..."
+                            />
+                        </div>
+                    </div>
+                )}
+
+                <WaypointInputs
+                    key={`start-${coordVersion}`}
+                    title="Origin Waypoint"
+                    point={start}
+                    onChange={updateWaypoint(setStart)}
+                />
+
+                <WaypointInputs
+                    key={`end-${coordVersion}`}
+                    title="Destination Waypoint"
+                    point={end}
+                    onChange={updateWaypoint(setEnd)}
+                />
+
+                <div className="w-48">
+                    <FormInput
+                        id="briefing-sample-spacing"
+                        label="Sample Spacing (m)"
+                        type="number"
+                        min="10"
+                        max="5000"
+                        value={spacingStr}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setSpacingStr(val);
+                            const parsed = parseInt(val, 10);
+                            if (!isNaN(parsed) && parsed > 0) {
+                                setSpacingM(parsed);
+                            }
+                        }}
+                        onBlur={() => {
+                            const parsed = parseInt(spacingStr, 10);
+                            if (isNaN(parsed) || parsed <= 0) {
+                                setSpacingStr(String(spacingM ?? 200));
+                            }
+                        }}
+                        className="font-mono text-xs"
+                    />
                 </div>
 
-                {checkResult && (
-                    <div className="mt-2 pt-3 border-t border-slate-200">
-                        {isSafe ? (
-                            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-[6px] flex items-center gap-3">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                                <div>
-                                    <h4 className="text-xs font-bold text-emerald-900 uppercase">
-                                        Route Clear - No Conflicts Detected
-                                    </h4>
-                                    <p className="text-[11px] text-emerald-700 mt-0.5">
-                                        All sampled trajectory coordinates conform to open flight
-                                        corridors.
-                                    </p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-3">
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-[6px] flex items-center gap-3">
-                                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                                    <div>
-                                        <h4 className="text-xs font-bold text-amber-900 uppercase">
-                                            Route Compromised ({violations.length} Violations)
-                                        </h4>
-                                        <p className="text-[11px] text-amber-700 mt-0.5">
-                                            Trajectory intersects restricted or prohibited airspace
-                                            sectors.
-                                        </p>
-                                    </div>
-                                </div>
+                {validationError && (
+                    <span className="form-error-msg" role="alert">
+                        {validationError}
+                    </span>
+                )}
 
-                                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-[6px]">
-                                    <table className="w-full text-left text-xs">
-                                        <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200">
-                                            <tr>
-                                                <th className="p-2">Zone Name</th>
-                                                <th className="p-2">Type</th>
-                                                <th className="p-2">Conflict Coordinate</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
+                {checkResult && (
+                    <div className="pt-2 border-t border-slate-200 flex flex-col gap-3">
+                        {isSafe ? (
+                            <TacticalCallout
+                                tone="success"
+                                icon={CheckCircle2}
+                                title="Route Clear — No Airspace Violations"
+                                description="All sampled trajectory coordinates conform to open flight corridors."
+                                rightSlot={<StatusBadge status="go" label="CLEAR" />}
+                            />
+                        ) : (
+                            <>
+                                <TacticalCallout
+                                    tone="warning"
+                                    icon={AlertTriangle}
+                                    title={`Route Compromised (${violations.length} Sector Violation${
+                                        violations.length > 1 ? "s" : ""
+                                    })`}
+                                    description="Trajectory intersects restricted or prohibited airspace sectors."
+                                    rightSlot={<StatusBadge status="no_go" label="CONFLICT" />}
+                                />
+
+                                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-md">
+                                    <Table fixed={false}>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>ZONE NAME</TableHead>
+                                                <TableHead>TYPE</TableHead>
+                                                <TableHead>CONFLICT COORDINATE</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
                                             {violations.map((v, i) => (
-                                                <tr
-                                                    key={`${v.zoneId || "violation"}-${i}`}
-                                                    className="hover:bg-slate-50"
-                                                >
-                                                    <td className="p-2 font-medium text-slate-800">
+                                                <TableRow key={`${v.zoneId || "violation"}-${i}`}>
+                                                    <TableCell bold darkText>
                                                         {formatNullable(
                                                             v.name ?? v.zoneId,
                                                             undefined,
                                                             "Unnamed Zone"
                                                         )}
-                                                    </td>
-                                                    <td className="p-2">
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <StatusBadge
                                                             status={
                                                                 v.zoneType ??
                                                                 DEFAULT_AIRSPACE_ZONE_TYPE
                                                             }
                                                         />
-                                                    </td>
-                                                    <td className="p-2 font-mono text-[11px] text-slate-600">
+                                                    </TableCell>
+                                                    <TableCell mono>
                                                         {formatNullable(
                                                             v.conflictPoint,
                                                             (pt) =>
-                                                                `${formatCoordinates({ latitude: pt.lat, longitude: pt.lon }, 4)} (${formatAltitude(pt.alt)})`
+                                                                `${formatCoordinates({ latitude: pt.lat, longitude: pt.lon }, 4)} (${formatAltitude(pt.alt !== undefined ? Math.round(pt.alt * 10) / 10 : undefined)})`
                                                         )}
-                                                    </td>
-                                                </tr>
+                                                    </TableCell>
+                                                </TableRow>
                                             ))}
-                                        </tbody>
-                                    </table>
+                                        </TableBody>
+                                    </Table>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
                 )}

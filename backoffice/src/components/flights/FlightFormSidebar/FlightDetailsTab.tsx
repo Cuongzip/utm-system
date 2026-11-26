@@ -1,9 +1,21 @@
 "use client";
 
-import { CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+    ChamferButton,
+    CustomSelect,
+    FormInput,
+    AutoGenInput,
+    StatusBadge,
+    type SelectOption,
+} from "@/components/ui";
+import { QUERY_KEYS, useCurrentUser, useFlightConformance, useFlightFeasibility } from "@/hooks";
+import { flightService } from "@/services/flightService";
 import { cn } from "@/lib";
 import { FlightFeasibilityCard } from "../FlightFeasibilityCard";
 import {
+    CONFORMANCE_STATUS,
     FEASIBILITY_VERDICT,
     type Drone,
     type FeasibilityVerdict,
@@ -11,6 +23,7 @@ import {
 } from "@/types";
 
 export interface FlightDetailsTabProps {
+    flightId?: string;
     formData: FlightFormPayload;
     onFormChange: <K extends keyof FlightFormPayload>(
         field: K,
@@ -29,6 +42,7 @@ export interface FlightDetailsTabProps {
 }
 
 export function FlightDetailsTab({
+    flightId,
     formData,
     onFormChange,
     mode,
@@ -42,7 +56,60 @@ export function FlightDetailsTab({
     fieldErrors = {},
     onClearFieldError,
 }: FlightDetailsTabProps) {
+    const queryClient = useQueryClient();
+    const { data: currentUser } = useCurrentUser();
     const selectedDrone = drones.find((d) => d.id === formData.droneId) || null;
+    const { data: conformance } = useFlightConformance(
+        flightId,
+        mode === "edit" && Boolean(flightId)
+    );
+    const { data: liveFeasibility } = useFlightFeasibility(
+        flightId,
+        mode === "edit" && Boolean(flightId) && totalDistanceM > 0
+    );
+
+    const rawLiveVerdict = liveFeasibility?.verdict;
+    const effectiveVerdict: FeasibilityVerdict =
+        rawLiveVerdict === FEASIBILITY_VERDICT.GO ||
+        rawLiveVerdict === FEASIBILITY_VERDICT.MARGINAL ||
+        rawLiveVerdict === FEASIBILITY_VERDICT.NO_GO
+            ? rawLiveVerdict
+            : feasibilityVerdict;
+    const effectiveIsWarning =
+        isFeasibilityWarning ||
+        (totalDistanceM > 0 &&
+            (effectiveVerdict === FEASIBILITY_VERDICT.MARGINAL ||
+                effectiveVerdict === FEASIBILITY_VERDICT.NO_GO));
+
+    const overrideMutation = useMutation({
+        mutationFn: (reason: string) =>
+            flightService.overrideFeasibility(flightId!, {
+                reason,
+                approvedBy: currentUser?.username || currentUser?.email || "atc-operator",
+            }),
+        onSuccess: () => {
+            toast.success("Feasibility override recorded and flight authorized");
+            if (flightId) {
+                queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightDetail(flightId) });
+                queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightFeasibility(flightId) });
+            }
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+        },
+        meta: { defaultErrorMessage: "Failed to override feasibility verdict" },
+    });
+
+    const overrideReasonText = (formData.feasibilityOverride || "").trim();
+    const canSubmitLiveOverride = Boolean(
+        mode === "edit" && flightId && !isReadOnly && overrideReasonText.length >= 10
+    );
+
+    const showLiveConformance = Boolean(
+        conformance?.status && conformance.status !== CONFORMANCE_STATUS.UNKNOWN
+    );
+    const lateralErr = conformance?.crossTrackErrorM;
+    const lateralLimit = conformance?.corridorRadiusM ?? 15;
+    const verticalErr = conformance?.verticalErrorM;
+    const verticalLimit = conformance?.altitudeBufferM ?? 10;
 
     return (
         <div className="space-y-4">
@@ -51,7 +118,7 @@ export function FlightDetailsTab({
                 label="Flight Number"
                 showAutoGen={mode !== "edit"}
                 disabled={mode === "edit" || isReadOnly}
-                required
+                required={mode !== "edit"}
                 manualPlaceholder="e.g. FL-2026-001"
                 value={formData.flightNumber ?? ""}
                 onChange={(e) => {
@@ -161,53 +228,81 @@ export function FlightDetailsTab({
                     value={formData.notes || ""}
                     disabled={isReadOnly}
                     onChange={(e) => onFormChange("notes", e.target.value)}
-                    className="w-full rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-2.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-hidden focus:border-[var(--color-border-dark)] font-sans resize-none"
+                    className="w-full rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-2.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-hidden focus:border-[var(--color-border-dark)] font-sans resize-none disabled:opacity-70"
                 />
             </div>
 
             <FlightFeasibilityCard
-                initialOverride={formData.feasibilityOverride}
+                flightId={flightId}
                 distanceM={totalDistanceM}
                 drone={selectedDrone}
+                overrideReason={
+                    isReadOnly || !effectiveIsWarning ? formData.feasibilityOverride : undefined
+                }
             />
 
-            {isFeasibilityWarning && (
+            {showLiveConformance && conformance && (
+                <div className="px-3 py-2.5 border border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-subtle)] flex items-center justify-between gap-2 text-xs">
+                    <div className="font-mono min-w-0">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-800 block">
+                            4D Corridor
+                        </span>
+                        {(lateralErr != null || verticalErr != null) && (
+                            <span className="text-[11px] text-slate-500 mt-0.5 block tabular-nums truncate">
+                                Lat {(lateralErr ?? 0).toFixed(1)}/{lateralLimit}m · Alt Δ{" "}
+                                {(verticalErr ?? 0).toFixed(1)}/{verticalLimit}m
+                            </span>
+                        )}
+                    </div>
+                    <StatusBadge
+                        status={conformance.status!}
+                        label={
+                            conformance.status === CONFORMANCE_STATUS.NON_CONFORMING
+                                ? "BREACH"
+                                : undefined
+                        }
+                    />
+                </div>
+            )}
+
+            {effectiveIsWarning && !isReadOnly && (
                 <div className="form-group pt-1">
                     <label className="form-label" htmlFor="feasibilityOverride">
-                        Feasibility Reason (
-                        {feasibilityVerdict === FEASIBILITY_VERDICT.NO_GO ? "No Go" : "Marginal"}){" "}
+                        Feasibility Override Reason (
+                        {effectiveVerdict === FEASIBILITY_VERDICT.NO_GO ? "No Go" : "Marginal"}){" "}
                         <span className="text-red-500">*</span>
                     </label>
                     <textarea
                         id="feasibilityOverride"
                         rows={2}
                         value={formData.feasibilityOverride || ""}
-                        disabled={isReadOnly}
-                        placeholder="Enter reason..."
-                        onChange={(e) => onFormChange("feasibilityOverride", e.target.value)}
+                        placeholder="Enter ATC justification (min 10 characters)..."
+                        onChange={(e) => {
+                            onFormChange("feasibilityOverride", e.target.value);
+                            onClearFieldError("feasibilityOverride");
+                        }}
                         className={cn(
-                            "w-full rounded-md border bg-[var(--color-surface-panel)] p-2.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-hidden font-sans resize-none",
-                            fieldErrors.feasibilityOverride
-                                ? "border-red-500 focus:border-red-500"
-                                : "border-[var(--color-border-default)] focus:border-[var(--color-border-dark)]"
+                            "form-input resize-none text-xs",
+                            fieldErrors.feasibilityOverride && "form-input-error"
                         )}
                     />
                     {fieldErrors.feasibilityOverride && (
-                        <p className="text-xs text-red-500 mt-1">
-                            {fieldErrors.feasibilityOverride}
-                        </p>
+                        <span className="form-error-msg">{fieldErrors.feasibilityOverride}</span>
                     )}
-                </div>
-            )}
-
-            {!isFeasibilityWarning && formData.feasibilityOverride && (
-                <div className="form-group pt-1">
-                    <label className="form-label text-[var(--color-text-muted)]">
-                        Feasibility Reason
-                    </label>
-                    <p className="text-xs text-[var(--color-text-primary)] font-mono">
-                        {formData.feasibilityOverride}
-                    </p>
+                    {mode === "edit" && flightId && (
+                        <div className="flex justify-end pt-1">
+                            <ChamferButton
+                                size="xs"
+                                variant="outline"
+                                disabled={!canSubmitLiveOverride || overrideMutation.isPending}
+                                onClick={() => overrideMutation.mutate(overrideReasonText)}
+                            >
+                                {overrideMutation.isPending
+                                    ? "Authorizing..."
+                                    : "Authorize Override"}
+                            </ChamferButton>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

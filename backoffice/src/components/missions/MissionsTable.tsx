@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Compass, MapPin, Play, Copy, Trash2 } from "lucide-react";
+import { Compass, MapPin, Play, Copy, Trash2, CalendarClock, CalendarOff } from "lucide-react";
 import {
     ChamferCard,
+    ChamferButton,
     StatusBadge,
     ActionMenu,
     type ActionMenuItem,
@@ -19,14 +20,24 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import { type Mission, MISSION_STATUS, DEFAULT_MISSION_STATUS } from "@/types";
+import {
+    type Mission,
+    MISSION_STATUS,
+    EXECUTABLE_MISSION_STATUSES,
+    MISSION_SCHEDULE_TYPE,
+    DEFAULT_MISSION_STATUS,
+} from "@/types";
 import { formatDate, formatNullable, formatHubName, formatMissionSchedule } from "@/utils";
 
 export interface MissionsTableProps {
     missions: Mission[];
     loading: boolean;
+    hasFilters?: boolean;
+    onClearFilters?: () => void;
     onSelectMission: (mission: Mission) => void;
     onExecuteMission: (mission: Mission) => void;
+    onScheduleMission: (mission: Mission) => void;
+    onUnscheduleMission: (mission: Mission) => void;
     onDuplicateMission: (mission: Mission) => void;
     onDeleteMission: (mission: Mission) => void;
     onNewMission: () => void;
@@ -36,8 +47,12 @@ export interface MissionsTableProps {
 export function MissionsTable({
     missions = [],
     loading = false,
+    hasFilters = false,
+    onClearFilters,
     onSelectMission,
     onExecuteMission,
+    onScheduleMission,
+    onUnscheduleMission,
     onDuplicateMission,
     onDeleteMission,
     onNewMission,
@@ -50,6 +65,11 @@ export function MissionsTable({
     const getActions = (mission: Mission): ActionMenuItem[] => {
         const status = (mission.status || DEFAULT_MISSION_STATUS).toLowerCase();
         const isDraft = status === MISSION_STATUS.DRAFT;
+        const isScheduled = status === MISSION_STATUS.SCHEDULED;
+        const canSchedule =
+            isDraft &&
+            mission.scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED &&
+            Boolean(mission.scheduledAt);
 
         const items: ActionMenuItem[] = [
             {
@@ -59,24 +79,45 @@ export function MissionsTable({
             },
         ];
 
-        if (status === MISSION_STATUS.DRAFT || status === MISSION_STATUS.SCHEDULED) {
+        if (EXECUTABLE_MISSION_STATUSES.has(status)) {
             items.push({
-                label: "Execute Mission",
-                icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
+                label:
+                    status === MISSION_STATUS.COMPLETED ||
+                    status === MISSION_STATUS.ABORTED ||
+                    status === MISSION_STATUS.FAILED
+                        ? "Re-Execute Mission"
+                        : "Execute Mission",
+                icon: <Play className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onExecuteMission(mission),
+            });
+        }
+
+        if (canSchedule) {
+            items.push({
+                label: "Schedule Dispatch",
+                icon: <CalendarClock className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onScheduleMission(mission),
+            });
+        }
+
+        if (isScheduled) {
+            items.push({
+                label: "Unschedule to Draft",
+                icon: <CalendarOff className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onUnscheduleMission(mission),
             });
         }
 
         items.push({
             label: "Duplicate",
-            icon: <Copy className="w-3.5 h-3.5 text-cyan-600" />,
+            icon: <Copy className="w-3.5 h-3.5 text-slate-500" />,
             onClick: () => onDuplicateMission(mission),
         });
 
-        if (status !== MISSION_STATUS.EXECUTING) {
+        if (status !== MISSION_STATUS.EXECUTING && status !== MISSION_STATUS.PAUSED) {
             items.push({
                 label: "Delete",
-                icon: <Trash2 className="w-3.5 h-3.5 text-red-500" />,
+                icon: <Trash2 className="w-3.5 h-3.5" />,
                 danger: true,
                 onClick: () => setMissionToDelete(mission),
             });
@@ -88,35 +129,53 @@ export function MissionsTable({
     return (
         <>
             <ChamferCard size="lg" className="w-full">
-                <Table fixed>
+                <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="160px">Code</TableHead>
-                            <TableHead width="220px">Mission</TableHead>
-                            <TableHead width="130px">Status</TableHead>
-                            <TableHead width="220px">Route</TableHead>
-                            <TableHead width="110px">Schedule</TableHead>
-                            <TableHead width="100px">Waypoints</TableHead>
-                            <TableHead width="120px">Created</TableHead>
-                            <TableHead width="100px" align="right">
-                                Actions
-                            </TableHead>
+                            <TableHead>CODE</TableHead>
+                            <TableHead>MISSION</TableHead>
+                            <TableHead>STATUS</TableHead>
+                            <TableHead>ROUTE</TableHead>
+                            <TableHead>SCHEDULE</TableHead>
+                            <TableHead>WPS</TableHead>
+                            <TableHead>CREATED</TableHead>
+                            <TableHead align="right">ACTIONS</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={8} />
+                            <TableLoading colSpan={8} message="Loading missions..." />
                         ) : missions.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} className="py-10 text-center">
                                     <EmptyState
                                         icon={Compass}
-                                        title="No missions found"
-                                        description="Plan and automate flight routes across your vertiport network"
-                                        action={{
-                                            label: "Create First Mission",
-                                            onClick: onNewMission,
-                                        }}
+                                        title={
+                                            hasFilters
+                                                ? "No matching missions"
+                                                : "No missions found"
+                                        }
+                                        description={
+                                            hasFilters
+                                                ? "No mission templates match the active search or status filter."
+                                                : "Plan and automate flight routes across your vertiport network."
+                                        }
+                                        action={
+                                            hasFilters && onClearFilters ? (
+                                                <ChamferButton
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={onClearFilters}
+                                                >
+                                                    Clear Filters
+                                                </ChamferButton>
+                                            ) : (
+                                                {
+                                                    label: "Create First Mission",
+                                                    onClick: onNewMission,
+                                                }
+                                            )
+                                        }
                                     />
                                 </TableCell>
                             </TableRow>
@@ -141,13 +200,20 @@ export function MissionsTable({
                                         key={mission.id}
                                         onClick={() => onSelectMission(mission)}
                                     >
-                                        <TableCell mono bold darkText>
+                                        <TableCell
+                                            mono
+                                            bold
+                                            darkText
+                                            truncate
+                                            className="max-w-[120px]"
+                                        >
                                             {formatNullable(mission.code)}
                                         </TableCell>
 
                                         <TableCell
                                             truncate
                                             bold
+                                            className="max-w-[175px]"
                                             tooltip={mission.name || mission.id}
                                         >
                                             <span className="font-semibold text-slate-900">
@@ -161,8 +227,12 @@ export function MissionsTable({
                                             />
                                         </TableCell>
 
-                                        <TableCell truncate tooltip={`${depName} → ${arrName}`}>
-                                            <div className="flex flex-col text-xs">
+                                        <TableCell
+                                            truncate
+                                            className="max-w-[175px]"
+                                            tooltip={`${depName} → ${arrName}`}
+                                        >
+                                            <div className="flex flex-col text-xs min-w-0">
                                                 <span className="font-medium text-slate-800 truncate">
                                                     {depName}
                                                 </span>
@@ -172,20 +242,20 @@ export function MissionsTable({
                                             </div>
                                         </TableCell>
 
-                                        <TableCell>
+                                        <TableCell className="whitespace-nowrap">
                                             <span className="text-xs text-slate-600 font-medium">
                                                 {scheduleLabel}
                                             </span>
                                         </TableCell>
 
                                         <TableCell mono darkText>
-                                            <div className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                            <div className="inline-flex items-center gap-1 text-xs font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 tabular-nums">
                                                 <MapPin className="w-3 h-3 text-slate-500" />
                                                 <span>{waypointCount}</span>
                                             </div>
                                         </TableCell>
 
-                                        <TableCell mono darkText>
+                                        <TableCell mono darkText className="whitespace-nowrap">
                                             <span className="text-xs text-slate-500">
                                                 {formatDate(mission.createdOn)}
                                             </span>
@@ -208,6 +278,7 @@ export function MissionsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
+                    itemLabel="missions"
                 />
             </ChamferCard>
 

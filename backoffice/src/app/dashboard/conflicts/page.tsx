@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Radio, Layers, ShieldAlert, RotateCcw } from "lucide-react";
-import { PageHeader, ChamferButton } from "@/components/ui";
-import { TacticalMapContainer, FlightsLayer, AirspaceLayer } from "@/components/map";
+import { PageHeader, ChamferButton, ErrorState } from "@/components/ui";
+import {
+    TacticalMapContainer,
+    FlightsLayer,
+    AirspaceLayer,
+    ConflictsLayer,
+} from "@/components/map";
 import {
     ActiveConflictsList,
     ResolvedConflictsTable,
@@ -17,23 +22,54 @@ import {
     useConflictsAll,
     useFlightsAll,
     useAirspaceAll,
+    usePermissions,
     QUERY_KEYS,
 } from "@/hooks";
-import { CONFLICT_STATUS, type Conflict, type ResolveConflictPayload } from "@/types";
+import {
+    AIRSPACE_ZONE_STATUS,
+    CONFLICT_STATUS,
+    type Conflict,
+    type ResolveConflictPayload,
+} from "@/types";
 
 export default function ConflictsPage() {
     const queryClient = useQueryClient();
+    const { canResolveConflict } = usePermissions();
 
     const [showLiveTraffic, setShowLiveTraffic] = useState(true);
     const [showAirspace, setShowAirspace] = useState(true);
+    const [selectedConflictId, setSelectedConflictId] = useState<string | null>(null);
     const [resolvingConflict, setResolvingConflict] = useState<Conflict | null>(null);
 
-    const { data: activeConflicts = [] } = useConflictsActive();
-    const { data: resolvedConflicts = [], isLoading: isLoadingResolved } = useConflictsAll({
+    const {
+        data: activeConflicts = [],
+        isError: isActiveError,
+        refetch: refetchActive,
+    } = useConflictsActive();
+    const {
+        data: resolvedConflicts = [],
+        isLoading: isLoadingResolved,
+        isError: isResolvedError,
+        refetch: refetchResolved,
+    } = useConflictsAll({
         status: CONFLICT_STATUS.RESOLVED,
     });
     const { data: flights = [] } = useFlightsAll();
     const { data: airspaces = [] } = useAirspaceAll();
+
+    const activeAirspaces = useMemo(
+        () => airspaces.filter((z) => z.status === AIRSPACE_ZONE_STATUS.ACTIVE),
+        [airspaces]
+    );
+
+    const conflictingFlightIds = useMemo(() => {
+        const ids = new Set<string>();
+        for (const c of activeConflicts) {
+            if (c.primaryFlightId) ids.add(c.primaryFlightId);
+            if (c.secondaryFlightId) ids.add(c.secondaryFlightId);
+        }
+        return ids;
+    }, [activeConflicts]);
 
     const acknowledgeMutation = useMutation({
         mutationFn: (id: string) => conflictService.acknowledge(id),
@@ -70,7 +106,7 @@ export default function ConflictsPage() {
     });
 
     return (
-        <div className="p-8 flex flex-col gap-6 w-full">
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
             <PageHeader title="AIRSPACE CONFLICTS">
                 <ChamferButton
                     variant="outline"
@@ -90,14 +126,19 @@ export default function ConflictsPage() {
                 </ChamferButton>
             </PageHeader>
 
-            <div className="w-full h-[480px]">
+            <div className="w-full h-[420px] sm:h-[460px]">
                 <TacticalMapContainer
                     initialLayerType="satellite"
                     className="w-full"
+                    onEntityClick={(entityId) => {
+                        if (entityId.startsWith("conflict-marker-")) {
+                            setSelectedConflictId(entityId.replace("conflict-marker-", ""));
+                        }
+                    }}
                     header={
-                        <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
+                        <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
                             <div className="flex items-center gap-2">
-                                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                                <ShieldAlert className="w-4 h-4 text-slate-600" />
                                 <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
                                     TACTICAL CONFLICT RADAR & AIRSPACE
                                 </span>
@@ -106,6 +147,7 @@ export default function ConflictsPage() {
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
+                                    aria-pressed={showLiveTraffic}
                                     onClick={() => setShowLiveTraffic((prev) => !prev)}
                                     className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
                                         showLiveTraffic
@@ -119,6 +161,7 @@ export default function ConflictsPage() {
 
                                 <button
                                     type="button"
+                                    aria-pressed={showAirspace}
                                     onClick={() => setShowAirspace((prev) => !prev)}
                                     className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
                                         showAirspace
@@ -133,35 +176,80 @@ export default function ConflictsPage() {
                         </div>
                     }
                 >
-                    {showLiveTraffic && <FlightsLayer flights={flights} activeOnly />}
-                    {showAirspace && <AirspaceLayer zones={airspaces} />}
+                    {showLiveTraffic && (
+                        <FlightsLayer
+                            flights={flights}
+                            activeOnly
+                            highlightedFlightIds={conflictingFlightIds}
+                            dimUnselected
+                            showRouteLabels="focused"
+                        />
+                    )}
+                    <ConflictsLayer
+                        conflicts={activeConflicts}
+                        flights={flights}
+                        selectedConflictId={selectedConflictId}
+                    />
+                    {showAirspace && <AirspaceLayer zones={activeAirspaces} />}
                 </TacticalMapContainer>
             </div>
 
             <div className="flex flex-col gap-3">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                    Active Conflicts
-                </h2>
-
-                <ActiveConflictsList
-                    conflicts={activeConflicts}
-                    onAcknowledge={(id) => acknowledgeMutation.mutate(id)}
-                    onResolve={(conflict) => setResolvingConflict(conflict)}
-                    isAcknowledging={acknowledgeMutation.isPending}
-                />
-            </div>
-
-            <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                        Resolved Conflicts
+                <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                        Active Conflicts
                     </h2>
+                    {activeConflicts.length > 0 && (
+                        <span className="text-xs font-mono text-slate-500 tabular-nums">
+                            {activeConflicts.length} active
+                        </span>
+                    )}
                 </div>
 
-                <ResolvedConflictsTable
-                    conflicts={resolvedConflicts}
-                    isLoading={isLoadingResolved}
-                />
+                {isActiveError && activeConflicts.length === 0 ? (
+                    <ErrorState
+                        compact
+                        title="Unable to load active conflicts"
+                        description="The Conflict Service did not respond. Retry to check separation status."
+                        onRetry={() => refetchActive()}
+                    />
+                ) : (
+                    <ActiveConflictsList
+                        conflicts={activeConflicts}
+                        selectedConflictId={selectedConflictId}
+                        onSelectConflict={(conflict) => setSelectedConflictId(conflict.id)}
+                        onAcknowledge={(id) => acknowledgeMutation.mutate(id)}
+                        onResolve={(conflict) => setResolvingConflict(conflict)}
+                        isAcknowledging={acknowledgeMutation.isPending}
+                        canResolve={canResolveConflict}
+                    />
+                )}
+            </div>
+
+            <div className="flex flex-col gap-3 pt-1">
+                <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                        Resolved Conflict History
+                    </h2>
+                    {resolvedConflicts.length > 0 && (
+                        <span className="text-xs font-mono text-slate-500 tabular-nums">
+                            {resolvedConflicts.length} resolved
+                        </span>
+                    )}
+                </div>
+
+                {isResolvedError && resolvedConflicts.length === 0 ? (
+                    <ErrorState
+                        compact
+                        title="Unable to load resolved conflict history"
+                        onRetry={() => refetchResolved()}
+                    />
+                ) : (
+                    <ResolvedConflictsTable
+                        conflicts={resolvedConflicts}
+                        isLoading={isLoadingResolved}
+                    />
+                )}
             </div>
 
             <ResolveConflictModal

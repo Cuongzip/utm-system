@@ -31,7 +31,41 @@ export const resolveAlertBody = zod
 export const resolveAlertResponse = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
+        alertType: zod
+            .enum([
+                "LATERAL_CORRIDOR_BREACH",
+                "VERTICAL_ALTITUDE_BREACH",
+                "3D_VOLUME_BREACH",
+                "C2_LINK_LOST",
+                "C2_LINK_LOST_CONTINGENT",
+                "NO_TELEMETRY_STREAM",
+                "RECOVERY_CONFORMANT",
+                "BATTERY_LOW",
+                "BATTERY_CRITICAL",
+                "GEOFENCE_BREACH",
+                "GEOFENCE_VIOLATION",
+                "AIRSPACE_BREACH",
+                "WEATHER_HAZARD",
+                "CONFLICT_PROXIMITY",
+                "COLLISION_WARNING",
+                "MOTOR_FAILURE",
+                "GPS_FAILURE",
+                "SIGNAL_LOSS",
+                "EMERGENCY_INCIDENT",
+                "SYSTEM_FAULT",
+                "MANUAL_ALERT",
+                "CONFLICT",
+                "EQUIPMENT",
+                "COMMUNICATION",
+                "AIRSPACE",
+                "WEATHER",
+                "FLEET",
+                "HUB",
+                "SECURITY",
+                "OTHER",
+            ])
+            .optional()
+            .describe("Alert type code"),
         severity: zod
             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
             .optional()
@@ -39,16 +73,17 @@ export const resolveAlertResponse = zod
         status: zod
             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         flightId: zod.string().optional().describe("Associated flight UUID"),
         hubId: zod.string().optional().describe("Associated hub UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        incidentId: zod.string().optional().describe("Associated emergency incident UUID"),
         message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
+        detailsJson: zod
+            .record(zod.string(), zod.any())
             .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
+            .describe("Structured JSON details payload"),
         acknowledgedAt: zod.iso
             .datetime({})
             .optional()
@@ -57,10 +92,6 @@ export const resolveAlertResponse = zod
             .string()
             .optional()
             .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
         resolvedAt: zod.iso
             .datetime({})
             .optional()
@@ -104,7 +135,41 @@ export const resolveAlert1Body = zod
 export const resolveAlert1Response = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
+        alertType: zod
+            .enum([
+                "LATERAL_CORRIDOR_BREACH",
+                "VERTICAL_ALTITUDE_BREACH",
+                "3D_VOLUME_BREACH",
+                "C2_LINK_LOST",
+                "C2_LINK_LOST_CONTINGENT",
+                "NO_TELEMETRY_STREAM",
+                "RECOVERY_CONFORMANT",
+                "BATTERY_LOW",
+                "BATTERY_CRITICAL",
+                "GEOFENCE_BREACH",
+                "GEOFENCE_VIOLATION",
+                "AIRSPACE_BREACH",
+                "WEATHER_HAZARD",
+                "CONFLICT_PROXIMITY",
+                "COLLISION_WARNING",
+                "MOTOR_FAILURE",
+                "GPS_FAILURE",
+                "SIGNAL_LOSS",
+                "EMERGENCY_INCIDENT",
+                "SYSTEM_FAULT",
+                "MANUAL_ALERT",
+                "CONFLICT",
+                "EQUIPMENT",
+                "COMMUNICATION",
+                "AIRSPACE",
+                "WEATHER",
+                "FLEET",
+                "HUB",
+                "SECURITY",
+                "OTHER",
+            ])
+            .optional()
+            .describe("Alert type code"),
         severity: zod
             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
             .optional()
@@ -112,16 +177,17 @@ export const resolveAlert1Response = zod
         status: zod
             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         flightId: zod.string().optional().describe("Associated flight UUID"),
         hubId: zod.string().optional().describe("Associated hub UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        incidentId: zod.string().optional().describe("Associated emergency incident UUID"),
         message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
+        detailsJson: zod
+            .record(zod.string(), zod.any())
             .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
+            .describe("Structured JSON details payload"),
         acknowledgedAt: zod.iso
             .datetime({})
             .optional()
@@ -130,10 +196,6 @@ export const resolveAlert1Response = zod
             .string()
             .optional()
             .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
         resolvedAt: zod.iso
             .datetime({})
             .optional()
@@ -171,7 +233,41 @@ export const acknowledgeAlertBody = zod
 export const acknowledgeAlertResponse = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
+        alertType: zod
+            .enum([
+                "LATERAL_CORRIDOR_BREACH",
+                "VERTICAL_ALTITUDE_BREACH",
+                "3D_VOLUME_BREACH",
+                "C2_LINK_LOST",
+                "C2_LINK_LOST_CONTINGENT",
+                "NO_TELEMETRY_STREAM",
+                "RECOVERY_CONFORMANT",
+                "BATTERY_LOW",
+                "BATTERY_CRITICAL",
+                "GEOFENCE_BREACH",
+                "GEOFENCE_VIOLATION",
+                "AIRSPACE_BREACH",
+                "WEATHER_HAZARD",
+                "CONFLICT_PROXIMITY",
+                "COLLISION_WARNING",
+                "MOTOR_FAILURE",
+                "GPS_FAILURE",
+                "SIGNAL_LOSS",
+                "EMERGENCY_INCIDENT",
+                "SYSTEM_FAULT",
+                "MANUAL_ALERT",
+                "CONFLICT",
+                "EQUIPMENT",
+                "COMMUNICATION",
+                "AIRSPACE",
+                "WEATHER",
+                "FLEET",
+                "HUB",
+                "SECURITY",
+                "OTHER",
+            ])
+            .optional()
+            .describe("Alert type code"),
         severity: zod
             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
             .optional()
@@ -179,16 +275,17 @@ export const acknowledgeAlertResponse = zod
         status: zod
             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         flightId: zod.string().optional().describe("Associated flight UUID"),
         hubId: zod.string().optional().describe("Associated hub UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        incidentId: zod.string().optional().describe("Associated emergency incident UUID"),
         message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
+        detailsJson: zod
+            .record(zod.string(), zod.any())
             .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
+            .describe("Structured JSON details payload"),
         acknowledgedAt: zod.iso
             .datetime({})
             .optional()
@@ -197,10 +294,6 @@ export const acknowledgeAlertResponse = zod
             .string()
             .optional()
             .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
         resolvedAt: zod.iso
             .datetime({})
             .optional()
@@ -238,7 +331,41 @@ export const acknowledgeAlert1Body = zod
 export const acknowledgeAlert1Response = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
+        alertType: zod
+            .enum([
+                "LATERAL_CORRIDOR_BREACH",
+                "VERTICAL_ALTITUDE_BREACH",
+                "3D_VOLUME_BREACH",
+                "C2_LINK_LOST",
+                "C2_LINK_LOST_CONTINGENT",
+                "NO_TELEMETRY_STREAM",
+                "RECOVERY_CONFORMANT",
+                "BATTERY_LOW",
+                "BATTERY_CRITICAL",
+                "GEOFENCE_BREACH",
+                "GEOFENCE_VIOLATION",
+                "AIRSPACE_BREACH",
+                "WEATHER_HAZARD",
+                "CONFLICT_PROXIMITY",
+                "COLLISION_WARNING",
+                "MOTOR_FAILURE",
+                "GPS_FAILURE",
+                "SIGNAL_LOSS",
+                "EMERGENCY_INCIDENT",
+                "SYSTEM_FAULT",
+                "MANUAL_ALERT",
+                "CONFLICT",
+                "EQUIPMENT",
+                "COMMUNICATION",
+                "AIRSPACE",
+                "WEATHER",
+                "FLEET",
+                "HUB",
+                "SECURITY",
+                "OTHER",
+            ])
+            .optional()
+            .describe("Alert type code"),
         severity: zod
             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
             .optional()
@@ -246,16 +373,17 @@ export const acknowledgeAlert1Response = zod
         status: zod
             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         flightId: zod.string().optional().describe("Associated flight UUID"),
         hubId: zod.string().optional().describe("Associated hub UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        incidentId: zod.string().optional().describe("Associated emergency incident UUID"),
         message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
+        detailsJson: zod
+            .record(zod.string(), zod.any())
             .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
+            .describe("Structured JSON details payload"),
         acknowledgedAt: zod.iso
             .datetime({})
             .optional()
@@ -264,10 +392,6 @@ export const acknowledgeAlert1Response = zod
             .string()
             .optional()
             .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
         resolvedAt: zod.iso
             .datetime({})
             .optional()
@@ -298,8 +422,12 @@ export const getAlertsQueryParams = zod.object({
     droneId: zod.string().optional().describe("Filter by drone UUID"),
     flightId: zod.string().optional().describe("Filter by flight UUID"),
     severity: zod.string().optional().describe("Filter by severity (LOW, MEDIUM, HIGH, CRITICAL)"),
-    acknowledged: zod.boolean().optional().describe("Filter by acknowledgment status"),
-    resolved: zod.boolean().optional().describe("Filter by resolution status"),
+    status: zod
+        .string()
+        .optional()
+        .describe("Filter by lifecycle status (ACTIVE, ACKNOWLEDGED, RESOLVED)"),
+    acknowledged: zod.boolean().optional().describe("Legacy filter by acknowledgment state"),
+    resolved: zod.boolean().optional().describe("Legacy filter by resolution state"),
     alertType: zod.string().optional().describe("Filter by alert type code"),
     pageNo: zod.number().optional().describe("Page index (0-based)"),
     pageSize: zod.number().default(getAlertsQueryPageSizeDefault).describe("Page size"),
@@ -313,7 +441,41 @@ export const getAlertsResponse = zod
                 zod
                     .object({
                         id: zod.string().optional().describe("Unique alert UUID identifier"),
-                        alertType: zod.string().optional().describe("Alert type code"),
+                        alertType: zod
+                            .enum([
+                                "LATERAL_CORRIDOR_BREACH",
+                                "VERTICAL_ALTITUDE_BREACH",
+                                "3D_VOLUME_BREACH",
+                                "C2_LINK_LOST",
+                                "C2_LINK_LOST_CONTINGENT",
+                                "NO_TELEMETRY_STREAM",
+                                "RECOVERY_CONFORMANT",
+                                "BATTERY_LOW",
+                                "BATTERY_CRITICAL",
+                                "GEOFENCE_BREACH",
+                                "GEOFENCE_VIOLATION",
+                                "AIRSPACE_BREACH",
+                                "WEATHER_HAZARD",
+                                "CONFLICT_PROXIMITY",
+                                "COLLISION_WARNING",
+                                "MOTOR_FAILURE",
+                                "GPS_FAILURE",
+                                "SIGNAL_LOSS",
+                                "EMERGENCY_INCIDENT",
+                                "SYSTEM_FAULT",
+                                "MANUAL_ALERT",
+                                "CONFLICT",
+                                "EQUIPMENT",
+                                "COMMUNICATION",
+                                "AIRSPACE",
+                                "WEATHER",
+                                "FLEET",
+                                "HUB",
+                                "SECURITY",
+                                "OTHER",
+                            ])
+                            .optional()
+                            .describe("Alert type code"),
                         severity: zod
                             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
                             .optional()
@@ -321,21 +483,23 @@ export const getAlertsResponse = zod
                         status: zod
                             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
                             .optional()
-                            .describe(
-                                "Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"
-                            ),
+                            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
                         droneId: zod.string().optional().describe("Associated drone UUID"),
                         flightId: zod.string().optional().describe("Associated flight UUID"),
                         hubId: zod.string().optional().describe("Associated hub UUID"),
+                        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+                        incidentId: zod
+                            .string()
+                            .optional()
+                            .describe("Associated emergency incident UUID"),
                         message: zod
                             .string()
                             .optional()
                             .describe("Diagnostic human-readable message"),
-                        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-                        acknowledged: zod
-                            .boolean()
+                        detailsJson: zod
+                            .record(zod.string(), zod.any())
                             .optional()
-                            .describe("Whether the alert has been acknowledged by an operator"),
+                            .describe("Structured JSON details payload"),
                         acknowledgedAt: zod.iso
                             .datetime({})
                             .optional()
@@ -344,10 +508,6 @@ export const getAlertsResponse = zod
                             .string()
                             .optional()
                             .describe("Operator or username who acknowledged the alert"),
-                        resolved: zod
-                            .boolean()
-                            .optional()
-                            .describe("Whether the alert has been marked as resolved"),
                         resolvedAt: zod.iso
                             .datetime({})
                             .optional()
@@ -396,16 +556,71 @@ export const createAlertBody = zod
             .min(1)
             .max(createAlertBodyAlertTypeMax)
             .describe(
-                "Type of alert: LATERAL_CORRIDOR_BREACH, VERTICAL_ALTITUDE_BREACH, 3D_VOLUME_BREACH, C2_LINK_LOST, BATTERY_LOW, etc."
+                "Type of alert: LATERAL_CORRIDOR_BREACH, VERTICAL_ALTITUDE_BREACH, 3D_VOLUME_BREACH, C2_LINK_LOST, BATTERY_LOW, AIRSPACE_BREACH, CONFLICT_PROXIMITY, EMERGENCY_INCIDENT, etc."
             ),
         severity: zod.string().optional().describe("Severity level: LOW, MEDIUM, HIGH, CRITICAL"),
         flightId: zod.string().optional().describe("Target flight UUID identifier"),
         droneId: zod.string().optional().describe("Target drone UUID identifier"),
         hubId: zod.string().optional().describe("Target hub UUID identifier"),
+        conflictId: zod
+            .string()
+            .optional()
+            .describe("Originating conflict UUID identifier (for auto-resolution)"),
+        incidentId: zod
+            .string()
+            .optional()
+            .describe("Originating emergency incident UUID identifier (for auto-resolution)"),
         message: zod.string().min(1).describe("Diagnostic or alert message description"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload or sensor data"),
+        detailsJson: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Structured JSON details payload or sensor metrics"),
     })
     .describe("Payload to publish or trigger an operational alert");
+
+/**
+ * @summary Auto-resolve open alerts linked to an emergency incident
+ */
+export const resolveByIncidentParams = zod.object({
+    incidentId: zod.string(),
+});
+
+export const resolveByIncidentBody = zod
+    .object({
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions taken"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or agent identifier who resolved the incident"),
+    })
+    .describe("Payload to mark an alert as resolved");
+
+export const resolveByIncidentResponse = zod.record(zod.string(), zod.any());
+
+/**
+ * @summary Auto-resolve open alerts linked to a conflict
+ */
+export const resolveByConflictParams = zod.object({
+    conflictId: zod.string(),
+});
+
+export const resolveByConflictBody = zod
+    .object({
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Resolution commentary or remediation actions taken"),
+        resolvedBy: zod
+            .string()
+            .optional()
+            .describe("Operator or agent identifier who resolved the incident"),
+    })
+    .describe("Payload to mark an alert as resolved");
+
+export const resolveByConflictResponse = zod.record(zod.string(), zod.any());
 
 /**
  * Retrieve complete technical metadata, breach values, and audit timeline for an alert.
@@ -418,7 +633,41 @@ export const getAlertByIdParams = zod.object({
 export const getAlertByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
+        alertType: zod
+            .enum([
+                "LATERAL_CORRIDOR_BREACH",
+                "VERTICAL_ALTITUDE_BREACH",
+                "3D_VOLUME_BREACH",
+                "C2_LINK_LOST",
+                "C2_LINK_LOST_CONTINGENT",
+                "NO_TELEMETRY_STREAM",
+                "RECOVERY_CONFORMANT",
+                "BATTERY_LOW",
+                "BATTERY_CRITICAL",
+                "GEOFENCE_BREACH",
+                "GEOFENCE_VIOLATION",
+                "AIRSPACE_BREACH",
+                "WEATHER_HAZARD",
+                "CONFLICT_PROXIMITY",
+                "COLLISION_WARNING",
+                "MOTOR_FAILURE",
+                "GPS_FAILURE",
+                "SIGNAL_LOSS",
+                "EMERGENCY_INCIDENT",
+                "SYSTEM_FAULT",
+                "MANUAL_ALERT",
+                "CONFLICT",
+                "EQUIPMENT",
+                "COMMUNICATION",
+                "AIRSPACE",
+                "WEATHER",
+                "FLEET",
+                "HUB",
+                "SECURITY",
+                "OTHER",
+            ])
+            .optional()
+            .describe("Alert type code"),
         severity: zod
             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
             .optional()
@@ -426,16 +675,17 @@ export const getAlertByIdResponse = zod
         status: zod
             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         flightId: zod.string().optional().describe("Associated flight UUID"),
         hubId: zod.string().optional().describe("Associated hub UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        incidentId: zod.string().optional().describe("Associated emergency incident UUID"),
         message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
+        detailsJson: zod
+            .record(zod.string(), zod.any())
             .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
+            .describe("Structured JSON details payload"),
         acknowledgedAt: zod.iso
             .datetime({})
             .optional()
@@ -444,10 +694,6 @@ export const getAlertByIdResponse = zod
             .string()
             .optional()
             .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
         resolvedAt: zod.iso
             .datetime({})
             .optional()
@@ -474,7 +720,41 @@ export const getAlertByIdResponse = zod
 export const getActiveAlertsResponseItem = zod
     .object({
         id: zod.string().optional().describe("Unique alert UUID identifier"),
-        alertType: zod.string().optional().describe("Alert type code"),
+        alertType: zod
+            .enum([
+                "LATERAL_CORRIDOR_BREACH",
+                "VERTICAL_ALTITUDE_BREACH",
+                "3D_VOLUME_BREACH",
+                "C2_LINK_LOST",
+                "C2_LINK_LOST_CONTINGENT",
+                "NO_TELEMETRY_STREAM",
+                "RECOVERY_CONFORMANT",
+                "BATTERY_LOW",
+                "BATTERY_CRITICAL",
+                "GEOFENCE_BREACH",
+                "GEOFENCE_VIOLATION",
+                "AIRSPACE_BREACH",
+                "WEATHER_HAZARD",
+                "CONFLICT_PROXIMITY",
+                "COLLISION_WARNING",
+                "MOTOR_FAILURE",
+                "GPS_FAILURE",
+                "SIGNAL_LOSS",
+                "EMERGENCY_INCIDENT",
+                "SYSTEM_FAULT",
+                "MANUAL_ALERT",
+                "CONFLICT",
+                "EQUIPMENT",
+                "COMMUNICATION",
+                "AIRSPACE",
+                "WEATHER",
+                "FLEET",
+                "HUB",
+                "SECURITY",
+                "OTHER",
+            ])
+            .optional()
+            .describe("Alert type code"),
         severity: zod
             .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
             .optional()
@@ -482,16 +762,17 @@ export const getActiveAlertsResponseItem = zod
         status: zod
             .enum(["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"])
             .optional()
-            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED"),
+            .describe("Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         flightId: zod.string().optional().describe("Associated flight UUID"),
         hubId: zod.string().optional().describe("Associated hub UUID"),
+        conflictId: zod.string().optional().describe("Associated conflict UUID"),
+        incidentId: zod.string().optional().describe("Associated emergency incident UUID"),
         message: zod.string().optional().describe("Diagnostic human-readable message"),
-        detailsJson: zod.string().optional().describe("Detailed JSON payload"),
-        acknowledged: zod
-            .boolean()
+        detailsJson: zod
+            .record(zod.string(), zod.any())
             .optional()
-            .describe("Whether the alert has been acknowledged by an operator"),
+            .describe("Structured JSON details payload"),
         acknowledgedAt: zod.iso
             .datetime({})
             .optional()
@@ -500,10 +781,6 @@ export const getActiveAlertsResponseItem = zod
             .string()
             .optional()
             .describe("Operator or username who acknowledged the alert"),
-        resolved: zod
-            .boolean()
-            .optional()
-            .describe("Whether the alert has been marked as resolved"),
         resolvedAt: zod.iso
             .datetime({})
             .optional()

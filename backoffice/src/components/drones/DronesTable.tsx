@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Bot, Edit, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bot, Edit, PowerOff } from "lucide-react";
 import {
     ChamferCard,
+    ChamferButton,
     StatusBadge,
     ActionMenu,
     type ActionMenuItem,
@@ -18,13 +19,17 @@ import {
     EmptyState,
     Pagination,
 } from "@/components/ui";
-import { usePagination } from "@/hooks";
+import { useHubsAll, usePagination } from "@/hooks";
 import { formatNullable, formatHubName } from "@/utils";
 import { type Drone, DEFAULT_DRONE_STATUS } from "@/types";
 
 export interface DronesTableProps {
     drones: Drone[];
     loading: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    hasFilters?: boolean;
+    onClearFilters?: () => void;
     onEditDrone: (drone: Drone) => void;
     onDeleteDrone: (id: string) => void;
 }
@@ -32,54 +37,88 @@ export interface DronesTableProps {
 export function DronesTable({
     drones = [],
     loading = false,
+    canEdit,
+    canDelete,
+    hasFilters = false,
+    onClearFilters,
     onEditDrone,
     onDeleteDrone,
 }: DronesTableProps) {
     const [droneToDelete, setDroneToDelete] = useState<Drone | null>(null);
+    const { data: hubs = [] } = useHubsAll();
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(drones);
 
-    const getActions = (drone: Drone): ActionMenuItem[] => [
-        {
-            label: "Edit",
-            icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-            onClick: () => onEditDrone(drone),
-        },
-        {
-            label: "Delete",
-            icon: <Trash2 className="w-3.5 h-3.5" />,
-            danger: true,
-            onClick: () => setDroneToDelete(drone),
-        },
-    ];
+    const hubMap = useMemo(
+        () => new Map(hubs.filter((h) => h.id).map((h) => [h.id, h.code || h.name || h.id])),
+        [hubs]
+    );
+
+    const hasActions = canEdit || canDelete;
+    const colSpan = hasActions ? 7 : 6;
+
+    const getActions = (drone: Drone): ActionMenuItem[] => {
+        const items: ActionMenuItem[] = [];
+        if (canEdit) {
+            items.push({
+                label: "Edit",
+                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onEditDrone(drone),
+            });
+        }
+        if (canDelete) {
+            items.push({
+                label: "Decommission",
+                icon: <PowerOff className="w-3.5 h-3.5" />,
+                danger: true,
+                onClick: () => setDroneToDelete(drone),
+            });
+        }
+        return items;
+    };
 
     return (
         <div className="flex flex-col gap-4 w-full">
             <ChamferCard size="lg" className="w-full">
-                <Table fixed>
+                <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="180px">REGISTRATION</TableHead>
-                            <TableHead width="150px">MANUFACTURER</TableHead>
-                            <TableHead width="150px">MODEL</TableHead>
-                            <TableHead width="180px">HOME HUB</TableHead>
-                            <TableHead width="130px">STATUS</TableHead>
-                            <TableHead width="130px">MAX PAYLOAD</TableHead>
-                            <TableHead width="100px" align="right">
-                                ACTIONS
-                            </TableHead>
+                            <TableHead>REGISTRATION</TableHead>
+                            <TableHead>MANUFACTURER</TableHead>
+                            <TableHead>MODEL</TableHead>
+                            <TableHead>HOME HUB</TableHead>
+                            <TableHead>STATUS</TableHead>
+                            <TableHead>SPECS</TableHead>
+                            {hasActions && <TableHead align="right">ACTIONS</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={7} message="Loading drone fleet..." />
+                            <TableLoading colSpan={colSpan} message="Loading drone fleet..." />
                         ) : drones.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="py-10 text-center">
+                                <TableCell colSpan={colSpan} className="py-10 text-center">
                                     <EmptyState
                                         icon={Bot}
-                                        title="No drones found"
-                                        description="Register a drone to monitor its status and telemetry"
+                                        title={
+                                            hasFilters ? "No matching drones" : "No drones found"
+                                        }
+                                        description={
+                                            hasFilters
+                                                ? "No drones match the active search or status filter."
+                                                : "Register a drone to monitor its status and telemetry."
+                                        }
+                                        action={
+                                            hasFilters && onClearFilters ? (
+                                                <ChamferButton
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={onClearFilters}
+                                                >
+                                                    Clear Filters
+                                                </ChamferButton>
+                                            ) : undefined
+                                        }
                                     />
                                 </TableCell>
                             </TableRow>
@@ -91,26 +130,81 @@ export function DronesTable({
                                 const hubText = formatHubName(
                                     drone.homeHub,
                                     drone.homeHubId,
-                                    undefined,
+                                    hubMap,
                                     "Unassigned"
                                 );
-                                const maxPayloadText = formatNullable(
+                                const isAwayFromHome = Boolean(
+                                    drone.currentHubId && drone.currentHubId !== drone.homeHubId
+                                );
+                                const currentHubLabel = isAwayFromHome
+                                    ? hubMap.get(drone.currentHubId!) ||
+                                      drone.currentHubId!.slice(0, 8)
+                                    : null;
+                                const hubTooltip = currentHubLabel
+                                    ? `${hubText} (Current: ${currentHubLabel})`
+                                    : hubText;
+
+                                const payloadPart = formatNullable(
                                     drone.maxPayload,
                                     (val) => `${val} kg`
                                 );
+                                const batteryWhPart =
+                                    drone.batteryCapacityWh != null
+                                        ? `${Math.round(drone.batteryCapacityWh)} Wh`
+                                        : null;
+                                const primarySpecs = batteryWhPart
+                                    ? `${payloadPart} · ${batteryWhPart}`
+                                    : payloadPart;
+
+                                const specsTooltipParts: string[] = [primarySpecs];
+                                if (drone.currentBatteryPct != null) {
+                                    specsTooltipParts.push(
+                                        `Charge: ${Math.round(drone.currentBatteryPct)}%`
+                                    );
+                                }
+                                if (drone.totalFlightHours != null) {
+                                    specsTooltipParts.push(
+                                        `Hours: ${drone.totalFlightHours.toFixed(1)}h`
+                                    );
+                                }
+                                const specsTooltip = specsTooltipParts.join(" · ");
 
                                 return (
-                                    <TableRow key={drone.id} onClick={() => onEditDrone(drone)}>
-                                        <TableCell mono bold truncate tooltip={regText}>
+                                    <TableRow
+                                        key={drone.id}
+                                        onClick={canEdit ? () => onEditDrone(drone) : undefined}
+                                    >
+                                        <TableCell
+                                            mono
+                                            bold
+                                            truncate
+                                            className="max-w-[140px]"
+                                            tooltip={regText}
+                                        >
                                             {regText}
                                         </TableCell>
-                                        <TableCell darkText truncate tooltip={mfgText}>
+                                        <TableCell
+                                            darkText
+                                            truncate
+                                            className="max-w-[130px]"
+                                            tooltip={mfgText}
+                                        >
                                             {mfgText}
                                         </TableCell>
-                                        <TableCell muted truncate tooltip={modelText}>
+                                        <TableCell
+                                            muted
+                                            truncate
+                                            className="max-w-[150px]"
+                                            tooltip={modelText}
+                                        >
                                             {modelText}
                                         </TableCell>
-                                        <TableCell muted truncate tooltip={hubText}>
+                                        <TableCell
+                                            muted
+                                            truncate
+                                            className="max-w-[160px]"
+                                            tooltip={hubTooltip}
+                                        >
                                             {hubText}
                                         </TableCell>
                                         <TableCell>
@@ -118,15 +212,17 @@ export function DronesTable({
                                                 status={drone.status ?? DEFAULT_DRONE_STATUS}
                                             />
                                         </TableCell>
-                                        <TableCell mono darkText>
-                                            {maxPayloadText}
+                                        <TableCell mono darkText truncate tooltip={specsTooltip}>
+                                            {primarySpecs}
                                         </TableCell>
-                                        <TableCell
-                                            align="right"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <ActionMenu items={getActions(drone)} />
-                                        </TableCell>
+                                        {hasActions && (
+                                            <TableCell
+                                                align="right"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <ActionMenu items={getActions(drone)} />
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 );
                             })
@@ -138,6 +234,7 @@ export function DronesTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
+                    itemLabel="drones"
                 />
             </ChamferCard>
 

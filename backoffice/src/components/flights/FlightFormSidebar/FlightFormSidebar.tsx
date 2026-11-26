@@ -16,6 +16,7 @@ import { FlightRouteTab } from "./FlightRouteTab";
 import { FlightScheduleTab } from "./FlightScheduleTab";
 
 export interface FlightFormSidebarProps {
+    flightId?: string;
     formData: FlightFormPayload;
     onFormChange: <K extends keyof FlightFormPayload>(
         field: K,
@@ -43,6 +44,7 @@ export interface FlightFormSidebarProps {
 }
 
 export function FlightFormSidebar({
+    flightId,
     formData,
     onFormChange,
     mode,
@@ -172,6 +174,7 @@ export function FlightFormSidebar({
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 select-text">
                     {activeTab === "details" && (
                         <FlightDetailsTab
+                            flightId={flightId}
                             formData={formData}
                             onFormChange={onFormChange}
                             mode={mode}

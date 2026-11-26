@@ -25,15 +25,15 @@ export const getHubByIdResponseLocationLongitudeMax = 180;
 
 export const getHubByIdResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the Hub"),
+        id: zod.string().optional(),
         code: zod
             .string()
             .min(getHubByIdResponseCodeMin)
             .max(getHubByIdResponseCodeMax)
             .regex(getHubByIdResponseCodeRegExp)
-            .optional()
-            .describe("Unique identification code / callsign of the Hub"),
-        name: zod.string().min(1).optional().describe("Display name of the Hub / Vertiport"),
+            .optional(),
+        name: zod.string().min(1).optional(),
+        organizationId: zod.string().optional(),
         location: zod
             .object({
                 latitude: zod
@@ -49,14 +49,19 @@ export const getHubByIdResponse = zod
             })
             .optional()
             .describe("WGS84 Geographical coordinates"),
-        altitudeMsl: zod.number().optional().describe("Altitude MSL in meters (m)"),
-        airspaceRadius: zod.number().optional().describe("Airspace protection radius in meters"),
-        status: zod
-            .enum(["active", "inactive", "maintenance"])
-            .optional()
-            .describe("Current operational status of the Hub"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        altitudeMsl: zod.number().optional(),
+        airspaceRadius: zod.number().optional(),
+        maxSimultaneousDrones: zod.number().optional(),
+        airspaceFloor: zod.number().optional(),
+        airspaceCeiling: zod.number().optional(),
+        timezone: zod.string().optional(),
+        capabilities: zod.record(zod.string(), zod.any()).optional(),
+        contactInfo: zod.record(zod.string(), zod.any()).optional(),
+        status: zod.enum(["active", "inactive", "maintenance", "offline"]).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and specifications of a Takeoff/Landing Hub or Vertiport");
 
@@ -75,7 +80,8 @@ export const updateHubBodyLocationLongitudeMax = 180;
 
 export const updateHubBody = zod
     .object({
-        name: zod.string().min(1).optional().describe("Updated name of the Hub"),
+        name: zod.string().min(1).optional(),
+        organizationId: zod.string().optional(),
         location: zod
             .object({
                 latitude: zod
@@ -91,18 +97,15 @@ export const updateHubBody = zod
             })
             .optional()
             .describe("WGS84 Geographical coordinates"),
-        altitudeMsl: zod
-            .number()
-            .optional()
-            .describe("Updated altitude in meters above mean sea level"),
-        airspaceRadius: zod
-            .number()
-            .optional()
-            .describe("Updated airspace protection radius in meters"),
-        status: zod
-            .enum(["active", "inactive", "maintenance"])
-            .optional()
-            .describe("Updated operational status (active, inactive, maintenance)"),
+        altitudeMsl: zod.number().optional(),
+        airspaceRadius: zod.number().optional(),
+        status: zod.enum(["active", "inactive", "maintenance", "offline"]).optional(),
+        maxSimultaneousDrones: zod.number().optional(),
+        airspaceFloor: zod.number().optional(),
+        airspaceCeiling: zod.number().optional(),
+        timezone: zod.string().optional(),
+        capabilities: zod.record(zod.string(), zod.any()).optional(),
+        contactInfo: zod.record(zod.string(), zod.any()).optional(),
     })
     .describe("Request payload for updating an existing Hub / Vertiport");
 
@@ -116,15 +119,15 @@ export const updateHubResponseLocationLongitudeMax = 180;
 
 export const updateHubResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the Hub"),
+        id: zod.string().optional(),
         code: zod
             .string()
             .min(updateHubResponseCodeMin)
             .max(updateHubResponseCodeMax)
             .regex(updateHubResponseCodeRegExp)
-            .optional()
-            .describe("Unique identification code / callsign of the Hub"),
-        name: zod.string().min(1).optional().describe("Display name of the Hub / Vertiport"),
+            .optional(),
+        name: zod.string().min(1).optional(),
+        organizationId: zod.string().optional(),
         location: zod
             .object({
                 latitude: zod
@@ -140,14 +143,19 @@ export const updateHubResponse = zod
             })
             .optional()
             .describe("WGS84 Geographical coordinates"),
-        altitudeMsl: zod.number().optional().describe("Altitude MSL in meters (m)"),
-        airspaceRadius: zod.number().optional().describe("Airspace protection radius in meters"),
-        status: zod
-            .enum(["active", "inactive", "maintenance"])
-            .optional()
-            .describe("Current operational status of the Hub"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        altitudeMsl: zod.number().optional(),
+        airspaceRadius: zod.number().optional(),
+        maxSimultaneousDrones: zod.number().optional(),
+        airspaceFloor: zod.number().optional(),
+        airspaceCeiling: zod.number().optional(),
+        timezone: zod.string().optional(),
+        capabilities: zod.record(zod.string(), zod.any()).optional(),
+        contactInfo: zod.record(zod.string(), zod.any()).optional(),
+        status: zod.enum(["active", "inactive", "maintenance", "offline"]).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and specifications of a Takeoff/Landing Hub or Vertiport");
 
@@ -169,7 +177,7 @@ export const getHubsQueryOffsetDefault = 0;
 export const getHubsQueryParams = zod.object({
     search: zod.string().optional().describe("Search term for hub name or callsign code"),
     status: zod
-        .enum(["active", "inactive", "maintenance"])
+        .enum(["active", "inactive", "maintenance", "offline"])
         .optional()
         .describe("Filter by operational status (active, inactive, maintenance)"),
     limit: zod
@@ -193,19 +201,15 @@ export const getHubsResponse = zod
             .array(
                 zod
                     .object({
-                        id: zod.string().optional().describe("Unique UUID identifier of the Hub"),
+                        id: zod.string().optional(),
                         code: zod
                             .string()
                             .min(getHubsResponseItemsItemCodeMin)
                             .max(getHubsResponseItemsItemCodeMax)
                             .regex(getHubsResponseItemsItemCodeRegExp)
-                            .optional()
-                            .describe("Unique identification code / callsign of the Hub"),
-                        name: zod
-                            .string()
-                            .min(1)
-                            .optional()
-                            .describe("Display name of the Hub / Vertiport"),
+                            .optional(),
+                        name: zod.string().min(1).optional(),
+                        organizationId: zod.string().optional(),
                         location: zod
                             .object({
                                 latitude: zod
@@ -221,23 +225,21 @@ export const getHubsResponse = zod
                             })
                             .optional()
                             .describe("WGS84 Geographical coordinates"),
-                        altitudeMsl: zod.number().optional().describe("Altitude MSL in meters (m)"),
-                        airspaceRadius: zod
-                            .number()
-                            .optional()
-                            .describe("Airspace protection radius in meters"),
+                        altitudeMsl: zod.number().optional(),
+                        airspaceRadius: zod.number().optional(),
+                        maxSimultaneousDrones: zod.number().optional(),
+                        airspaceFloor: zod.number().optional(),
+                        airspaceCeiling: zod.number().optional(),
+                        timezone: zod.string().optional(),
+                        capabilities: zod.record(zod.string(), zod.any()).optional(),
+                        contactInfo: zod.record(zod.string(), zod.any()).optional(),
                         status: zod
-                            .enum(["active", "inactive", "maintenance"])
-                            .optional()
-                            .describe("Current operational status of the Hub"),
-                        createdOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Record creation timestamp"),
-                        lastModifiedOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Last modification timestamp"),
+                            .enum(["active", "inactive", "maintenance", "offline"])
+                            .optional(),
+                        createdOn: zod.iso.datetime({}).optional(),
+                        createdBy: zod.string().optional(),
+                        lastModifiedOn: zod.iso.datetime({}).optional(),
+                        lastModifiedBy: zod.string().optional(),
                     })
                     .describe(
                         "Detailed profile and specifications of a Takeoff/Landing Hub or Vertiport"
@@ -268,9 +270,9 @@ export const createHubBody = zod
             .min(createHubBodyCodeMin)
             .max(createHubBodyCodeMax)
             .regex(createHubBodyCodeRegExp)
-            .optional()
-            .describe("Unique code / callsign identifier of the Hub (auto-generated if omitted)"),
-        name: zod.string().min(1).describe("Name of the Hub / Vertiport"),
+            .optional(),
+        name: zod.string().min(1),
+        organizationId: zod.string().optional(),
         location: zod
             .object({
                 latitude: zod
@@ -285,7 +287,42 @@ export const createHubBody = zod
                     .describe("Longitude (-180 to 180)"),
             })
             .describe("WGS84 Geographical coordinates"),
-        altitudeMsl: zod.number().describe("Altitude in meters above sea level"),
-        airspaceRadius: zod.number().describe("Airspace protection radius in meters"),
+        altitudeMsl: zod.number(),
+        airspaceRadius: zod.number(),
+        maxSimultaneousDrones: zod.number().optional(),
+        airspaceFloor: zod.number().optional(),
+        airspaceCeiling: zod.number().optional(),
+        timezone: zod.string().optional(),
+        capabilities: zod.record(zod.string(), zod.any()).optional(),
+        contactInfo: zod.record(zod.string(), zod.any()).optional(),
     })
     .describe("Request payload for registering a new Hub / Vertiport");
+
+/**
+ * @summary Get real-time Hub operational status and capacity utilization
+ */
+export const getHubOperationalStatusParams = zod.object({
+    id: zod.string(),
+});
+
+export const getHubOperationalStatusResponseCodeMin = 3;
+export const getHubOperationalStatusResponseCodeMax = 50;
+export const getHubOperationalStatusResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const getHubOperationalStatusResponse = zod.object({
+    id: zod.string().optional(),
+    code: zod
+        .string()
+        .min(getHubOperationalStatusResponseCodeMin)
+        .max(getHubOperationalStatusResponseCodeMax)
+        .regex(getHubOperationalStatusResponseCodeRegExp)
+        .optional(),
+    name: zod.string().min(1).optional(),
+    status: zod.enum(["active", "inactive", "maintenance", "offline"]).optional(),
+    maxSimultaneousDrones: zod.number().optional(),
+    stationedDronesCount: zod.number().optional(),
+    activeFlightsCount: zod.number().optional(),
+    availableCapacity: zod.number().optional(),
+    utilizationPct: zod.number().optional(),
+    evaluatedAt: zod.iso.datetime({}).optional(),
+});

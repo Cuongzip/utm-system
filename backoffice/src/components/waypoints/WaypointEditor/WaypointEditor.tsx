@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib";
+import type { Hub } from "@/types";
 import type { WaypointItem } from "../types";
 import { WaypointEditorHeader } from "./WaypointEditorHeader";
 import { WaypointPositionSubTab } from "./WaypointPositionSubTab";
@@ -12,6 +13,7 @@ export interface WaypointEditorProps<T extends WaypointItem> {
     waypoint: T;
     onUpdate: (wp: T) => void;
     onClose: () => void;
+    hubs?: Hub[];
     defaultAltitude: number;
     isReadOnly: boolean;
     fieldErrors: Record<string, string>;
@@ -23,6 +25,7 @@ export function WaypointEditor<T extends WaypointItem>({
     waypoint,
     onUpdate,
     onClose,
+    hubs,
     defaultAltitude,
     isReadOnly,
     fieldErrors,
@@ -101,6 +104,7 @@ export function WaypointEditor<T extends WaypointItem>({
                     key={waypoint.id || waypoint.tempId}
                     waypoint={waypoint}
                     onUpdate={onUpdate}
+                    hubs={hubs}
                     defaultAltitude={defaultAltitude}
                     isReadOnly={isReadOnly}
                     nameError={nameError}

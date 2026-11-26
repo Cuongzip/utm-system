@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { AlertCircle, PlaneTakeoff, PlaneLanding } from "lucide-react";
-import type { Hub } from "@/types";
+import { WAYPOINT_TYPE, type Hub } from "@/types";
 import type { WaypointItem } from "./types";
 import { WaypointEditor } from "./WaypointEditor/WaypointEditor";
 import { PinnedHubWaypointItem } from "./WaypointList/PinnedHubWaypointItem";
@@ -17,6 +18,7 @@ export interface WaypointRouteTabProps<T extends WaypointItem> {
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
     departureHub: Hub | null;
     arrivalHub: Hub | null;
+    hubs?: Hub[];
     defaultAltitude: number;
     isReadOnly: boolean;
     generalError: string | undefined;
@@ -34,6 +36,7 @@ export function WaypointRouteTab<T extends WaypointItem>({
     onMoveWaypointOrder,
     departureHub,
     arrivalHub,
+    hubs,
     defaultAltitude,
     isReadOnly,
     generalError,
@@ -48,12 +51,28 @@ export function WaypointRouteTab<T extends WaypointItem>({
           )
         : -1;
 
+    const hubMap = useMemo(() => {
+        const map = new Map<string, Hub>();
+        for (const h of hubs ?? []) {
+            if (h.id) map.set(h.id, h);
+        }
+        return map;
+    }, [hubs]);
+
+    const hubStopCount = useMemo(
+        () =>
+            waypoints.filter((w) => w.waypointType === WAYPOINT_TYPE.HUB || Boolean(w.hubId))
+                .length,
+        [waypoints]
+    );
     const totalPoints = waypoints.length + (departureHub ? 1 : 0) + (arrivalHub ? 1 : 0);
+    const routeSummaryLabel =
+        hubStopCount > 0 ? `${hubStopCount + 1} legs` : `${totalPoints} points`;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             {generalError && (
-                <div className="p-2.5 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                     <span>{generalError}</span>
                 </div>
@@ -64,6 +83,7 @@ export function WaypointRouteTab<T extends WaypointItem>({
                     waypoint={selectedWaypoint}
                     onUpdate={onUpdateWaypoint}
                     onClose={() => onSelectWaypoint(null)}
+                    hubs={hubs}
                     defaultAltitude={defaultAltitude}
                     isReadOnly={isReadOnly}
                     fieldErrors={fieldErrors}
@@ -72,12 +92,12 @@ export function WaypointRouteTab<T extends WaypointItem>({
                 />
             ) : (
                 <>
-                    <div className="flex items-center justify-between pb-1 border-b border-[var(--color-border-default)]">
-                        <span className="text-xs font-bold text-[var(--color-text-primary)]">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[var(--color-border-default)]">
+                        <span className="text-xs font-bold font-mono uppercase tracking-wider text-[var(--color-text-primary)]">
                             {title}
                         </span>
-                        <span className="text-xs text-[var(--color-text-muted)] font-mono">
-                            {totalPoints} points
+                        <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
+                            {routeSummaryLabel}
                         </span>
                     </div>
 
@@ -99,7 +119,7 @@ export function WaypointRouteTab<T extends WaypointItem>({
                                             Departure Station (Select in Details tab)
                                         </span>
                                         <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5">
-                                            Alt: 0m
+                                            Origin Vertiport
                                         </span>
                                     </div>
                                 </div>
@@ -117,11 +137,13 @@ export function WaypointRouteTab<T extends WaypointItem>({
                                     k.startsWith(`waypoints.${idx}.`)
                             );
                             const seqDisplay = (departureHub ? 2 : 1) + idx;
+                            const matchedHub = wp.hubId ? (hubMap.get(wp.hubId) ?? null) : null;
 
                             return (
                                 <WaypointListItem
                                     key={wp.id || wp.tempId || idx}
                                     waypoint={wp}
+                                    matchedHub={matchedHub}
                                     displaySequence={seqDisplay}
                                     hasError={wpHasError}
                                     isFirst={idx === 0}
@@ -152,7 +174,7 @@ export function WaypointRouteTab<T extends WaypointItem>({
                                             Arrival Station (Select in Details tab)
                                         </span>
                                         <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5">
-                                            Alt: 0m
+                                            Destination Vertiport
                                         </span>
                                     </div>
                                 </div>

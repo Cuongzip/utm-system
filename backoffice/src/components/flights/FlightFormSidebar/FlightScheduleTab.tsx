@@ -92,7 +92,7 @@ export function FlightScheduleTab({
                     ) : (
                         scheduledDeparture &&
                         scheduledArrival && (
-                            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1.5 font-mono">
+                            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 flex items-center gap-1.5 font-mono">
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                                 <span>Arrival time must be later than departure time</span>
                             </div>

@@ -3,11 +3,11 @@
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useHubsAll, useDronesAll, useMissionDetail, QUERY_KEYS } from "@/hooks";
 import { missionService } from "@/services/missionService";
 import { syncMissionWaypoints, MissionEditor, type MissionSaveData } from "@/components/missions";
-import { EmptyState } from "@/components/ui";
+import { EmptyState, PageEditorSkeleton } from "@/components/ui";
 import type { UpdateMissionPayload } from "@/types";
 
 export default function EditMissionPage() {
@@ -27,12 +27,16 @@ export default function EditMissionPage() {
 
     const updateMutation = useMutation({
         mutationFn: async ({ payload, waypoints, defaultAltitude }: MissionSaveData) => {
+            const depHub = hubs.find((h) => h.id === mission?.departureHubId) ?? null;
+            const arrHub = hubs.find((h) => h.id === mission?.arrivalHubId) ?? null;
             await missionService.updateMission(missionId, payload as UpdateMissionPayload);
             await syncMissionWaypoints(
                 missionId,
                 mission?.waypoints ?? [],
                 waypoints,
-                defaultAltitude
+                defaultAltitude,
+                depHub,
+                arrHub
             );
         },
         onSuccess: () => {
@@ -44,14 +48,7 @@ export default function EditMissionPage() {
     });
 
     if (missionLoading || hubsLoading || dronesLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="w-8 h-8 text-slate-500 animate-spin" />
-                <p className="text-xs font-mono text-[var(--color-text-muted)]">
-                    Loading mission details...
-                </p>
-            </div>
-        );
+        return <PageEditorSkeleton />;
     }
 
     if (missionError || !mission) {

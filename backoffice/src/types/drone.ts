@@ -7,6 +7,16 @@ import {
     getDronesQueryParams,
 } from "@/generated/drone";
 
+export const DRONE_PHYSICS_DEFAULTS = {
+    batteryCapacityWh: 400,
+    maxPayload: 2.5,
+    hoverPowerW: 350,
+    cruisePowerW: 280,
+    cruiseSpeedMs: 15,
+    batteryHealthPct: 100,
+    windToleranceMs: 12,
+} as const;
+
 export type CreateDronePayload = zod.infer<typeof createDroneBody>;
 export type UpdateDronePayload = zod.infer<typeof updateDroneBody>;
 export type DroneQueryParams = zod.infer<typeof getDronesQueryParams>;
@@ -20,6 +30,7 @@ export const DRONE_STATUS = {
     MAINTENANCE: "maintenance",
     CHARGING: "charging",
     OFFLINE: "offline",
+    RETIRED: "retired",
 } as const satisfies Record<string, DroneStatus>;
 
 export const DEFAULT_DRONE_STATUS: DroneStatus = DRONE_STATUS.AVAILABLE;

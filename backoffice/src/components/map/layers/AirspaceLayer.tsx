@@ -9,6 +9,7 @@ import { createTacticalLabel } from "../mapLabels";
 
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
+    labelMaxDistance?: number;
 }
 
 const TYPE_COLOR_MAP: Record<string, string> = {
@@ -18,7 +19,12 @@ const TYPE_COLOR_MAP: Record<string, string> = {
     warning: MAP_TOKENS.colors.airspace.warning,
 };
 
-export function AirspaceLayer({ zones = [] }: AirspaceLayerProps) {
+function formatCompactZoneName(zone: AirspaceZone): string {
+    const raw = (zone.name || zone.id || "Zone").trim();
+    return raw.length > 22 ? `${raw.slice(0, 20)}…` : raw;
+}
+
+export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
 
@@ -69,11 +75,11 @@ export function AirspaceLayer({ zones = [] }: AirspaceLayerProps) {
                 const zoneTypeKey = zone.zoneType || "warning";
                 const baseColor = TYPE_COLOR_MAP[zoneTypeKey] || "#64748b";
 
-                const floor = 0;
+                const floor = zone.altitudeFloor ?? 0;
                 const ceiling =
-                    zone.altitudeCeiling && zone.altitudeCeiling > floor
+                    zone.altitudeCeiling !== undefined && zone.altitudeCeiling > floor
                         ? zone.altitudeCeiling
-                        : 150;
+                        : floor + 150;
 
                 const entity = viewer.entities.add({
                     id: zone.id,
@@ -97,11 +103,11 @@ export function AirspaceLayer({ zones = [] }: AirspaceLayerProps) {
                     },
                     position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, ceiling + 15),
                     label: createTacticalLabel(Cesium, {
-                        text: `${zone.name || zone.id} (${floor}-${ceiling}m)`,
+                        text: `${formatCompactZoneName(zone)} · ${floor}–${ceiling}m`,
                         isSelected: false,
                         accentColor: "#f59e0b",
                         fontSize: 11,
-                        maxDistance: 1500000,
+                        maxDistance: labelMaxDistance,
                     }),
                 });
 
@@ -126,7 +132,7 @@ export function AirspaceLayer({ zones = [] }: AirspaceLayerProps) {
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, zones]);
+    }, [viewer, isLoaded, zones, labelMaxDistance]);
 
     return null;
 }

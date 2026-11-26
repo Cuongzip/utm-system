@@ -9,7 +9,6 @@ export interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: React.ReactNode;
-    icon?: React.ReactNode;
     maxWidth?: string | number;
     children: React.ReactNode;
 
@@ -24,7 +23,6 @@ export function Modal({
     isOpen,
     onClose,
     title,
-    icon,
     maxWidth = "480px",
     children,
     onSubmit,
@@ -47,26 +45,19 @@ export function Modal({
                             onClick={(e) => e.stopPropagation()}
                         >
                             <ChamferCard size="lg" className="w-full">
-                                <div className="px-6 py-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5">
-                                        {icon && (
-                                            <span className="flex items-center justify-center">
-                                                {icon}
-                                            </span>
-                                        )}
-                                        <DialogPrimitive.Title asChild>
-                                            <h3 className="text-[17px] font-bold text-[var(--color-text-primary)] tracking-tight">
-                                                {title}
-                                            </h3>
-                                        </DialogPrimitive.Title>
-                                    </div>
+                                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-2">
+                                    <DialogPrimitive.Title asChild>
+                                        <h2 className="text-base sm:text-[17px] font-bold text-[var(--color-text-primary)] tracking-tight min-w-0 truncate">
+                                            {title}
+                                        </h2>
+                                    </DialogPrimitive.Title>
                                     <DialogPrimitive.Close asChild>
                                         <button
                                             type="button"
-                                            className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)] transition-all -mt-0.5 -mr-1 cursor-pointer"
+                                            className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors -mt-0.5 -mr-1 cursor-pointer shrink-0"
                                             aria-label="Close modal"
                                         >
-                                            <X className="w-4 h-4" />
+                                            <X className="w-4 h-4" aria-hidden="true" />
                                         </button>
                                     </DialogPrimitive.Close>
                                 </div>
@@ -74,14 +65,14 @@ export function Modal({
                                 {onSubmit ? (
                                     <form
                                         onSubmit={onSubmit}
-                                        className="px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto"
+                                        className="px-4 sm:px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto overscroll-contain"
                                         noValidate
                                     >
                                         {children}
                                         {footer ? (
                                             footer
                                         ) : (
-                                            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
+                                            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
                                                 <ChamferButton
                                                     variant="outline"
                                                     size="sm"
@@ -112,10 +103,10 @@ export function Modal({
                                         )}
                                     </form>
                                 ) : (
-                                    <div className="px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto">
+                                    <div className="px-4 sm:px-6 py-4 flex flex-col gap-3.5 max-h-[calc(85vh-70px)] overflow-y-auto overscroll-contain">
                                         {children}
                                         {footer && (
-                                            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
+                                            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-3.5 border-t border-[var(--color-border-subtle)]">
                                                 {footer}
                                             </div>
                                         )}

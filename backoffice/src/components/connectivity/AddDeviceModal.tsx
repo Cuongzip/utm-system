@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Path, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
 import { useDronesAll } from "@/hooks";
@@ -27,7 +27,7 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
         setError,
         formState: { errors },
     } = useForm<DeviceRegistrationPayload>({
-        resolver: zodResolver(registerDeviceBody) as any,
+        resolver: zodResolver(registerDeviceBody) as unknown as Resolver<DeviceRegistrationPayload>,
         defaultValues: {
             droneId: "",
             deviceIdentifier: undefined,
@@ -46,23 +46,20 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
     }, [isOpen, reset]);
 
     const droneOptions: SelectOption[] = useMemo(() => {
-        return [
-            { value: "", label: "Select drone by registration number..." },
-            ...drones.map((drone) => ({
-                value: drone.id,
-                label: drone.registrationNumber
-                    ? `${drone.registrationNumber}${drone.model ? ` — ${drone.model}` : ""}`
-                    : `${drone.model || "Drone"} (${drone.id.substring(0, 8)})`,
-                description: drone.status ? drone.status.toUpperCase() : undefined,
-            })),
-        ];
+        return drones.map((drone) => ({
+            value: drone.id,
+            label: drone.registrationNumber
+                ? `${drone.registrationNumber}${drone.model ? ` — ${drone.model}` : ""}`
+                : `${drone.model || "Drone"} (${drone.id.substring(0, 8)})`,
+            description: drone.status ? drone.status.toUpperCase() : undefined,
+        }));
     }, [drones]);
 
     const onFormSubmit = async (data: DeviceRegistrationPayload) => {
         try {
             setLoading(true);
             const payload: DeviceRegistrationPayload = {
-                droneId: data.droneId.trim(),
+                droneId: data.droneId?.trim() || undefined,
                 deviceIdentifier: data.deviceIdentifier,
                 certificateFingerprint: data.certificateFingerprint?.trim() || undefined,
             };
@@ -72,7 +69,7 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
             const parsed = parseApiError(err, "Failed to register device");
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
-                    setError(field as any, { message: msg });
+                    setError(field as Path<DeviceRegistrationPayload>, { message: msg });
                 });
             }
         } finally {
@@ -99,6 +96,7 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
                     control={control}
                     render={({ field }) => (
                         <CustomSelect
+                            id="droneId"
                             value={field.value || ""}
                             onValueChange={field.onChange}
                             options={droneOptions}

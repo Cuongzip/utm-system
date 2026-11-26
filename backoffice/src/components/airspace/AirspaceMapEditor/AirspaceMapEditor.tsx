@@ -22,6 +22,7 @@ export interface AirspaceMapEditorProps {
     onUndoPolygonPoint: () => void;
     onClearPolygonPoints: () => void;
     zoneType: AirspaceZoneType;
+    altitudeFloor: number;
     altitudeCeiling: number;
     existingZones: AirspaceZone[];
     currentZoneId?: string;
@@ -39,6 +40,7 @@ export function AirspaceMapEditor({
     onUndoPolygonPoint,
     onClearPolygonPoints,
     zoneType,
+    altitudeFloor,
     altitudeCeiling,
     existingZones,
     currentZoneId,
@@ -118,7 +120,7 @@ export function AirspaceMapEditor({
                                 <span className="text-slate-500">|</span>
                                 <span>
                                     Radius:{" "}
-                                    <strong className="text-cyan-400 font-bold">
+                                    <strong className="text-white font-bold">
                                         {radiusMeters}m
                                     </strong>
                                 </span>
@@ -161,6 +163,7 @@ export function AirspaceMapEditor({
                 radiusMeters={radiusMeters}
                 polygonPoints={polygonPoints}
                 zoneType={zoneType}
+                altitudeFloor={altitudeFloor}
                 altitudeCeiling={altitudeCeiling}
             />
 

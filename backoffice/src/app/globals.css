@@ -234,10 +234,16 @@ body {
     gap: 14px;
 }
 
+@media (max-width: 639px) {
+    .form-row-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
 .form-label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--color-border-dark);
+    color: var(--color-text-primary);
 }
 
 .form-input,
@@ -335,8 +341,8 @@ body {
 
 .utm-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
     font-weight: 700;
-    color: var(--color-tech-cyan);
-    border-bottom: 2px solid var(--color-tech-cyan);
+    color: var(--color-text-primary);
+    border-bottom: 2px solid #334155;
 }
 
 [data-sonner-toast] [data-close-button] {

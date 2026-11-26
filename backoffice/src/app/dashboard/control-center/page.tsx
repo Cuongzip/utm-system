@@ -9,15 +9,25 @@ import {
     ActiveAlerts,
 } from "@/components/control-center";
 import {
+    AirspaceLayer,
     HubsLayer,
     LiveTelemetryLayer,
     FlightsLayer,
+    AdsbLayer,
     TacticalMapContainer,
     useCesium,
     fitCameraToBounds,
 } from "@/components/map";
-import { useLiveTelemetry, useFlightsAll, useHubsAll } from "@/hooks";
-import { type Flight, type Hub, ACTIVE_FLIGHT_STATUSES } from "@/types";
+import {
+    useLiveTelemetry,
+    useFlightsAll,
+    useHubsAll,
+    useDronesAll,
+    useAirspaceAll,
+    useAdsbAircraft,
+} from "@/hooks";
+import { cn } from "@/lib";
+import { type Flight, type Hub, ACTIVE_FLIGHT_STATUSES, AIRSPACE_ZONE_STATUS } from "@/types";
 
 function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flight[] }) {
     const { viewer, isLoaded } = useCesium();
@@ -69,7 +79,19 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
 export default function ControlCenterPage() {
     const { data: allFlights = [] } = useFlightsAll();
     const { data: hubs = [] } = useHubsAll();
-    const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
+    const { data: drones = [] } = useDronesAll();
+    const { data: airspaceZones = [] } = useAirspaceAll();
+    const [rawSelectedFlightId, setSelectedFlightId] = useState<string | null>(null);
+    const [filterAirspace, setFilterAirspace] = useState(true);
+    const [filterHubs, setFilterHubs] = useState(true);
+    const [filterAdsb, setFilterAdsb] = useState(false);
+
+    const { data: adsbData } = useAdsbAircraft(filterAdsb, 15000);
+
+    const activeZones = useMemo(
+        () => airspaceZones.filter((z) => z.status === AIRSPACE_ZONE_STATUS.ACTIVE),
+        [airspaceZones]
+    );
 
     const flights = useMemo(() => {
         return allFlights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status));
@@ -85,15 +107,12 @@ export default function ControlCenterPage() {
         return hubs.filter((h) => activeHubIds.has(h.id));
     }, [flights, hubs]);
 
-    useEffect(() => {
-        if (flights.length > 0) {
-            setSelectedFlightId((prev) =>
-                prev && flights.some((f) => f.id === prev) ? prev : flights[0].id
-            );
-        } else {
-            setSelectedFlightId(null);
-        }
-    }, [flights]);
+    const selectedFlightId = useMemo(() => {
+        if (flights.length === 0) return null;
+        return rawSelectedFlightId && flights.some((f) => f.id === rawSelectedFlightId)
+            ? rawSelectedFlightId
+            : flights[0].id;
+    }, [flights, rawSelectedFlightId]);
 
     const { telemetryMap } = useLiveTelemetry(flights);
 
@@ -101,14 +120,65 @@ export default function ControlCenterPage() {
     const selectedTelemetry = selectedFlightId ? (telemetryMap[selectedFlightId] ?? null) : null;
 
     return (
-        <div className="p-8 space-y-6">
-            <PageHeader title="Live Operations" />
+        <div className="p-4 sm:p-6 lg:p-8 space-y-5">
+            <PageHeader title="LIVE OPERATIONS" />
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8 h-[540px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <div className="lg:col-span-8 h-[520px]">
                     <TacticalMapContainer
                         initialLayerType="satellite"
                         className="w-full"
+                        header={
+                            <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)] z-10">
+                                <span className="text-xs font-bold font-mono tracking-wider text-[var(--color-text-primary)] uppercase">
+                                    OPERATIONS RADAR
+                                </span>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        aria-pressed={filterAirspace}
+                                        onClick={() => setFilterAirspace((prev) => !prev)}
+                                        className={cn(
+                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            filterAirspace
+                                                ? "bg-slate-800 text-white shadow-2xs"
+                                                : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
+                                        )}
+                                    >
+                                        AIRSPACE
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-pressed={filterHubs}
+                                        onClick={() => setFilterHubs((prev) => !prev)}
+                                        className={cn(
+                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            filterHubs
+                                                ? "bg-slate-800 text-white shadow-2xs"
+                                                : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
+                                        )}
+                                    >
+                                        HUBS
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-pressed={filterAdsb}
+                                        onClick={() => setFilterAdsb((prev) => !prev)}
+                                        className={cn(
+                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            filterAdsb
+                                                ? "bg-slate-800 text-white shadow-2xs"
+                                                : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
+                                        )}
+                                    >
+                                        ADS-B
+                                        {filterAdsb && adsbData?.aircraft
+                                            ? ` (${adsbData.aircraft.length})`
+                                            : ""}
+                                    </button>
+                                </div>
+                            </div>
+                        }
                         onEntityClick={(entityId) => {
                             const rawId = entityId
                                 .replace(/^drone-live-/, "")
@@ -121,9 +191,12 @@ export default function ControlCenterPage() {
                             }
                         }}
                     >
+                        {filterAirspace && <AirspaceLayer zones={activeZones} />}
                         <FlightsLayer
                             flights={flights}
                             selectedFlightId={selectedFlightId}
+                            dimUnselected
+                            showRouteLabels="focused"
                             hubs={hubs}
                         />
                         <LiveTelemetryLayer
@@ -131,8 +204,10 @@ export default function ControlCenterPage() {
                             telemetryMap={telemetryMap}
                             selectedFlightId={selectedFlightId}
                             autoFollowSelected={false}
+                            autoFitInitialBounds={false}
                         />
-                        <HubsLayer hubs={relevantHubs} autoFitBounds={false} />
+                        {filterHubs && <HubsLayer hubs={relevantHubs} autoFitBounds={false} />}
+                        {filterAdsb && <AdsbLayer aircraft={adsbData?.aircraft ?? []} />}
                         <PerspectiveResetHandler hubs={relevantHubs} flights={flights} />
                     </TacticalMapContainer>
                 </div>
@@ -142,6 +217,7 @@ export default function ControlCenterPage() {
                         telemetry={selectedTelemetry}
                         flight={selectedFlight}
                         flights={flights}
+                        drones={drones}
                         selectedFlightId={selectedFlightId}
                         onSelectFlight={setSelectedFlightId}
                         telemetryMap={telemetryMap}
@@ -149,8 +225,14 @@ export default function ControlCenterPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FlightControl droneId={selectedFlight?.droneId} flightId={selectedFlight?.id} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <FlightControl
+                    droneId={selectedFlight?.droneId}
+                    flightId={selectedFlight?.id}
+                    flightStatus={selectedFlight?.status}
+                    altitudeM={selectedTelemetry?.altitude ?? null}
+                    hasLiveLink={Boolean(selectedTelemetry)}
+                />
                 <RecentCommands droneId={selectedFlight?.droneId} />
                 <ActiveAlerts />
             </div>

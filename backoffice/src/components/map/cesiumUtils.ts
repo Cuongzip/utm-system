@@ -11,7 +11,15 @@ export interface FitCameraOptions {
     animate?: boolean;
     duration?: number;
     minHeight?: number;
+    maxHeight?: number;
     paddingMultiplier?: number;
+}
+
+function computeMedian(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 export function fitCameraToBounds(
@@ -21,25 +29,58 @@ export function fitCameraToBounds(
 ): boolean {
     if (!viewer || viewer.isDestroyed() || !points || points.length === 0) return false;
 
-    let minLat = 90;
-    let maxLat = -90;
-    let minLng = 180;
-    let maxLng = -180;
-    let validCount = 0;
+    const validPoints: Array<{ lat: number; lng: number }> = [];
 
     for (const p of points) {
         const lat = p.lat ?? p.latitude;
         const lng = p.lng ?? p.longitude;
-        if (typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng)) {
-            minLat = Math.min(minLat, lat);
-            maxLat = Math.max(maxLat, lat);
-            minLng = Math.min(minLng, lng);
-            maxLng = Math.max(maxLng, lng);
-            validCount++;
+        if (
+            typeof lat === "number" &&
+            typeof lng === "number" &&
+            Number.isFinite(lat) &&
+            Number.isFinite(lng) &&
+            lat >= -90 &&
+            lat <= 90 &&
+            lng >= -180 &&
+            lng <= 180 &&
+            (Math.abs(lat) > 0.001 || Math.abs(lng) > 0.001)
+        ) {
+            validPoints.push({ lat, lng });
         }
     }
 
-    if (validCount === 0) return false;
+    if (validPoints.length === 0) return false;
+
+    const minHeight = options.minHeight ?? 1500;
+    const maxHeight = options.maxHeight ?? 45000;
+    const paddingMult = options.paddingMultiplier ?? 1.55;
+
+    let targetPoints = validPoints;
+    if (validPoints.length > 2) {
+        const medLat = computeMedian(validPoints.map((pt) => pt.lat));
+        const medLng = computeMedian(validPoints.map((pt) => pt.lng));
+        const maxClusterDeg = (maxHeight * 1.5) / 111320;
+        const clustered = validPoints.filter(
+            (pt) =>
+                Math.abs(pt.lat - medLat) <= maxClusterDeg &&
+                Math.abs(pt.lng - medLng) <= maxClusterDeg
+        );
+        if (clustered.length > 0) {
+            targetPoints = clustered;
+        }
+    }
+
+    let minLat = 90;
+    let maxLat = -90;
+    let minLng = 180;
+    let maxLng = -180;
+
+    for (const pt of targetPoints) {
+        minLat = Math.min(minLat, pt.lat);
+        maxLat = Math.max(maxLat, pt.lat);
+        minLng = Math.min(minLng, pt.lng);
+        maxLng = Math.max(maxLng, pt.lng);
+    }
 
     viewer.resize();
 
@@ -48,59 +89,36 @@ export function fitCameraToBounds(
 
     const latSpanMeters = (maxLat - minLat) * 111320;
     const lngSpanMeters = (maxLng - minLng) * 111320 * Math.cos((centerLat * Math.PI) / 180);
+
+    const canvas = viewer.scene?.canvas;
+    const aspect =
+        canvas && canvas.clientHeight > 0
+            ? Math.max(canvas.clientWidth / canvas.clientHeight, 0.6)
+            : 1.6;
+
+    const effectiveSpanMeters = Math.max(latSpanMeters, lngSpanMeters / aspect);
     const maxSpanMeters = Math.max(latSpanMeters, lngSpanMeters);
 
-    const minHeight = options.minHeight ?? 1500;
-    const maxHeight = 35000;
-    const paddingMult = options.paddingMultiplier ?? 1.5;
-
-    let targetHeight: number;
-    if (validCount === 1 || maxSpanMeters < 80) {
-        targetHeight = minHeight;
-    } else {
-        targetHeight = Math.min(Math.max(maxSpanMeters * paddingMult, minHeight), maxHeight);
-    }
+    const targetHeight =
+        targetPoints.length === 1 || maxSpanMeters < 80
+            ? minHeight
+            : Math.min(Math.max(effectiveSpanMeters * paddingMult, minHeight), maxHeight);
 
     const duration = options.duration ?? 0.8;
+    const destination = Cesium.Cartesian3.fromDegrees(centerLng, centerLat, targetHeight);
 
-    if (validCount === 1 || maxSpanMeters < 80) {
-        const destination = Cesium.Cartesian3.fromDegrees(centerLng, centerLat, targetHeight);
-        if (options.animate !== false) {
-            viewer.camera.flyTo({
-                destination,
-                duration,
-                complete: () => {
-                    if (!viewer.isDestroyed()) viewer.scene.requestRender();
-                },
-            });
-        } else {
-            viewer.camera.setView({
-                destination,
-            });
-        }
+    if (options.animate !== false) {
+        viewer.camera.flyTo({
+            destination,
+            duration,
+            complete: () => {
+                if (!viewer.isDestroyed()) viewer.scene.requestRender();
+            },
+        });
     } else {
-        const padLat = Math.max((maxLat - minLat) * 0.25, 0.005);
-        const padLng = Math.max((maxLng - minLng) * 0.25, 0.005);
-        const rect = Cesium.Rectangle.fromDegrees(
-            minLng - padLng,
-            minLat - padLat,
-            maxLng + padLng,
-            maxLat + padLat
-        );
-
-        if (options.animate !== false) {
-            viewer.camera.flyTo({
-                destination: rect,
-                duration,
-                complete: () => {
-                    if (!viewer.isDestroyed()) viewer.scene.requestRender();
-                },
-            });
-        } else {
-            viewer.camera.setView({
-                destination: rect,
-            });
-        }
+        viewer.camera.setView({
+            destination,
+        });
     }
 
     viewer.scene.requestRender();

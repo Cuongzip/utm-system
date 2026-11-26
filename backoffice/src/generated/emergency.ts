@@ -48,14 +48,6 @@ export const getProtocolResponse = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -102,14 +94,6 @@ export const updateProtocolBody = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
 });
 
@@ -147,14 +131,6 @@ export const updateProtocolResponse = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -202,14 +178,6 @@ export const getProtocol1Response = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -256,14 +224,6 @@ export const updateProtocol1Body = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
 });
 
@@ -301,14 +261,6 @@ export const updateProtocol1Response = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -333,6 +285,7 @@ export const updateRootCauseResponse = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -354,10 +307,10 @@ export const updateRootCauseResponse = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -386,7 +339,7 @@ export const updateRootCauseResponse = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -413,6 +366,7 @@ export const updateRootCause1Response = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -434,10 +388,10 @@ export const updateRootCause1Response = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -466,7 +420,7 @@ export const updateRootCause1Response = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -578,14 +532,6 @@ export const getProtocolsResponseItem = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -636,14 +582,6 @@ export const createProtocolBody = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
 });
 
@@ -681,14 +619,6 @@ export const createProtocolResponse = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -736,14 +666,6 @@ export const getProtocols1ResponseItem = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -794,14 +716,6 @@ export const createProtocol1Body = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
 });
 
@@ -839,14 +753,6 @@ export const createProtocol1Response = zod.object({
     confirmationTimeoutSeconds: zod.number().optional(),
     autoExecuteOnTimeout: zod.boolean().optional(),
     priority: zod.number().optional(),
-    thresholds: zod.any().optional(),
-    conditions: zod.any().optional(),
-    notifyPilot: zod.boolean().optional(),
-    notifySupervisor: zod.boolean().optional(),
-    notifyOpsCenter: zod.boolean().optional(),
-    sendSms: zod.boolean().optional(),
-    sendEmail: zod.boolean().optional(),
-    playAudioAlarm: zod.boolean().optional(),
     isActive: zod.boolean().optional(),
     isSystemDefault: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
@@ -854,21 +760,27 @@ export const createProtocol1Response = zod.object({
 });
 
 /**
- * @summary Operator confirm or reject emergency failsafe action
+ * @summary Manually resolve an active, pending, executing, or escalated emergency incident
  */
-export const confirmIncidentParams = zod.object({
+export const resolveIncidentParams = zod.object({
     id: zod.string(),
 });
 
-export const confirmIncidentBody = zod.object({
-    approved: zod.boolean(),
-});
+export const resolveIncidentBody = zod
+    .object({
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Operator notes describing how the incident was resolved"),
+    })
+    .describe("Optional payload when manually resolving an emergency incident");
 
-export const confirmIncidentResponse = zod.object({
+export const resolveIncidentResponse = zod.object({
     id: zod.string().optional(),
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -890,10 +802,10 @@ export const confirmIncidentResponse = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -922,7 +834,170 @@ export const confirmIncidentResponse = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
+            })
+        )
+        .optional(),
+    detectedAt: zod.iso.datetime({}).optional(),
+    createdOn: zod.iso.datetime({}).optional(),
+    lastModifiedOn: zod.iso.datetime({}).optional(),
+});
+
+/**
+ * @summary Manually resolve an active, pending, executing, or escalated emergency incident
+ */
+export const resolveIncident1Params = zod.object({
+    id: zod.string(),
+});
+
+export const resolveIncident1Body = zod
+    .object({
+        resolutionNotes: zod
+            .string()
+            .optional()
+            .describe("Operator notes describing how the incident was resolved"),
+    })
+    .describe("Optional payload when manually resolving an emergency incident");
+
+export const resolveIncident1Response = zod.object({
+    id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
+    droneId: zod.string().optional(),
+    flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    status: zod
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
+        .optional(),
+    message: zod.string().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
+    latitude: zod.number().optional(),
+    longitude: zod.number().optional(),
+    altitude: zod.number().optional(),
+    responseAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    wasAutoExecuted: zod.boolean().optional(),
+    confirmationRequired: zod.boolean().optional(),
+    confirmedBy: zod.string().optional(),
+    confirmedAt: zod.iso.datetime({}).optional(),
+    confirmationTimeoutAt: zod.iso.datetime({}).optional(),
+    actionStartedAt: zod.iso.datetime({}).optional(),
+    actionCompletedAt: zod.iso.datetime({}).optional(),
+    actionSuccess: zod.boolean().optional(),
+    actionError: zod.string().optional(),
+    resolvedAt: zod.iso.datetime({}).optional(),
+    resolvedBy: zod.string().optional(),
+    resolutionNotes: zod.string().optional(),
+    rootCause: zod
+        .enum(["equipment", "weather", "pilot_error", "software", "external", "unknown"])
+        .optional(),
+    rootCauseNotes: zod.string().optional(),
+    lessonsLearned: zod.string().optional(),
+    timeline: zod
+        .array(
+            zod.object({
+                timestamp: zod.string().optional(),
+                event: zod.string().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
+            })
+        )
+        .optional(),
+    detectedAt: zod.iso.datetime({}).optional(),
+    createdOn: zod.iso.datetime({}).optional(),
+    lastModifiedOn: zod.iso.datetime({}).optional(),
+});
+
+/**
+ * @summary Operator confirm or reject emergency failsafe action
+ */
+export const confirmIncidentParams = zod.object({
+    id: zod.string(),
+});
+
+export const confirmIncidentBody = zod.object({
+    approved: zod.boolean(),
+});
+
+export const confirmIncidentResponse = zod.object({
+    id: zod.string().optional(),
+    incidentNumber: zod.string().optional(),
+    droneId: zod.string().optional(),
+    flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    severity: zod.enum(["warning", "critical", "emergency"]).optional(),
+    status: zod
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
+        .optional(),
+    message: zod.string().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
+    latitude: zod.number().optional(),
+    longitude: zod.number().optional(),
+    altitude: zod.number().optional(),
+    responseAction: zod
+        .enum(["RTH", "LAND", "HOVER", "DIVERT", "DESCEND", "CLIMB", "ESTOP", "NONE"])
+        .optional(),
+    wasAutoExecuted: zod.boolean().optional(),
+    confirmationRequired: zod.boolean().optional(),
+    confirmedBy: zod.string().optional(),
+    confirmedAt: zod.iso.datetime({}).optional(),
+    confirmationTimeoutAt: zod.iso.datetime({}).optional(),
+    actionStartedAt: zod.iso.datetime({}).optional(),
+    actionCompletedAt: zod.iso.datetime({}).optional(),
+    actionSuccess: zod.boolean().optional(),
+    actionError: zod.string().optional(),
+    resolvedAt: zod.iso.datetime({}).optional(),
+    resolvedBy: zod.string().optional(),
+    resolutionNotes: zod.string().optional(),
+    rootCause: zod
+        .enum(["equipment", "weather", "pilot_error", "software", "external", "unknown"])
+        .optional(),
+    rootCauseNotes: zod.string().optional(),
+    lessonsLearned: zod.string().optional(),
+    timeline: zod
+        .array(
+            zod.object({
+                timestamp: zod.string().optional(),
+                event: zod.string().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -947,6 +1022,7 @@ export const confirmIncident1Response = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -968,10 +1044,10 @@ export const confirmIncident1Response = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -1000,7 +1076,7 @@ export const confirmIncident1Response = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -1052,6 +1128,7 @@ export const getIncidentsResponse = zod.object({
                 incidentNumber: zod.string().optional(),
                 droneId: zod.string().optional(),
                 flightId: zod.string().optional(),
+                protocolId: zod.string().optional(),
                 emergencyType: zod
                     .enum([
                         "battery_low",
@@ -1073,10 +1150,17 @@ export const getIncidentsResponse = zod.object({
                     .optional(),
                 severity: zod.enum(["warning", "critical", "emergency"]).optional(),
                 status: zod
-                    .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+                    .enum([
+                        "active",
+                        "pending_confirmation",
+                        "executing",
+                        "resolved",
+                        "rejected",
+                        "escalated",
+                    ])
                     .optional(),
                 message: zod.string().optional(),
-                detectionData: zod.any().optional(),
+                detectionData: zod.record(zod.string(), zod.any()).optional(),
                 latitude: zod.number().optional(),
                 longitude: zod.number().optional(),
                 altitude: zod.number().optional(),
@@ -1112,7 +1196,7 @@ export const getIncidentsResponse = zod.object({
                         zod.object({
                             timestamp: zod.string().optional(),
                             event: zod.string().optional(),
-                            data: zod.any().optional(),
+                            data: zod.record(zod.string(), zod.any()).optional(),
                         })
                     )
                     .optional(),
@@ -1130,10 +1214,17 @@ export const getIncidentsResponse = zod.object({
 /**
  * @summary Report and ingest a new emergency incident from flight watchdog or telemetry
  */
+export const createIncidentBodyIncidentNumberMin = 3;
+export const createIncidentBodyIncidentNumberMax = 50;
+export const createIncidentBodyIncidentNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const createIncidentBody = zod
     .object({
         incidentNumber: zod
             .string()
+            .min(createIncidentBodyIncidentNumberMin)
+            .max(createIncidentBodyIncidentNumberMax)
+            .regex(createIncidentBodyIncidentNumberRegExp)
             .optional()
             .describe(
                 "Incident investigation tracking number (e.g. INC-YYYYMMDD-XXXX). If omitted or blank, auto-generated."
@@ -1176,6 +1267,7 @@ export const createIncidentResponse = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -1197,10 +1289,10 @@ export const createIncidentResponse = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -1229,7 +1321,7 @@ export const createIncidentResponse = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -1281,6 +1373,7 @@ export const getIncidents1Response = zod.object({
                 incidentNumber: zod.string().optional(),
                 droneId: zod.string().optional(),
                 flightId: zod.string().optional(),
+                protocolId: zod.string().optional(),
                 emergencyType: zod
                     .enum([
                         "battery_low",
@@ -1302,10 +1395,17 @@ export const getIncidents1Response = zod.object({
                     .optional(),
                 severity: zod.enum(["warning", "critical", "emergency"]).optional(),
                 status: zod
-                    .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+                    .enum([
+                        "active",
+                        "pending_confirmation",
+                        "executing",
+                        "resolved",
+                        "rejected",
+                        "escalated",
+                    ])
                     .optional(),
                 message: zod.string().optional(),
-                detectionData: zod.any().optional(),
+                detectionData: zod.record(zod.string(), zod.any()).optional(),
                 latitude: zod.number().optional(),
                 longitude: zod.number().optional(),
                 altitude: zod.number().optional(),
@@ -1341,7 +1441,7 @@ export const getIncidents1Response = zod.object({
                         zod.object({
                             timestamp: zod.string().optional(),
                             event: zod.string().optional(),
-                            data: zod.any().optional(),
+                            data: zod.record(zod.string(), zod.any()).optional(),
                         })
                     )
                     .optional(),
@@ -1359,10 +1459,17 @@ export const getIncidents1Response = zod.object({
 /**
  * @summary Report and ingest a new emergency incident from flight watchdog or telemetry
  */
+export const createIncident1BodyIncidentNumberMin = 3;
+export const createIncident1BodyIncidentNumberMax = 50;
+export const createIncident1BodyIncidentNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const createIncident1Body = zod
     .object({
         incidentNumber: zod
             .string()
+            .min(createIncident1BodyIncidentNumberMin)
+            .max(createIncident1BodyIncidentNumberMax)
+            .regex(createIncident1BodyIncidentNumberRegExp)
             .optional()
             .describe(
                 "Incident investigation tracking number (e.g. INC-YYYYMMDD-XXXX). If omitted or blank, auto-generated."
@@ -1405,6 +1512,7 @@ export const createIncident1Response = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -1426,10 +1534,10 @@ export const createIncident1Response = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -1458,7 +1566,7 @@ export const createIncident1Response = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -1632,31 +1740,32 @@ export const getIncidentBlackboxResponseItem = zod.object({
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitudeMsl: zod.number().optional(),
-    altitudeAgl: zod.number().optional(),
-    roll: zod.number().optional(),
-    pitch: zod.number().optional(),
-    yaw: zod.number().optional(),
     groundSpeed: zod.number().optional(),
-    verticalSpeed: zod.number().optional(),
     heading: zod.number().optional(),
     batteryLevel: zod.number().optional(),
-    batteryVoltage: zod.number().optional(),
-    batteryCurrent: zod.number().optional(),
     signalStrength: zod.number().optional(),
-    gpsSatellites: zod.number().optional(),
-    gpsHdop: zod.number().optional(),
-    motorRpm: zod.array(zod.number()).optional(),
-    motorTemps: zod.array(zod.number()).optional(),
-    commandReceived: zod.string().optional(),
     commandExecuted: zod.string().optional(),
     emergencyActive: zod.boolean().optional(),
-    emergencyType: zod.string().optional(),
-    emergencySeverity: zod.string().optional(),
-    flightMode: zod.string().optional(),
-    windSpeed: zod.number().optional(),
-    windDirection: zod.number().optional(),
-    temperature: zod.number().optional(),
-    humidity: zod.number().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    emergencySeverity: zod.enum(["warning", "critical", "emergency"]).optional(),
     isEmergencyRecording: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
 });
@@ -1683,31 +1792,32 @@ export const getIncidentBlackbox1ResponseItem = zod.object({
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitudeMsl: zod.number().optional(),
-    altitudeAgl: zod.number().optional(),
-    roll: zod.number().optional(),
-    pitch: zod.number().optional(),
-    yaw: zod.number().optional(),
     groundSpeed: zod.number().optional(),
-    verticalSpeed: zod.number().optional(),
     heading: zod.number().optional(),
     batteryLevel: zod.number().optional(),
-    batteryVoltage: zod.number().optional(),
-    batteryCurrent: zod.number().optional(),
     signalStrength: zod.number().optional(),
-    gpsSatellites: zod.number().optional(),
-    gpsHdop: zod.number().optional(),
-    motorRpm: zod.array(zod.number()).optional(),
-    motorTemps: zod.array(zod.number()).optional(),
-    commandReceived: zod.string().optional(),
     commandExecuted: zod.string().optional(),
     emergencyActive: zod.boolean().optional(),
-    emergencyType: zod.string().optional(),
-    emergencySeverity: zod.string().optional(),
-    flightMode: zod.string().optional(),
-    windSpeed: zod.number().optional(),
-    windDirection: zod.number().optional(),
-    temperature: zod.number().optional(),
-    humidity: zod.number().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    emergencySeverity: zod.enum(["warning", "critical", "emergency"]).optional(),
     isEmergencyRecording: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
 });
@@ -1725,6 +1835,7 @@ export const getIncidentResponse = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -1746,10 +1857,10 @@ export const getIncidentResponse = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -1778,7 +1889,7 @@ export const getIncidentResponse = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -1799,6 +1910,7 @@ export const getIncident1Response = zod.object({
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -1820,10 +1932,10 @@ export const getIncident1Response = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -1852,7 +1964,7 @@ export const getIncident1Response = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -1872,6 +1984,7 @@ export const getPendingConfirmationsResponseItem = zod.object({
             incidentNumber: zod.string().optional(),
             droneId: zod.string().optional(),
             flightId: zod.string().optional(),
+            protocolId: zod.string().optional(),
             emergencyType: zod
                 .enum([
                     "battery_low",
@@ -1893,10 +2006,17 @@ export const getPendingConfirmationsResponseItem = zod.object({
                 .optional(),
             severity: zod.enum(["warning", "critical", "emergency"]).optional(),
             status: zod
-                .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+                .enum([
+                    "active",
+                    "pending_confirmation",
+                    "executing",
+                    "resolved",
+                    "rejected",
+                    "escalated",
+                ])
                 .optional(),
             message: zod.string().optional(),
-            detectionData: zod.any().optional(),
+            detectionData: zod.record(zod.string(), zod.any()).optional(),
             latitude: zod.number().optional(),
             longitude: zod.number().optional(),
             altitude: zod.number().optional(),
@@ -1925,7 +2045,7 @@ export const getPendingConfirmationsResponseItem = zod.object({
                     zod.object({
                         timestamp: zod.string().optional(),
                         event: zod.string().optional(),
-                        data: zod.any().optional(),
+                        data: zod.record(zod.string(), zod.any()).optional(),
                     })
                 )
                 .optional(),
@@ -1969,14 +2089,6 @@ export const getPendingConfirmationsResponseItem = zod.object({
             confirmationTimeoutSeconds: zod.number().optional(),
             autoExecuteOnTimeout: zod.boolean().optional(),
             priority: zod.number().optional(),
-            thresholds: zod.any().optional(),
-            conditions: zod.any().optional(),
-            notifyPilot: zod.boolean().optional(),
-            notifySupervisor: zod.boolean().optional(),
-            notifyOpsCenter: zod.boolean().optional(),
-            sendSms: zod.boolean().optional(),
-            sendEmail: zod.boolean().optional(),
-            playAudioAlarm: zod.boolean().optional(),
             isActive: zod.boolean().optional(),
             isSystemDefault: zod.boolean().optional(),
             createdOn: zod.iso.datetime({}).optional(),
@@ -1998,6 +2110,7 @@ export const getPendingConfirmations1ResponseItem = zod.object({
             incidentNumber: zod.string().optional(),
             droneId: zod.string().optional(),
             flightId: zod.string().optional(),
+            protocolId: zod.string().optional(),
             emergencyType: zod
                 .enum([
                     "battery_low",
@@ -2019,10 +2132,17 @@ export const getPendingConfirmations1ResponseItem = zod.object({
                 .optional(),
             severity: zod.enum(["warning", "critical", "emergency"]).optional(),
             status: zod
-                .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+                .enum([
+                    "active",
+                    "pending_confirmation",
+                    "executing",
+                    "resolved",
+                    "rejected",
+                    "escalated",
+                ])
                 .optional(),
             message: zod.string().optional(),
-            detectionData: zod.any().optional(),
+            detectionData: zod.record(zod.string(), zod.any()).optional(),
             latitude: zod.number().optional(),
             longitude: zod.number().optional(),
             altitude: zod.number().optional(),
@@ -2051,7 +2171,7 @@ export const getPendingConfirmations1ResponseItem = zod.object({
                     zod.object({
                         timestamp: zod.string().optional(),
                         event: zod.string().optional(),
-                        data: zod.any().optional(),
+                        data: zod.record(zod.string(), zod.any()).optional(),
                     })
                 )
                 .optional(),
@@ -2095,14 +2215,6 @@ export const getPendingConfirmations1ResponseItem = zod.object({
             confirmationTimeoutSeconds: zod.number().optional(),
             autoExecuteOnTimeout: zod.boolean().optional(),
             priority: zod.number().optional(),
-            thresholds: zod.any().optional(),
-            conditions: zod.any().optional(),
-            notifyPilot: zod.boolean().optional(),
-            notifySupervisor: zod.boolean().optional(),
-            notifyOpsCenter: zod.boolean().optional(),
-            sendSms: zod.boolean().optional(),
-            sendEmail: zod.boolean().optional(),
-            playAudioAlarm: zod.boolean().optional(),
             isActive: zod.boolean().optional(),
             isSystemDefault: zod.boolean().optional(),
             createdOn: zod.iso.datetime({}).optional(),
@@ -2114,13 +2226,14 @@ export const getPendingConfirmations1ResponseItem = zod.object({
 export const getPendingConfirmations1Response = zod.array(getPendingConfirmations1ResponseItem);
 
 /**
- * @summary Get all active, pending, and executing incidents for map radar
+ * @summary Get all active, pending, executing, and escalated incidents for map radar
  */
 export const getActiveIncidentsResponseItem = zod.object({
     id: zod.string().optional(),
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -2142,10 +2255,10 @@ export const getActiveIncidentsResponseItem = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -2174,7 +2287,7 @@ export const getActiveIncidentsResponseItem = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -2185,13 +2298,14 @@ export const getActiveIncidentsResponseItem = zod.object({
 export const getActiveIncidentsResponse = zod.array(getActiveIncidentsResponseItem);
 
 /**
- * @summary Get all active, pending, and executing incidents for map radar
+ * @summary Get all active, pending, executing, and escalated incidents for map radar
  */
 export const getActiveIncidents1ResponseItem = zod.object({
     id: zod.string().optional(),
     incidentNumber: zod.string().optional(),
     droneId: zod.string().optional(),
     flightId: zod.string().optional(),
+    protocolId: zod.string().optional(),
     emergencyType: zod
         .enum([
             "battery_low",
@@ -2213,10 +2327,10 @@ export const getActiveIncidents1ResponseItem = zod.object({
         .optional(),
     severity: zod.enum(["warning", "critical", "emergency"]).optional(),
     status: zod
-        .enum(["active", "pending_confirmation", "executing", "resolved", "escalated"])
+        .enum(["active", "pending_confirmation", "executing", "resolved", "rejected", "escalated"])
         .optional(),
     message: zod.string().optional(),
-    detectionData: zod.any().optional(),
+    detectionData: zod.record(zod.string(), zod.any()).optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitude: zod.number().optional(),
@@ -2245,7 +2359,7 @@ export const getActiveIncidents1ResponseItem = zod.object({
             zod.object({
                 timestamp: zod.string().optional(),
                 event: zod.string().optional(),
-                data: zod.any().optional(),
+                data: zod.record(zod.string(), zod.any()).optional(),
             })
         )
         .optional(),
@@ -2295,31 +2409,32 @@ export const getFlightBlackboxResponseItem = zod.object({
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitudeMsl: zod.number().optional(),
-    altitudeAgl: zod.number().optional(),
-    roll: zod.number().optional(),
-    pitch: zod.number().optional(),
-    yaw: zod.number().optional(),
     groundSpeed: zod.number().optional(),
-    verticalSpeed: zod.number().optional(),
     heading: zod.number().optional(),
     batteryLevel: zod.number().optional(),
-    batteryVoltage: zod.number().optional(),
-    batteryCurrent: zod.number().optional(),
     signalStrength: zod.number().optional(),
-    gpsSatellites: zod.number().optional(),
-    gpsHdop: zod.number().optional(),
-    motorRpm: zod.array(zod.number()).optional(),
-    motorTemps: zod.array(zod.number()).optional(),
-    commandReceived: zod.string().optional(),
     commandExecuted: zod.string().optional(),
     emergencyActive: zod.boolean().optional(),
-    emergencyType: zod.string().optional(),
-    emergencySeverity: zod.string().optional(),
-    flightMode: zod.string().optional(),
-    windSpeed: zod.number().optional(),
-    windDirection: zod.number().optional(),
-    temperature: zod.number().optional(),
-    humidity: zod.number().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    emergencySeverity: zod.enum(["warning", "critical", "emergency"]).optional(),
     isEmergencyRecording: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
 });
@@ -2349,31 +2464,32 @@ export const getFlightBlackbox1ResponseItem = zod.object({
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     altitudeMsl: zod.number().optional(),
-    altitudeAgl: zod.number().optional(),
-    roll: zod.number().optional(),
-    pitch: zod.number().optional(),
-    yaw: zod.number().optional(),
     groundSpeed: zod.number().optional(),
-    verticalSpeed: zod.number().optional(),
     heading: zod.number().optional(),
     batteryLevel: zod.number().optional(),
-    batteryVoltage: zod.number().optional(),
-    batteryCurrent: zod.number().optional(),
     signalStrength: zod.number().optional(),
-    gpsSatellites: zod.number().optional(),
-    gpsHdop: zod.number().optional(),
-    motorRpm: zod.array(zod.number()).optional(),
-    motorTemps: zod.array(zod.number()).optional(),
-    commandReceived: zod.string().optional(),
     commandExecuted: zod.string().optional(),
     emergencyActive: zod.boolean().optional(),
-    emergencyType: zod.string().optional(),
-    emergencySeverity: zod.string().optional(),
-    flightMode: zod.string().optional(),
-    windSpeed: zod.number().optional(),
-    windDirection: zod.number().optional(),
-    temperature: zod.number().optional(),
-    humidity: zod.number().optional(),
+    emergencyType: zod
+        .enum([
+            "battery_low",
+            "battery_critical",
+            "battery_rapid_discharge",
+            "signal_weak",
+            "signal_lost",
+            "geofence_warning",
+            "geofence_breach",
+            "collision_aircraft",
+            "collision_obstacle",
+            "weather_wind",
+            "weather_visibility",
+            "motor_anomaly",
+            "motor_failure",
+            "gps_degraded",
+            "gps_lost",
+        ])
+        .optional(),
+    emergencySeverity: zod.enum(["warning", "critical", "emergency"]).optional(),
     isEmergencyRecording: zod.boolean().optional(),
     createdOn: zod.iso.datetime({}).optional(),
 });

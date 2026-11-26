@@ -28,6 +28,7 @@ export function useCrudList<T extends { id?: string }>({
     const {
         data,
         isLoading: loading,
+        isError,
         refetch,
     } = useQuery({
         queryKey,
@@ -89,6 +90,7 @@ export function useCrudList<T extends { id?: string }>({
     return {
         items,
         loading,
+        isError,
         refresh,
         isModalOpen,
         itemToEdit,

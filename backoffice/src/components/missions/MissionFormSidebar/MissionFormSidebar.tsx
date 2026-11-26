@@ -14,6 +14,7 @@ import { MissionWaypointsTab } from "./MissionWaypointsTab";
 import { MissionScheduleTab } from "./MissionScheduleTab";
 
 export interface MissionFormSidebarProps {
+    missionId?: string;
     formData: MissionFormPayload;
     onFormChange: <K extends keyof MissionFormPayload>(
         field: K,
@@ -28,6 +29,7 @@ export interface MissionFormSidebarProps {
     waypoints: Waypoint[];
     selectedWaypoint: Waypoint | null;
     onSelectWaypoint: (wp: Waypoint | null) => void;
+    onAddHubWaypoint: (hub: Hub) => void;
     onUpdateWaypoint: (wp: Waypoint) => void;
     onDeleteWaypoint: (wpId: string) => void;
     onMoveWaypointOrder: (fromIndex: number, toIndex: number) => void;
@@ -35,11 +37,14 @@ export interface MissionFormSidebarProps {
     onTabChange: (tab: "details" | "waypoints" | "schedule") => void;
     isEdit: boolean;
     isReadOnly: boolean;
+    onAutoPlanHubs?: () => void;
+    isAutoPlanning?: boolean;
     fieldErrors: Record<string, string>;
     onClearFieldError: (field: string) => void;
 }
 
 export function MissionFormSidebar({
+    missionId,
     formData,
     onFormChange,
     droneId,
@@ -51,6 +56,7 @@ export function MissionFormSidebar({
     waypoints = [],
     selectedWaypoint,
     onSelectWaypoint,
+    onAddHubWaypoint,
     onUpdateWaypoint,
     onDeleteWaypoint,
     onMoveWaypointOrder,
@@ -58,6 +64,8 @@ export function MissionFormSidebar({
     onTabChange,
     isEdit = false,
     isReadOnly = false,
+    onAutoPlanHubs,
+    isAutoPlanning = false,
     fieldErrors = {},
     onClearFieldError,
 }: MissionFormSidebarProps) {
@@ -151,6 +159,7 @@ export function MissionFormSidebar({
                 <div className="flex-1 min-h-0 p-5 overflow-y-auto space-y-4">
                     {activeTab === "details" && (
                         <MissionDetailsTab
+                            missionId={missionId}
                             formData={formData}
                             onFormChange={onFormChange}
                             droneId={droneId}
@@ -170,12 +179,16 @@ export function MissionFormSidebar({
                             waypoints={waypoints}
                             selectedWaypoint={selectedWaypoint}
                             onSelectWaypoint={onSelectWaypoint}
+                            onAddHubWaypoint={onAddHubWaypoint}
                             onUpdateWaypoint={onUpdateWaypoint}
                             onDeleteWaypoint={onDeleteWaypoint}
                             onMoveWaypointOrder={onMoveWaypointOrder}
                             departureHub={departureHub}
                             arrivalHub={arrivalHub}
+                            hubs={hubs}
                             isReadOnly={isReadOnly}
+                            onAutoPlanHubs={onAutoPlanHubs}
+                            isAutoPlanning={isAutoPlanning}
                             fieldErrors={fieldErrors}
                             onClearFieldError={onClearFieldError}
                         />

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { forwardRef } from "react";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib";
 import { Tooltip } from "./Tooltip";
+import { Skeleton } from "./Skeleton";
 
 export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
     fixed?: boolean;
@@ -62,15 +62,28 @@ export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement>
 }
 
 export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
-    ({ selected = false, onClick, className, children, ...props }, ref) => {
+    ({ selected = false, onClick, onKeyDown, tabIndex, className, children, ...props }, ref) => {
+        const isInteractive = Boolean(onClick);
+        const handleKeyDown: React.KeyboardEventHandler<HTMLTableRowElement> = (e) => {
+            onKeyDown?.(e);
+            if (!e.defaultPrevented && onClick && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                onClick(e as unknown as React.MouseEvent<HTMLTableRowElement>);
+            }
+        };
+
         return (
             <tr
                 ref={ref}
                 onClick={onClick}
+                onKeyDown={isInteractive ? handleKeyDown : onKeyDown}
+                tabIndex={isInteractive ? (tabIndex ?? 0) : tabIndex}
+                aria-selected={isInteractive ? selected : undefined}
                 className={cn(
                     "transition-colors duration-150 hover:bg-[var(--color-surface-base)]",
-                    Boolean(onClick) && "cursor-pointer",
-                    selected && "!bg-[var(--color-surface-card)]",
+                    isInteractive &&
+                        "cursor-pointer focus-visible:outline-none focus-visible:bg-slate-100",
+                    selected && "!bg-slate-100/90",
                     className
                 )}
                 {...props}
@@ -148,7 +161,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
                 <span
                     className={cn(
                         truncate && "block max-w-full truncate",
-                        mono && "font-mono",
+                        mono && "font-mono tabular-nums",
                         bold && "font-semibold",
                         muted && "text-[var(--color-text-secondary)] font-medium",
                         subtle && "text-[var(--color-text-muted)]",
@@ -187,18 +200,41 @@ TableCell.displayName = "TableCell";
 
 export interface TableLoadingProps {
     colSpan?: number;
+    rows?: number;
     message?: string;
 }
 
-export function TableLoading({ colSpan = 1, message = "Loading..." }: TableLoadingProps) {
+const SKELETON_WIDTHS = ["w-24", "w-32", "w-20", "w-28", "w-16", "w-24", "w-20", "w-14"];
+
+export function TableLoading({ colSpan = 1, rows = 5, message = "Loading..." }: TableLoadingProps) {
+    const columns = Math.max(1, colSpan);
     return (
-        <tr>
-            <td colSpan={colSpan} className="py-16 text-center">
-                <div className="flex flex-col items-center justify-center gap-2 w-full text-[var(--color-text-muted)] text-[13px] font-medium">
-                    <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
-                    <span>{message}</span>
-                </div>
-            </td>
-        </tr>
+        <>
+            {Array.from({ length: rows }).map((_, rowIdx) => (
+                <tr
+                    key={`table-skeleton-${rowIdx}`}
+                    aria-hidden={rowIdx > 0}
+                    className="border-b border-[var(--color-border-subtle)] last:border-b-0"
+                >
+                    {Array.from({ length: columns }).map((__, colIdx) => (
+                        <td key={`cell-${rowIdx}-${colIdx}`} className="px-4 py-3.5">
+                            <Skeleton
+                                className={cn(
+                                    "h-4",
+                                    colIdx === columns - 1 && columns > 2
+                                        ? "w-12 ml-auto"
+                                        : SKELETON_WIDTHS[
+                                              (rowIdx + colIdx) % SKELETON_WIDTHS.length
+                                          ]
+                                )}
+                            />
+                        </td>
+                    ))}
+                </tr>
+            ))}
+            <tr className="sr-only" role="status" aria-live="polite">
+                <td colSpan={columns}>{message}</td>
+            </tr>
+        </>
     );
 }

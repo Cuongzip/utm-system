@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { cn } from "@/lib";
 
-export type ChamferButtonVariant = "dark" | "outline" | "danger";
+export type ChamferButtonVariant = "dark" | "outline";
 export type ChamferButtonSize = "xs" | "sm" | "md";
 export type ChamferButtonClip = "xs" | "sm";
 
@@ -11,6 +12,9 @@ export interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButto
     variant?: ChamferButtonVariant;
     size?: ChamferButtonSize;
     clip?: ChamferButtonClip;
+    href?: string;
+    external?: boolean;
+    nativeAnchor?: boolean;
     children: React.ReactNode;
 }
 
@@ -27,13 +31,15 @@ const SIZE_CLASSES: Record<ChamferButtonSize, string> = {
 
 const SOLID_VARIANTS: Record<Exclude<ChamferButtonVariant, "outline">, string> = {
     dark: "bg-[var(--color-border-dark)] text-white hover:bg-[#1e293b]",
-    danger: "bg-[var(--color-tech-red)] text-white hover:bg-[var(--color-tech-red-hover)]",
 };
 
 export function ChamferButton({
     variant = "dark",
     size = "sm",
     clip,
+    href,
+    external = false,
+    nativeAnchor = false,
     className,
     disabled,
     type = "button",
@@ -46,46 +52,121 @@ export function ChamferButton({
     const sizeClass = SIZE_CLASSES[size];
 
     if (variant === "outline") {
-        return (
-            <button
-                type={type}
-                disabled={disabled}
+        const outlineWrapperClass = cn(
+            "group relative p-[1px] inline-flex items-center justify-center transition-colors cursor-pointer border-none font-bold no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1",
+            "bg-[#cbd5e1] hover:bg-[#94a3b8]",
+            clipClass,
+            disabled && "opacity-50 cursor-not-allowed pointer-events-none",
+            className
+        );
+        const outlineInner = (
+            <span
                 className={cn(
-                    "group relative p-[1px] inline-flex items-center justify-center transition-colors cursor-pointer border-none font-bold",
-                    "bg-[#cbd5e1] hover:bg-[#94a3b8]",
+                    "w-full h-full inline-flex items-center justify-center bg-white group-hover:bg-[#f8fafc] group-active:bg-slate-100 text-[#334155] transition-colors pointer-events-none",
                     clipClass,
-                    disabled && "opacity-50 cursor-not-allowed pointer-events-none",
-                    className
+                    sizeClass
                 )}
-                {...props}
             >
-                <span
-                    className={cn(
-                        "w-full h-full inline-flex items-center justify-center bg-white group-hover:bg-[#f8fafc] group-active:bg-slate-100 text-[#334155] transition-colors pointer-events-none",
-                        clipClass,
-                        sizeClass
-                    )}
+                {children}
+            </span>
+        );
+
+        if (href && !disabled) {
+            if (external) {
+                return (
+                    <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={props["aria-label"]}
+                        title={props.title}
+                        className={outlineWrapperClass}
+                    >
+                        {outlineInner}
+                    </a>
+                );
+            }
+            if (nativeAnchor) {
+                return (
+                    <a
+                        href={href}
+                        aria-label={props["aria-label"]}
+                        title={props.title}
+                        className={outlineWrapperClass}
+                    >
+                        {outlineInner}
+                    </a>
+                );
+            }
+            return (
+                <Link
+                    href={href}
+                    aria-label={props["aria-label"]}
+                    title={props.title}
+                    className={outlineWrapperClass}
                 >
-                    {children}
-                </span>
+                    {outlineInner}
+                </Link>
+            );
+        }
+
+        return (
+            <button type={type} disabled={disabled} className={outlineWrapperClass} {...props}>
+                {outlineInner}
             </button>
         );
     }
 
+    const solidClass = cn(
+        "inline-flex items-center justify-center transition-colors cursor-pointer border-none font-bold no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1",
+        clipClass,
+        sizeClass,
+        SOLID_VARIANTS[variant],
+        disabled && "opacity-50 cursor-not-allowed pointer-events-none",
+        className
+    );
+
+    if (href && !disabled) {
+        if (external) {
+            return (
+                <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={props["aria-label"]}
+                    title={props.title}
+                    className={solidClass}
+                >
+                    {children}
+                </a>
+            );
+        }
+        if (nativeAnchor) {
+            return (
+                <a
+                    href={href}
+                    aria-label={props["aria-label"]}
+                    title={props.title}
+                    className={solidClass}
+                >
+                    {children}
+                </a>
+            );
+        }
+        return (
+            <Link
+                href={href}
+                aria-label={props["aria-label"]}
+                title={props.title}
+                className={solidClass}
+            >
+                {children}
+            </Link>
+        );
+    }
+
     return (
-        <button
-            type={type}
-            disabled={disabled}
-            className={cn(
-                "inline-flex items-center justify-center transition-colors cursor-pointer border-none font-bold",
-                clipClass,
-                sizeClass,
-                SOLID_VARIANTS[variant],
-                disabled && "opacity-50 cursor-not-allowed",
-                className
-            )}
-            {...props}
-        >
+        <button type={type} disabled={disabled} className={solidClass} {...props}>
             {children}
         </button>
     );

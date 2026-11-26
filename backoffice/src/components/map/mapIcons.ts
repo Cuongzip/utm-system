@@ -42,3 +42,19 @@ export function getWaypointIconUri(index: number, isSelected: boolean = false): 
 </svg>`;
     return createSvgDataUri(svg);
 }
+
+export function getAircraftIconUri(color: string = "#f59e0b"): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <circle cx="16" cy="16" r="13" fill="#0f172a" fill-opacity="0.88" stroke="${color}" stroke-width="1.8"/>
+  <path d="M16 6 L18 13 L25 16 L25 18 L18 17 L17.5 22 L20.5 24 L20.5 25.5 L16 24.5 L11.5 25.5 L11.5 24 L14.5 22 L14 17 L7 18 L7 16 L14 13 Z" fill="${color}"/>
+</svg>`;
+    return createSvgDataUri(svg);
+}
+
+export function getConflictMarkerUri(): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34" fill="none">
+  <polygon points="17,2 32,17 17,32 2,17" fill="#7f1d1d" fill-opacity="0.92" stroke="#ef4444" stroke-width="2.2"/>
+  <text x="17" y="22" font-family="system-ui, sans-serif" font-weight="900" font-size="15" fill="#ffffff" text-anchor="middle">!</text>
+</svg>`;
+    return createSvgDataUri(svg);
+}

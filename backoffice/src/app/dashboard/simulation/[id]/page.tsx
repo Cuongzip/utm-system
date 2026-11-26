@@ -3,8 +3,16 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
-import { ChamferButton, StatusBadge, EmptyState, PageHeader } from "@/components/ui";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import {
+    ChamferButton,
+    ChamferCard,
+    KpiStrip,
+    StatusBadge,
+    EmptyState,
+    PageHeader,
+    Skeleton,
+} from "@/components/ui";
 import {
     SessionControlsPanel,
     SessionTelemetryCards,
@@ -12,7 +20,7 @@ import {
     SessionLiveFeed,
 } from "@/components/simulation";
 import { simulationService } from "@/services/simulationService";
-import { QUERY_KEYS } from "@/hooks";
+import { QUERY_KEYS, useFlightsAll } from "@/hooks";
 import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS } from "@/types";
 
 interface SimulationDetailPageProps {
@@ -22,6 +30,7 @@ interface SimulationDetailPageProps {
 export default function SimulationDetailPage({ params }: SimulationDetailPageProps) {
     const { id } = use(params);
     const router = useRouter();
+    const { data: flights = [] } = useFlightsAll();
 
     const {
         data: session,
@@ -37,26 +46,49 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
         },
     });
 
+    const flightNumber = session?.flightId
+        ? (flights.find((f) => f.id === session.flightId)?.flightNumber ?? null)
+        : null;
+
     if (isLoading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[400px]">
-                <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
-                    <span className="text-xs font-mono text-slate-500">
-                        Loading simulation session...
-                    </span>
+            <div
+                role="status"
+                aria-busy="true"
+                aria-label="Loading simulation session"
+                className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full"
+            >
+                <div className="flex items-center justify-between">
+                    <Skeleton className="h-7 w-56" />
+                    <Skeleton className="h-9 w-28" />
                 </div>
+                <KpiStrip
+                    loading
+                    items={[
+                        { id: "bat", label: "BATTERY", value: "—" },
+                        { id: "spd", label: "SPEED", value: "—" },
+                        { id: "alt", label: "ALTITUDE & HEADING", value: "—" },
+                        { id: "traj", label: "TRAJECTORY", value: "—" },
+                    ]}
+                />
+                <ChamferCard size="lg">
+                    <div className="p-5 flex flex-col gap-3">
+                        <Skeleton className="h-5 w-44" />
+                        <Skeleton className="h-48 w-full" />
+                    </div>
+                </ChamferCard>
+                <span className="sr-only">Loading simulation session...</span>
             </div>
         );
     }
 
     if (!session) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh] p-8">
+            <div className="flex items-center justify-center min-h-[60vh] p-4 sm:p-6 lg:p-8">
                 <EmptyState
                     icon={AlertCircle}
                     title="Simulation Session Not Found"
-                    description={`No simulation session found with ID: ${id}`}
+                    description="The requested simulation session does not exist or has been deleted."
                     action={{
                         label: "Back to Simulations",
                         onClick: () => router.push("/dashboard/simulation"),
@@ -68,26 +100,28 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
         );
     }
 
+    const shortTag = `SIM-${session.id.slice(0, 6).toUpperCase()}`;
+    const headerTitle = flightNumber ? `SIMULATION · ${flightNumber}` : `SIMULATION · ${shortTag}`;
+
     return (
-        <div className="p-8 flex flex-col gap-6 w-full">
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
             <PageHeader
-                title={`SESSION: ${session.id}`}
+                title={headerTitle}
                 badges={
-                    <StatusBadge status={session.status ?? DEFAULT_SIMULATION_STATUS} showDot />
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-[var(--color-text-muted)]">
+                            {shortTag}
+                        </span>
+                        <StatusBadge status={session.status ?? DEFAULT_SIMULATION_STATUS} showDot />
+                    </div>
                 }
             >
-                <ChamferButton
-                    variant="outline"
-                    size="sm"
-                    clip="xs"
-                    onClick={() => router.push("/dashboard/simulation")}
-                >
+                <SessionControlsPanel session={session} onRefresh={refetch} />
+                <ChamferButton href="/dashboard/simulation" variant="outline" size="sm" clip="xs">
                     <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Back to Sessions</span>
+                    <span>Sessions</span>
                 </ChamferButton>
             </PageHeader>
-
-            <SessionControlsPanel session={session} onRefresh={refetch} />
 
             <SessionTelemetryCards session={session} />
 

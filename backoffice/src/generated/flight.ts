@@ -17,30 +17,18 @@ export const getFlightByIdParams = zod.object({
 
 export const getFlightByIdResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -65,16 +53,10 @@ export const getFlightByIdResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -86,29 +68,108 @@ export const getFlightByIdResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -122,23 +183,14 @@ export const updateFlightParams = zod.object({
 
 export const updateFlightBody = zod
     .object({
-        droneId: zod.string().optional().describe("Updated Drone UUID identifier"),
-        departureHubId: zod.string().optional().describe("Updated Departure Hub UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Updated Arrival Hub UUID identifier"),
-        pilotId: zod.string().optional().describe("Updated Remote Pilot ID"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Updated scheduled departure timestamp"),
-        scheduledArrival: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Updated scheduled arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Updated cruising altitude in meters (m)"),
-        notes: zod.string().optional().describe("Updated flight remarks or weather considerations"),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        notes: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -163,47 +215,112 @@ export const updateFlightBody = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe(
-                "Updated operational justification / reason if feasibility is marginal or no-go"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe(
-                "Updated pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"
-            ),
+        feasibilityOverride: zod.string().optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        dependsOnFlightId: zod.string().optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Request payload for updating an existing Flight Plan before departure");
 
 export const updateFlightResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -228,16 +345,10 @@ export const updateFlightResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -249,29 +360,108 @@ export const updateFlightResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -295,6 +485,22 @@ export const getFlightsQueryParams = zod.object({
         .describe("Filter by authorization status (pending, approved, rejected)"),
     pilotId: zod.string().optional().describe("Filter by pilot ID"),
     droneId: zod.string().optional().describe("Filter by assigned drone ID"),
+    executionId: zod.string().optional().describe("Filter by mission execution ID"),
+    hubId: zod.string().optional().describe("Filter by departure OR arrival Hub ID"),
+    flightType: zod
+        .string()
+        .optional()
+        .describe(
+            "Filter by flight type (delivery, inspection, surveillance, training, test, repositioning)"
+        ),
+    from: zod.iso
+        .datetime({})
+        .optional()
+        .describe("Filter flights with scheduledDeparture >= from (ISO-8601 date-time)"),
+    to: zod.iso
+        .datetime({})
+        .optional()
+        .describe("Filter flights with scheduledDeparture <= to (ISO-8601 date-time)"),
     limit: zod
         .number()
         .default(getFlightsQueryLimitDefault)
@@ -308,51 +514,18 @@ export const getFlightsResponse = zod
             .array(
                 zod
                     .object({
-                        id: zod
-                            .string()
-                            .optional()
-                            .describe("Unique UUID identifier of the flight"),
-                        flightNumber: zod
-                            .string()
-                            .optional()
-                            .describe("Unique flight number / callsign"),
-                        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-                        departureHubId: zod
-                            .string()
-                            .optional()
-                            .describe("Departure Hub / Vertiport UUID identifier"),
-                        arrivalHubId: zod
-                            .string()
-                            .optional()
-                            .describe("Arrival Hub / Vertiport UUID identifier"),
-                        pilotId: zod
-                            .string()
-                            .optional()
-                            .describe("Remote Pilot ID / License number"),
-                        scheduledDeparture: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Scheduled departure timestamp"),
-                        scheduledArrival: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Scheduled arrival timestamp"),
-                        actualDeparture: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Actual departure timestamp"),
-                        actualArrival: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Actual arrival timestamp"),
-                        cruisingAltitudeM: zod
-                            .number()
-                            .optional()
-                            .describe("Planned cruising altitude in meters (m)"),
-                        executionId: zod
-                            .string()
-                            .optional()
-                            .describe("Associated mission execution UUID identifier"),
+                        id: zod.string().optional(),
+                        flightNumber: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        pilotId: zod.string().optional(),
+                        scheduledDeparture: zod.iso.datetime({}).optional(),
+                        scheduledArrival: zod.iso.datetime({}).optional(),
+                        actualDeparture: zod.iso.datetime({}).optional(),
+                        actualArrival: zod.iso.datetime({}).optional(),
+                        cruisingAltitudeM: zod.number().optional(),
+                        executionId: zod.string().optional(),
                         plannedRoute: zod
                             .object({
                                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -383,20 +556,10 @@ export const getFlightsResponse = zod
                             ),
                         authorizationStatus: zod
                             .enum(["pending", "approved", "rejected"])
-                            .optional()
-                            .describe("ATC authorization status (pending, approved, rejected)"),
+                            .optional(),
                         conformanceStatus: zod
-                            .enum([
-                                "conformant",
-                                "conforming",
-                                "contingent",
-                                "non_conforming",
-                                "unknown",
-                            ])
-                            .optional()
-                            .describe(
-                                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-                            ),
+                            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+                            .optional(),
                         status: zod
                             .enum([
                                 "planned",
@@ -408,42 +571,134 @@ export const getFlightsResponse = zod
                                 "diverted",
                                 "emergency_landing",
                             ])
-                            .optional()
-                            .describe(
-                                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-                            ),
+                            .optional(),
                         feasibilityVerdict: zod
                             .enum(["go", "marginal", "no_go", "unknown"])
-                            .optional()
-                            .describe(
-                                "Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"
-                            ),
-                        feasibilityOverride: zod
-                            .string()
-                            .optional()
-                            .describe(
-                                "ATC authorization override justification remarks if applicable"
-                            ),
-                        notes: zod
-                            .string()
-                            .optional()
-                            .describe("Flight remarks, route notes or weather considerations"),
-                        createdOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Record creation timestamp"),
-                        createdBy: zod
-                            .string()
-                            .optional()
-                            .describe("Username who created this flight plan"),
-                        lastModifiedOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Last modification timestamp"),
-                        lastModifiedBy: zod
-                            .string()
-                            .optional()
-                            .describe("Username who last updated this flight plan"),
+                            .optional(),
+                        feasibilityOverride: zod.string().optional(),
+                        notes: zod.string().optional(),
+                        createdOn: zod.iso.datetime({}).optional(),
+                        createdBy: zod.string().optional(),
+                        lastModifiedOn: zod.iso.datetime({}).optional(),
+                        lastModifiedBy: zod.string().optional(),
+                        waypoints: zod
+                            .array(
+                                zod
+                                    .object({
+                                        sequence: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Sequence number of waypoint in flight (1, 2, ...)"
+                                            ),
+                                        name: zod
+                                            .string()
+                                            .min(1)
+                                            .optional()
+                                            .describe("Waypoint designation or name"),
+                                        latitude: zod.number().optional().describe("GPS latitude"),
+                                        longitude: zod
+                                            .number()
+                                            .optional()
+                                            .describe("GPS longitude"),
+                                        altitude: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Target flight altitude in meters AGL"),
+                                        actions: zod
+                                            .record(zod.string(), zod.any())
+                                            .optional()
+                                            .describe(
+                                                "Actions at waypoint (takeoff, hover, winch_drop, land)"
+                                            ),
+                                        conditions: zod
+                                            .record(zod.string(), zod.any())
+                                            .optional()
+                                            .describe(
+                                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                                            ),
+                                        waypointType: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Waypoint node type: coordinate or hub"),
+                                        hubId: zod
+                                            .string()
+                                            .optional()
+                                            .describe(
+                                                "Optional stopover hub UUID when waypointType is hub"
+                                            ),
+                                        stopoverType: zod
+                                            .string()
+                                            .optional()
+                                            .describe(
+                                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                                            ),
+                                        speedToWaypoint: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Target cruise speed towards this waypoint in m/s"
+                                            ),
+                                        headingAtWaypoint: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Desired heading in degrees (0-360) upon reaching waypoint"
+                                            ),
+                                        turnRadius: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Fly-by turn radius in meters"),
+                                        hoverDurationSec: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Hover duration in seconds at this waypoint"),
+                                        waitForConfirmation: zod
+                                            .boolean()
+                                            .optional()
+                                            .describe(
+                                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                                            ),
+                                        payloadDeltaKg: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Payload weight delta in kg applied at this waypoint"
+                                            ),
+                                    })
+                                    .describe("Waypoint details within a flight plan")
+                            )
+                            .optional(),
+                        missionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        totalLegs: zod.number().optional(),
+                        dependsOnFlightId: zod.string().optional(),
+                        payloadWeightKg: zod.number().optional(),
+                        flightType: zod
+                            .enum([
+                                "delivery",
+                                "inspection",
+                                "surveillance",
+                                "training",
+                                "test",
+                                "repositioning",
+                            ])
+                            .optional(),
+                        operationMode: zod
+                            .enum(["autonomous", "remote_pilot", "hybrid"])
+                            .optional(),
+                        minAltitudeM: zod.number().optional(),
+                        maxAltitudeM: zod.number().optional(),
+                        authorizationNumber: zod.string().optional(),
+                        authorizedBy: zod.string().optional(),
+                        authorizedAt: zod.iso.datetime({}).optional(),
+                        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+                        missionType: zod.string().optional(),
+                        missionData: zod.record(zod.string(), zod.any()).optional(),
+                        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+                        expectedInitialBatteryPct: zod.number().optional(),
+                        minimumTurnaroundMinutes: zod.number().optional(),
+                        arrivalStopoverType: zod.string().optional(),
                     })
                     .describe("Detailed profile and telemetry status of a Flight Plan / Operation")
             )
@@ -457,30 +712,27 @@ export const getFlightsResponse = zod
  * Register a new flight plan with scheduled status and pending authorization
  * @summary Create a new flight plan
  */
+export const createFlightBodyFlightNumberMin = 3;
+export const createFlightBodyFlightNumberMax = 50;
+export const createFlightBodyFlightNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const createFlightBody = zod
     .object({
         flightNumber: zod
             .string()
-            .optional()
-            .describe("Unique flight number / callsign (auto-generated if omitted)"),
-        droneId: zod.string().min(1).describe("Assigned Drone UUID identifier"),
-        departureHubId: zod.string().min(1).describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().min(1).describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso.datetime({}).min(1).describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).min(1).describe("Scheduled arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+            .min(createFlightBodyFlightNumberMin)
+            .max(createFlightBodyFlightNumberMax)
+            .regex(createFlightBodyFlightNumberRegExp)
+            .optional(),
+        droneId: zod.string().min(1),
+        departureHubId: zod.string().min(1),
+        arrivalHubId: zod.string().min(1),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).min(1),
+        scheduledArrival: zod.iso.datetime({}).min(1),
+        cruisingAltitudeM: zod.number().optional(),
+        notes: zod.string().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -493,14 +745,98 @@ export const createFlightBody = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("Operational justification / reason if feasibility is marginal or no-go"),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
+        feasibilityOverride: zod.string().optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Request payload for registering a new Flight Plan");
 
@@ -514,30 +850,18 @@ export const startFlightParams = zod.object({
 
 export const startFlightResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -562,16 +886,10 @@ export const startFlightResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -583,29 +901,108 @@ export const startFlightResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -625,30 +1022,18 @@ export const rejectFlightBody = zod
 
 export const rejectFlightResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -673,16 +1058,10 @@ export const rejectFlightResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -694,29 +1073,108 @@ export const rejectFlightResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -730,30 +1188,18 @@ export const completeFlightParams = zod.object({
 
 export const completeFlightResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -778,16 +1224,10 @@ export const completeFlightResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -799,29 +1239,108 @@ export const completeFlightResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -835,30 +1354,18 @@ export const authorizeFlightParams = zod.object({
 
 export const authorizeFlightResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -883,16 +1390,10 @@ export const authorizeFlightResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -904,29 +1405,108 @@ export const authorizeFlightResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -949,30 +1529,18 @@ export const abortFlightBody = zod
 
 export const abortFlightResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -997,16 +1565,10 @@ export const abortFlightResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -1018,29 +1580,108 @@ export const abortFlightResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -1064,30 +1705,18 @@ export const overrideFeasibilityBody = zod
 
 export const overrideFeasibilityResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the flight"),
-        flightNumber: zod.string().optional().describe("Unique flight number / callsign"),
-        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
-        departureHubId: zod
-            .string()
-            .optional()
-            .describe("Departure Hub / Vertiport UUID identifier"),
-        arrivalHubId: zod.string().optional().describe("Arrival Hub / Vertiport UUID identifier"),
-        pilotId: zod.string().optional().describe("Remote Pilot ID / License number"),
-        scheduledDeparture: zod.iso
-            .datetime({})
-            .optional()
-            .describe("Scheduled departure timestamp"),
-        scheduledArrival: zod.iso.datetime({}).optional().describe("Scheduled arrival timestamp"),
-        actualDeparture: zod.iso.datetime({}).optional().describe("Actual departure timestamp"),
-        actualArrival: zod.iso.datetime({}).optional().describe("Actual arrival timestamp"),
-        cruisingAltitudeM: zod
-            .number()
-            .optional()
-            .describe("Planned cruising altitude in meters (m)"),
-        executionId: zod
-            .string()
-            .optional()
-            .describe("Associated mission execution UUID identifier"),
+        id: zod.string().optional(),
+        flightNumber: zod.string().optional(),
+        droneId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduledDeparture: zod.iso.datetime({}).optional(),
+        scheduledArrival: zod.iso.datetime({}).optional(),
+        actualDeparture: zod.iso.datetime({}).optional(),
+        actualArrival: zod.iso.datetime({}).optional(),
+        cruisingAltitudeM: zod.number().optional(),
+        executionId: zod.string().optional(),
         plannedRoute: zod
             .object({
                 type: zod.string().min(1).describe("GeoJSON geometry type"),
@@ -1112,16 +1741,10 @@ export const overrideFeasibilityResponse = zod
             })
             .optional()
             .describe("GeoJSON LineString representation for 2D/3D flight route coordinates"),
-        authorizationStatus: zod
-            .enum(["pending", "approved", "rejected"])
-            .optional()
-            .describe("ATC authorization status (pending, approved, rejected)"),
+        authorizationStatus: zod.enum(["pending", "approved", "rejected"]).optional(),
         conformanceStatus: zod
-            .enum(["conformant", "conforming", "contingent", "non_conforming", "unknown"])
-            .optional()
-            .describe(
-                "4D flight conformance monitoring status (conforming, contingent, non_conforming)"
-            ),
+            .enum(["conformant", "contingent", "non_conforming", "unknown"])
+            .optional(),
         status: zod
             .enum([
                 "planned",
@@ -1133,29 +1756,108 @@ export const overrideFeasibilityResponse = zod
                 "diverted",
                 "emergency_landing",
             ])
-            .optional()
-            .describe(
-                "Current flight status (planned, scheduled, authorized, active, completed, cancelled, aborted)"
-            ),
-        feasibilityVerdict: zod
-            .enum(["go", "marginal", "no_go", "unknown"])
-            .optional()
-            .describe("Pre-flight feasibility evaluation verdict (go, marginal, no_go, unknown)"),
-        feasibilityOverride: zod
-            .string()
-            .optional()
-            .describe("ATC authorization override justification remarks if applicable"),
-        notes: zod
-            .string()
-            .optional()
-            .describe("Flight remarks, route notes or weather considerations"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("Username who created this flight plan"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("Username who last updated this flight plan"),
+            .optional(),
+        feasibilityVerdict: zod.enum(["go", "marginal", "no_go", "unknown"]).optional(),
+        feasibilityOverride: zod.string().optional(),
+        notes: zod.string().optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence number of waypoint in flight (1, 2, ...)"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod
+                            .number()
+                            .optional()
+                            .describe("Target flight altitude in meters AGL"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint (takeoff, hover, winch_drop, land)"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe(
+                                "Flight conditions at waypoint (speed limit, wind tolerance)"
+                            ),
+                        waypointType: zod
+                            .string()
+                            .optional()
+                            .describe("Waypoint node type: coordinate or hub"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID when waypointType is hub"),
+                        stopoverType: zod
+                            .string()
+                            .optional()
+                            .describe(
+                                "Stopover action type at hub (none, recharge, battery_swap, relay_handoff, payload_dropoff, payload_pickup)"
+                            ),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation upon reaching waypoint"
+                            ),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload weight delta in kg applied at this waypoint"),
+                    })
+                    .describe("Waypoint details within a flight plan")
+            )
+            .optional(),
+        missionId: zod.string().optional(),
+        legIndex: zod.number().optional(),
+        totalLegs: zod.number().optional(),
+        dependsOnFlightId: zod.string().optional(),
+        payloadWeightKg: zod.number().optional(),
+        flightType: zod
+            .enum(["delivery", "inspection", "surveillance", "training", "test", "repositioning"])
+            .optional(),
+        operationMode: zod.enum(["autonomous", "remote_pilot", "hybrid"]).optional(),
+        minAltitudeM: zod.number().optional(),
+        maxAltitudeM: zod.number().optional(),
+        authorizationNumber: zod.string().optional(),
+        authorizedBy: zod.string().optional(),
+        authorizedAt: zod.iso.datetime({}).optional(),
+        riskAssessment: zod.enum(["low", "medium", "high"]).optional(),
+        missionType: zod.string().optional(),
+        missionData: zod.record(zod.string(), zod.any()).optional(),
+        weatherConditions: zod.record(zod.string(), zod.any()).optional(),
+        expectedInitialBatteryPct: zod.number().optional(),
+        minimumTurnaroundMinutes: zod.number().optional(),
+        arrivalStopoverType: zod.string().optional(),
     })
     .describe("Detailed profile and telemetry status of a Flight Plan / Operation");
 
@@ -1323,6 +2025,102 @@ export const evaluateConformanceResponse = zod
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
     })
     .describe("Instantaneous 4D flight conformance evaluation details");
+
+/**
+ * Evaluates energy and live wind feasibility for any drone + mission/distance profile without requiring a saved Flight.
+ * @summary Standalone pre-flight feasibility check
+ */
+export const checkStandaloneFeasibilityBody = zod
+    .object({
+        droneId: zod.string().min(1),
+        missionId: zod.string().optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        distanceM: zod.number().optional(),
+        hoverTimeS: zod.number().optional(),
+        payloadKg: zod.number().optional(),
+        windSpeedMs: zod.number().optional(),
+    })
+    .describe("Standalone pre-flight energy & wind feasibility check request");
+
+export const checkStandaloneFeasibilityResponse = zod
+    .object({
+        flightId: zod.string().optional().describe("Flight UUID identifier"),
+        droneId: zod.string().optional().describe("Assigned Drone UUID identifier"),
+        verdict: zod
+            .enum(["go", "marginal", "no_go", "unknown"])
+            .optional()
+            .describe("Feasibility verdict (go, marginal, no_go, unknown)"),
+        marginPct: zod.number().optional().describe("Net battery reserve margin percentage (%)"),
+        usableWh: zod
+            .number()
+            .optional()
+            .describe("Net usable battery capacity in Watt-hours (Wh)"),
+        requiredWh: zod
+            .number()
+            .optional()
+            .describe("Total required mission energy in Watt-hours (Wh)"),
+        breakdown: zod
+            .object({
+                cruiseWh: zod
+                    .number()
+                    .optional()
+                    .describe("Energy consumed during cruise phase in Watt-hours (Wh)"),
+                hoverWh: zod
+                    .number()
+                    .optional()
+                    .describe("Energy consumed during hover phases in Watt-hours (Wh)"),
+                climbWh: zod
+                    .number()
+                    .optional()
+                    .describe("Energy consumed for climb/maneuver surcharge in Watt-hours (Wh)"),
+                payloadFactor: zod.number().optional().describe("Payload multiplier factor"),
+                windFactor: zod.number().optional().describe("Wind resistance multiplier factor"),
+            })
+            .optional()
+            .describe("Breakdown of consumed energy components and adjustment factors"),
+        windUsed: zod
+            .object({
+                speedMs: zod.number().optional().describe("Wind speed in meters per second (m/s)"),
+                source: zod
+                    .string()
+                    .optional()
+                    .describe("Source of wind data (override, weather_service, default)"),
+            })
+            .optional()
+            .describe("Wind conditions applied during energy evaluation"),
+        confidence: zod
+            .string()
+            .optional()
+            .describe("Evaluation confidence level (high, medium, low)"),
+        solutions: zod
+            .array(
+                zod
+                    .object({
+                        kind: zod.string().optional().describe("Solution classification kind"),
+                        label: zod.string().optional().describe("Short human-readable title"),
+                        detail: zod
+                            .string()
+                            .optional()
+                            .describe("Detailed actionable recommendation"),
+                    })
+                    .describe(
+                        "Mitigation solution or recommendation for marginal/no-go feasibility"
+                    )
+            )
+            .optional()
+            .describe("Recommended mitigations if verdict is marginal or no-go"),
+        explanation: zod.string().optional().describe("Summary explanation of evaluation outcome"),
+        explanationSource: zod
+            .string()
+            .optional()
+            .describe("Source of explanation (deterministic, llm)"),
+        evaluatedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when evaluation was executed"),
+    })
+    .describe("Outcome of pre-flight feasibility and energy calculation");
 
 /**
  * Retrieve current 4D flight conformance evaluation, lateral/vertical errors, and breach violations.

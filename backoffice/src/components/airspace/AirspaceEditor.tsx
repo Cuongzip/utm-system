@@ -80,6 +80,12 @@ export function AirspaceEditor({
     const handleSave = async () => {
         setFieldErrors({});
 
+        const toIsoOrUndefined = (val?: string) => {
+            if (!val?.trim()) return undefined;
+            const d = new Date(val);
+            return Number.isNaN(d.getTime()) ? val.trim() : d.toISOString();
+        };
+
         const payload = {
             ...(mode === "create" && formData.code?.trim()
                 ? { code: formData.code.trim().toUpperCase() }
@@ -87,7 +93,10 @@ export function AirspaceEditor({
             name: (formData.name ?? "").trim(),
             zoneType: formData.zoneType,
             status: formData.status,
+            altitudeFloor: Number(formData.altitudeFloor ?? 0),
             altitudeCeiling: Number(formData.altitudeCeiling),
+            effectiveStart: toIsoOrUndefined(formData.effectiveStart),
+            effectiveEnd: toIsoOrUndefined(formData.effectiveEnd),
             hubId: formData.hubId || undefined,
             description: formData.description?.trim() || undefined,
             geometry: computedGeoJson ?? undefined,
@@ -210,6 +219,7 @@ export function AirspaceEditor({
                         onUndoPolygonPoint={undoPolygonPoint}
                         onClearPolygonPoints={clearPolygonPoints}
                         zoneType={formData.zoneType}
+                        altitudeFloor={formData.altitudeFloor ?? 0}
                         altitudeCeiling={formData.altitudeCeiling}
                         existingZones={existingZones}
                         currentZoneId={initialData?.id}

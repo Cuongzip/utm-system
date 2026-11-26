@@ -2,105 +2,152 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Activity } from "lucide-react";
-import { ChamferCard, StatusBadge, EmptyState } from "@/components/ui";
+import { ArrowRight } from "lucide-react";
+import { ChamferCard, StatusBadge, EmptyState, Skeleton } from "@/components/ui";
 import { formatDateTime } from "@/utils/format";
-import { DEFAULT_FLIGHT_STATUS, type Flight, type FlightStatus } from "@/types";
+import {
+    DEFAULT_FLIGHT_STATUS,
+    FLIGHT_STATUS,
+    type Flight,
+    type FlightStatus,
+    type Hub,
+} from "@/types";
 
 export interface DashboardFlightLogProps {
     flights: Flight[];
+    hubs?: Hub[];
     isLoading: boolean;
 }
 
-export function DashboardFlightLog({ flights = [], isLoading = false }: DashboardFlightLogProps) {
-    const recentFlights = useMemo(() => {
+const STATUS_PRIORITY: Record<FlightStatus, number> = {
+    [FLIGHT_STATUS.EMERGENCY_LANDING]: 0,
+    [FLIGHT_STATUS.DIVERTED]: 1,
+    [FLIGHT_STATUS.ACTIVE]: 2,
+    [FLIGHT_STATUS.AUTHORIZED]: 3,
+    [FLIGHT_STATUS.SCHEDULED]: 4,
+    [FLIGHT_STATUS.PLANNED]: 5,
+    [FLIGHT_STATUS.COMPLETED]: 6,
+    [FLIGHT_STATUS.CANCELLED]: 7,
+};
+
+export function DashboardFlightLog({
+    flights = [],
+    hubs = [],
+    isLoading = false,
+}: DashboardFlightLogProps) {
+    const hubCodeMap = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const h of hubs) {
+            if (h.id) {
+                map.set(h.id, h.code || h.name || "HUB");
+            }
+        }
+        return map;
+    }, [hubs]);
+
+    const prioritizedFlights = useMemo(() => {
         const getFlightTime = (f: Flight) =>
             new Date(f.actualDeparture || f.scheduledDeparture || 0).getTime();
-        return [...flights].sort((a, b) => getFlightTime(b) - getFlightTime(a)).slice(0, 5);
+
+        return [...flights]
+            .sort((a, b) => {
+                const statusA = a.status ?? DEFAULT_FLIGHT_STATUS;
+                const statusB = b.status ?? DEFAULT_FLIGHT_STATUS;
+                const prioDiff = (STATUS_PRIORITY[statusA] ?? 9) - (STATUS_PRIORITY[statusB] ?? 9);
+                if (prioDiff !== 0) return prioDiff;
+                return getFlightTime(b) - getFlightTime(a);
+            })
+            .slice(0, 6);
     }, [flights]);
 
     return (
-        <ChamferCard size="lg" className="h-full min-h-[340px]">
-            <div className="p-5 flex flex-col justify-between h-full">
-                <div>
-                    <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-subtle)]">
-                        <div className="flex items-center space-x-2 text-xs font-bold text-[var(--color-text-primary)] font-mono tracking-wider">
-                            <Activity className="h-4 w-4 text-cyan-600" />
-                            <span>FLIGHT LOG</span>
-                        </div>
-                        <span className="text-xs font-mono text-[var(--color-text-muted)]">
-                            {isLoading ? "SYNCING..." : `${recentFlights.length} RECENT ENTRIES`}
+        <ChamferCard size="md" className="w-full">
+            <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono uppercase tracking-wider">
+                        Live & Recent Flights
+                    </span>
+                    {!isLoading && flights.length > 0 && (
+                        <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
+                            · {prioritizedFlights.length} of {flights.length}
                         </span>
-                    </div>
-
-                    <div className="mt-3 divide-y divide-[var(--color-border-subtle)]">
-                        {isLoading ? (
-                            <div className="py-2 space-y-3">
-                                {Array.from({ length: 4 }).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="animate-pulse flex items-center justify-between p-2 rounded bg-slate-50/70 dark:bg-slate-800/40"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-5 h-4 bg-slate-200 dark:bg-slate-700 rounded" />
-                                            <div className="space-y-1.5">
-                                                <div className="w-24 h-3.5 bg-slate-200 dark:bg-slate-700 rounded" />
-                                                <div className="w-32 h-2.5 bg-slate-100 dark:bg-slate-800 rounded" />
-                                            </div>
-                                        </div>
-                                        <div className="w-16 h-5 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : recentFlights.length === 0 ? (
-                            <EmptyState compact title="No recent flight entries" />
-                        ) : (
-                            recentFlights.map((flight, idx) => {
-                                const indexStr = String(idx + 1).padStart(2, "0");
-                                const flightCode =
-                                    flight.flightNumber ||
-                                    (flight.id
-                                        ? `DRP-${flight.id.slice(0, 8).toUpperCase()}`
-                                        : "N/A");
-                                const timeStr =
-                                    formatDateTime(
-                                        flight.actualDeparture || flight.scheduledDeparture,
-                                        "MMM d, yyyy, h:mm a"
-                                    ) || "--";
-                                const status: FlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;
-
-                                return (
-                                    <Link
-                                        key={flight.id || idx}
-                                        href={
-                                            flight.id
-                                                ? `/dashboard/flights/${flight.id}`
-                                                : "/dashboard/flights"
-                                        }
-                                        className="py-2.5 flex items-center justify-between hover:bg-[var(--color-surface-card)] px-2 rounded transition-colors group cursor-pointer block"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <span className="text-xs font-mono font-bold text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors w-5">
-                                                {indexStr}
-                                            </span>
-                                            <div className="min-w-0">
-                                                <div className="text-xs font-bold font-mono text-[var(--color-text-primary)] truncate">
-                                                    {flightCode}
-                                                </div>
-                                                <div className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                                                    {timeStr}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <StatusBadge status={status} showDot={false} />
-                                    </Link>
-                                );
-                            })
-                        )}
-                    </div>
+                    )}
                 </div>
+                <Link
+                    href="/dashboard/flights"
+                    className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-slate-600 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded px-1"
+                >
+                    <span>View all</span>
+                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                </Link>
             </div>
+
+            {isLoading ? (
+                <div className="divide-y divide-[var(--color-border-subtle)]">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="px-4 py-3 flex items-center justify-between gap-3">
+                            <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-3.5 w-28" />
+                                <Skeleton className="h-3 w-36" />
+                            </div>
+                            <Skeleton className="h-5 w-16" />
+                        </div>
+                    ))}
+                </div>
+            ) : prioritizedFlights.length === 0 ? (
+                <EmptyState compact title="No recent flight entries" />
+            ) : (
+                <div className="divide-y divide-[var(--color-border-subtle)]">
+                    {prioritizedFlights.map((flight, idx) => {
+                        const flightCode = flight.flightNumber || "Unnumbered Flight";
+                        const depLabel = flight.departureHubId
+                            ? hubCodeMap.get(flight.departureHubId)
+                            : null;
+                        const arrLabel = flight.arrivalHubId
+                            ? hubCodeMap.get(flight.arrivalHubId)
+                            : null;
+                        const routeLabel =
+                            depLabel && arrLabel ? `${depLabel} → ${arrLabel}` : null;
+                        const timeStr =
+                            formatDateTime(
+                                flight.actualDeparture || flight.scheduledDeparture,
+                                "MMM d · HH:mm"
+                            ) || "Unscheduled";
+                        const status: FlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;
+
+                        return (
+                            <Link
+                                key={flight.id || idx}
+                                href={
+                                    flight.id
+                                        ? `/dashboard/flights/${flight.id}`
+                                        : "/dashboard/flights"
+                                }
+                                className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+                            >
+                                <div className="min-w-0">
+                                    <div className="text-xs font-bold font-mono text-[var(--color-text-primary)] truncate">
+                                        {flightCode}
+                                    </div>
+                                    <div className="text-[11px] font-mono text-[var(--color-text-muted)] truncate">
+                                        {routeLabel ? `${routeLabel} · ${timeStr}` : timeStr}
+                                    </div>
+                                </div>
+
+                                <StatusBadge
+                                    status={status}
+                                    label={
+                                        status === FLIGHT_STATUS.EMERGENCY_LANDING
+                                            ? "EMERG LAND"
+                                            : undefined
+                                    }
+                                    showDot
+                                />
+                            </Link>
+                        );
+                    })}
+                </div>
+            )}
         </ChamferCard>
     );
 }

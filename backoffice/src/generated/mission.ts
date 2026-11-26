@@ -8,6 +8,286 @@
 import zod from "zod";
 
 /**
+ * @summary Get template by ID or code (latest version)
+ */
+export const getTemplateByIdParams = zod.object({
+    id: zod.string(),
+});
+
+export const getTemplateByIdResponseCodeMin = 3;
+export const getTemplateByIdResponseCodeMax = 50;
+export const getTemplateByIdResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const getTemplateByIdResponse = zod
+    .object({
+        id: zod.string().optional(),
+        code: zod
+            .string()
+            .min(getTemplateByIdResponseCodeMin)
+            .max(getTemplateByIdResponseCodeMax)
+            .regex(getTemplateByIdResponseCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        version: zod.number().optional(),
+        isLatest: zod.boolean().optional(),
+        previousVersionId: zod.string().optional(),
+        changelog: zod.string().optional(),
+        usageCount: zod.number().optional(),
+        isPublished: zod.boolean().optional(),
+        publishedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Mission Template detailed representation");
+
+/**
+ * @summary Update template (creates a new immutable version)
+ */
+export const updateTemplateParams = zod.object({
+    id: zod.string(),
+});
+
+export const updateTemplateBodyNameMax = 255;
+
+export const updateTemplateBody = zod
+    .object({
+        name: zod.string().min(1).max(updateTemplateBodyNameMax).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        changelog: zod.string().optional(),
+    })
+    .describe("Request payload to update a Mission Template (creates a new version)");
+
+export const updateTemplateResponseCodeMin = 3;
+export const updateTemplateResponseCodeMax = 50;
+export const updateTemplateResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const updateTemplateResponse = zod
+    .object({
+        id: zod.string().optional(),
+        code: zod
+            .string()
+            .min(updateTemplateResponseCodeMin)
+            .max(updateTemplateResponseCodeMax)
+            .regex(updateTemplateResponseCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        version: zod.number().optional(),
+        isLatest: zod.boolean().optional(),
+        previousVersionId: zod.string().optional(),
+        changelog: zod.string().optional(),
+        usageCount: zod.number().optional(),
+        isPublished: zod.boolean().optional(),
+        publishedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Mission Template detailed representation");
+
+/**
+ * @summary Delete template and all versions (blocked if usageCount > 0)
+ */
+export const deleteTemplateParams = zod.object({
+    id: zod.string(),
+});
+
+export const deleteTemplateResponse = zod.record(zod.string(), zod.string());
+
+/**
  * Update waypoint parameters within a draft mission
  * @summary Update a waypoint
  */
@@ -22,6 +302,8 @@ export const updateWaypointBodyLatitudeMax = 90;
 export const updateWaypointBodyLongitudeMin = -180;
 export const updateWaypointBodyLongitudeMax = 180;
 export const updateWaypointBodyAltitudeMin = 0;
+export const updateWaypointBodyHeadingAtWaypointMin = 0;
+export const updateWaypointBodyHeadingAtWaypointMax = 360;
 
 export const updateWaypointBody = zod
     .object({
@@ -36,18 +318,18 @@ export const updateWaypointBody = zod
             .min(updateWaypointBodyLatitudeMin)
             .max(updateWaypointBodyLatitudeMax)
             .optional()
-            .describe("GPS latitude (-90 to 90)"),
+            .describe("GPS latitude (-90 to 90; locked from Hub when waypointType is HUB)"),
         longitude: zod
             .number()
             .min(updateWaypointBodyLongitudeMin)
             .max(updateWaypointBodyLongitudeMax)
             .optional()
-            .describe("GPS longitude (-180 to 180)"),
+            .describe("GPS longitude (-180 to 180; locked from Hub when waypointType is HUB)"),
         altitude: zod
             .number()
             .min(updateWaypointBodyAltitudeMin)
             .optional()
-            .describe("Target flight altitude in meters (> 0)"),
+            .describe("Target altitude in meters AGL (> 0 for COORDINATE; >= 0 for HUB)"),
         actions: zod
             .record(zod.string(), zod.any())
             .optional()
@@ -56,34 +338,141 @@ export const updateWaypointBody = zod
             .record(zod.string(), zod.any())
             .optional()
             .describe("Flight conditions at waypoint"),
+        hubId: zod
+            .string()
+            .optional()
+            .describe("Updated intermediate Hub UUID for HUB stopover node"),
+        stopoverType: zod
+            .enum([
+                "none",
+                "recharge",
+                "battery_swap",
+                "relay_handoff",
+                "payload_dropoff",
+                "payload_pickup",
+            ])
+            .optional()
+            .describe("Updated stopover type at hub"),
+        groundTimeMinutes: zod
+            .number()
+            .optional()
+            .describe("Updated ground turnaround time in minutes"),
+        payloadDeltaKg: zod.number().optional().describe("Updated payload weight delta in kg"),
+        hoverDurationSec: zod.number().optional().describe("Updated hover duration in seconds"),
+        speedToWaypoint: zod
+            .number()
+            .optional()
+            .describe("Target cruise speed towards this waypoint in m/s"),
+        headingAtWaypoint: zod
+            .number()
+            .min(updateWaypointBodyHeadingAtWaypointMin)
+            .max(updateWaypointBodyHeadingAtWaypointMax)
+            .optional()
+            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+        turnRadius: zod.number().optional().describe("Fly-by turn radius in meters"),
+        waitForConfirmation: zod
+            .boolean()
+            .optional()
+            .describe("Whether drone should hold and await operator confirmation at this waypoint"),
+        waypointType: zod
+            .enum(["coordinate", "hub"])
+            .optional()
+            .describe("Updated waypoint node type: 'coordinate' or 'hub'"),
     })
     .describe("Request payload for updating an existing waypoint");
+
+export const updateWaypointResponseHubCodeMin = 3;
+export const updateWaypointResponseHubCodeMax = 50;
+export const updateWaypointResponseHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 
 export const updateWaypointResponse = zod
     .object({
         id: zod.string().optional().describe("Waypoint UUID identifier"),
         missionId: zod.string().optional().describe("Mission UUID identifier"),
-        sequence: zod
-            .number()
-            .optional()
-            .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
+        sequence: zod.number().optional().describe("Sequence order of waypoint in mission"),
         name: zod.string().min(1).optional().describe("Waypoint designation or name"),
         latitude: zod.number().optional().describe("GPS latitude"),
         longitude: zod.number().optional().describe("GPS longitude"),
-        altitude: zod.number().optional().describe("Altitude in meters"),
+        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+        hubId: zod.string().optional().describe("Optional stopover hub UUID identifier"),
+        stopoverType: zod
+            .enum([
+                "none",
+                "recharge",
+                "battery_swap",
+                "relay_handoff",
+                "payload_dropoff",
+                "payload_pickup",
+            ])
+            .optional()
+            .describe("Stopover type at hub"),
+        groundTimeMinutes: zod
+            .number()
+            .optional()
+            .describe("Ground turnaround time in minutes at stopover hub"),
+        payloadDeltaKg: zod.number().optional().describe("Payload delta in kg at this waypoint"),
+        hoverDurationSec: zod
+            .number()
+            .optional()
+            .describe("Hover duration in seconds at this waypoint"),
         actions: zod.record(zod.string(), zod.any()).optional().describe("Actions at waypoint"),
         conditions: zod
             .record(zod.string(), zod.any())
             .optional()
             .describe("Conditions at waypoint"),
-        warning: zod
-            .string()
-            .optional()
-            .describe("Safety warnings (e.g. proximity to no fly zone)"),
+        warning: zod.string().optional().describe("Safety warnings"),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Created by user ID"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
         lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        speedToWaypoint: zod
+            .number()
+            .optional()
+            .describe("Target cruise speed towards this waypoint in m/s"),
+        headingAtWaypoint: zod
+            .number()
+            .optional()
+            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+        turnRadius: zod.number().optional().describe("Fly-by turn radius in meters"),
+        waitForConfirmation: zod
+            .boolean()
+            .optional()
+            .describe("Whether drone holds and awaits operator confirmation at this waypoint"),
+        waypointType: zod
+            .enum(["coordinate", "hub"])
+            .optional()
+            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+        hub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(updateWaypointResponseHubCodeMin)
+                    .max(updateWaypointResponseHubCodeMax)
+                    .regex(updateWaypointResponseHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
     })
     .describe("Waypoint details");
 
@@ -107,6 +496,9 @@ export const getMissionByIdParams = zod.object({
 export const getMissionByIdResponseCodeMin = 3;
 export const getMissionByIdResponseCodeMax = 50;
 export const getMissionByIdResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getMissionByIdResponseWaypointsItemHubCodeMin = 3;
+export const getMissionByIdResponseWaypointsItemHubCodeMax = 50;
+export const getMissionByIdResponseWaypointsItemHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const getMissionByIdResponseDepartureHubCodeMin = 3;
 export const getMissionByIdResponseDepartureHubCodeMax = 50;
 export const getMissionByIdResponseDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
@@ -126,15 +518,28 @@ export const getMissionByIdResponse = zod
             .describe("Mission business tracking code"),
         name: zod.string().min(1).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
+        payloadWeightKg: zod.number().optional().describe("Payload mass in kilograms to transport"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
+        droneId: zod.string().optional().describe("Optional pre-assigned Drone UUID identifier"),
+        pilotId: zod.string().optional().describe("Optional pre-assigned Remote Pilot ID"),
         scheduleType: zod
-            .enum(["immediate", "scheduled"])
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
             .optional()
-            .describe("Schedule type ('immediate' or 'scheduled')"),
+            .describe("Schedule type"),
         scheduledAt: zod.iso.datetime({}).optional().describe("Scheduled departure timestamp"),
         status: zod
-            .enum(["draft", "scheduled", "executing", "paused", "completed", "aborted", "failed"])
+            .enum([
+                "draft",
+                "ready",
+                "scheduled",
+                "executing",
+                "paused",
+                "completed",
+                "aborted",
+                "cancelled",
+                "failed",
+            ])
             .optional()
             .describe("Mission operational status"),
         waypointCount: zod
@@ -154,7 +559,7 @@ export const getMissionByIdResponse = zod
                         sequence: zod
                             .number()
                             .optional()
-                            .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
+                            .describe("Sequence order of waypoint in mission"),
                         name: zod
                             .string()
                             .min(1)
@@ -162,7 +567,34 @@ export const getMissionByIdResponse = zod
                             .describe("Waypoint designation or name"),
                         latitude: zod.number().optional().describe("GPS latitude"),
                         longitude: zod.number().optional().describe("GPS longitude"),
-                        altitude: zod.number().optional().describe("Altitude in meters"),
+                        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID identifier"),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional()
+                            .describe("Stopover type at hub"),
+                        groundTimeMinutes: zod
+                            .number()
+                            .optional()
+                            .describe("Ground turnaround time in minutes at stopover hub"),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload delta in kg at this waypoint"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
                         actions: zod
                             .record(zod.string(), zod.any())
                             .optional()
@@ -171,10 +603,7 @@ export const getMissionByIdResponse = zod
                             .record(zod.string(), zod.any())
                             .optional()
                             .describe("Conditions at waypoint"),
-                        warning: zod
-                            .string()
-                            .optional()
-                            .describe("Safety warnings (e.g. proximity to no fly zone)"),
+                        warning: zod.string().optional().describe("Safety warnings"),
                         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
                         createdBy: zod.string().optional().describe("Created by user ID"),
                         lastModifiedOn: zod.iso
@@ -185,6 +614,63 @@ export const getMissionByIdResponse = zod
                             .string()
                             .optional()
                             .describe("Last modified by user ID"),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation at this waypoint"
+                            ),
+                        waypointType: zod
+                            .enum(["coordinate", "hub"])
+                            .optional()
+                            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+                        hub: zod
+                            .object({
+                                id: zod.string().optional().describe("Hub unique identifier"),
+                                code: zod
+                                    .string()
+                                    .min(getMissionByIdResponseWaypointsItemHubCodeMin)
+                                    .max(getMissionByIdResponseWaypointsItemHubCodeMax)
+                                    .regex(getMissionByIdResponseWaypointsItemHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
+                                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                                location: zod
+                                    .object({
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
+                                    })
+                                    .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
+                            })
+                            .optional()
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
                     })
                     .describe("Waypoint details")
             )
@@ -205,13 +691,22 @@ export const getMissionByIdResponse = zod
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
                     .object({
-                        lat: zod.number().optional(),
-                        lng: zod.number().optional(),
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
                     })
                     .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
             })
             .optional()
-            .describe("Brief summary of departure or arrival hub"),
+            .describe("Brief summary of departure, arrival, or stopover hub"),
         arrivalHub: zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
@@ -227,17 +722,55 @@ export const getMissionByIdResponse = zod
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
                     .object({
-                        lat: zod.number().optional(),
-                        lng: zod.number().optional(),
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
                     })
                     .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
             })
             .optional()
-            .describe("Brief summary of departure or arrival hub"),
+            .describe("Brief summary of departure, arrival, or stopover hub"),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Created by user ID (Keycloak sub)"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
         lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        recurringPattern: zod
+            .string()
+            .optional()
+            .describe("Optional cron expression for recurring missions"),
+        triggerConditions: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Optional event trigger conditions"),
+        requiredCapabilities: zod
+            .array(zod.string())
+            .optional()
+            .describe("Optional required drone capabilities"),
+        feasibilityOverride: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional feasibility override metadata"),
+        templateId: zod
+            .string()
+            .optional()
+            .describe("Source mission template UUID if instantiated from template"),
+        templateVersion: zod.number().optional().describe("Source mission template version"),
+        estimatedDistance: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated route distance in meters"),
+        estimatedDuration: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated flight duration in seconds"),
     })
     .describe("Mission detailed information");
 
@@ -250,27 +783,65 @@ export const updateMissionParams = zod.object({
 });
 
 export const updateMissionBodyNameMax = 255;
+export const updateMissionBodyPayloadWeightKgMax = 50;
+export const updateMissionBodyPilotIdMin = 0;
+export const updateMissionBodyPilotIdMax = 100;
+export const updateMissionBodyRecurringPatternMin = 0;
+export const updateMissionBodyRecurringPatternMax = 100;
 
 export const updateMissionBody = zod
     .object({
         name: zod.string().min(1).max(updateMissionBodyNameMax).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
+        payloadWeightKg: zod
+            .number()
+            .max(updateMissionBodyPayloadWeightKgMax)
+            .optional()
+            .describe("Payload mass in kilograms to transport"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
         scheduleType: zod
-            .enum(["immediate", "scheduled"])
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
             .optional()
-            .describe("Mission schedule type ('immediate' or 'scheduled')"),
+            .describe("Mission schedule type"),
         scheduledAt: zod.iso
             .datetime({})
             .optional()
             .describe("Scheduled flight departure timestamp"),
+        droneId: zod.string().optional().describe("Optional pre-assigned Drone UUID identifier"),
+        pilotId: zod
+            .string()
+            .min(updateMissionBodyPilotIdMin)
+            .max(updateMissionBodyPilotIdMax)
+            .optional()
+            .describe("Optional pre-assigned Remote Pilot ID"),
+        recurringPattern: zod
+            .string()
+            .min(updateMissionBodyRecurringPatternMin)
+            .max(updateMissionBodyRecurringPatternMax)
+            .optional()
+            .describe("Optional cron expression for recurring missions"),
+        triggerConditions: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Optional event trigger conditions"),
+        requiredCapabilities: zod
+            .array(zod.string())
+            .optional()
+            .describe("Optional required drone capabilities"),
+        feasibilityOverride: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional feasibility override metadata"),
     })
     .describe("Request payload for updating an existing mission in draft status");
 
 export const updateMissionResponseCodeMin = 3;
 export const updateMissionResponseCodeMax = 50;
 export const updateMissionResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateMissionResponseWaypointsItemHubCodeMin = 3;
+export const updateMissionResponseWaypointsItemHubCodeMax = 50;
+export const updateMissionResponseWaypointsItemHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const updateMissionResponseDepartureHubCodeMin = 3;
 export const updateMissionResponseDepartureHubCodeMax = 50;
 export const updateMissionResponseDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
@@ -290,15 +861,28 @@ export const updateMissionResponse = zod
             .describe("Mission business tracking code"),
         name: zod.string().min(1).optional().describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
+        payloadWeightKg: zod.number().optional().describe("Payload mass in kilograms to transport"),
         departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
+        droneId: zod.string().optional().describe("Optional pre-assigned Drone UUID identifier"),
+        pilotId: zod.string().optional().describe("Optional pre-assigned Remote Pilot ID"),
         scheduleType: zod
-            .enum(["immediate", "scheduled"])
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
             .optional()
-            .describe("Schedule type ('immediate' or 'scheduled')"),
+            .describe("Schedule type"),
         scheduledAt: zod.iso.datetime({}).optional().describe("Scheduled departure timestamp"),
         status: zod
-            .enum(["draft", "scheduled", "executing", "paused", "completed", "aborted", "failed"])
+            .enum([
+                "draft",
+                "ready",
+                "scheduled",
+                "executing",
+                "paused",
+                "completed",
+                "aborted",
+                "cancelled",
+                "failed",
+            ])
             .optional()
             .describe("Mission operational status"),
         waypointCount: zod
@@ -318,7 +902,7 @@ export const updateMissionResponse = zod
                         sequence: zod
                             .number()
                             .optional()
-                            .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
+                            .describe("Sequence order of waypoint in mission"),
                         name: zod
                             .string()
                             .min(1)
@@ -326,7 +910,34 @@ export const updateMissionResponse = zod
                             .describe("Waypoint designation or name"),
                         latitude: zod.number().optional().describe("GPS latitude"),
                         longitude: zod.number().optional().describe("GPS longitude"),
-                        altitude: zod.number().optional().describe("Altitude in meters"),
+                        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID identifier"),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional()
+                            .describe("Stopover type at hub"),
+                        groundTimeMinutes: zod
+                            .number()
+                            .optional()
+                            .describe("Ground turnaround time in minutes at stopover hub"),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload delta in kg at this waypoint"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
                         actions: zod
                             .record(zod.string(), zod.any())
                             .optional()
@@ -335,10 +946,7 @@ export const updateMissionResponse = zod
                             .record(zod.string(), zod.any())
                             .optional()
                             .describe("Conditions at waypoint"),
-                        warning: zod
-                            .string()
-                            .optional()
-                            .describe("Safety warnings (e.g. proximity to no fly zone)"),
+                        warning: zod.string().optional().describe("Safety warnings"),
                         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
                         createdBy: zod.string().optional().describe("Created by user ID"),
                         lastModifiedOn: zod.iso
@@ -349,6 +957,63 @@ export const updateMissionResponse = zod
                             .string()
                             .optional()
                             .describe("Last modified by user ID"),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation at this waypoint"
+                            ),
+                        waypointType: zod
+                            .enum(["coordinate", "hub"])
+                            .optional()
+                            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+                        hub: zod
+                            .object({
+                                id: zod.string().optional().describe("Hub unique identifier"),
+                                code: zod
+                                    .string()
+                                    .min(updateMissionResponseWaypointsItemHubCodeMin)
+                                    .max(updateMissionResponseWaypointsItemHubCodeMax)
+                                    .regex(updateMissionResponseWaypointsItemHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
+                                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                                location: zod
+                                    .object({
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
+                                    })
+                                    .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
+                            })
+                            .optional()
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
                     })
                     .describe("Waypoint details")
             )
@@ -369,13 +1034,22 @@ export const updateMissionResponse = zod
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
                     .object({
-                        lat: zod.number().optional(),
-                        lng: zod.number().optional(),
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
                     })
                     .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
             })
             .optional()
-            .describe("Brief summary of departure or arrival hub"),
+            .describe("Brief summary of departure, arrival, or stopover hub"),
         arrivalHub: zod
             .object({
                 id: zod.string().optional().describe("Hub unique identifier"),
@@ -391,17 +1065,55 @@ export const updateMissionResponse = zod
                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                 location: zod
                     .object({
-                        lat: zod.number().optional(),
-                        lng: zod.number().optional(),
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
                     })
                     .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
             })
             .optional()
-            .describe("Brief summary of departure or arrival hub"),
+            .describe("Brief summary of departure, arrival, or stopover hub"),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Created by user ID (Keycloak sub)"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
         lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        recurringPattern: zod
+            .string()
+            .optional()
+            .describe("Optional cron expression for recurring missions"),
+        triggerConditions: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Optional event trigger conditions"),
+        requiredCapabilities: zod
+            .array(zod.string())
+            .optional()
+            .describe("Optional required drone capabilities"),
+        feasibilityOverride: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional feasibility override metadata"),
+        templateId: zod
+            .string()
+            .optional()
+            .describe("Source mission template UUID if instantiated from template"),
+        templateVersion: zod.number().optional().describe("Source mission template version"),
+        estimatedDistance: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated route distance in meters"),
+        estimatedDuration: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated flight duration in seconds"),
     })
     .describe("Mission detailed information");
 
@@ -413,36 +1125,472 @@ export const deleteMissionParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the mission"),
 });
 
+export const deleteMissionResponse = zod.record(zod.string(), zod.string());
+
 /**
- * Get paginated missions filtered by status, hubs, and schedule type
+ * @summary List latest mission templates
+ */
+export const getTemplatesQueryPageDefault = 0;
+export const getTemplatesQuerySizeDefault = 20;
+
+export const getTemplatesQueryParams = zod.object({
+    category: zod.string().optional(),
+    published: zod.boolean().optional(),
+    search: zod.string().optional(),
+    limit: zod.number().optional(),
+    offset: zod.number().optional(),
+    page: zod.number().optional(),
+    size: zod.number().default(getTemplatesQuerySizeDefault),
+});
+
+export const getTemplatesResponseItemsItemCodeMin = 3;
+export const getTemplatesResponseItemsItemCodeMax = 50;
+export const getTemplatesResponseItemsItemCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const getTemplatesResponse = zod.object({
+    items: zod
+        .array(
+            zod
+                .object({
+                    id: zod.string().optional(),
+                    code: zod
+                        .string()
+                        .min(getTemplatesResponseItemsItemCodeMin)
+                        .max(getTemplatesResponseItemsItemCodeMax)
+                        .regex(getTemplatesResponseItemsItemCodeRegExp)
+                        .optional(),
+                    name: zod.string().min(1).optional(),
+                    description: zod.string().optional(),
+                    category: zod.string().optional(),
+                    tags: zod.array(zod.string()).optional(),
+                    variables: zod
+                        .array(
+                            zod
+                                .object({
+                                    key: zod.string().optional(),
+                                    label: zod.string().optional(),
+                                    type: zod.string().optional(),
+                                    required: zod.boolean().optional(),
+                                    defaultValue: zod.any().optional(),
+                                    validation: zod.record(zod.string(), zod.any()).optional(),
+                                })
+                                .describe(
+                                    "Parameterized variable definition inside a Mission Template"
+                                )
+                        )
+                        .optional(),
+                    blueprint: zod
+                        .object({
+                            waypoints: zod
+                                .array(
+                                    zod
+                                        .object({
+                                            sequence: zod.number().optional(),
+                                            name: zod.string().min(1).optional(),
+                                            latitude: zod.any().optional(),
+                                            longitude: zod.any().optional(),
+                                            altitude: zod.any().optional(),
+                                            speedToWaypoint: zod.any().optional(),
+                                            headingAtWaypoint: zod.number().optional(),
+                                            turnRadius: zod.number().optional(),
+                                            hubId: zod.string().optional(),
+                                            stopoverType: zod
+                                                .enum([
+                                                    "none",
+                                                    "recharge",
+                                                    "battery_swap",
+                                                    "relay_handoff",
+                                                    "payload_dropoff",
+                                                    "payload_pickup",
+                                                ])
+                                                .optional(),
+                                            groundTimeMinutes: zod.number().optional(),
+                                            payloadDeltaKg: zod.number().optional(),
+                                            hoverDuration: zod.number().optional(),
+                                            waitForConfirmation: zod.boolean().optional(),
+                                            actions: zod.record(zod.string(), zod.any()).optional(),
+                                            conditions: zod
+                                                .record(zod.string(), zod.any())
+                                                .optional(),
+                                            waypointType: zod
+                                                .enum(["coordinate", "hub"])
+                                                .optional(),
+                                        })
+                                        .describe(
+                                            "Parameterized waypoint blueprint inside a Mission Template"
+                                        )
+                                )
+                                .optional(),
+                            defaultScheduleType: zod
+                                .enum([
+                                    "immediate",
+                                    "manual",
+                                    "scheduled",
+                                    "recurring",
+                                    "event_triggered",
+                                ])
+                                .optional(),
+                            defaultTriggerConditions: zod
+                                .array(zod.record(zod.string(), zod.any()))
+                                .optional(),
+                            requiredCapabilities: zod.array(zod.string()).optional(),
+                            payloadWeightKg: zod.number().optional(),
+                            estimatedDuration: zod.number().optional(),
+                            estimatedDistance: zod.number().optional(),
+                        })
+                        .optional()
+                        .describe("Mission route & scheduling blueprint inside a Mission Template"),
+                    version: zod.number().optional(),
+                    isLatest: zod.boolean().optional(),
+                    previousVersionId: zod.string().optional(),
+                    changelog: zod.string().optional(),
+                    usageCount: zod.number().optional(),
+                    isPublished: zod.boolean().optional(),
+                    publishedAt: zod.iso.datetime({}).optional(),
+                    createdOn: zod.iso.datetime({}).optional(),
+                    createdBy: zod.string().optional(),
+                    lastModifiedOn: zod.iso.datetime({}).optional(),
+                    lastModifiedBy: zod.string().optional(),
+                })
+                .describe("Mission Template detailed representation")
+        )
+        .optional(),
+    total: zod.number().optional(),
+});
+
+/**
+ * @summary Create a new mission template
+ */
+export const createTemplateBodyCodeMin = 3;
+export const createTemplateBodyCodeMax = 50;
+export const createTemplateBodyCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const createTemplateBodyNameMax = 255;
+
+export const createTemplateBody = zod
+    .object({
+        code: zod
+            .string()
+            .min(createTemplateBodyCodeMin)
+            .max(createTemplateBodyCodeMax)
+            .regex(createTemplateBodyCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).max(createTemplateBodyNameMax),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+    })
+    .describe("Request payload to create a reusable Mission Template");
+
+/**
+ * @summary Unpublish template
+ */
+export const unpublishTemplateParams = zod.object({
+    id: zod.string(),
+});
+
+export const unpublishTemplateResponseCodeMin = 3;
+export const unpublishTemplateResponseCodeMax = 50;
+export const unpublishTemplateResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const unpublishTemplateResponse = zod
+    .object({
+        id: zod.string().optional(),
+        code: zod
+            .string()
+            .min(unpublishTemplateResponseCodeMin)
+            .max(unpublishTemplateResponseCodeMax)
+            .regex(unpublishTemplateResponseCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        version: zod.number().optional(),
+        isLatest: zod.boolean().optional(),
+        previousVersionId: zod.string().optional(),
+        changelog: zod.string().optional(),
+        usageCount: zod.number().optional(),
+        isPublished: zod.boolean().optional(),
+        publishedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Mission Template detailed representation");
+
+/**
+ * @summary Publish template
+ */
+export const publishTemplateParams = zod.object({
+    id: zod.string(),
+});
+
+export const publishTemplateResponseCodeMin = 3;
+export const publishTemplateResponseCodeMax = 50;
+export const publishTemplateResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const publishTemplateResponse = zod
+    .object({
+        id: zod.string().optional(),
+        code: zod
+            .string()
+            .min(publishTemplateResponseCodeMin)
+            .max(publishTemplateResponseCodeMax)
+            .regex(publishTemplateResponseCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        version: zod.number().optional(),
+        isLatest: zod.boolean().optional(),
+        previousVersionId: zod.string().optional(),
+        changelog: zod.string().optional(),
+        usageCount: zod.number().optional(),
+        isPublished: zod.boolean().optional(),
+        publishedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Mission Template detailed representation");
+
+/**
+ * @summary Instantiate a draft mission from a template with variable interpolation
+ */
+export const instantiateTemplateParams = zod.object({
+    id: zod.string(),
+});
+
+export const instantiateTemplateBody = zod
+    .object({
+        missionName: zod.string().optional(),
+        variableValues: zod.record(zod.string(), zod.any()).optional(),
+        departureHubId: zod.string().optional(),
+        arrivalHubId: zod.string().optional(),
+        droneId: zod.string().optional(),
+        pilotId: zod.string().optional(),
+        scheduleType: zod
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+            .optional(),
+        scheduledAt: zod.iso.datetime({}).optional(),
+    })
+    .describe("Request payload to instantiate a draft Mission from a Mission Template");
+
+/**
+ * Get paginated missions filtered by status, hubs, drone, and schedule type
  * @summary Get list of missions
  */
 export const getMissionsQueryPageDefault = 0;
 export const getMissionsQuerySizeDefault = 20;
 
 export const getMissionsQueryParams = zod.object({
-    status: zod
-        .string()
-        .optional()
-        .describe(
-            "Filter by mission status (draft, scheduled, executing, paused, completed, aborted, failed)"
-        ),
+    status: zod.string().optional().describe("Filter by mission status"),
     departureHubId: zod.string().optional().describe("Filter by departure hub UUID"),
     arrivalHubId: zod.string().optional().describe("Filter by destination arrival hub UUID"),
-    scheduleType: zod
-        .string()
-        .optional()
-        .describe("Filter by schedule type (immediate, scheduled)"),
+    droneId: zod.string().optional().describe("Filter by assigned drone UUID"),
+    scheduleType: zod.string().optional().describe("Filter by schedule type"),
     page: zod.number().optional().describe("Page number (zero-based)"),
     size: zod
         .number()
         .default(getMissionsQuerySizeDefault)
         .describe("Page size (records per page)"),
+    limit: zod.number().optional().describe("Optional limit alias"),
+    offset: zod.number().optional().describe("Optional offset alias"),
 });
 
 export const getMissionsResponseItemsItemCodeMin = 3;
 export const getMissionsResponseItemsItemCodeMax = 50;
 export const getMissionsResponseItemsItemCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getMissionsResponseItemsItemWaypointsItemHubCodeMin = 3;
+export const getMissionsResponseItemsItemWaypointsItemHubCodeMax = 50;
+export const getMissionsResponseItemsItemWaypointsItemHubCodeRegExp = new RegExp(
+    "^[A-Za-z0-9_-]+$"
+);
 export const getMissionsResponseItemsItemDepartureHubCodeMin = 3;
 export const getMissionsResponseItemsItemDepartureHubCodeMax = 50;
 export const getMissionsResponseItemsItemDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
@@ -469,6 +1617,10 @@ export const getMissionsResponse = zod
                             .string()
                             .optional()
                             .describe("Mission detailed description"),
+                        payloadWeightKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload mass in kilograms to transport"),
                         departureHubId: zod
                             .string()
                             .optional()
@@ -477,10 +1629,24 @@ export const getMissionsResponse = zod
                             .string()
                             .optional()
                             .describe("Arrival Hub UUID identifier"),
-                        scheduleType: zod
-                            .enum(["immediate", "scheduled"])
+                        droneId: zod
+                            .string()
                             .optional()
-                            .describe("Schedule type ('immediate' or 'scheduled')"),
+                            .describe("Optional pre-assigned Drone UUID identifier"),
+                        pilotId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional pre-assigned Remote Pilot ID"),
+                        scheduleType: zod
+                            .enum([
+                                "immediate",
+                                "manual",
+                                "scheduled",
+                                "recurring",
+                                "event_triggered",
+                            ])
+                            .optional()
+                            .describe("Schedule type"),
                         scheduledAt: zod.iso
                             .datetime({})
                             .optional()
@@ -488,11 +1654,13 @@ export const getMissionsResponse = zod
                         status: zod
                             .enum([
                                 "draft",
+                                "ready",
                                 "scheduled",
                                 "executing",
                                 "paused",
                                 "completed",
                                 "aborted",
+                                "cancelled",
                                 "failed",
                             ])
                             .optional()
@@ -522,9 +1690,7 @@ export const getMissionsResponse = zod
                                         sequence: zod
                                             .number()
                                             .optional()
-                                            .describe(
-                                                "Sequence order of waypoint in mission (1, 2, 3...)"
-                                            ),
+                                            .describe("Sequence order of waypoint in mission"),
                                         name: zod
                                             .string()
                                             .min(1)
@@ -538,7 +1704,36 @@ export const getMissionsResponse = zod
                                         altitude: zod
                                             .number()
                                             .optional()
-                                            .describe("Altitude in meters"),
+                                            .describe("Altitude in meters AGL"),
+                                        hubId: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Optional stopover hub UUID identifier"),
+                                        stopoverType: zod
+                                            .enum([
+                                                "none",
+                                                "recharge",
+                                                "battery_swap",
+                                                "relay_handoff",
+                                                "payload_dropoff",
+                                                "payload_pickup",
+                                            ])
+                                            .optional()
+                                            .describe("Stopover type at hub"),
+                                        groundTimeMinutes: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Ground turnaround time in minutes at stopover hub"
+                                            ),
+                                        payloadDeltaKg: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Payload delta in kg at this waypoint"),
+                                        hoverDurationSec: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Hover duration in seconds at this waypoint"),
                                         actions: zod
                                             .record(zod.string(), zod.any())
                                             .optional()
@@ -550,9 +1745,7 @@ export const getMissionsResponse = zod
                                         warning: zod
                                             .string()
                                             .optional()
-                                            .describe(
-                                                "Safety warnings (e.g. proximity to no fly zone)"
-                                            ),
+                                            .describe("Safety warnings"),
                                         createdOn: zod.iso
                                             .datetime({})
                                             .optional()
@@ -569,6 +1762,88 @@ export const getMissionsResponse = zod
                                             .string()
                                             .optional()
                                             .describe("Last modified by user ID"),
+                                        speedToWaypoint: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Target cruise speed towards this waypoint in m/s"
+                                            ),
+                                        headingAtWaypoint: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Desired heading in degrees (0-360) upon reaching waypoint"
+                                            ),
+                                        turnRadius: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Fly-by turn radius in meters"),
+                                        waitForConfirmation: zod
+                                            .boolean()
+                                            .optional()
+                                            .describe(
+                                                "Whether drone holds and awaits operator confirmation at this waypoint"
+                                            ),
+                                        waypointType: zod
+                                            .enum(["coordinate", "hub"])
+                                            .optional()
+                                            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+                                        hub: zod
+                                            .object({
+                                                id: zod
+                                                    .string()
+                                                    .optional()
+                                                    .describe("Hub unique identifier"),
+                                                code: zod
+                                                    .string()
+                                                    .min(
+                                                        getMissionsResponseItemsItemWaypointsItemHubCodeMin
+                                                    )
+                                                    .max(
+                                                        getMissionsResponseItemsItemWaypointsItemHubCodeMax
+                                                    )
+                                                    .regex(
+                                                        getMissionsResponseItemsItemWaypointsItemHubCodeRegExp
+                                                    )
+                                                    .optional()
+                                                    .describe("Hub operational code"),
+                                                name: zod
+                                                    .string()
+                                                    .min(1)
+                                                    .optional()
+                                                    .describe("Hub name"),
+                                                latitude: zod
+                                                    .number()
+                                                    .optional()
+                                                    .describe("Hub GPS latitude"),
+                                                longitude: zod
+                                                    .number()
+                                                    .optional()
+                                                    .describe("Hub GPS longitude"),
+                                                location: zod
+                                                    .object({
+                                                        latitude: zod.number().optional(),
+                                                        longitude: zod.number().optional(),
+                                                    })
+                                                    .optional(),
+                                                status: zod
+                                                    .string()
+                                                    .optional()
+                                                    .describe(
+                                                        "Hub operational status (active, maintenance, inactive)"
+                                                    ),
+                                                maxSimultaneousDrones: zod
+                                                    .number()
+                                                    .optional()
+                                                    .describe(
+                                                        "Maximum simultaneous active drones allowed at this hub"
+                                                    ),
+                                                active: zod.boolean().optional(),
+                                            })
+                                            .optional()
+                                            .describe(
+                                                "Brief summary of departure, arrival, or stopover hub"
+                                            ),
                                     })
                                     .describe("Waypoint details")
                             )
@@ -589,13 +1864,26 @@ export const getMissionsResponse = zod
                                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                                 location: zod
                                     .object({
-                                        lat: zod.number().optional(),
-                                        lng: zod.number().optional(),
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
                                     })
                                     .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
                             })
                             .optional()
-                            .describe("Brief summary of departure or arrival hub"),
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
                         arrivalHub: zod
                             .object({
                                 id: zod.string().optional().describe("Hub unique identifier"),
@@ -611,13 +1899,26 @@ export const getMissionsResponse = zod
                                 longitude: zod.number().optional().describe("Hub GPS longitude"),
                                 location: zod
                                     .object({
-                                        lat: zod.number().optional(),
-                                        lng: zod.number().optional(),
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
                                     })
                                     .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
                             })
                             .optional()
-                            .describe("Brief summary of departure or arrival hub"),
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
                         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
                         createdBy: zod
                             .string()
@@ -631,6 +1932,38 @@ export const getMissionsResponse = zod
                             .string()
                             .optional()
                             .describe("Last modified by user ID"),
+                        recurringPattern: zod
+                            .string()
+                            .optional()
+                            .describe("Optional cron expression for recurring missions"),
+                        triggerConditions: zod
+                            .array(zod.record(zod.string(), zod.any()))
+                            .optional()
+                            .describe("Optional event trigger conditions"),
+                        requiredCapabilities: zod
+                            .array(zod.string())
+                            .optional()
+                            .describe("Optional required drone capabilities"),
+                        feasibilityOverride: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Optional feasibility override metadata"),
+                        templateId: zod
+                            .string()
+                            .optional()
+                            .describe("Source mission template UUID if instantiated from template"),
+                        templateVersion: zod
+                            .number()
+                            .optional()
+                            .describe("Source mission template version"),
+                        estimatedDistance: zod
+                            .number()
+                            .optional()
+                            .describe("Persisted estimated route distance in meters"),
+                        estimatedDuration: zod
+                            .number()
+                            .optional()
+                            .describe("Persisted estimated flight duration in seconds"),
                     })
                     .describe("Mission detailed information")
             )
@@ -651,6 +1984,11 @@ export const createMissionBodyCodeMin = 3;
 export const createMissionBodyCodeMax = 50;
 export const createMissionBodyCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
 export const createMissionBodyNameMax = 255;
+export const createMissionBodyPayloadWeightKgMax = 50;
+export const createMissionBodyPilotIdMin = 0;
+export const createMissionBodyPilotIdMax = 100;
+export const createMissionBodyRecurringPatternMin = 0;
+export const createMissionBodyRecurringPatternMax = 100;
 
 export const createMissionBody = zod
     .object({
@@ -665,18 +2003,50 @@ export const createMissionBody = zod
             ),
         name: zod.string().min(1).max(createMissionBodyNameMax).describe("Mission name"),
         description: zod.string().optional().describe("Mission detailed description"),
+        payloadWeightKg: zod
+            .number()
+            .max(createMissionBodyPayloadWeightKgMax)
+            .optional()
+            .describe("Payload mass in kilograms to transport"),
         departureHubId: zod.string().min(1).describe("Departure Hub UUID identifier"),
         arrivalHubId: zod.string().min(1).describe("Arrival Hub UUID identifier"),
         scheduleType: zod
-            .enum(["immediate", "scheduled"])
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
             .optional()
-            .describe("Mission schedule type ('immediate' or 'scheduled')"),
+            .describe(
+                "Mission schedule type ('immediate', 'manual', 'scheduled', 'recurring', 'event_triggered')"
+            ),
         scheduledAt: zod.iso
             .datetime({})
             .optional()
+            .describe("Scheduled flight departure timestamp"),
+        droneId: zod.string().optional().describe("Optional pre-assigned Drone UUID identifier"),
+        pilotId: zod
+            .string()
+            .min(createMissionBodyPilotIdMin)
+            .max(createMissionBodyPilotIdMax)
+            .optional()
+            .describe("Optional pre-assigned Remote Pilot ID or Keycloak User ID"),
+        recurringPattern: zod
+            .string()
+            .min(createMissionBodyRecurringPatternMin)
+            .max(createMissionBodyRecurringPatternMax)
+            .optional()
+            .describe("Optional cron expression for recurring missions"),
+        triggerConditions: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Optional event trigger conditions"),
+        requiredCapabilities: zod
+            .array(zod.string())
+            .optional()
             .describe(
-                "Scheduled flight departure timestamp (required if scheduleType is scheduled)"
+                "Optional required drone capabilities (e.g. payload_release, thermal_camera, bvlos)"
             ),
+        feasibilityOverride: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional pre-flight feasibility override metadata"),
     })
     .describe("Request payload for creating a mission");
 
@@ -688,31 +2058,98 @@ export const getWaypointsParams = zod.object({
     missionId: zod.string().describe("Unique UUID identifier of the mission"),
 });
 
+export const getWaypointsResponseHubCodeMin = 3;
+export const getWaypointsResponseHubCodeMax = 50;
+export const getWaypointsResponseHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const getWaypointsResponseItem = zod
     .object({
         id: zod.string().optional().describe("Waypoint UUID identifier"),
         missionId: zod.string().optional().describe("Mission UUID identifier"),
-        sequence: zod
-            .number()
-            .optional()
-            .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
+        sequence: zod.number().optional().describe("Sequence order of waypoint in mission"),
         name: zod.string().min(1).optional().describe("Waypoint designation or name"),
         latitude: zod.number().optional().describe("GPS latitude"),
         longitude: zod.number().optional().describe("GPS longitude"),
-        altitude: zod.number().optional().describe("Altitude in meters"),
+        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+        hubId: zod.string().optional().describe("Optional stopover hub UUID identifier"),
+        stopoverType: zod
+            .enum([
+                "none",
+                "recharge",
+                "battery_swap",
+                "relay_handoff",
+                "payload_dropoff",
+                "payload_pickup",
+            ])
+            .optional()
+            .describe("Stopover type at hub"),
+        groundTimeMinutes: zod
+            .number()
+            .optional()
+            .describe("Ground turnaround time in minutes at stopover hub"),
+        payloadDeltaKg: zod.number().optional().describe("Payload delta in kg at this waypoint"),
+        hoverDurationSec: zod
+            .number()
+            .optional()
+            .describe("Hover duration in seconds at this waypoint"),
         actions: zod.record(zod.string(), zod.any()).optional().describe("Actions at waypoint"),
         conditions: zod
             .record(zod.string(), zod.any())
             .optional()
             .describe("Conditions at waypoint"),
-        warning: zod
-            .string()
-            .optional()
-            .describe("Safety warnings (e.g. proximity to no fly zone)"),
+        warning: zod.string().optional().describe("Safety warnings"),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Created by user ID"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
         lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        speedToWaypoint: zod
+            .number()
+            .optional()
+            .describe("Target cruise speed towards this waypoint in m/s"),
+        headingAtWaypoint: zod
+            .number()
+            .optional()
+            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+        turnRadius: zod.number().optional().describe("Fly-by turn radius in meters"),
+        waitForConfirmation: zod
+            .boolean()
+            .optional()
+            .describe("Whether drone holds and awaits operator confirmation at this waypoint"),
+        waypointType: zod
+            .enum(["coordinate", "hub"])
+            .optional()
+            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+        hub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(getWaypointsResponseHubCodeMin)
+                    .max(getWaypointsResponseHubCodeMax)
+                    .regex(getWaypointsResponseHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
     })
     .describe("Waypoint details");
 export const getWaypointsResponse = zod.array(getWaypointsResponseItem);
@@ -731,6 +2168,8 @@ export const addWaypointBodyLatitudeMax = 90;
 export const addWaypointBodyLongitudeMin = -180;
 export const addWaypointBodyLongitudeMax = 180;
 export const addWaypointBodyAltitudeMin = 0;
+export const addWaypointBodyHeadingAtWaypointMin = 0;
+export const addWaypointBodyHeadingAtWaypointMax = 360;
 
 export const addWaypointBody = zod
     .object({
@@ -744,26 +2183,76 @@ export const addWaypointBody = zod
             .number()
             .min(addWaypointBodyLatitudeMin)
             .max(addWaypointBodyLatitudeMax)
-            .describe("GPS latitude (-90 to 90)"),
+            .optional()
+            .describe("GPS latitude (-90 to 90; locked from Hub when waypointType is HUB)"),
         longitude: zod
             .number()
             .min(addWaypointBodyLongitudeMin)
             .max(addWaypointBodyLongitudeMax)
-            .describe("GPS longitude (-180 to 180)"),
+            .optional()
+            .describe("GPS longitude (-180 to 180; locked from Hub when waypointType is HUB)"),
         altitude: zod
             .number()
             .min(addWaypointBodyAltitudeMin)
-            .describe("Target flight altitude in meters (> 0)"),
+            .optional()
+            .describe(
+                "Target altitude in meters AGL (> 0 for COORDINATE; >= 0 / defaults to 0m pad for HUB)"
+            ),
         actions: zod
             .record(zod.string(), zod.any())
             .optional()
-            .describe("Actions to execute at waypoint (hover, photo, drop)"),
+            .describe("Actions to execute at waypoint"),
         conditions: zod
             .record(zod.string(), zod.any())
             .optional()
-            .describe("Flight conditions at waypoint (speed limit, wind tolerance)"),
+            .describe("Flight conditions at waypoint"),
+        hubId: zod.string().optional().describe("Intermediate Hub UUID for HUB stopover node"),
+        stopoverType: zod
+            .enum([
+                "none",
+                "recharge",
+                "battery_swap",
+                "relay_handoff",
+                "payload_dropoff",
+                "payload_pickup",
+            ])
+            .optional()
+            .describe("Stopover action type at hub (required non-NONE for HUB waypoints)"),
+        groundTimeMinutes: zod
+            .number()
+            .optional()
+            .describe("Ground turnaround time in minutes at stopover hub"),
+        payloadDeltaKg: zod
+            .number()
+            .optional()
+            .describe("Payload weight delta in kg applied after this waypoint"),
+        hoverDurationSec: zod
+            .number()
+            .optional()
+            .describe("Hover duration in seconds at this waypoint"),
+        speedToWaypoint: zod
+            .number()
+            .optional()
+            .describe("Target cruise speed towards this waypoint in m/s"),
+        headingAtWaypoint: zod
+            .number()
+            .min(addWaypointBodyHeadingAtWaypointMin)
+            .max(addWaypointBodyHeadingAtWaypointMax)
+            .optional()
+            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+        turnRadius: zod.number().optional().describe("Fly-by turn radius in meters"),
+        waitForConfirmation: zod
+            .boolean()
+            .optional()
+            .describe("Whether drone should hold and await operator confirmation at this waypoint"),
+        waypointType: zod
+            .enum(["coordinate", "hub"])
+            .optional()
+            .describe(
+                "Waypoint node type: 'coordinate' (airborne) or 'hub' (vertiport stopover boundary)"
+            ),
     })
-    .describe("Request payload for creating a new waypoint");
+    .describe("Request payload for creating a new waypoint (COORDINATE or HUB)");
 
 /**
  * Reorder waypoint sequence numbers in a single atomic transaction
@@ -792,49 +2281,936 @@ export const reorderWaypointsBody = zod
     })
     .describe("Request payload to reorder waypoints for a mission");
 
+export const reorderWaypointsResponseHubCodeMin = 3;
+export const reorderWaypointsResponseHubCodeMax = 50;
+export const reorderWaypointsResponseHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
 export const reorderWaypointsResponseItem = zod
     .object({
         id: zod.string().optional().describe("Waypoint UUID identifier"),
         missionId: zod.string().optional().describe("Mission UUID identifier"),
-        sequence: zod
-            .number()
-            .optional()
-            .describe("Sequence order of waypoint in mission (1, 2, 3...)"),
+        sequence: zod.number().optional().describe("Sequence order of waypoint in mission"),
         name: zod.string().min(1).optional().describe("Waypoint designation or name"),
         latitude: zod.number().optional().describe("GPS latitude"),
         longitude: zod.number().optional().describe("GPS longitude"),
-        altitude: zod.number().optional().describe("Altitude in meters"),
+        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+        hubId: zod.string().optional().describe("Optional stopover hub UUID identifier"),
+        stopoverType: zod
+            .enum([
+                "none",
+                "recharge",
+                "battery_swap",
+                "relay_handoff",
+                "payload_dropoff",
+                "payload_pickup",
+            ])
+            .optional()
+            .describe("Stopover type at hub"),
+        groundTimeMinutes: zod
+            .number()
+            .optional()
+            .describe("Ground turnaround time in minutes at stopover hub"),
+        payloadDeltaKg: zod.number().optional().describe("Payload delta in kg at this waypoint"),
+        hoverDurationSec: zod
+            .number()
+            .optional()
+            .describe("Hover duration in seconds at this waypoint"),
         actions: zod.record(zod.string(), zod.any()).optional().describe("Actions at waypoint"),
         conditions: zod
             .record(zod.string(), zod.any())
             .optional()
             .describe("Conditions at waypoint"),
-        warning: zod
-            .string()
-            .optional()
-            .describe("Safety warnings (e.g. proximity to no fly zone)"),
+        warning: zod.string().optional().describe("Safety warnings"),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Created by user ID"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
         lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        speedToWaypoint: zod
+            .number()
+            .optional()
+            .describe("Target cruise speed towards this waypoint in m/s"),
+        headingAtWaypoint: zod
+            .number()
+            .optional()
+            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+        turnRadius: zod.number().optional().describe("Fly-by turn radius in meters"),
+        waitForConfirmation: zod
+            .boolean()
+            .optional()
+            .describe("Whether drone holds and awaits operator confirmation at this waypoint"),
+        waypointType: zod
+            .enum(["coordinate", "hub"])
+            .optional()
+            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+        hub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(reorderWaypointsResponseHubCodeMin)
+                    .max(reorderWaypointsResponseHubCodeMax)
+                    .regex(reorderWaypointsResponseHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
     })
     .describe("Waypoint details");
 export const reorderWaypointsResponse = zod.array(reorderWaypointsResponseItem);
 
 /**
- * Converts draft/scheduled mission into an active flight execution
+ * Analyzes the mission's energy budget across all waypoints and automatically inserts first-class HUB stopover nodes (via multi-hop Dijkstra hub bridging or survey diversion to nearest active Hub) so large missions decompose cleanly into flyable flight legs
+ * @summary Auto-plan intermediate HUB stopover waypoints
+ */
+export const autoPlanHubsParams = zod.object({
+    missionId: zod.string().describe("Unique UUID identifier of the mission"),
+});
+
+export const autoPlanHubsBody = zod
+    .object({
+        droneId: zod
+            .string()
+            .optional()
+            .describe(
+                "Optional drone UUID whose real battery/power specs determine split range (defaults to fleet reference specs)"
+            ),
+        preferredStopoverType: zod
+            .enum([
+                "none",
+                "recharge",
+                "battery_swap",
+                "relay_handoff",
+                "payload_dropoff",
+                "payload_pickup",
+            ])
+            .optional()
+            .describe(
+                "Preferred stopover type for auto-inserted HUB waypoints (recharge, battery_swap, relay_handoff; default recharge)"
+            ),
+        persist: zod
+            .boolean()
+            .optional()
+            .describe(
+                "Whether to persist inserted HUB waypoints into the draft mission (true) or preview only (false). Defaults to true."
+            ),
+    })
+    .describe(
+        "Request payload for automatically planning intermediate HUB stopover waypoints based on battery energy budget"
+    );
+
+export const autoPlanHubsResponseWaypointsItemHubCodeMin = 3;
+export const autoPlanHubsResponseWaypointsItemHubCodeMax = 50;
+export const autoPlanHubsResponseWaypointsItemHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const autoPlanHubsResponse = zod
+    .object({
+        missionId: zod.string().optional().describe("Mission UUID"),
+        insertedHubCount: zod
+            .number()
+            .optional()
+            .describe("Number of intermediate HUB stopover waypoints inserted"),
+        totalWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total number of waypoints after planning"),
+        plannedLegCount: zod.number().optional().describe("Resulting number of flight legs"),
+        estimatedDistanceMeters: zod
+            .number()
+            .optional()
+            .describe("Recalculated total mission distance in meters"),
+        estimatedDurationSeconds: zod
+            .number()
+            .optional()
+            .describe("Recalculated total mission duration in seconds"),
+        persisted: zod
+            .boolean()
+            .optional()
+            .describe("Whether the planned HUB waypoints were persisted to the database"),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional().describe("Waypoint UUID identifier"),
+                        missionId: zod.string().optional().describe("Mission UUID identifier"),
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence order of waypoint in mission"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID identifier"),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional()
+                            .describe("Stopover type at hub"),
+                        groundTimeMinutes: zod
+                            .number()
+                            .optional()
+                            .describe("Ground turnaround time in minutes at stopover hub"),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload delta in kg at this waypoint"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Conditions at waypoint"),
+                        warning: zod.string().optional().describe("Safety warnings"),
+                        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+                        createdBy: zod.string().optional().describe("Created by user ID"),
+                        lastModifiedOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Last modified timestamp"),
+                        lastModifiedBy: zod
+                            .string()
+                            .optional()
+                            .describe("Last modified by user ID"),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation at this waypoint"
+                            ),
+                        waypointType: zod
+                            .enum(["coordinate", "hub"])
+                            .optional()
+                            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+                        hub: zod
+                            .object({
+                                id: zod.string().optional().describe("Hub unique identifier"),
+                                code: zod
+                                    .string()
+                                    .min(autoPlanHubsResponseWaypointsItemHubCodeMin)
+                                    .max(autoPlanHubsResponseWaypointsItemHubCodeMax)
+                                    .regex(autoPlanHubsResponseWaypointsItemHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
+                                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                                location: zod
+                                    .object({
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
+                                    })
+                                    .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
+                            })
+                            .optional()
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
+                    })
+                    .describe("Waypoint details")
+            )
+            .optional()
+            .describe("Ordered mission waypoints including auto-inserted HUB stopover nodes"),
+        notes: zod
+            .array(zod.string())
+            .optional()
+            .describe("Planning explanations and inserted hub summaries"),
+    })
+    .describe("Result of automatic energy-budget HUB waypoint planning for a mission");
+
+/**
+ * Converts draft/scheduled mission into a single-leg or multi-leg active flight execution with Saga rollback protection
  * @summary Execute mission
  */
 export const executeMissionParams = zod.object({
     missionId: zod.string().describe("Unique UUID identifier of the mission"),
 });
 
+export const executeMissionBodyLegAssignmentsItemLegIndexMin = 0;
+
 export const executeMissionBody = zod
     .object({
-        droneId: zod.string().min(1).describe("Assigned Drone UUID identifier"),
+        droneId: zod
+            .string()
+            .optional()
+            .describe(
+                "Assigned Drone UUID identifier (optional if autoAssign is true or legAssignments provided)"
+            ),
         pilotId: zod.string().min(1).describe("Assigned Remote Pilot ID or Keycloak User ID"),
+        autoAssign: zod
+            .boolean()
+            .optional()
+            .describe(
+                "Whether to let the Fleet Scoring Engine automatically select the best drone(s)"
+            ),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe(
+                "Multi-leg execution coordination mode (same_drone_sequential or multi_drone_relay)"
+            ),
+        legAssignments: zod
+            .array(
+                zod
+                    .object({
+                        legIndex: zod
+                            .number()
+                            .min(executeMissionBodyLegAssignmentsItemLegIndexMin)
+                            .describe("Zero-based leg index"),
+                        droneId: zod.string().min(1).describe("Assigned drone UUID for this leg"),
+                    })
+                    .describe(
+                        "Explicit drone assignment for a specific flight leg in multi-drone relay mode"
+                    )
+            )
+            .optional()
+            .describe("Optional explicit per-leg drone assignments for multi_drone_relay mode"),
+        autoSplitByRange: zod
+            .boolean()
+            .optional()
+            .describe(
+                "When true, automatically inserts an intermediate charging hub stop if a leg exceeds drone battery range"
+            ),
     })
-    .describe("Request payload for executing a mission");
+    .describe("Request payload for executing a mission across one or multiple flight legs");
+
+/**
+ * Revert a scheduled mission back to draft status for editing
+ * @summary Unschedule a scheduled mission
+ */
+export const unscheduleMissionParams = zod.object({
+    id: zod.string().describe("Unique UUID identifier of the mission"),
+});
+
+export const unscheduleMissionResponseCodeMin = 3;
+export const unscheduleMissionResponseCodeMax = 50;
+export const unscheduleMissionResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const unscheduleMissionResponseWaypointsItemHubCodeMin = 3;
+export const unscheduleMissionResponseWaypointsItemHubCodeMax = 50;
+export const unscheduleMissionResponseWaypointsItemHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const unscheduleMissionResponseDepartureHubCodeMin = 3;
+export const unscheduleMissionResponseDepartureHubCodeMax = 50;
+export const unscheduleMissionResponseDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const unscheduleMissionResponseArrivalHubCodeMin = 3;
+export const unscheduleMissionResponseArrivalHubCodeMax = 50;
+export const unscheduleMissionResponseArrivalHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const unscheduleMissionResponse = zod
+    .object({
+        id: zod.string().optional().describe("Mission UUID identifier"),
+        code: zod
+            .string()
+            .min(unscheduleMissionResponseCodeMin)
+            .max(unscheduleMissionResponseCodeMax)
+            .regex(unscheduleMissionResponseCodeRegExp)
+            .optional()
+            .describe("Mission business tracking code"),
+        name: zod.string().min(1).optional().describe("Mission name"),
+        description: zod.string().optional().describe("Mission detailed description"),
+        payloadWeightKg: zod.number().optional().describe("Payload mass in kilograms to transport"),
+        departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
+        arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
+        droneId: zod.string().optional().describe("Optional pre-assigned Drone UUID identifier"),
+        pilotId: zod.string().optional().describe("Optional pre-assigned Remote Pilot ID"),
+        scheduleType: zod
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+            .optional()
+            .describe("Schedule type"),
+        scheduledAt: zod.iso.datetime({}).optional().describe("Scheduled departure timestamp"),
+        status: zod
+            .enum([
+                "draft",
+                "ready",
+                "scheduled",
+                "executing",
+                "paused",
+                "completed",
+                "aborted",
+                "cancelled",
+                "failed",
+            ])
+            .optional()
+            .describe("Mission operational status"),
+        waypointCount: zod
+            .number()
+            .optional()
+            .describe("Total number of waypoints defined for this mission"),
+        estimatedDistanceMeters: zod
+            .number()
+            .optional()
+            .describe("Estimated route distance in meters calculated using Haversine formula"),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional().describe("Waypoint UUID identifier"),
+                        missionId: zod.string().optional().describe("Mission UUID identifier"),
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence order of waypoint in mission"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID identifier"),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional()
+                            .describe("Stopover type at hub"),
+                        groundTimeMinutes: zod
+                            .number()
+                            .optional()
+                            .describe("Ground turnaround time in minutes at stopover hub"),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload delta in kg at this waypoint"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Conditions at waypoint"),
+                        warning: zod.string().optional().describe("Safety warnings"),
+                        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+                        createdBy: zod.string().optional().describe("Created by user ID"),
+                        lastModifiedOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Last modified timestamp"),
+                        lastModifiedBy: zod
+                            .string()
+                            .optional()
+                            .describe("Last modified by user ID"),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation at this waypoint"
+                            ),
+                        waypointType: zod
+                            .enum(["coordinate", "hub"])
+                            .optional()
+                            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+                        hub: zod
+                            .object({
+                                id: zod.string().optional().describe("Hub unique identifier"),
+                                code: zod
+                                    .string()
+                                    .min(unscheduleMissionResponseWaypointsItemHubCodeMin)
+                                    .max(unscheduleMissionResponseWaypointsItemHubCodeMax)
+                                    .regex(unscheduleMissionResponseWaypointsItemHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
+                                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                                location: zod
+                                    .object({
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
+                                    })
+                                    .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
+                            })
+                            .optional()
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
+                    })
+                    .describe("Waypoint details")
+            )
+            .optional()
+            .describe("Ordered list of waypoints along the mission route"),
+        departureHub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(unscheduleMissionResponseDepartureHubCodeMin)
+                    .max(unscheduleMissionResponseDepartureHubCodeMax)
+                    .regex(unscheduleMissionResponseDepartureHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
+        arrivalHub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(unscheduleMissionResponseArrivalHubCodeMin)
+                    .max(unscheduleMissionResponseArrivalHubCodeMax)
+                    .regex(unscheduleMissionResponseArrivalHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Created by user ID (Keycloak sub)"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        recurringPattern: zod
+            .string()
+            .optional()
+            .describe("Optional cron expression for recurring missions"),
+        triggerConditions: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Optional event trigger conditions"),
+        requiredCapabilities: zod
+            .array(zod.string())
+            .optional()
+            .describe("Optional required drone capabilities"),
+        feasibilityOverride: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional feasibility override metadata"),
+        templateId: zod
+            .string()
+            .optional()
+            .describe("Source mission template UUID if instantiated from template"),
+        templateVersion: zod.number().optional().describe("Source mission template version"),
+        estimatedDistance: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated route distance in meters"),
+        estimatedDuration: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated flight duration in seconds"),
+    })
+    .describe("Mission detailed information");
+
+/**
+ * Transition a draft mission with future scheduledAt and >=2 waypoints to scheduled status for automatic dispatch
+ * @summary Schedule a draft mission
+ */
+export const scheduleMissionParams = zod.object({
+    id: zod.string().describe("Unique UUID identifier of the mission"),
+});
+
+export const scheduleMissionResponseCodeMin = 3;
+export const scheduleMissionResponseCodeMax = 50;
+export const scheduleMissionResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const scheduleMissionResponseWaypointsItemHubCodeMin = 3;
+export const scheduleMissionResponseWaypointsItemHubCodeMax = 50;
+export const scheduleMissionResponseWaypointsItemHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const scheduleMissionResponseDepartureHubCodeMin = 3;
+export const scheduleMissionResponseDepartureHubCodeMax = 50;
+export const scheduleMissionResponseDepartureHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const scheduleMissionResponseArrivalHubCodeMin = 3;
+export const scheduleMissionResponseArrivalHubCodeMax = 50;
+export const scheduleMissionResponseArrivalHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const scheduleMissionResponse = zod
+    .object({
+        id: zod.string().optional().describe("Mission UUID identifier"),
+        code: zod
+            .string()
+            .min(scheduleMissionResponseCodeMin)
+            .max(scheduleMissionResponseCodeMax)
+            .regex(scheduleMissionResponseCodeRegExp)
+            .optional()
+            .describe("Mission business tracking code"),
+        name: zod.string().min(1).optional().describe("Mission name"),
+        description: zod.string().optional().describe("Mission detailed description"),
+        payloadWeightKg: zod.number().optional().describe("Payload mass in kilograms to transport"),
+        departureHubId: zod.string().optional().describe("Departure Hub UUID identifier"),
+        arrivalHubId: zod.string().optional().describe("Arrival Hub UUID identifier"),
+        droneId: zod.string().optional().describe("Optional pre-assigned Drone UUID identifier"),
+        pilotId: zod.string().optional().describe("Optional pre-assigned Remote Pilot ID"),
+        scheduleType: zod
+            .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+            .optional()
+            .describe("Schedule type"),
+        scheduledAt: zod.iso.datetime({}).optional().describe("Scheduled departure timestamp"),
+        status: zod
+            .enum([
+                "draft",
+                "ready",
+                "scheduled",
+                "executing",
+                "paused",
+                "completed",
+                "aborted",
+                "cancelled",
+                "failed",
+            ])
+            .optional()
+            .describe("Mission operational status"),
+        waypointCount: zod
+            .number()
+            .optional()
+            .describe("Total number of waypoints defined for this mission"),
+        estimatedDistanceMeters: zod
+            .number()
+            .optional()
+            .describe("Estimated route distance in meters calculated using Haversine formula"),
+        waypoints: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional().describe("Waypoint UUID identifier"),
+                        missionId: zod.string().optional().describe("Mission UUID identifier"),
+                        sequence: zod
+                            .number()
+                            .optional()
+                            .describe("Sequence order of waypoint in mission"),
+                        name: zod
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Waypoint designation or name"),
+                        latitude: zod.number().optional().describe("GPS latitude"),
+                        longitude: zod.number().optional().describe("GPS longitude"),
+                        altitude: zod.number().optional().describe("Altitude in meters AGL"),
+                        hubId: zod
+                            .string()
+                            .optional()
+                            .describe("Optional stopover hub UUID identifier"),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional()
+                            .describe("Stopover type at hub"),
+                        groundTimeMinutes: zod
+                            .number()
+                            .optional()
+                            .describe("Ground turnaround time in minutes at stopover hub"),
+                        payloadDeltaKg: zod
+                            .number()
+                            .optional()
+                            .describe("Payload delta in kg at this waypoint"),
+                        hoverDurationSec: zod
+                            .number()
+                            .optional()
+                            .describe("Hover duration in seconds at this waypoint"),
+                        actions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Actions at waypoint"),
+                        conditions: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Conditions at waypoint"),
+                        warning: zod.string().optional().describe("Safety warnings"),
+                        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+                        createdBy: zod.string().optional().describe("Created by user ID"),
+                        lastModifiedOn: zod.iso
+                            .datetime({})
+                            .optional()
+                            .describe("Last modified timestamp"),
+                        lastModifiedBy: zod
+                            .string()
+                            .optional()
+                            .describe("Last modified by user ID"),
+                        speedToWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Target cruise speed towards this waypoint in m/s"),
+                        headingAtWaypoint: zod
+                            .number()
+                            .optional()
+                            .describe("Desired heading in degrees (0-360) upon reaching waypoint"),
+                        turnRadius: zod
+                            .number()
+                            .optional()
+                            .describe("Fly-by turn radius in meters"),
+                        waitForConfirmation: zod
+                            .boolean()
+                            .optional()
+                            .describe(
+                                "Whether drone holds and awaits operator confirmation at this waypoint"
+                            ),
+                        waypointType: zod
+                            .enum(["coordinate", "hub"])
+                            .optional()
+                            .describe("Waypoint node type: 'coordinate' or 'hub'"),
+                        hub: zod
+                            .object({
+                                id: zod.string().optional().describe("Hub unique identifier"),
+                                code: zod
+                                    .string()
+                                    .min(scheduleMissionResponseWaypointsItemHubCodeMin)
+                                    .max(scheduleMissionResponseWaypointsItemHubCodeMax)
+                                    .regex(scheduleMissionResponseWaypointsItemHubCodeRegExp)
+                                    .optional()
+                                    .describe("Hub operational code"),
+                                name: zod.string().min(1).optional().describe("Hub name"),
+                                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                                location: zod
+                                    .object({
+                                        latitude: zod.number().optional(),
+                                        longitude: zod.number().optional(),
+                                    })
+                                    .optional(),
+                                status: zod
+                                    .string()
+                                    .optional()
+                                    .describe(
+                                        "Hub operational status (active, maintenance, inactive)"
+                                    ),
+                                maxSimultaneousDrones: zod
+                                    .number()
+                                    .optional()
+                                    .describe(
+                                        "Maximum simultaneous active drones allowed at this hub"
+                                    ),
+                                active: zod.boolean().optional(),
+                            })
+                            .optional()
+                            .describe("Brief summary of departure, arrival, or stopover hub"),
+                    })
+                    .describe("Waypoint details")
+            )
+            .optional()
+            .describe("Ordered list of waypoints along the mission route"),
+        departureHub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(scheduleMissionResponseDepartureHubCodeMin)
+                    .max(scheduleMissionResponseDepartureHubCodeMax)
+                    .regex(scheduleMissionResponseDepartureHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
+        arrivalHub: zod
+            .object({
+                id: zod.string().optional().describe("Hub unique identifier"),
+                code: zod
+                    .string()
+                    .min(scheduleMissionResponseArrivalHubCodeMin)
+                    .max(scheduleMissionResponseArrivalHubCodeMax)
+                    .regex(scheduleMissionResponseArrivalHubCodeRegExp)
+                    .optional()
+                    .describe("Hub operational code"),
+                name: zod.string().min(1).optional().describe("Hub name"),
+                latitude: zod.number().optional().describe("Hub GPS latitude"),
+                longitude: zod.number().optional().describe("Hub GPS longitude"),
+                location: zod
+                    .object({
+                        latitude: zod.number().optional(),
+                        longitude: zod.number().optional(),
+                    })
+                    .optional(),
+                status: zod
+                    .string()
+                    .optional()
+                    .describe("Hub operational status (active, maintenance, inactive)"),
+                maxSimultaneousDrones: zod
+                    .number()
+                    .optional()
+                    .describe("Maximum simultaneous active drones allowed at this hub"),
+                active: zod.boolean().optional(),
+            })
+            .optional()
+            .describe("Brief summary of departure, arrival, or stopover hub"),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Created by user ID (Keycloak sub)"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modified timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last modified by user ID"),
+        recurringPattern: zod
+            .string()
+            .optional()
+            .describe("Optional cron expression for recurring missions"),
+        triggerConditions: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Optional event trigger conditions"),
+        requiredCapabilities: zod
+            .array(zod.string())
+            .optional()
+            .describe("Optional required drone capabilities"),
+        feasibilityOverride: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional feasibility override metadata"),
+        templateId: zod
+            .string()
+            .optional()
+            .describe("Source mission template UUID if instantiated from template"),
+        templateVersion: zod.number().optional().describe("Source mission template version"),
+        estimatedDistance: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated route distance in meters"),
+        estimatedDuration: zod
+            .number()
+            .optional()
+            .describe("Persisted estimated flight duration in seconds"),
+    })
+    .describe("Mission detailed information");
 
 /**
  * Clone an existing mission and all its waypoints as a new draft mission
@@ -843,6 +3219,641 @@ export const executeMissionBody = zod
 export const duplicateMissionParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the mission to clone"),
 });
+
+/**
+ * Resumes a paused execution and sends RESUME to any active leg drone
+ * @summary Resume mission execution
+ */
+export const resumeExecutionParams = zod.object({
+    id: zod.string(),
+});
+
+export const resumeExecutionResponse = zod
+    .object({
+        id: zod.string().optional().describe("Execution unique UUID identifier"),
+        missionId: zod.string().optional().describe("Associated mission UUID identifier"),
+        pilotId: zod.string().optional().describe("Assigned Remote Pilot ID or Keycloak user ID"),
+        startedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution started"),
+        completedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution finished"),
+        status: zod
+            .enum(["in_progress", "paused", "completed", "aborted", "failed"])
+            .optional()
+            .describe(
+                "Execution progress status (in_progress, paused, completed, aborted, failed)"
+            ),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Username who started execution"),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe("Execution coordination mode (same_drone_sequential, multi_drone_relay)"),
+        primaryDroneId: zod
+            .string()
+            .optional()
+            .describe("Primary drone UUID assigned to this execution"),
+        currentLegIndex: zod
+            .number()
+            .optional()
+            .describe("Zero-based index of currently active leg"),
+        totalLegs: zod
+            .number()
+            .optional()
+            .describe("Total number of flight legs in this execution"),
+        completedLegs: zod.number().optional().describe("Number of completed flight legs"),
+        pausedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution was paused"),
+        abortReason: zod.string().optional().describe("Reason for aborting execution"),
+        errorMessage: zod
+            .string()
+            .optional()
+            .describe("Diagnostic error message if execution failed or paused due to leg incident"),
+        triggerType: zod.string().optional().describe("Trigger source (MANUAL or SCHEDULED)"),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        executionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        status: zod
+                            .enum([
+                                "planned",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "diverted",
+                                "emergency_landing",
+                                "cancelled",
+                                "failed",
+                            ])
+                            .optional(),
+                    })
+                    .describe(
+                        "Execution status and flight binding of a single leg inside a multi-leg mission"
+                    )
+            )
+            .optional()
+            .describe("Ordered list of flight legs belonging to this execution"),
+        currentWaypointIndex: zod
+            .number()
+            .optional()
+            .describe("Latest reached waypoint index (1-based sequence within current leg)"),
+        completedWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total count of completed waypoint arrivals across execution"),
+        waypointLogs: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Chronological log of reached waypoints"),
+    })
+    .describe("Mission execution progress profile");
+
+/**
+ * Pauses an in-progress execution and sends HOVER to any active leg drone
+ * @summary Pause mission execution
+ */
+export const pauseExecutionParams = zod.object({
+    id: zod.string(),
+});
+
+export const pauseExecutionResponse = zod
+    .object({
+        id: zod.string().optional().describe("Execution unique UUID identifier"),
+        missionId: zod.string().optional().describe("Associated mission UUID identifier"),
+        pilotId: zod.string().optional().describe("Assigned Remote Pilot ID or Keycloak user ID"),
+        startedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution started"),
+        completedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution finished"),
+        status: zod
+            .enum(["in_progress", "paused", "completed", "aborted", "failed"])
+            .optional()
+            .describe(
+                "Execution progress status (in_progress, paused, completed, aborted, failed)"
+            ),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Username who started execution"),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe("Execution coordination mode (same_drone_sequential, multi_drone_relay)"),
+        primaryDroneId: zod
+            .string()
+            .optional()
+            .describe("Primary drone UUID assigned to this execution"),
+        currentLegIndex: zod
+            .number()
+            .optional()
+            .describe("Zero-based index of currently active leg"),
+        totalLegs: zod
+            .number()
+            .optional()
+            .describe("Total number of flight legs in this execution"),
+        completedLegs: zod.number().optional().describe("Number of completed flight legs"),
+        pausedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution was paused"),
+        abortReason: zod.string().optional().describe("Reason for aborting execution"),
+        errorMessage: zod
+            .string()
+            .optional()
+            .describe("Diagnostic error message if execution failed or paused due to leg incident"),
+        triggerType: zod.string().optional().describe("Trigger source (MANUAL or SCHEDULED)"),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        executionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        status: zod
+                            .enum([
+                                "planned",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "diverted",
+                                "emergency_landing",
+                                "cancelled",
+                                "failed",
+                            ])
+                            .optional(),
+                    })
+                    .describe(
+                        "Execution status and flight binding of a single leg inside a multi-leg mission"
+                    )
+            )
+            .optional()
+            .describe("Ordered list of flight legs belonging to this execution"),
+        currentWaypointIndex: zod
+            .number()
+            .optional()
+            .describe("Latest reached waypoint index (1-based sequence within current leg)"),
+        completedWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total count of completed waypoint arrivals across execution"),
+        waypointLogs: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Chronological log of reached waypoints"),
+    })
+    .describe("Mission execution progress profile");
+
+/**
+ * Assigns a replacement available drone at the leg departure hub and updates the generated flight plan
+ * @summary Reassign replacement drone to upcoming leg
+ */
+export const reassignLegDroneParams = zod.object({
+    id: zod.string(),
+    legIndex: zod.number(),
+});
+
+export const reassignLegDroneBody = zod
+    .object({
+        droneId: zod
+            .string()
+            .min(1)
+            .describe("Replacement drone UUID stationed at the leg departure hub"),
+        reason: zod.string().optional().describe("Reason for reassigning the drone"),
+    })
+    .describe(
+        "Request payload for reassigning a replacement drone to an upcoming or paused mission leg"
+    );
+
+export const reassignLegDroneResponse = zod
+    .object({
+        id: zod.string().optional().describe("Execution unique UUID identifier"),
+        missionId: zod.string().optional().describe("Associated mission UUID identifier"),
+        pilotId: zod.string().optional().describe("Assigned Remote Pilot ID or Keycloak user ID"),
+        startedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution started"),
+        completedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution finished"),
+        status: zod
+            .enum(["in_progress", "paused", "completed", "aborted", "failed"])
+            .optional()
+            .describe(
+                "Execution progress status (in_progress, paused, completed, aborted, failed)"
+            ),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Username who started execution"),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe("Execution coordination mode (same_drone_sequential, multi_drone_relay)"),
+        primaryDroneId: zod
+            .string()
+            .optional()
+            .describe("Primary drone UUID assigned to this execution"),
+        currentLegIndex: zod
+            .number()
+            .optional()
+            .describe("Zero-based index of currently active leg"),
+        totalLegs: zod
+            .number()
+            .optional()
+            .describe("Total number of flight legs in this execution"),
+        completedLegs: zod.number().optional().describe("Number of completed flight legs"),
+        pausedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution was paused"),
+        abortReason: zod.string().optional().describe("Reason for aborting execution"),
+        errorMessage: zod
+            .string()
+            .optional()
+            .describe("Diagnostic error message if execution failed or paused due to leg incident"),
+        triggerType: zod.string().optional().describe("Trigger source (MANUAL or SCHEDULED)"),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        executionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        status: zod
+                            .enum([
+                                "planned",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "diverted",
+                                "emergency_landing",
+                                "cancelled",
+                                "failed",
+                            ])
+                            .optional(),
+                    })
+                    .describe(
+                        "Execution status and flight binding of a single leg inside a multi-leg mission"
+                    )
+            )
+            .optional()
+            .describe("Ordered list of flight legs belonging to this execution"),
+        currentWaypointIndex: zod
+            .number()
+            .optional()
+            .describe("Latest reached waypoint index (1-based sequence within current leg)"),
+        completedWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total count of completed waypoint arrivals across execution"),
+        waypointLogs: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Chronological log of reached waypoints"),
+    })
+    .describe("Mission execution progress profile");
+
+/**
+ * Cancels all pending leg flights and aborts any active flight leg
+ * @summary Abort mission execution
+ */
+export const abortExecutionParams = zod.object({
+    id: zod.string(),
+});
+
+export const abortExecutionBody = zod
+    .object({
+        reason: zod.string().optional().describe("Operational reason for aborting execution"),
+    })
+    .describe("Optional reason payload when aborting or pausing a mission execution");
+
+export const abortExecutionResponse = zod
+    .object({
+        id: zod.string().optional().describe("Execution unique UUID identifier"),
+        missionId: zod.string().optional().describe("Associated mission UUID identifier"),
+        pilotId: zod.string().optional().describe("Assigned Remote Pilot ID or Keycloak user ID"),
+        startedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution started"),
+        completedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution finished"),
+        status: zod
+            .enum(["in_progress", "paused", "completed", "aborted", "failed"])
+            .optional()
+            .describe(
+                "Execution progress status (in_progress, paused, completed, aborted, failed)"
+            ),
+        createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
+        createdBy: zod.string().optional().describe("Username who started execution"),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe("Execution coordination mode (same_drone_sequential, multi_drone_relay)"),
+        primaryDroneId: zod
+            .string()
+            .optional()
+            .describe("Primary drone UUID assigned to this execution"),
+        currentLegIndex: zod
+            .number()
+            .optional()
+            .describe("Zero-based index of currently active leg"),
+        totalLegs: zod
+            .number()
+            .optional()
+            .describe("Total number of flight legs in this execution"),
+        completedLegs: zod.number().optional().describe("Number of completed flight legs"),
+        pausedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution was paused"),
+        abortReason: zod.string().optional().describe("Reason for aborting execution"),
+        errorMessage: zod
+            .string()
+            .optional()
+            .describe("Diagnostic error message if execution failed or paused due to leg incident"),
+        triggerType: zod.string().optional().describe("Trigger source (MANUAL or SCHEDULED)"),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        executionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        status: zod
+                            .enum([
+                                "planned",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "diverted",
+                                "emergency_landing",
+                                "cancelled",
+                                "failed",
+                            ])
+                            .optional(),
+                    })
+                    .describe(
+                        "Execution status and flight binding of a single leg inside a multi-leg mission"
+                    )
+            )
+            .optional()
+            .describe("Ordered list of flight legs belonging to this execution"),
+        currentWaypointIndex: zod
+            .number()
+            .optional()
+            .describe("Latest reached waypoint index (1-based sequence within current leg)"),
+        completedWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total count of completed waypoint arrivals across execution"),
+        waypointLogs: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Chronological log of reached waypoints"),
+    })
+    .describe("Mission execution progress profile");
+
+/**
+ * @summary Get all versions of a template
+ */
+export const getTemplateVersionsParams = zod.object({
+    id: zod.string(),
+});
+
+export const getTemplateVersionsResponseCodeMin = 3;
+export const getTemplateVersionsResponseCodeMax = 50;
+export const getTemplateVersionsResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const getTemplateVersionsResponseItem = zod
+    .object({
+        id: zod.string().optional(),
+        code: zod
+            .string()
+            .min(getTemplateVersionsResponseCodeMin)
+            .max(getTemplateVersionsResponseCodeMax)
+            .regex(getTemplateVersionsResponseCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        version: zod.number().optional(),
+        isLatest: zod.boolean().optional(),
+        previousVersionId: zod.string().optional(),
+        changelog: zod.string().optional(),
+        usageCount: zod.number().optional(),
+        isPublished: zod.boolean().optional(),
+        publishedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Mission Template detailed representation");
+export const getTemplateVersionsResponse = zod.array(getTemplateVersionsResponseItem);
+
+/**
+ * @summary Get specific version of a template
+ */
+export const getTemplateVersionParams = zod.object({
+    id: zod.string(),
+    version: zod.number(),
+});
+
+export const getTemplateVersionResponseCodeMin = 3;
+export const getTemplateVersionResponseCodeMax = 50;
+export const getTemplateVersionResponseCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const getTemplateVersionResponse = zod
+    .object({
+        id: zod.string().optional(),
+        code: zod
+            .string()
+            .min(getTemplateVersionResponseCodeMin)
+            .max(getTemplateVersionResponseCodeMax)
+            .regex(getTemplateVersionResponseCodeRegExp)
+            .optional(),
+        name: zod.string().min(1).optional(),
+        description: zod.string().optional(),
+        category: zod.string().optional(),
+        tags: zod.array(zod.string()).optional(),
+        variables: zod
+            .array(
+                zod
+                    .object({
+                        key: zod.string().optional(),
+                        label: zod.string().optional(),
+                        type: zod.string().optional(),
+                        required: zod.boolean().optional(),
+                        defaultValue: zod.any().optional(),
+                        validation: zod.record(zod.string(), zod.any()).optional(),
+                    })
+                    .describe("Parameterized variable definition inside a Mission Template")
+            )
+            .optional(),
+        blueprint: zod
+            .object({
+                waypoints: zod
+                    .array(
+                        zod
+                            .object({
+                                sequence: zod.number().optional(),
+                                name: zod.string().min(1).optional(),
+                                latitude: zod.any().optional(),
+                                longitude: zod.any().optional(),
+                                altitude: zod.any().optional(),
+                                speedToWaypoint: zod.any().optional(),
+                                headingAtWaypoint: zod.number().optional(),
+                                turnRadius: zod.number().optional(),
+                                hubId: zod.string().optional(),
+                                stopoverType: zod
+                                    .enum([
+                                        "none",
+                                        "recharge",
+                                        "battery_swap",
+                                        "relay_handoff",
+                                        "payload_dropoff",
+                                        "payload_pickup",
+                                    ])
+                                    .optional(),
+                                groundTimeMinutes: zod.number().optional(),
+                                payloadDeltaKg: zod.number().optional(),
+                                hoverDuration: zod.number().optional(),
+                                waitForConfirmation: zod.boolean().optional(),
+                                actions: zod.record(zod.string(), zod.any()).optional(),
+                                conditions: zod.record(zod.string(), zod.any()).optional(),
+                                waypointType: zod.enum(["coordinate", "hub"]).optional(),
+                            })
+                            .describe("Parameterized waypoint blueprint inside a Mission Template")
+                    )
+                    .optional(),
+                defaultScheduleType: zod
+                    .enum(["immediate", "manual", "scheduled", "recurring", "event_triggered"])
+                    .optional(),
+                defaultTriggerConditions: zod.array(zod.record(zod.string(), zod.any())).optional(),
+                requiredCapabilities: zod.array(zod.string()).optional(),
+                payloadWeightKg: zod.number().optional(),
+                estimatedDuration: zod.number().optional(),
+                estimatedDistance: zod.number().optional(),
+            })
+            .optional()
+            .describe("Mission route & scheduling blueprint inside a Mission Template"),
+        version: zod.number().optional(),
+        isLatest: zod.boolean().optional(),
+        previousVersionId: zod.string().optional(),
+        changelog: zod.string().optional(),
+        usageCount: zod.number().optional(),
+        isPublished: zod.boolean().optional(),
+        publishedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Mission Template detailed representation");
 
 /**
  * Get list of all execution runs for a given mission
@@ -856,15 +3867,7 @@ export const getExecutionsByMissionIdResponse = zod
     .object({
         id: zod.string().optional().describe("Execution unique UUID identifier"),
         missionId: zod.string().optional().describe("Associated mission UUID identifier"),
-        currentWaypointIndex: zod
-            .number()
-            .optional()
-            .describe("Index of waypoint drone is currently targeting"),
-        totalWaypoints: zod.number().optional().describe("Total number of waypoints in mission"),
-        completedWaypoints: zod
-            .number()
-            .optional()
-            .describe("Number of waypoints completed by drone"),
+        pilotId: zod.string().optional().describe("Assigned Remote Pilot ID or Keycloak user ID"),
         startedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution started"),
         completedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution finished"),
         status: zod
@@ -875,11 +3878,328 @@ export const getExecutionsByMissionIdResponse = zod
             ),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Username who started execution"),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe("Execution coordination mode (same_drone_sequential, multi_drone_relay)"),
+        primaryDroneId: zod
+            .string()
+            .optional()
+            .describe("Primary drone UUID assigned to this execution"),
+        currentLegIndex: zod
+            .number()
+            .optional()
+            .describe("Zero-based index of currently active leg"),
+        totalLegs: zod
+            .number()
+            .optional()
+            .describe("Total number of flight legs in this execution"),
+        completedLegs: zod.number().optional().describe("Number of completed flight legs"),
+        pausedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution was paused"),
+        abortReason: zod.string().optional().describe("Reason for aborting execution"),
+        errorMessage: zod
+            .string()
+            .optional()
+            .describe("Diagnostic error message if execution failed or paused due to leg incident"),
+        triggerType: zod.string().optional().describe("Trigger source (MANUAL or SCHEDULED)"),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        executionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        status: zod
+                            .enum([
+                                "planned",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "diverted",
+                                "emergency_landing",
+                                "cancelled",
+                                "failed",
+                            ])
+                            .optional(),
+                    })
+                    .describe(
+                        "Execution status and flight binding of a single leg inside a multi-leg mission"
+                    )
+            )
+            .optional()
+            .describe("Ordered list of flight legs belonging to this execution"),
+        currentWaypointIndex: zod
+            .number()
+            .optional()
+            .describe("Latest reached waypoint index (1-based sequence within current leg)"),
+        completedWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total count of completed waypoint arrivals across execution"),
+        waypointLogs: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Chronological log of reached waypoints"),
     })
     .describe("Mission execution progress profile");
 
 /**
- * Get progress profile of a specific mission execution
+ * Dry-run decomposes mission into flight legs, evaluates airspace compliance, battery energy, candidate drones per leg, and charging stop recommendations
+ * @summary Preview multi-leg execution plan
+ */
+export const getExecutionPlanParams = zod.object({
+    missionId: zod.string().describe("Unique UUID identifier of the mission"),
+});
+
+export const getExecutionPlanResponseLegsItemCandidateDronesItemRegistrationNumberMin = 3;
+export const getExecutionPlanResponseLegsItemCandidateDronesItemRegistrationNumberMax = 50;
+export const getExecutionPlanResponseLegsItemCandidateDronesItemRegistrationNumberRegExp =
+    new RegExp("^[A-Za-z0-9_-]+$");
+export const getExecutionPlanResponseLegsItemCandidateDronesItemBatteryCapacityWhMin = 0;
+export const getExecutionPlanResponseLegsItemRecommendedChargingHubsItemCodeMin = 3;
+export const getExecutionPlanResponseLegsItemRecommendedChargingHubsItemCodeMax = 50;
+export const getExecutionPlanResponseLegsItemRecommendedChargingHubsItemCodeRegExp = new RegExp(
+    "^[A-Za-z0-9_-]+$"
+);
+
+export const getExecutionPlanResponse = zod
+    .object({
+        missionId: zod.string().optional(),
+        missionName: zod.string().optional(),
+        recommendedMode: zod.enum(["same_drone_sequential", "multi_drone_relay"]).optional(),
+        totalLegs: zod.number().optional(),
+        totalDistanceMeters: zod.number().optional(),
+        totalDurationSeconds: zod.number().optional(),
+        totalEnergyWh: zod.number().optional(),
+        feasible: zod.boolean().optional(),
+        warnings: zod.array(zod.string()).optional(),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        legIndex: zod.number().optional(),
+                        departureHubId: zod.string().optional(),
+                        departureHubName: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        arrivalHubName: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        distanceMeters: zod.number().optional(),
+                        estimatedDurationSeconds: zod.number().optional(),
+                        payloadWeightKg: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        airspaceSafe: zod.boolean().optional(),
+                        airspaceWarnings: zod.array(zod.string()).optional(),
+                        candidateDrones: zod
+                            .array(
+                                zod
+                                    .object({
+                                        droneId: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Drone UUID identifier"),
+                                        registrationNumber: zod
+                                            .string()
+                                            .min(
+                                                getExecutionPlanResponseLegsItemCandidateDronesItemRegistrationNumberMin
+                                            )
+                                            .max(
+                                                getExecutionPlanResponseLegsItemCandidateDronesItemRegistrationNumberMax
+                                            )
+                                            .regex(
+                                                getExecutionPlanResponseLegsItemCandidateDronesItemRegistrationNumberRegExp
+                                            )
+                                            .optional()
+                                            .describe("Aircraft registration number / callsign"),
+                                        manufacturer: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Manufacturer"),
+                                        model: zod.string().optional().describe("Airframe model"),
+                                        maxPayloadKg: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Maximum payload capacity in kg"),
+                                        batteryCapacityWh: zod
+                                            .number()
+                                            .min(
+                                                getExecutionPlanResponseLegsItemCandidateDronesItemBatteryCapacityWhMin
+                                            )
+                                            .optional()
+                                            .describe("Battery rated capacity in Wh"),
+                                        estimatedEnergyConsumptionWh: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Projected energy needed in Wh"),
+                                        batteryMarginPct: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Battery reserve margin percentage above safety threshold"
+                                            ),
+                                        eligible: zod
+                                            .boolean()
+                                            .optional()
+                                            .describe(
+                                                "Whether the drone is eligible to fly this mission"
+                                            ),
+                                        ineligibilityReason: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Reason for ineligibility if not eligible"),
+                                        finalScore: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Overall suitability score from 0.0 to 100.0"
+                                            ),
+                                    })
+                                    .describe(
+                                        "Evaluation and score of a candidate drone for a mission"
+                                    )
+                            )
+                            .optional(),
+                        recommendedChargingHubs: zod
+                            .array(
+                                zod
+                                    .object({
+                                        id: zod
+                                            .string()
+                                            .optional()
+                                            .describe("Hub unique identifier"),
+                                        code: zod
+                                            .string()
+                                            .min(
+                                                getExecutionPlanResponseLegsItemRecommendedChargingHubsItemCodeMin
+                                            )
+                                            .max(
+                                                getExecutionPlanResponseLegsItemRecommendedChargingHubsItemCodeMax
+                                            )
+                                            .regex(
+                                                getExecutionPlanResponseLegsItemRecommendedChargingHubsItemCodeRegExp
+                                            )
+                                            .optional()
+                                            .describe("Hub operational code"),
+                                        name: zod.string().min(1).optional().describe("Hub name"),
+                                        latitude: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Hub GPS latitude"),
+                                        longitude: zod
+                                            .number()
+                                            .optional()
+                                            .describe("Hub GPS longitude"),
+                                        location: zod
+                                            .object({
+                                                latitude: zod.number().optional(),
+                                                longitude: zod.number().optional(),
+                                            })
+                                            .optional(),
+                                        status: zod
+                                            .string()
+                                            .optional()
+                                            .describe(
+                                                "Hub operational status (active, maintenance, inactive)"
+                                            ),
+                                        maxSimultaneousDrones: zod
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "Maximum simultaneous active drones allowed at this hub"
+                                            ),
+                                        active: zod.boolean().optional(),
+                                    })
+                                    .describe(
+                                        "Brief summary of departure, arrival, or stopover hub"
+                                    )
+                            )
+                            .optional(),
+                    })
+                    .describe("Dry-run preview plan of an individual leg decomposed from a mission")
+            )
+            .optional(),
+    })
+    .describe("Comprehensive dry-run multi-leg execution plan for a mission");
+
+/**
+ * Evaluate available drones at the departure hub against mission payload and battery consumption requirements
+ * @summary Get candidate drones with suitability scores
+ */
+export const getCandidateDronesParams = zod.object({
+    id: zod.string().describe("Unique UUID identifier of the mission"),
+});
+
+export const getCandidateDronesResponseRegistrationNumberMin = 3;
+export const getCandidateDronesResponseRegistrationNumberMax = 50;
+export const getCandidateDronesResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const getCandidateDronesResponseBatteryCapacityWhMin = 0;
+
+export const getCandidateDronesResponseItem = zod
+    .object({
+        droneId: zod.string().optional().describe("Drone UUID identifier"),
+        registrationNumber: zod
+            .string()
+            .min(getCandidateDronesResponseRegistrationNumberMin)
+            .max(getCandidateDronesResponseRegistrationNumberMax)
+            .regex(getCandidateDronesResponseRegistrationNumberRegExp)
+            .optional()
+            .describe("Aircraft registration number / callsign"),
+        manufacturer: zod.string().optional().describe("Manufacturer"),
+        model: zod.string().optional().describe("Airframe model"),
+        maxPayloadKg: zod.number().optional().describe("Maximum payload capacity in kg"),
+        batteryCapacityWh: zod
+            .number()
+            .min(getCandidateDronesResponseBatteryCapacityWhMin)
+            .optional()
+            .describe("Battery rated capacity in Wh"),
+        estimatedEnergyConsumptionWh: zod
+            .number()
+            .optional()
+            .describe("Projected energy needed in Wh"),
+        batteryMarginPct: zod
+            .number()
+            .optional()
+            .describe("Battery reserve margin percentage above safety threshold"),
+        eligible: zod
+            .boolean()
+            .optional()
+            .describe("Whether the drone is eligible to fly this mission"),
+        ineligibilityReason: zod
+            .string()
+            .optional()
+            .describe("Reason for ineligibility if not eligible"),
+        finalScore: zod.number().optional().describe("Overall suitability score from 0.0 to 100.0"),
+    })
+    .describe("Evaluation and score of a candidate drone for a mission");
+export const getCandidateDronesResponse = zod.array(getCandidateDronesResponseItem);
+
+/**
+ * Get progress profile and leg statuses of a specific mission execution
  * @summary Get execution by ID
  */
 export const getExecutionByIdParams = zod.object({
@@ -890,15 +4210,7 @@ export const getExecutionByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Execution unique UUID identifier"),
         missionId: zod.string().optional().describe("Associated mission UUID identifier"),
-        currentWaypointIndex: zod
-            .number()
-            .optional()
-            .describe("Index of waypoint drone is currently targeting"),
-        totalWaypoints: zod.number().optional().describe("Total number of waypoints in mission"),
-        completedWaypoints: zod
-            .number()
-            .optional()
-            .describe("Number of waypoints completed by drone"),
+        pilotId: zod.string().optional().describe("Assigned Remote Pilot ID or Keycloak user ID"),
         startedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution started"),
         completedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution finished"),
         status: zod
@@ -909,5 +4221,83 @@ export const getExecutionByIdResponse = zod
             ),
         createdOn: zod.iso.datetime({}).optional().describe("Creation timestamp"),
         createdBy: zod.string().optional().describe("Username who started execution"),
+        executionMode: zod
+            .enum(["same_drone_sequential", "multi_drone_relay"])
+            .optional()
+            .describe("Execution coordination mode (same_drone_sequential, multi_drone_relay)"),
+        primaryDroneId: zod
+            .string()
+            .optional()
+            .describe("Primary drone UUID assigned to this execution"),
+        currentLegIndex: zod
+            .number()
+            .optional()
+            .describe("Zero-based index of currently active leg"),
+        totalLegs: zod
+            .number()
+            .optional()
+            .describe("Total number of flight legs in this execution"),
+        completedLegs: zod.number().optional().describe("Number of completed flight legs"),
+        pausedAt: zod.iso.datetime({}).optional().describe("Timestamp when execution was paused"),
+        abortReason: zod.string().optional().describe("Reason for aborting execution"),
+        errorMessage: zod
+            .string()
+            .optional()
+            .describe("Diagnostic error message if execution failed or paused due to leg incident"),
+        triggerType: zod.string().optional().describe("Trigger source (MANUAL or SCHEDULED)"),
+        legs: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        executionId: zod.string().optional(),
+                        legIndex: zod.number().optional(),
+                        flightId: zod.string().optional(),
+                        droneId: zod.string().optional(),
+                        departureHubId: zod.string().optional(),
+                        arrivalHubId: zod.string().optional(),
+                        stopoverType: zod
+                            .enum([
+                                "none",
+                                "recharge",
+                                "battery_swap",
+                                "relay_handoff",
+                                "payload_dropoff",
+                                "payload_pickup",
+                            ])
+                            .optional(),
+                        groundTimeMinutes: zod.number().optional(),
+                        estimatedEnergyWh: zod.number().optional(),
+                        status: zod
+                            .enum([
+                                "planned",
+                                "authorized",
+                                "active",
+                                "completed",
+                                "diverted",
+                                "emergency_landing",
+                                "cancelled",
+                                "failed",
+                            ])
+                            .optional(),
+                    })
+                    .describe(
+                        "Execution status and flight binding of a single leg inside a multi-leg mission"
+                    )
+            )
+            .optional()
+            .describe("Ordered list of flight legs belonging to this execution"),
+        currentWaypointIndex: zod
+            .number()
+            .optional()
+            .describe("Latest reached waypoint index (1-based sequence within current leg)"),
+        completedWaypoints: zod
+            .number()
+            .optional()
+            .describe("Total count of completed waypoint arrivals across execution"),
+        waypointLogs: zod
+            .array(zod.record(zod.string(), zod.any()))
+            .optional()
+            .describe("Chronological log of reached waypoints"),
     })
     .describe("Mission execution progress profile");

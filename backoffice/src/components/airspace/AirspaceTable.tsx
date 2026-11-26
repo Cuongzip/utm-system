@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Shield, Edit, Trash2 } from "lucide-react";
 import {
     ChamferCard,
+    ChamferButton,
     StatusBadge,
     ActionMenu,
     type ActionMenuItem,
@@ -29,7 +30,10 @@ import {
 interface AirspaceTableProps {
     zones: AirspaceZone[];
     loading: boolean;
+    canDelete: boolean;
     selectedZoneId?: string | null;
+    hasFilters?: boolean;
+    onClearFilters?: () => void;
     onSelectZone: (zone: AirspaceZone) => void;
     onDeleteZone: (id: string) => void;
     hubMap: Map<string, string>;
@@ -38,7 +42,10 @@ interface AirspaceTableProps {
 export function AirspaceTable({
     zones = [],
     loading = false,
+    canDelete,
     selectedZoneId,
+    hasFilters = false,
+    onClearFilters,
     onSelectZone,
     onDeleteZone,
     hubMap = new Map(),
@@ -47,34 +54,37 @@ export function AirspaceTable({
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(zones);
 
-    const getActions = (zone: AirspaceZone): ActionMenuItem[] => [
-        {
-            label: "View Details",
-            icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
-            onClick: () => onSelectZone(zone),
-        },
-        {
-            label: "Delete",
-            icon: <Trash2 className="w-3.5 h-3.5" />,
-            danger: true,
-            onClick: () => setZoneToDelete(zone),
-        },
-    ];
+    const getActions = (zone: AirspaceZone): ActionMenuItem[] => {
+        const items: ActionMenuItem[] = [
+            {
+                label: "View Details",
+                icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onSelectZone(zone),
+            },
+        ];
+        if (canDelete) {
+            items.push({
+                label: "Delete",
+                icon: <Trash2 className="w-3.5 h-3.5" />,
+                danger: true,
+                onClick: () => setZoneToDelete(zone),
+            });
+        }
+        return items;
+    };
 
     return (
         <div className="flex flex-col gap-4 w-full">
             <ChamferCard size="lg" className="w-full">
-                <Table fixed>
+                <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="140px">CODE</TableHead>
-                            <TableHead width="230px">ZONE NAME</TableHead>
-                            <TableHead width="140px">TYPE</TableHead>
-                            <TableHead width="180px">ASSOCIATED HUB</TableHead>
-                            <TableHead width="130px">STATUS</TableHead>
-                            <TableHead width="90px" align="right">
-                                ACTIONS
-                            </TableHead>
+                            <TableHead>CODE</TableHead>
+                            <TableHead>ZONE NAME</TableHead>
+                            <TableHead>TYPE</TableHead>
+                            <TableHead>ASSOCIATED HUB</TableHead>
+                            <TableHead>STATUS</TableHead>
+                            <TableHead align="right">ACTIONS</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -85,8 +95,27 @@ export function AirspaceTable({
                                 <TableCell colSpan={6} className="py-10 text-center">
                                     <EmptyState
                                         icon={Shield}
-                                        title="No airspace zones found"
-                                        description="Establish your first 3D airspace restriction zone or corridor"
+                                        title={
+                                            hasFilters
+                                                ? "No matching airspace zones"
+                                                : "No airspace zones found"
+                                        }
+                                        description={
+                                            hasFilters
+                                                ? "No airspace sectors match the active search or status filter."
+                                                : "Establish your first 3D airspace restriction zone or corridor."
+                                        }
+                                        action={
+                                            hasFilters && onClearFilters ? (
+                                                <ChamferButton
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={onClearFilters}
+                                                >
+                                                    Clear Filters
+                                                </ChamferButton>
+                                            ) : undefined
+                                        }
                                     />
                                 </TableCell>
                             </TableRow>
@@ -102,10 +131,21 @@ export function AirspaceTable({
                                         selected={isSelected}
                                         onClick={() => onSelectZone(zone)}
                                     >
-                                        <TableCell mono bold darkText>
+                                        <TableCell
+                                            mono
+                                            bold
+                                            darkText
+                                            truncate
+                                            className="max-w-[130px]"
+                                        >
                                             {formatNullable(zone.code)}
                                         </TableCell>
-                                        <TableCell truncate bold tooltip={zoneName}>
+                                        <TableCell
+                                            truncate
+                                            bold
+                                            className="max-w-[220px]"
+                                            tooltip={zoneName}
+                                        >
                                             <span className="font-semibold text-slate-900">
                                                 {zoneName}
                                             </span>
@@ -116,7 +156,12 @@ export function AirspaceTable({
                                                 showDot={true}
                                             />
                                         </TableCell>
-                                        <TableCell truncate muted tooltip={hubName}>
+                                        <TableCell
+                                            truncate
+                                            muted
+                                            className="max-w-[180px]"
+                                            tooltip={hubName}
+                                        >
                                             {hubName}
                                         </TableCell>
                                         <TableCell>
@@ -142,6 +187,7 @@ export function AirspaceTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
+                    itemLabel="zones"
                 />
             </ChamferCard>
 

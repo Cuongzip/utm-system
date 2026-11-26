@@ -1,126 +1,144 @@
 "use client";
 
 import { useMemo } from "react";
-import { Zap, Info } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
+import { useFlightFeasibility } from "@/hooks";
 import { formatDistance } from "@/utils";
-import { FEASIBILITY_VERDICT, type Drone } from "@/types";
+import { FEASIBILITY_VERDICT, type Drone, type FeasibilityVerdict } from "@/types";
 import { estimateRouteFeasibility } from "./flightUtils";
 
 export interface FlightFeasibilityCardProps {
-    initialOverride?: string;
+    flightId?: string;
     distanceM: number;
     drone: Drone | null;
+    overrideReason?: string;
 }
 
 export function FlightFeasibilityCard({
-    initialOverride,
+    flightId,
     distanceM = 0,
     drone = null,
+    overrideReason,
 }: FlightFeasibilityCardProps) {
-    const { requiredWh, usableWh, marginPct, verdict, estimatedDurationMin } = useMemo(() => {
+    const { data: liveResult } = useFlightFeasibility(flightId, Boolean(flightId) && distanceM > 0);
+
+    const localEstimate = useMemo(() => {
         return estimateRouteFeasibility(distanceM, drone);
     }, [distanceM, drone]);
 
     if (distanceM <= 0) {
-        return (
-            <div className="pt-2">
-                <div className="p-3 border border-dashed border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-card)]/50 text-xs">
-                    <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
-                        <Info className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                        <span>
-                            Select vertiports or place waypoints to evaluate route feasibility.
-                        </span>
-                    </div>
-                </div>
-            </div>
-        );
+        return null;
     }
 
+    const requiredWh = liveResult?.requiredWh ?? localEstimate.requiredWh;
+    const usableWh = liveResult?.usableWh ?? localEstimate.usableWh;
+    const marginPct = liveResult?.marginPct ?? localEstimate.marginPct;
+    const rawVerdict = liveResult?.verdict;
+    const verdict: FeasibilityVerdict =
+        rawVerdict === FEASIBILITY_VERDICT.GO || rawLiveVerdictIsMarginalOrNoGo(rawVerdict)
+            ? rawVerdict
+            : localEstimate.verdict;
+    const estimatedDurationMin = localEstimate.estimatedDurationMin;
+    const windSpeedMs = liveResult?.windUsed?.speedMs;
+    const solutions = liveResult?.solutions ?? [];
+
     const energyPct = usableWh > 0 ? Math.min(100, Math.round((requiredWh / usableWh) * 100)) : 100;
+    const trimmedOverride = overrideReason?.trim();
+
+    const barColorClass =
+        verdict === FEASIBILITY_VERDICT.NO_GO
+            ? "bg-red-500"
+            : verdict === FEASIBILITY_VERDICT.MARGINAL
+              ? "bg-amber-500"
+              : "bg-slate-700";
 
     return (
-        <div className="pt-2 space-y-2">
-            <div className="p-3 border border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-card)]/70 text-xs space-y-2.5">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-semibold text-[var(--color-text-primary)]">
-                        <Zap className="w-3.5 h-3.5 text-cyan-600" />
-                        <span>Route Feasibility</span>
-                    </div>
-                    <StatusBadge
-                        status={verdict}
-                        label={
-                            verdict === FEASIBILITY_VERDICT.GO
-                                ? "FEASIBLE"
-                                : verdict === FEASIBILITY_VERDICT.MARGINAL
-                                  ? "MARGINAL"
-                                  : "NO GO"
-                        }
+        <div className="p-3 border border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-subtle)] text-xs space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-800">
+                    Route Feasibility
+                </span>
+                <StatusBadge
+                    status={verdict}
+                    label={
+                        verdict === FEASIBILITY_VERDICT.GO
+                            ? "FEASIBLE"
+                            : verdict === FEASIBILITY_VERDICT.MARGINAL
+                              ? "MARGINAL"
+                              : "NO GO"
+                    }
+                />
+            </div>
+
+            <div className="grid grid-cols-3 divide-x divide-[var(--color-border-default)] py-1.5 font-mono text-[11px] border-t border-b border-[var(--color-border-default)] text-[var(--color-text-secondary)]">
+                <div className="pr-2">
+                    <span className="text-[var(--color-text-muted)] text-[10px] uppercase block">
+                        Distance
+                    </span>
+                    <span className="font-bold text-[var(--color-text-primary)] tabular-nums">
+                        {formatDistance(distanceM, 2)}
+                    </span>
+                </div>
+                <div className="px-2">
+                    <span className="text-[var(--color-text-muted)] text-[10px] uppercase block">
+                        Est. Time
+                    </span>
+                    <span className="font-bold text-[var(--color-text-primary)] tabular-nums">
+                        ~{estimatedDurationMin} min
+                    </span>
+                </div>
+                <div className="pl-2">
+                    <span className="text-[var(--color-text-muted)] text-[10px] uppercase block">
+                        Margin
+                    </span>
+                    <span className="font-bold text-[var(--color-text-primary)] tabular-nums">
+                        {marginPct >= 0 ? `+${marginPct.toFixed(1)}%` : `${marginPct.toFixed(1)}%`}
+                    </span>
+                </div>
+            </div>
+
+            <div className="space-y-1">
+                <div className="flex items-center justify-between font-mono text-[10px] text-[var(--color-text-muted)] tabular-nums">
+                    <span>
+                        Energy: {Math.round(requiredWh)} / {Math.round(usableWh)} Wh
+                    </span>
+                    {windSpeedMs != null && <span>Wind {windSpeedMs.toFixed(1)} m/s</span>}
+                </div>
+                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                        className={`h-full transition-all duration-300 ${barColorClass}`}
+                        style={{ width: `${Math.min(100, energyPct)}%` }}
                     />
                 </div>
-
-                <div className="grid grid-cols-3 gap-2 py-1.5 font-mono text-[11px] border-t border-b border-[var(--color-border-default)]/60 text-[var(--color-text-secondary)]">
-                    <div>
-                        <span className="text-[var(--color-text-muted)] text-[10px] block">
-                            Distance
-                        </span>
-                        <span className="font-bold text-[var(--color-text-primary)]">
-                            {formatDistance(distanceM, 2)}
-                        </span>
-                    </div>
-                    <div>
-                        <span className="text-[var(--color-text-muted)] text-[10px] block">
-                            Est. Time
-                        </span>
-                        <span className="font-bold text-[var(--color-text-primary)]">
-                            ~{estimatedDurationMin} min
-                        </span>
-                    </div>
-                    <div>
-                        <span className="text-[var(--color-text-muted)] text-[10px] block">
-                            Energy Margin
-                        </span>
-                        <span
-                            className={`font-bold ${
-                                marginPct >= 20
-                                    ? "text-emerald-600"
-                                    : marginPct > 0
-                                      ? "text-amber-600"
-                                      : "text-red-600"
-                            }`}
-                        >
-                            {marginPct >= 0
-                                ? `+${marginPct.toFixed(1)}%`
-                                : `${marginPct.toFixed(1)}%`}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="space-y-1">
-                    <div className="flex justify-between font-mono text-[10px] text-[var(--color-text-muted)]">
-                        <span>Required: {requiredWh.toFixed(1)} Wh</span>
-                        <span>Usable: {usableWh.toFixed(1)} Wh</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full transition-all duration-300 ${
-                                energyPct <= 80
-                                    ? "bg-emerald-500"
-                                    : energyPct <= 100
-                                      ? "bg-amber-500"
-                                      : "bg-red-500"
-                            }`}
-                            style={{ width: `${Math.min(100, energyPct)}%` }}
-                        />
-                    </div>
-                </div>
-
-                {initialOverride && (
-                    <div className="pt-1 text-[11px] text-[var(--color-text-muted)] font-mono">
-                        Override: {initialOverride}
-                    </div>
-                )}
             </div>
+
+            {verdict !== FEASIBILITY_VERDICT.GO && solutions.length > 0 && (
+                <ul className="space-y-1 pt-1.5 border-t border-[var(--color-border-default)] text-[11px] text-slate-600">
+                    {solutions.slice(0, 2).map((sol, idx) => (
+                        <li key={idx}>
+                            <span className="font-semibold text-slate-800">{sol.label}: </span>
+                            <span>{sol.detail}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            {trimmedOverride && (
+                <div className="pt-2 border-t border-[var(--color-border-default)]">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] block">
+                        Override Note
+                    </span>
+                    <p className="text-[11px] font-mono text-[var(--color-text-primary)] mt-0.5 leading-relaxed">
+                        {trimmedOverride}
+                    </p>
+                </div>
+            )}
         </div>
     );
+}
+
+function rawLiveVerdictIsMarginalOrNoGo(
+    v: string | undefined
+): v is typeof FEASIBILITY_VERDICT.MARGINAL | typeof FEASIBILITY_VERDICT.NO_GO {
+    return v === FEASIBILITY_VERDICT.MARGINAL || v === FEASIBILITY_VERDICT.NO_GO;
 }

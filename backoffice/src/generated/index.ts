@@ -10,3 +10,6 @@ export * from "./organization";
 export * from "./mission";
 export * from "./simulation";
 export * from "./emergency";
+export * as weatherAisSchemas from "./weather-ais";
+export * as fleetSchemas from "./fleet";
+export * as intelligenceSchemas from "./intelligence";

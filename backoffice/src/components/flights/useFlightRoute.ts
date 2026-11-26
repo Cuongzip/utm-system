@@ -29,14 +29,16 @@ function parseInitialRouteWaypoints(
     arrivalHub?: Hub | null,
     cruisingAltitude = 120
 ): FlightWaypoint[] {
-    let route = initialRoute as any;
-    if (typeof route === "string") {
+    let parsed: unknown = initialRoute;
+    if (typeof parsed === "string") {
         try {
-            route = JSON.parse(route);
+            parsed = JSON.parse(parsed);
         } catch {
-            route = null;
+            parsed = null;
         }
     }
+    const route =
+        parsed && typeof parsed === "object" ? (parsed as { coordinates?: unknown }) : null;
     if (
         !route?.coordinates ||
         !Array.isArray(route.coordinates) ||
@@ -45,7 +47,7 @@ function parseInitialRouteWaypoints(
         return [];
     }
 
-    const coords = route.coordinates;
+    const coords = route.coordinates as number[][];
     const parsedWaypoints: FlightWaypoint[] = [];
 
     const isStartDep =

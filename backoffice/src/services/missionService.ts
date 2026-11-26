@@ -6,10 +6,15 @@ import type {
     CreateMissionPayload,
     UpdateMissionPayload,
     ExecuteMissionPayload,
+    MissionExecution,
+    MissionExecutionPlan,
     MissionExecutionResult,
     AddWaypointPayload,
     UpdateWaypointPayload,
     ReorderWaypointsPayload,
+    AutoPlanHubsPayload,
+    AutoPlanHubsResult,
+    ReassignLegDronePayload,
     MissionQueryParams,
     Waypoint,
 } from "@/types";
@@ -51,6 +56,33 @@ export const missionService = {
         });
     },
 
+    scheduleMission: async (id: string): Promise<Mission> => {
+        return apiClient<Mission>(API_ENDPOINTS.MISSIONS.SCHEDULE(id), {
+            method: "POST",
+        });
+    },
+
+    unscheduleMission: async (id: string): Promise<Mission> => {
+        return apiClient<Mission>(API_ENDPOINTS.MISSIONS.UNSCHEDULE(id), {
+            method: "POST",
+        });
+    },
+
+    getExecutionPlan: async (
+        id: string,
+        autoSplitByRange = false
+    ): Promise<MissionExecutionPlan> => {
+        const endpoint = autoSplitByRange
+            ? buildUrl(API_ENDPOINTS.MISSIONS.EXECUTION_PLAN(id), { autoSplitByRange: true })
+            : API_ENDPOINTS.MISSIONS.EXECUTION_PLAN(id);
+        return apiClient<MissionExecutionPlan>(endpoint);
+    },
+
+    getExecutions: async (id: string): Promise<MissionExecution[]> => {
+        const res = await apiClient<MissionExecution[]>(API_ENDPOINTS.MISSIONS.EXECUTIONS(id));
+        return Array.isArray(res) ? res : [];
+    },
+
     executeMission: async (
         id: string,
         payload: ExecuteMissionPayload
@@ -58,6 +90,25 @@ export const missionService = {
         return apiClient<MissionExecutionResult>(API_ENDPOINTS.MISSIONS.EXECUTE(id), {
             method: "POST",
             body: JSON.stringify(payload),
+        });
+    },
+
+    pauseExecution: async (executionId: string): Promise<MissionExecution> => {
+        return apiClient<MissionExecution>(API_ENDPOINTS.MISSIONS.EXECUTION_PAUSE(executionId), {
+            method: "POST",
+        });
+    },
+
+    resumeExecution: async (executionId: string): Promise<MissionExecution> => {
+        return apiClient<MissionExecution>(API_ENDPOINTS.MISSIONS.EXECUTION_RESUME(executionId), {
+            method: "POST",
+        });
+    },
+
+    abortExecution: async (executionId: string, reason?: string): Promise<MissionExecution> => {
+        return apiClient<MissionExecution>(API_ENDPOINTS.MISSIONS.EXECUTION_ABORT(executionId), {
+            method: "POST",
+            body: JSON.stringify(reason ? { reason } : {}),
         });
     },
 
@@ -96,5 +147,29 @@ export const missionService = {
             method: "POST",
             body: JSON.stringify(payload),
         });
+    },
+
+    autoPlanHubs: async (
+        missionId: string,
+        payload?: AutoPlanHubsPayload
+    ): Promise<AutoPlanHubsResult> => {
+        return apiClient<AutoPlanHubsResult>(API_ENDPOINTS.MISSIONS.AUTO_PLAN_HUBS(missionId), {
+            method: "POST",
+            body: JSON.stringify(payload ?? {}),
+        });
+    },
+
+    reassignLegDrone: async (
+        executionId: string,
+        legIndex: number,
+        payload: ReassignLegDronePayload
+    ): Promise<MissionExecution> => {
+        return apiClient<MissionExecution>(
+            API_ENDPOINTS.MISSIONS.EXECUTION_REASSIGN_LEG(executionId, legIndex),
+            {
+                method: "POST",
+                body: JSON.stringify(payload),
+            }
+        );
     },
 };

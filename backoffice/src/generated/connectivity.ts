@@ -8,11 +8,270 @@
 import zod from "zod";
 
 /**
- * Heartbeat signal sent periodically by IoT hardware/gateway to maintain online presence. Supports lookup by id, deviceIdentifier, or droneId.
+ * @summary Update adaptive telemetry rate mode for a device
+ */
+export const setDeviceTelemetryModeParams = zod.object({
+    id: zod.string(),
+});
+
+export const setDeviceTelemetryModeBodyReasonMin = 0;
+export const setDeviceTelemetryModeBodyReasonMax = 255;
+
+export const setDeviceTelemetryModeBody = zod
+    .object({
+        mode: zod
+            .enum(["idle", "normal", "enhanced", "emergency"])
+            .describe("Target telemetry mode (idle, normal, enhanced, emergency)"),
+        reason: zod
+            .string()
+            .min(setDeviceTelemetryModeBodyReasonMin)
+            .max(setDeviceTelemetryModeBodyReasonMax)
+            .optional()
+            .describe("Reason for telemetry rate adjustment"),
+    })
+    .describe("Payload to update a device's adaptive telemetry rate mode");
+
+export const setDeviceTelemetryModeResponse = zod
+    .object({
+        deviceId: zod.string().optional(),
+        deviceIdentifier: zod.string().optional(),
+        droneId: zod.string().optional(),
+        telemetryMode: zod.enum(["idle", "normal", "enhanced", "emergency"]).optional(),
+        telemetryModeReason: zod.string().optional(),
+        rateHz: zod.number().optional(),
+        intervalMs: zod.number().optional(),
+        updatedAt: zod.iso.datetime({}).optional(),
+    })
+    .describe("Result of updating a device's adaptive telemetry rate mode");
+
+/**
+ * @summary Ingest OEM telemetry authenticated via X-API-Key header
+ */
+export const ingestOemTelemetryHeader = zod.object({
+    "X-API-Key": zod.string().optional(),
+});
+
+export const ingestOemTelemetryBodyLatitudeMin = -90;
+export const ingestOemTelemetryBodyLatitudeMax = 90;
+export const ingestOemTelemetryBodyLongitudeMin = -180;
+export const ingestOemTelemetryBodyLongitudeMax = 180;
+export const ingestOemTelemetryBodyAltitudeMin = 0;
+export const ingestOemTelemetryBodyHeadingMin = 0;
+export const ingestOemTelemetryBodyHeadingMax = 360;
+export const ingestOemTelemetryBodySpeedMin = 0;
+export const ingestOemTelemetryBodyBatteryLevelMin = 0;
+export const ingestOemTelemetryBodyBatteryLevelMax = 100;
+
+export const ingestOemTelemetryBody = zod
+    .object({
+        droneId: zod.string().min(1).describe("Drone UUID or registration number"),
+        flightId: zod.string().optional().describe("Optional active flight UUID"),
+        latitude: zod
+            .number()
+            .min(ingestOemTelemetryBodyLatitudeMin)
+            .max(ingestOemTelemetryBodyLatitudeMax),
+        longitude: zod
+            .number()
+            .min(ingestOemTelemetryBodyLongitudeMin)
+            .max(ingestOemTelemetryBodyLongitudeMax),
+        altitude: zod.number().min(ingestOemTelemetryBodyAltitudeMin),
+        heading: zod
+            .number()
+            .min(ingestOemTelemetryBodyHeadingMin)
+            .max(ingestOemTelemetryBodyHeadingMax)
+            .optional(),
+        speed: zod.number().min(ingestOemTelemetryBodySpeedMin).optional(),
+        batteryLevel: zod
+            .number()
+            .min(ingestOemTelemetryBodyBatteryLevelMin)
+            .max(ingestOemTelemetryBodyBatteryLevelMax)
+            .optional(),
+        pitch: zod.number().optional(),
+        roll: zod.number().optional(),
+        yaw: zod.number().optional(),
+        signalStrength: zod.number().optional(),
+        flightMode: zod.string().optional(),
+        armed: zod.boolean().optional(),
+        custom: zod.record(zod.string(), zod.any()).optional(),
+    })
+    .describe("Payload for OEM 3rd-party telemetry ingestion via X-API-Key");
+
+export const ingestOemTelemetryResponse = zod
+    .object({
+        success: zod.boolean().optional(),
+        droneId: zod.string().optional(),
+        deviceId: zod.string().optional(),
+        timestamp: zod.iso.datetime({}).optional(),
+    })
+    .describe("Acknowledgement after ingesting OEM telemetry");
+
+/**
+ * @summary Register OEM drone and hardware device via X-API-Key header
+ */
+export const registerDroneHeader = zod.object({
+    "X-API-Key": zod.string().optional(),
+});
+
+export const registerDroneBodyRegistrationNumberMin = 3;
+export const registerDroneBodyRegistrationNumberMax = 50;
+export const registerDroneBodyRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const registerDroneBodyManufacturerMin = 0;
+export const registerDroneBodyManufacturerMax = 100;
+export const registerDroneBodyModelMax = 100;
+export const registerDroneBodySerialNumberMin = 0;
+export const registerDroneBodySerialNumberMax = 100;
+export const registerDroneBodyBatteryCapacityWhMin = 0;
+export const registerDroneBodyMaxPayloadMin = 0;
+
+export const registerDroneBody = zod
+    .object({
+        registrationNumber: zod
+            .string()
+            .min(registerDroneBodyRegistrationNumberMin)
+            .max(registerDroneBodyRegistrationNumberMax)
+            .regex(registerDroneBodyRegistrationNumberRegExp),
+        manufacturer: zod
+            .string()
+            .min(registerDroneBodyManufacturerMin)
+            .max(registerDroneBodyManufacturerMax)
+            .optional(),
+        model: zod.string().min(1).max(registerDroneBodyModelMax),
+        serialNumber: zod
+            .string()
+            .min(registerDroneBodySerialNumberMin)
+            .max(registerDroneBodySerialNumberMax)
+            .optional(),
+        ownerId: zod.string().optional(),
+        homeHubId: zod.string().optional(),
+        batteryCapacityWh: zod.number().min(registerDroneBodyBatteryCapacityWhMin).optional(),
+        maxPayload: zod.number().min(registerDroneBodyMaxPayloadMin).optional(),
+        maxFlightTime: zod.number().optional(),
+        maxRange: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+    })
+    .describe("Payload for OEM 3rd-party drone registration via X-API-Key");
+
+export const registerDroneResponseRegistrationNumberMin = 3;
+export const registerDroneResponseRegistrationNumberMax = 50;
+export const registerDroneResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const registerDroneResponse = zod
+    .object({
+        id: zod.string().optional(),
+        registrationNumber: zod
+            .string()
+            .min(registerDroneResponseRegistrationNumberMin)
+            .max(registerDroneResponseRegistrationNumberMax)
+            .regex(registerDroneResponseRegistrationNumberRegExp)
+            .optional(),
+        manufacturer: zod.string().optional(),
+        model: zod.string().optional(),
+        serialNumber: zod.string().optional(),
+        status: zod.string().optional(),
+        deviceId: zod.string().optional(),
+        deviceIdentifier: zod.string().optional(),
+    })
+    .describe("Drone and hardware registration summary created via OEM integration");
+
+/**
+ * @summary List all OEM manufacturer API keys
+ */
+export const listApiKeysResponseItem = zod
+    .object({
+        id: zod.string().optional(),
+        name: zod.string().min(1).optional(),
+        manufacturerName: zod.string().optional(),
+        keyPrefix: zod.string().optional(),
+        scopes: zod.array(zod.string()).optional(),
+        isActive: zod.boolean().optional(),
+        expiresAt: zod.iso.datetime({}).optional(),
+        lastUsedAt: zod.iso.datetime({}).optional(),
+        revokedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+    })
+    .describe("Manufacturer API key metadata (never includes raw key or hash)");
+export const listApiKeysResponse = zod.array(listApiKeysResponseItem);
+
+/**
+ * @summary Create a new OEM manufacturer API key
+ */
+export const createApiKeyBodyNameMax = 255;
+export const createApiKeyBodyManufacturerNameMax = 255;
+
+export const createApiKeyBody = zod
+    .object({
+        name: zod.string().min(1).max(createApiKeyBodyNameMax).describe("Human-readable key name"),
+        manufacturerName: zod
+            .string()
+            .min(1)
+            .max(createApiKeyBodyManufacturerNameMax)
+            .describe("OEM manufacturer name"),
+        scopes: zod
+            .array(zod.string())
+            .optional()
+            .describe("Granted scopes (telemetry:write, drone:register, status:read)"),
+        expiresInDays: zod.number().optional().describe("Optional validity duration in days"),
+        expiresAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Optional explicit expiration timestamp"),
+    })
+    .describe("Payload to create a new OEM manufacturer integration API key");
+
+export const createApiKeyResponse = zod
+    .object({
+        apiKey: zod
+            .string()
+            .optional()
+            .describe("Plaintext API key (shown only once upon creation)"),
+        keyInfo: zod
+            .object({
+                id: zod.string().optional(),
+                name: zod.string().min(1).optional(),
+                manufacturerName: zod.string().optional(),
+                keyPrefix: zod.string().optional(),
+                scopes: zod.array(zod.string()).optional(),
+                isActive: zod.boolean().optional(),
+                expiresAt: zod.iso.datetime({}).optional(),
+                lastUsedAt: zod.iso.datetime({}).optional(),
+                revokedAt: zod.iso.datetime({}).optional(),
+                createdOn: zod.iso.datetime({}).optional(),
+                createdBy: zod.string().optional(),
+            })
+            .optional()
+            .describe("Manufacturer API key metadata (never includes raw key or hash)"),
+    })
+    .describe("Response returned once when a new manufacturer API key is generated");
+
+/**
+ * @summary Revoke an OEM manufacturer API key
+ */
+export const revokeApiKeyParams = zod.object({
+    id: zod.string(),
+});
+
+export const revokeApiKeyResponse = zod
+    .object({
+        id: zod.string().optional(),
+        name: zod.string().min(1).optional(),
+        manufacturerName: zod.string().optional(),
+        keyPrefix: zod.string().optional(),
+        scopes: zod.array(zod.string()).optional(),
+        isActive: zod.boolean().optional(),
+        expiresAt: zod.iso.datetime({}).optional(),
+        lastUsedAt: zod.iso.datetime({}).optional(),
+        revokedAt: zod.iso.datetime({}).optional(),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+    })
+    .describe("Manufacturer API key metadata (never includes raw key or hash)");
+
+/**
  * @summary Send device heartbeat ping
  */
 export const processHeartbeatParams = zod.object({
-    id: zod.string().describe("Unique registration UUID, device identifier, or drone UUID"),
+    id: zod.string(),
 });
 
 export const processHeartbeatBodySocketIdMin = 0;
@@ -40,43 +299,298 @@ export const processHeartbeatResponse = zod
     .describe("Response payload for device heartbeat ping");
 
 /**
- * Associates a unique hardware device identifier with a drone in a 1-to-1 relationship. Requires admin or hub_operator role.
- * @summary Register drone hardware device
+ * @summary Get active X.509 device certificate metadata
  */
+export const getDeviceCertificateParams = zod.object({
+    id: zod.string(),
+});
+
+export const getDeviceCertificateResponse = zod
+    .object({
+        id: zod.string().optional(),
+        deviceRegistrationId: zod.string().optional(),
+        deviceIdentifier: zod.string().optional(),
+        certificatePem: zod.string().optional(),
+        caCertificatePem: zod.string().optional(),
+        fingerprint: zod.string().optional(),
+        commonName: zod.string().optional(),
+        serialNumber: zod.string().optional(),
+        issuedAt: zod.iso.datetime({}).optional(),
+        expiresAt: zod.iso.datetime({}).optional(),
+        revokedAt: zod.iso.datetime({}).optional(),
+        revocationReason: zod.string().optional(),
+    })
+    .describe("Active X.509 v3 device certificate metadata and public PEM (without private key)");
+
+/**
+ * @summary Issue or rotate 90-day RSA-2048 X.509 device certificate
+ */
+export const issueCertificateParams = zod.object({
+    id: zod.string(),
+});
+
+export const issueCertificateResponse = zod
+    .object({
+        certificatePem: zod.string().optional().describe("PEM-encoded X.509 v3 device certificate"),
+        privateKeyPem: zod
+            .string()
+            .optional()
+            .describe("PEM-encoded PKCS#8 RSA-2048 private key (returned once on issuance)"),
+        caCertificatePem: zod
+            .string()
+            .optional()
+            .describe("PEM-encoded UTM Root CA X.509 v3 certificate"),
+        fingerprint: zod
+            .string()
+            .optional()
+            .describe("SHA-256 certificate fingerprint (uppercase hex)"),
+        commonName: zod.string().optional().describe("Certificate Subject Common Name (CN)"),
+        serialNumber: zod.string().optional().describe("Certificate hexadecimal serial number"),
+        issuedAt: zod.iso.datetime({}).optional().describe("Certificate validity start timestamp"),
+        expiresAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Certificate expiration timestamp (90 days from issuance)"),
+    })
+    .describe("Newly issued X.509 v3 device certificate bundle including private key and Root CA");
+
+/**
+ * @summary Revoke active X.509 device certificate
+ */
+export const revokeDeviceCertificateParams = zod.object({
+    id: zod.string(),
+});
+
+export const revokeDeviceCertificateQueryParams = zod.object({
+    reason: zod.string().optional(),
+});
+
+export const revokeDeviceCertificateResponse = zod
+    .object({
+        id: zod.string().optional(),
+        deviceRegistrationId: zod.string().optional(),
+        deviceIdentifier: zod.string().optional(),
+        certificatePem: zod.string().optional(),
+        caCertificatePem: zod.string().optional(),
+        fingerprint: zod.string().optional(),
+        commonName: zod.string().optional(),
+        serialNumber: zod.string().optional(),
+        issuedAt: zod.iso.datetime({}).optional(),
+        expiresAt: zod.iso.datetime({}).optional(),
+        revokedAt: zod.iso.datetime({}).optional(),
+        revocationReason: zod.string().optional(),
+    })
+    .describe("Active X.509 v3 device certificate metadata and public PEM (without private key)");
+
+/**
+ * @summary Register hardware device (DRONE, GATEWAY, or GCS)
+ */
+export const registerDeviceBodyDroneIdMin = 0;
 export const registerDeviceBodyDroneIdMax = 36;
+export const registerDeviceBodyHubIdMin = 0;
+export const registerDeviceBodyHubIdMax = 36;
 export const registerDeviceBodyDeviceIdentifierMin = 3;
-export const registerDeviceBodyDeviceIdentifierMax = 50;
-export const registerDeviceBodyDeviceIdentifierRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const registerDeviceBodyDeviceIdentifierMax = 100;
+export const registerDeviceBodyDeviceIdentifierRegExp = new RegExp("^[A-Za-z0-9_:-]+$");
 export const registerDeviceBodyCertificateFingerprintMin = 0;
 export const registerDeviceBodyCertificateFingerprintMax = 128;
 
 export const registerDeviceBody = zod
     .object({
+        deviceType: zod
+            .enum(["drone", "gateway", "gcs"])
+            .optional()
+            .describe("Device category (drone, gateway, gcs). Defaults to drone when omitted."),
         droneId: zod
             .string()
-            .min(1)
+            .min(registerDeviceBodyDroneIdMin)
             .max(registerDeviceBodyDroneIdMax)
-            .describe("Unique UUID of the drone"),
+            .optional()
+            .describe("Unique UUID of the drone (required when deviceType is drone)"),
+        hubId: zod
+            .string()
+            .min(registerDeviceBodyHubIdMin)
+            .max(registerDeviceBodyHubIdMax)
+            .optional()
+            .describe("Unique UUID of the hub (required when deviceType is gateway)"),
         deviceIdentifier: zod
             .string()
             .min(registerDeviceBodyDeviceIdentifierMin)
             .max(registerDeviceBodyDeviceIdentifierMax)
             .regex(registerDeviceBodyDeviceIdentifierRegExp)
             .optional()
-            .describe(
-                "Unique hardware identifier (MAC address, IMEI, or serial number). If omitted or blank, a unique identifier will be auto-generated (e.g. DEV-XXXXXXXX)."
-            ),
+            .describe("Unique hardware identifier. Auto-generated when omitted."),
         certificateFingerprint: zod
             .string()
             .min(registerDeviceBodyCertificateFingerprintMin)
             .max(registerDeviceBodyCertificateFingerprintMax)
             .optional()
-            .describe("Optional SSL/TLS certificate fingerprint or public key thumbprint"),
+            .describe("Optional X.509 SHA-256 certificate fingerprint"),
+        supportedProtocols: zod
+            .array(zod.string())
+            .optional()
+            .describe("Supported communication protocols"),
+        metadata: zod
+            .record(zod.string(), zod.any())
+            .optional()
+            .describe("Optional hardware/firmware metadata"),
     })
-    .describe("Payload to register drone hardware connectivity device");
+    .describe("Payload to register hardware connectivity device (DRONE, GATEWAY, or GCS)");
 
 /**
- * Retrieve a paginated and filtered list of registered devices in the UTM system. Requires admin or hub_operator role.
+ * @summary Get OEM manufacturer fleet connectivity status via X-API-Key header
+ */
+export const getStatusHeader = zod.object({
+    "X-API-Key": zod.string().optional(),
+});
+
+export const getStatusResponseDronesItemRegistrationNumberMin = 3;
+export const getStatusResponseDronesItemRegistrationNumberMax = 50;
+export const getStatusResponseDronesItemRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const getStatusResponse = zod
+    .object({
+        manufacturer: zod.string().optional(),
+        totalDrones: zod.number().optional(),
+        onlineDrones: zod.number().optional(),
+        drones: zod
+            .array(
+                zod
+                    .object({
+                        id: zod.string().optional(),
+                        registrationNumber: zod
+                            .string()
+                            .min(getStatusResponseDronesItemRegistrationNumberMin)
+                            .max(getStatusResponseDronesItemRegistrationNumberMax)
+                            .regex(getStatusResponseDronesItemRegistrationNumberRegExp)
+                            .optional(),
+                        model: zod.string().optional(),
+                        status: zod.string().optional(),
+                        connectionStatus: zod.string().optional(),
+                        lastSeen: zod.iso.datetime({}).optional(),
+                    })
+                    .describe("Drone operational and connectivity status for OEM manufacturer")
+            )
+            .optional(),
+    })
+    .describe("Aggregated fleet connectivity status for an OEM manufacturer");
+
+/**
+ * @summary Get telemetry rate distribution across registered devices
+ */
+export const getTelemetryStatsResponse = zod
+    .object({
+        totalDevices: zod.number().optional(),
+        byMode: zod.record(zod.string(), zod.number()).optional(),
+    })
+    .describe("Aggregated adaptive telemetry mode statistics across registered devices");
+
+/**
+ * @summary List supported adaptive telemetry rate modes
+ */
+export const getTelemetryModesResponseItem = zod
+    .object({
+        mode: zod.enum(["idle", "normal", "enhanced", "emergency"]).optional(),
+        rateHz: zod.number().optional(),
+        intervalMs: zod.number().optional(),
+        description: zod.string().optional(),
+    })
+    .describe("Adaptive telemetry mode configuration");
+export const getTelemetryModesResponse = zod.array(getTelemetryModesResponseItem);
+
+/**
+ * @summary Get overall connectivity gateway operational status
+ */
+export const getConnectivityStatusResponse = zod
+    .object({
+        status: zod.string().optional(),
+        onlineDevices: zod.number().optional(),
+        totalDevices: zod.number().optional(),
+        protocols: zod
+            .array(
+                zod
+                    .object({
+                        protocol: zod.string().optional(),
+                        status: zod.string().optional(),
+                        connectedDevices: zod.number().optional(),
+                        registeredDevices: zod.number().optional(),
+                        messagesRouted: zod.number().optional(),
+                    })
+                    .describe("Statistics for a communication protocol adapter")
+            )
+            .optional(),
+        telemetry: zod
+            .object({
+                totalDevices: zod.number().optional(),
+                byMode: zod.record(zod.string(), zod.number()).optional(),
+            })
+            .optional()
+            .describe("Aggregated adaptive telemetry mode statistics across registered devices"),
+        commands: zod
+            .object({
+                pendingCount: zod.number().optional(),
+                totalRouted: zod.number().optional(),
+                totalSimulated: zod.number().optional(),
+                totalAcknowledged: zod.number().optional(),
+                totalFailed: zod.number().optional(),
+                byPriority: zod.record(zod.string(), zod.number()).optional(),
+                priorityConfigs: zod
+                    .record(
+                        zod.string(),
+                        zod
+                            .object({
+                                priority: zod.number().optional(),
+                                timeoutMs: zod.number().optional(),
+                                maxRetries: zod.number().optional(),
+                                commands: zod.array(zod.string()).optional(),
+                            })
+                            .describe("Configuration for a command priority tier")
+                    )
+                    .optional(),
+            })
+            .optional()
+            .describe("Command router statistics across priority tiers"),
+    })
+    .describe("Overall connectivity module operational status");
+
+/**
+ * @summary Get protocol adapter statistics and connected devices
+ */
+export const getProtocolStatsResponse = zod
+    .object({
+        adapters: zod
+            .array(
+                zod
+                    .object({
+                        protocol: zod.string().optional(),
+                        status: zod.string().optional(),
+                        connectedDevices: zod.number().optional(),
+                        registeredDevices: zod.number().optional(),
+                        messagesRouted: zod.number().optional(),
+                    })
+                    .describe("Statistics for a communication protocol adapter")
+            )
+            .optional(),
+        connectedDevices: zod
+            .array(
+                zod
+                    .object({
+                        deviceId: zod.string().optional(),
+                        deviceIdentifier: zod.string().optional(),
+                        deviceType: zod.enum(["drone", "gateway", "gcs"]).optional(),
+                        droneId: zod.string().optional(),
+                        hubId: zod.string().optional(),
+                        protocols: zod.array(zod.string()).optional(),
+                        socketId: zod.string().optional(),
+                        lastSeenAt: zod.iso.datetime({}).optional(),
+                    })
+                    .describe("Brief summary of an active online connected device")
+            )
+            .optional(),
+    })
+    .describe("Protocol adapter statistics and currently connected devices");
+
+/**
  * @summary List registered devices
  */
 export const getDevicesQueryLimitDefault = 20;
@@ -86,16 +600,11 @@ export const getDevicesQueryParams = zod.object({
     connectionStatus: zod
         .enum(["offline", "online", "connecting"])
         .optional()
-        .describe("Filter by device connection status (online, offline, connecting)"),
-    search: zod
-        .string()
-        .optional()
-        .describe("Search term for hardware device identifier or drone ID"),
-    limit: zod
-        .number()
-        .default(getDevicesQueryLimitDefault)
-        .describe("Page size limit (default: 20, 0 or negative for unpaged)"),
-    offset: zod.number().optional().describe("Offset index (default: 0)"),
+        .describe("Filter by connection status"),
+    hubId: zod.string().optional().describe("Filter by Hub UUID"),
+    search: zod.string().optional().describe("Search by identifier or drone ID"),
+    limit: zod.number().default(getDevicesQueryLimitDefault),
+    offset: zod.number().optional(),
 });
 
 export const getDevicesResponse = zod
@@ -108,20 +617,33 @@ export const getDevicesResponse = zod
                             .string()
                             .optional()
                             .describe("Unique device registration identifier"),
+                        deviceType: zod
+                            .enum(["drone", "gateway", "gcs"])
+                            .optional()
+                            .describe("Hardware device type (drone, gateway, gcs)"),
                         droneId: zod.string().optional().describe("Associated drone UUID"),
                         droneRegistrationNumber: zod
                             .string()
                             .optional()
                             .describe("Aircraft registration number"),
                         droneModel: zod.string().optional().describe("Drone aircraft model"),
+                        hubId: zod.string().optional().describe("Associated hub UUID"),
                         deviceIdentifier: zod
                             .string()
                             .optional()
                             .describe("Unique hardware device identifier"),
+                        registrationStatus: zod
+                            .enum(["pending", "active", "revoked"])
+                            .optional()
+                            .describe("Registration lifecycle status (pending, active, revoked)"),
                         connectionStatus: zod
                             .enum(["offline", "online", "connecting"])
                             .optional()
                             .describe("Current connection status"),
+                        supportedProtocols: zod
+                            .array(zod.string())
+                            .optional()
+                            .describe("Supported communication protocols"),
                         socketId: zod
                             .string()
                             .optional()
@@ -129,7 +651,19 @@ export const getDevicesResponse = zod
                         certificateFingerprint: zod
                             .string()
                             .optional()
-                            .describe("Hardware certificate fingerprint"),
+                            .describe("Hardware certificate SHA-256 fingerprint"),
+                        telemetryMode: zod
+                            .enum(["idle", "normal", "enhanced", "emergency"])
+                            .optional()
+                            .describe("Active adaptive telemetry rate mode"),
+                        telemetryModeReason: zod
+                            .string()
+                            .optional()
+                            .describe("Reason for current telemetry rate mode"),
+                        metadata: zod
+                            .record(zod.string(), zod.any())
+                            .optional()
+                            .describe("Device metadata"),
                         lastSeenAt: zod.iso
                             .datetime({})
                             .optional()
@@ -138,10 +672,18 @@ export const getDevicesResponse = zod
                             .datetime({})
                             .optional()
                             .describe("Record creation timestamp"),
+                        createdBy: zod
+                            .string()
+                            .optional()
+                            .describe("Identity that created this registration"),
                         lastModifiedOn: zod.iso
                             .datetime({})
                             .optional()
                             .describe("Last modification timestamp"),
+                        lastModifiedBy: zod
+                            .string()
+                            .optional()
+                            .describe("Identity that last modified this registration"),
                     })
                     .describe("Detailed profile of hardware device registration")
             )
@@ -155,44 +697,78 @@ export const getDevicesResponse = zod
     .describe("Paginated list response of registered hardware devices");
 
 /**
- * Returns detailed profile of a device registration. Supports lookup by registration UUID, deviceIdentifier, or droneId.
- * @summary Get device details by ID
+ * @summary Get device details by ID, identifier, or droneId
  */
 export const getDeviceByIdParams = zod.object({
-    id: zod.string().describe("Unique registration UUID, device identifier, or drone UUID"),
+    id: zod.string(),
+});
+
+export const getDeviceByIdQueryEnrichDefault = true;
+
+export const getDeviceByIdQueryParams = zod.object({
+    enrich: zod
+        .boolean()
+        .default(getDeviceByIdQueryEnrichDefault)
+        .describe("Include cross-service drone summary enrichment"),
 });
 
 export const getDeviceByIdResponse = zod
     .object({
         id: zod.string().optional().describe("Unique device registration identifier"),
+        deviceType: zod
+            .enum(["drone", "gateway", "gcs"])
+            .optional()
+            .describe("Hardware device type (drone, gateway, gcs)"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         droneRegistrationNumber: zod.string().optional().describe("Aircraft registration number"),
         droneModel: zod.string().optional().describe("Drone aircraft model"),
+        hubId: zod.string().optional().describe("Associated hub UUID"),
         deviceIdentifier: zod.string().optional().describe("Unique hardware device identifier"),
+        registrationStatus: zod
+            .enum(["pending", "active", "revoked"])
+            .optional()
+            .describe("Registration lifecycle status (pending, active, revoked)"),
         connectionStatus: zod
             .enum(["offline", "online", "connecting"])
             .optional()
             .describe("Current connection status"),
+        supportedProtocols: zod
+            .array(zod.string())
+            .optional()
+            .describe("Supported communication protocols"),
         socketId: zod.string().optional().describe("Current active WebSocket session ID"),
         certificateFingerprint: zod
             .string()
             .optional()
-            .describe("Hardware certificate fingerprint"),
+            .describe("Hardware certificate SHA-256 fingerprint"),
+        telemetryMode: zod
+            .enum(["idle", "normal", "enhanced", "emergency"])
+            .optional()
+            .describe("Active adaptive telemetry rate mode"),
+        telemetryModeReason: zod
+            .string()
+            .optional()
+            .describe("Reason for current telemetry rate mode"),
+        metadata: zod.record(zod.string(), zod.any()).optional().describe("Device metadata"),
         lastSeenAt: zod.iso
             .datetime({})
             .optional()
             .describe("Timestamp of the last received heartbeat ping"),
         createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Identity that created this registration"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod
+            .string()
+            .optional()
+            .describe("Identity that last modified this registration"),
     })
     .describe("Detailed profile of hardware device registration");
 
 /**
- * Removes hardware device registration. Rejected if the drone is actively in flight or in mission. Requires admin role.
  * @summary Revoke device registration
  */
 export const revokeDeviceRegistrationParams = zod.object({
-    id: zod.string().describe("Unique registration UUID, device identifier, or drone UUID"),
+    id: zod.string(),
 });
 
 export const revokeDeviceRegistrationResponse = zod
@@ -202,31 +778,95 @@ export const revokeDeviceRegistrationResponse = zod
     .describe("Response message after revoking device registration");
 
 /**
- * Returns list of active online devices, applying automatic deadman-switch timeout pruning (30s threshold).
  * @summary List currently online devices
  */
 export const getOnlineDevicesResponseItem = zod
     .object({
         id: zod.string().optional().describe("Unique device registration identifier"),
+        deviceType: zod
+            .enum(["drone", "gateway", "gcs"])
+            .optional()
+            .describe("Hardware device type (drone, gateway, gcs)"),
         droneId: zod.string().optional().describe("Associated drone UUID"),
         droneRegistrationNumber: zod.string().optional().describe("Aircraft registration number"),
         droneModel: zod.string().optional().describe("Drone aircraft model"),
+        hubId: zod.string().optional().describe("Associated hub UUID"),
         deviceIdentifier: zod.string().optional().describe("Unique hardware device identifier"),
+        registrationStatus: zod
+            .enum(["pending", "active", "revoked"])
+            .optional()
+            .describe("Registration lifecycle status (pending, active, revoked)"),
         connectionStatus: zod
             .enum(["offline", "online", "connecting"])
             .optional()
             .describe("Current connection status"),
+        supportedProtocols: zod
+            .array(zod.string())
+            .optional()
+            .describe("Supported communication protocols"),
         socketId: zod.string().optional().describe("Current active WebSocket session ID"),
         certificateFingerprint: zod
             .string()
             .optional()
-            .describe("Hardware certificate fingerprint"),
+            .describe("Hardware certificate SHA-256 fingerprint"),
+        telemetryMode: zod
+            .enum(["idle", "normal", "enhanced", "emergency"])
+            .optional()
+            .describe("Active adaptive telemetry rate mode"),
+        telemetryModeReason: zod
+            .string()
+            .optional()
+            .describe("Reason for current telemetry rate mode"),
+        metadata: zod.record(zod.string(), zod.any()).optional().describe("Device metadata"),
         lastSeenAt: zod.iso
             .datetime({})
             .optional()
             .describe("Timestamp of the last received heartbeat ping"),
         createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Identity that created this registration"),
         lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod
+            .string()
+            .optional()
+            .describe("Identity that last modified this registration"),
     })
     .describe("Detailed profile of hardware device registration");
 export const getOnlineDevicesResponse = zod.array(getOnlineDevicesResponseItem);
+
+/**
+ * @summary Get command router priority tier statistics
+ */
+export const getCommandStatsResponse = zod
+    .object({
+        pendingCount: zod.number().optional(),
+        totalRouted: zod.number().optional(),
+        totalSimulated: zod.number().optional(),
+        totalAcknowledged: zod.number().optional(),
+        totalFailed: zod.number().optional(),
+        byPriority: zod.record(zod.string(), zod.number()).optional(),
+        priorityConfigs: zod
+            .record(
+                zod.string(),
+                zod
+                    .object({
+                        priority: zod.number().optional(),
+                        timeoutMs: zod.number().optional(),
+                        maxRetries: zod.number().optional(),
+                        commands: zod.array(zod.string()).optional(),
+                    })
+                    .describe("Configuration for a command priority tier")
+            )
+            .optional(),
+    })
+    .describe("Command router statistics across priority tiers");
+
+/**
+ * @summary Get public UTM Root CA X.509 certificate
+ */
+export const getCaCertificateResponse = zod
+    .object({
+        caCertificatePem: zod.string().optional().describe("PEM-encoded UTM Root CA certificate"),
+        commonName: zod.string().optional().describe("CA Common Name"),
+        expiresAt: zod.iso.datetime({}).optional().describe("Root CA expiration timestamp"),
+    })
+    .describe("Public UTM Root CA X.509 v3 certificate");

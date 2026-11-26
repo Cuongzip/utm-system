@@ -19,6 +19,7 @@ export interface ActiveAirspaceGraphicProps {
     radiusMeters: number;
     polygonPoints: GeoPoint[];
     zoneType: AirspaceZoneType;
+    altitudeFloor: number;
     altitudeCeiling: number;
 }
 
@@ -28,6 +29,7 @@ export function ActiveAirspaceGraphic({
     radiusMeters,
     polygonPoints,
     zoneType,
+    altitudeFloor,
     altitudeCeiling,
 }: ActiveAirspaceGraphicProps) {
     const { viewer, isLoaded } = useCesium();
@@ -53,7 +55,8 @@ export function ActiveAirspaceGraphic({
             const baseColor = Cesium.Color.fromCssColorString(hexColor);
             const fillColor = Cesium.Color.fromAlpha(baseColor, 0.35);
             const outlineColor = Cesium.Color.fromAlpha(baseColor, 0.9);
-            const ceiling = Math.max(altitudeCeiling ?? 120, 20);
+            const floor = Math.max(altitudeFloor ?? 0, 0);
+            const ceiling = Math.max(altitudeCeiling ?? 120, floor + 10);
 
             if (geometryMode === "radius") {
                 const centerPoint = viewer.entities.add({
@@ -84,7 +87,7 @@ export function ActiveAirspaceGraphic({
                             hierarchy: new Cesium.PolygonHierarchy(
                                 Cesium.Cartesian3.fromDegreesArray(degreesArray)
                             ),
-                            height: 0,
+                            height: floor,
                             extrudedHeight: ceiling,
                             material: fillColor,
                             outline: true,
@@ -123,7 +126,7 @@ export function ActiveAirspaceGraphic({
                                 hierarchy: new Cesium.PolygonHierarchy(
                                     Cesium.Cartesian3.fromDegreesArray(degreesArray)
                                 ),
-                                height: 0,
+                                height: floor,
                                 extrudedHeight: ceiling,
                                 material: fillColor,
                                 outline: true,
@@ -173,6 +176,7 @@ export function ActiveAirspaceGraphic({
         radiusMeters,
         polygonPoints,
         zoneType,
+        altitudeFloor,
         altitudeCeiling,
     ]);
 

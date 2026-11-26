@@ -63,14 +63,14 @@ export function ResolvedConflictsTable({
             />
 
             <ChamferCard size="lg" className="w-full">
-                <Table fixed>
+                <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="140px">TYPE</TableHead>
-                            <TableHead width="110px">SEVERITY</TableHead>
+                            <TableHead>TYPE</TableHead>
+                            <TableHead>SEVERITY</TableHead>
                             <TableHead>DESCRIPTION</TableHead>
-                            <TableHead width="140px">STRATEGY</TableHead>
-                            <TableHead width="160px">RESOLVED AT</TableHead>
+                            <TableHead>STRATEGY</TableHead>
+                            <TableHead>RESOLVED AT</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -114,7 +114,7 @@ export function ResolvedConflictsTable({
                                         <TableCell
                                             truncate
                                             tooltip={item.description || undefined}
-                                            className="text-xs text-slate-700 font-normal"
+                                            className="max-w-[340px] text-xs text-slate-700 font-normal"
                                         >
                                             {item.description || "—"}
                                         </TableCell>
@@ -144,6 +144,7 @@ export function ResolvedConflictsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
+                    itemLabel="conflicts"
                 />
             </ChamferCard>
         </div>

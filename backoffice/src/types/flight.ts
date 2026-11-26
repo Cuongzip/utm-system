@@ -109,8 +109,57 @@ export type FlightListResponse = Omit<
     items?: Flight[];
 };
 
-type FeasibilityResult = NonNullable<zod.infer<typeof checkFeasibilityResponse>>;
+export type FeasibilityResult = NonNullable<zod.infer<typeof checkFeasibilityResponse>>;
 export type FeasibilityVerdict = NonNullable<FeasibilityResult["verdict"]>;
+
+export interface FeasibilitySolution {
+    kind?: string;
+    label?: string;
+    detail?: string;
+}
+
+export interface FeasibilityCheckPayload {
+    payloadKg?: number;
+    distanceM?: number;
+    hoverTimeS?: number;
+}
+
+export interface FeasibilityOverridePayload {
+    reason: string;
+    approvedBy: string;
+}
+
+export const CONFORMANCE_STATUSES = [
+    "conformant",
+    "non_conforming",
+    "contingent",
+    "unknown",
+] as const;
+export type ConformanceStatus = (typeof CONFORMANCE_STATUSES)[number];
+
+export const CONFORMANCE_STATUS = {
+    CONFORMANT: "conformant",
+    NON_CONFORMING: "non_conforming",
+    CONTINGENT: "contingent",
+    UNKNOWN: "unknown",
+} as const satisfies Record<string, ConformanceStatus>;
+
+export interface FlightConformance {
+    flightId: string;
+    status: ConformanceStatus;
+    crossTrackErrorM?: number;
+    verticalErrorM?: number;
+    corridorRadiusM?: number;
+    altitudeBufferM?: number;
+    currentLatitude?: number;
+    currentLongitude?: number;
+    currentAltitude?: number;
+    currentSpeed?: number;
+    currentHeading?: number;
+    lastTelemetryTime?: string;
+    lastEvaluatedAt?: string;
+    violationsJson?: string;
+}
 
 export const FEASIBILITY_VERDICTS = createFlightBody.shape.feasibilityVerdict.unwrap().options;
 

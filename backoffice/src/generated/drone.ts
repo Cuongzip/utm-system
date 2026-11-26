@@ -15,6 +15,15 @@ export const getDroneByIdParams = zod.object({
     id: zod.string().describe("Unique UUID identifier of the drone"),
 });
 
+export const getDroneByIdQueryEnrichDefault = true;
+
+export const getDroneByIdQueryParams = zod.object({
+    enrich: zod
+        .boolean()
+        .default(getDroneByIdQueryEnrichDefault)
+        .describe("Include cross-service organization, hub, and connectivity enrichment"),
+});
+
 export const getDroneByIdResponseRegistrationNumberMin = 3;
 export const getDroneByIdResponseRegistrationNumberMax = 50;
 export const getDroneByIdResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
@@ -29,32 +38,54 @@ export const getDroneByIdResponseHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+
 
 export const getDroneByIdResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the drone"),
+        id: zod.string().optional(),
         registrationNumber: zod
             .string()
             .min(getDroneByIdResponseRegistrationNumberMin)
             .max(getDroneByIdResponseRegistrationNumberMax)
             .regex(getDroneByIdResponseRegistrationNumberRegExp)
-            .optional()
-            .describe("Aircraft registration number / callsign"),
-        manufacturer: zod.string().optional().describe("Manufacturer name"),
-        model: zod.string().optional().describe("Model / airframe designation"),
-        ownerId: zod.string().optional().describe("Owner organization UUID identifier"),
-        homeHubId: zod.string().optional().describe("Base / Home hub UUID identifier"),
-        batteryCapacityWh: zod
-            .number()
-            .min(getDroneByIdResponseBatteryCapacityWhMin)
-            .optional()
-            .describe("Rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod
-            .number()
-            .min(getDroneByIdResponseMaxPayloadMin)
-            .optional()
-            .describe("Maximum payload capacity in kilograms (kg)"),
+            .optional(),
+        serialNumber: zod.string().optional(),
+        manufacturer: zod.string().optional(),
+        model: zod.string().optional(),
+        ownerId: zod.string().optional(),
+        homeHubId: zod.string().optional(),
+        currentHubId: zod.string().optional(),
+        batteryCapacityWh: zod.number().min(getDroneByIdResponseBatteryCapacityWhMin).optional(),
+        currentBatteryPct: zod.number().optional(),
+        maxPayload: zod.number().min(getDroneByIdResponseMaxPayloadMin).optional(),
+        maxAltitude: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+        hoverPowerW: zod.number().optional(),
+        cruisePowerW: zod.number().optional(),
+        cruiseSpeedMs: zod.number().optional(),
+        batteryHealthPct: zod.number().optional(),
+        windToleranceMs: zod.number().optional(),
+        maxFlightTimeMin: zod.number().optional(),
+        maxRangeM: zod.number().optional(),
+        communicationProtocol: zod
+            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+            .optional(),
+        remoteId: zod.string().optional(),
+        capabilities: zod.array(zod.string()).optional(),
+        specifications: zod.record(zod.string(), zod.any()).optional(),
+        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+        lastMaintenance: zod.iso.datetime({}).optional(),
+        nextMaintenance: zod.iso.datetime({}).optional(),
+        totalFlightHours: zod.number().optional(),
+        totalFlights: zod.number().optional(),
         status: zod
-            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
-            .optional()
-            .describe("Current operational status"),
+            .enum([
+                "available",
+                "standby",
+                "in_flight",
+                "maintenance",
+                "charging",
+                "emergency",
+                "offline",
+                "retired",
+            ])
+            .optional(),
         owner: zod
             .object({
                 id: zod.string().optional().describe("Organization UUID identifier"),
@@ -67,6 +98,7 @@ export const getDroneByIdResponse = zod
                     .optional()
                     .describe("Business registration number"),
                 type: zod.string().optional().describe("Organization classification type"),
+                status: zod.string().optional().describe("Operational status"),
             })
             .optional()
             .describe("Brief summary of owner organization"),
@@ -81,6 +113,7 @@ export const getDroneByIdResponse = zod
                     .optional()
                     .describe("Hub callsign / identification code"),
                 name: zod.string().min(1).optional().describe("Hub display name"),
+                status: zod.string().optional().describe("Hub operational status"),
             })
             .optional()
             .describe("Brief summary of base hub / vertiport station"),
@@ -102,13 +135,10 @@ export const getDroneByIdResponse = zod
             })
             .optional()
             .describe("Brief summary of hardware device registration and connectivity status"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("User or client ID that created the record"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("User or client ID that last modified the record"),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and specifications of a Drone / UAS");
 
@@ -122,29 +152,53 @@ export const updateDroneParams = zod.object({
 
 export const updateDroneBodyBatteryCapacityWhMin = 0;
 export const updateDroneBodyMaxPayloadMin = 0;
+export const updateDroneBodyCurrentBatteryPctMax = 100;
+export const updateDroneBodyBatteryHealthPctMax = 100;
+export const updateDroneBodySerialNumberMin = 0;
+export const updateDroneBodySerialNumberMax = 100;
 
 export const updateDroneBody = zod
     .object({
-        homeHubId: zod
-            .string()
-            .optional()
-            .describe("Identifier of newly assigned home hub station"),
-        batteryCapacityWh: zod
-            .number()
-            .min(updateDroneBodyBatteryCapacityWhMin)
-            .optional()
-            .describe("Updated rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod
-            .number()
-            .min(updateDroneBodyMaxPayloadMin)
-            .optional()
-            .describe("Updated maximum payload capacity in kg"),
+        homeHubId: zod.string().optional(),
+        batteryCapacityWh: zod.number().min(updateDroneBodyBatteryCapacityWhMin).optional(),
+        maxPayload: zod.number().min(updateDroneBodyMaxPayloadMin).optional(),
         status: zod
-            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
-            .optional()
-            .describe(
-                "Operational status of the drone (available, in_flight, maintenance, charging, offline)"
-            ),
+            .enum([
+                "available",
+                "standby",
+                "in_flight",
+                "maintenance",
+                "charging",
+                "emergency",
+                "offline",
+                "retired",
+            ])
+            .optional(),
+        currentHubId: zod.string().optional(),
+        currentBatteryPct: zod.number().max(updateDroneBodyCurrentBatteryPctMax).optional(),
+        hoverPowerW: zod.number().optional(),
+        cruisePowerW: zod.number().optional(),
+        cruiseSpeedMs: zod.number().optional(),
+        batteryHealthPct: zod.number().max(updateDroneBodyBatteryHealthPctMax).optional(),
+        windToleranceMs: zod.number().optional(),
+        maxFlightTimeMin: zod.number().optional(),
+        maxRangeM: zod.number().optional(),
+        serialNumber: zod
+            .string()
+            .min(updateDroneBodySerialNumberMin)
+            .max(updateDroneBodySerialNumberMax)
+            .optional(),
+        maxAltitude: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+        communicationProtocol: zod
+            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+            .optional(),
+        remoteId: zod.string().optional(),
+        capabilities: zod.array(zod.string()).optional(),
+        specifications: zod.record(zod.string(), zod.any()).optional(),
+        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+        lastMaintenance: zod.iso.datetime({}).optional(),
+        nextMaintenance: zod.iso.datetime({}).optional(),
     })
     .describe("Request payload for updating an existing Drone / UAS");
 
@@ -162,32 +216,54 @@ export const updateDroneResponseHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$
 
 export const updateDroneResponse = zod
     .object({
-        id: zod.string().optional().describe("Unique UUID identifier of the drone"),
+        id: zod.string().optional(),
         registrationNumber: zod
             .string()
             .min(updateDroneResponseRegistrationNumberMin)
             .max(updateDroneResponseRegistrationNumberMax)
             .regex(updateDroneResponseRegistrationNumberRegExp)
-            .optional()
-            .describe("Aircraft registration number / callsign"),
-        manufacturer: zod.string().optional().describe("Manufacturer name"),
-        model: zod.string().optional().describe("Model / airframe designation"),
-        ownerId: zod.string().optional().describe("Owner organization UUID identifier"),
-        homeHubId: zod.string().optional().describe("Base / Home hub UUID identifier"),
-        batteryCapacityWh: zod
-            .number()
-            .min(updateDroneResponseBatteryCapacityWhMin)
-            .optional()
-            .describe("Rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod
-            .number()
-            .min(updateDroneResponseMaxPayloadMin)
-            .optional()
-            .describe("Maximum payload capacity in kilograms (kg)"),
+            .optional(),
+        serialNumber: zod.string().optional(),
+        manufacturer: zod.string().optional(),
+        model: zod.string().optional(),
+        ownerId: zod.string().optional(),
+        homeHubId: zod.string().optional(),
+        currentHubId: zod.string().optional(),
+        batteryCapacityWh: zod.number().min(updateDroneResponseBatteryCapacityWhMin).optional(),
+        currentBatteryPct: zod.number().optional(),
+        maxPayload: zod.number().min(updateDroneResponseMaxPayloadMin).optional(),
+        maxAltitude: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+        hoverPowerW: zod.number().optional(),
+        cruisePowerW: zod.number().optional(),
+        cruiseSpeedMs: zod.number().optional(),
+        batteryHealthPct: zod.number().optional(),
+        windToleranceMs: zod.number().optional(),
+        maxFlightTimeMin: zod.number().optional(),
+        maxRangeM: zod.number().optional(),
+        communicationProtocol: zod
+            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+            .optional(),
+        remoteId: zod.string().optional(),
+        capabilities: zod.array(zod.string()).optional(),
+        specifications: zod.record(zod.string(), zod.any()).optional(),
+        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+        lastMaintenance: zod.iso.datetime({}).optional(),
+        nextMaintenance: zod.iso.datetime({}).optional(),
+        totalFlightHours: zod.number().optional(),
+        totalFlights: zod.number().optional(),
         status: zod
-            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
-            .optional()
-            .describe("Current operational status"),
+            .enum([
+                "available",
+                "standby",
+                "in_flight",
+                "maintenance",
+                "charging",
+                "emergency",
+                "offline",
+                "retired",
+            ])
+            .optional(),
         owner: zod
             .object({
                 id: zod.string().optional().describe("Organization UUID identifier"),
@@ -200,6 +276,7 @@ export const updateDroneResponse = zod
                     .optional()
                     .describe("Business registration number"),
                 type: zod.string().optional().describe("Organization classification type"),
+                status: zod.string().optional().describe("Operational status"),
             })
             .optional()
             .describe("Brief summary of owner organization"),
@@ -214,6 +291,7 @@ export const updateDroneResponse = zod
                     .optional()
                     .describe("Hub callsign / identification code"),
                 name: zod.string().min(1).optional().describe("Hub display name"),
+                status: zod.string().optional().describe("Hub operational status"),
             })
             .optional()
             .describe("Brief summary of base hub / vertiport station"),
@@ -235,13 +313,10 @@ export const updateDroneResponse = zod
             })
             .optional()
             .describe("Brief summary of hardware device registration and connectivity status"),
-        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
-        createdBy: zod.string().optional().describe("User or client ID that created the record"),
-        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
-        lastModifiedBy: zod
-            .string()
-            .optional()
-            .describe("User or client ID that last modified the record"),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
     })
     .describe("Detailed profile and specifications of a Drone / UAS");
 
@@ -254,6 +329,265 @@ export const deleteDroneParams = zod.object({
 });
 
 /**
+ * @summary Update Drone operational status
+ */
+export const updateDroneStatusParams = zod.object({
+    id: zod.string(),
+});
+
+export const updateDroneStatusBody = zod.record(zod.string(), zod.string());
+
+export const updateDroneStatusResponseRegistrationNumberMin = 3;
+export const updateDroneStatusResponseRegistrationNumberMax = 50;
+export const updateDroneStatusResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateDroneStatusResponseBatteryCapacityWhMin = 0;
+export const updateDroneStatusResponseMaxPayloadMin = 0;
+export const updateDroneStatusResponseOwnerRegistrationNumberMin = 3;
+export const updateDroneStatusResponseOwnerRegistrationNumberMax = 50;
+export const updateDroneStatusResponseOwnerRegistrationNumberRegExp = new RegExp(
+    "^[A-Za-z0-9_-]+$"
+);
+export const updateDroneStatusResponseHomeHubCodeMin = 3;
+export const updateDroneStatusResponseHomeHubCodeMax = 50;
+export const updateDroneStatusResponseHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const updateDroneStatusResponse = zod
+    .object({
+        id: zod.string().optional(),
+        registrationNumber: zod
+            .string()
+            .min(updateDroneStatusResponseRegistrationNumberMin)
+            .max(updateDroneStatusResponseRegistrationNumberMax)
+            .regex(updateDroneStatusResponseRegistrationNumberRegExp)
+            .optional(),
+        serialNumber: zod.string().optional(),
+        manufacturer: zod.string().optional(),
+        model: zod.string().optional(),
+        ownerId: zod.string().optional(),
+        homeHubId: zod.string().optional(),
+        currentHubId: zod.string().optional(),
+        batteryCapacityWh: zod
+            .number()
+            .min(updateDroneStatusResponseBatteryCapacityWhMin)
+            .optional(),
+        currentBatteryPct: zod.number().optional(),
+        maxPayload: zod.number().min(updateDroneStatusResponseMaxPayloadMin).optional(),
+        maxAltitude: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+        hoverPowerW: zod.number().optional(),
+        cruisePowerW: zod.number().optional(),
+        cruiseSpeedMs: zod.number().optional(),
+        batteryHealthPct: zod.number().optional(),
+        windToleranceMs: zod.number().optional(),
+        maxFlightTimeMin: zod.number().optional(),
+        maxRangeM: zod.number().optional(),
+        communicationProtocol: zod
+            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+            .optional(),
+        remoteId: zod.string().optional(),
+        capabilities: zod.array(zod.string()).optional(),
+        specifications: zod.record(zod.string(), zod.any()).optional(),
+        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+        lastMaintenance: zod.iso.datetime({}).optional(),
+        nextMaintenance: zod.iso.datetime({}).optional(),
+        totalFlightHours: zod.number().optional(),
+        totalFlights: zod.number().optional(),
+        status: zod
+            .enum([
+                "available",
+                "standby",
+                "in_flight",
+                "maintenance",
+                "charging",
+                "emergency",
+                "offline",
+                "retired",
+            ])
+            .optional(),
+        owner: zod
+            .object({
+                id: zod.string().optional().describe("Organization UUID identifier"),
+                name: zod.string().min(1).optional().describe("Organization name"),
+                registrationNumber: zod
+                    .string()
+                    .min(updateDroneStatusResponseOwnerRegistrationNumberMin)
+                    .max(updateDroneStatusResponseOwnerRegistrationNumberMax)
+                    .regex(updateDroneStatusResponseOwnerRegistrationNumberRegExp)
+                    .optional()
+                    .describe("Business registration number"),
+                type: zod.string().optional().describe("Organization classification type"),
+                status: zod.string().optional().describe("Operational status"),
+            })
+            .optional()
+            .describe("Brief summary of owner organization"),
+        homeHub: zod
+            .object({
+                id: zod.string().optional().describe("Hub UUID identifier"),
+                code: zod
+                    .string()
+                    .min(updateDroneStatusResponseHomeHubCodeMin)
+                    .max(updateDroneStatusResponseHomeHubCodeMax)
+                    .regex(updateDroneStatusResponseHomeHubCodeRegExp)
+                    .optional()
+                    .describe("Hub callsign / identification code"),
+                name: zod.string().min(1).optional().describe("Hub display name"),
+                status: zod.string().optional().describe("Hub operational status"),
+            })
+            .optional()
+            .describe("Brief summary of base hub / vertiport station"),
+        deviceRegistration: zod
+            .object({
+                id: zod.string().optional().describe("Device registration record ID"),
+                deviceIdentifier: zod
+                    .string()
+                    .optional()
+                    .describe("Unique hardware device identifier (MAC/IMEI)"),
+                connectionStatus: zod
+                    .string()
+                    .optional()
+                    .describe("Connection status (online, offline, connecting)"),
+                lastSeenAt: zod.iso
+                    .datetime({})
+                    .optional()
+                    .describe("Timestamp of the last received heartbeat"),
+            })
+            .optional()
+            .describe("Brief summary of hardware device registration and connectivity status"),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Detailed profile and specifications of a Drone / UAS");
+
+/**
+ * @summary Transfer Drone to another Hub
+ */
+export const updateDroneHubParams = zod.object({
+    id: zod.string(),
+});
+
+export const updateDroneHubBody = zod.record(zod.string(), zod.string());
+
+export const updateDroneHubResponseRegistrationNumberMin = 3;
+export const updateDroneHubResponseRegistrationNumberMax = 50;
+export const updateDroneHubResponseRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateDroneHubResponseBatteryCapacityWhMin = 0;
+export const updateDroneHubResponseMaxPayloadMin = 0;
+export const updateDroneHubResponseOwnerRegistrationNumberMin = 3;
+export const updateDroneHubResponseOwnerRegistrationNumberMax = 50;
+export const updateDroneHubResponseOwnerRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const updateDroneHubResponseHomeHubCodeMin = 3;
+export const updateDroneHubResponseHomeHubCodeMax = 50;
+export const updateDroneHubResponseHomeHubCodeRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+
+export const updateDroneHubResponse = zod
+    .object({
+        id: zod.string().optional(),
+        registrationNumber: zod
+            .string()
+            .min(updateDroneHubResponseRegistrationNumberMin)
+            .max(updateDroneHubResponseRegistrationNumberMax)
+            .regex(updateDroneHubResponseRegistrationNumberRegExp)
+            .optional(),
+        serialNumber: zod.string().optional(),
+        manufacturer: zod.string().optional(),
+        model: zod.string().optional(),
+        ownerId: zod.string().optional(),
+        homeHubId: zod.string().optional(),
+        currentHubId: zod.string().optional(),
+        batteryCapacityWh: zod.number().min(updateDroneHubResponseBatteryCapacityWhMin).optional(),
+        currentBatteryPct: zod.number().optional(),
+        maxPayload: zod.number().min(updateDroneHubResponseMaxPayloadMin).optional(),
+        maxAltitude: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+        hoverPowerW: zod.number().optional(),
+        cruisePowerW: zod.number().optional(),
+        cruiseSpeedMs: zod.number().optional(),
+        batteryHealthPct: zod.number().optional(),
+        windToleranceMs: zod.number().optional(),
+        maxFlightTimeMin: zod.number().optional(),
+        maxRangeM: zod.number().optional(),
+        communicationProtocol: zod
+            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+            .optional(),
+        remoteId: zod.string().optional(),
+        capabilities: zod.array(zod.string()).optional(),
+        specifications: zod.record(zod.string(), zod.any()).optional(),
+        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+        lastMaintenance: zod.iso.datetime({}).optional(),
+        nextMaintenance: zod.iso.datetime({}).optional(),
+        totalFlightHours: zod.number().optional(),
+        totalFlights: zod.number().optional(),
+        status: zod
+            .enum([
+                "available",
+                "standby",
+                "in_flight",
+                "maintenance",
+                "charging",
+                "emergency",
+                "offline",
+                "retired",
+            ])
+            .optional(),
+        owner: zod
+            .object({
+                id: zod.string().optional().describe("Organization UUID identifier"),
+                name: zod.string().min(1).optional().describe("Organization name"),
+                registrationNumber: zod
+                    .string()
+                    .min(updateDroneHubResponseOwnerRegistrationNumberMin)
+                    .max(updateDroneHubResponseOwnerRegistrationNumberMax)
+                    .regex(updateDroneHubResponseOwnerRegistrationNumberRegExp)
+                    .optional()
+                    .describe("Business registration number"),
+                type: zod.string().optional().describe("Organization classification type"),
+                status: zod.string().optional().describe("Operational status"),
+            })
+            .optional()
+            .describe("Brief summary of owner organization"),
+        homeHub: zod
+            .object({
+                id: zod.string().optional().describe("Hub UUID identifier"),
+                code: zod
+                    .string()
+                    .min(updateDroneHubResponseHomeHubCodeMin)
+                    .max(updateDroneHubResponseHomeHubCodeMax)
+                    .regex(updateDroneHubResponseHomeHubCodeRegExp)
+                    .optional()
+                    .describe("Hub callsign / identification code"),
+                name: zod.string().min(1).optional().describe("Hub display name"),
+                status: zod.string().optional().describe("Hub operational status"),
+            })
+            .optional()
+            .describe("Brief summary of base hub / vertiport station"),
+        deviceRegistration: zod
+            .object({
+                id: zod.string().optional().describe("Device registration record ID"),
+                deviceIdentifier: zod
+                    .string()
+                    .optional()
+                    .describe("Unique hardware device identifier (MAC/IMEI)"),
+                connectionStatus: zod
+                    .string()
+                    .optional()
+                    .describe("Connection status (online, offline, connecting)"),
+                lastSeenAt: zod.iso
+                    .datetime({})
+                    .optional()
+                    .describe("Timestamp of the last received heartbeat"),
+            })
+            .optional()
+            .describe("Brief summary of hardware device registration and connectivity status"),
+        createdOn: zod.iso.datetime({}).optional(),
+        createdBy: zod.string().optional(),
+        lastModifiedOn: zod.iso.datetime({}).optional(),
+        lastModifiedBy: zod.string().optional(),
+    })
+    .describe("Detailed profile and specifications of a Drone / UAS");
+
+/**
  * Retrieve a paginated and filtered list of registered drones in the DROPS-UTM system, including operational status and hardware connectivity.
  * @summary List all Drones
  */
@@ -262,12 +596,21 @@ export const getDronesQueryOffsetDefault = 0;
 
 export const getDronesQueryParams = zod.object({
     status: zod
-        .enum(["available", "in_flight", "maintenance", "charging", "offline"])
+        .enum([
+            "available",
+            "standby",
+            "in_flight",
+            "maintenance",
+            "charging",
+            "emergency",
+            "offline",
+            "retired",
+        ])
         .optional()
-        .describe(
-            "Filter by drone operational status (available, in_flight, maintenance, charging, offline)"
-        ),
+        .describe("Filter by drone operational status"),
     homeHubId: zod.string().optional().describe("Filter by base / home hub station ID"),
+    currentHubId: zod.string().optional().describe("Filter by current parked hub station ID"),
+    hubId: zod.string().optional().describe("Alias for currentHubId"),
     ownerId: zod.string().optional().describe("Filter by owner organization ID"),
     search: zod
         .string()
@@ -300,38 +643,60 @@ export const getDronesResponse = zod
             .array(
                 zod
                     .object({
-                        id: zod.string().optional().describe("Unique UUID identifier of the drone"),
+                        id: zod.string().optional(),
                         registrationNumber: zod
                             .string()
                             .min(getDronesResponseItemsItemRegistrationNumberMin)
                             .max(getDronesResponseItemsItemRegistrationNumberMax)
                             .regex(getDronesResponseItemsItemRegistrationNumberRegExp)
-                            .optional()
-                            .describe("Aircraft registration number / callsign"),
-                        manufacturer: zod.string().optional().describe("Manufacturer name"),
-                        model: zod.string().optional().describe("Model / airframe designation"),
-                        ownerId: zod
-                            .string()
-                            .optional()
-                            .describe("Owner organization UUID identifier"),
-                        homeHubId: zod
-                            .string()
-                            .optional()
-                            .describe("Base / Home hub UUID identifier"),
+                            .optional(),
+                        serialNumber: zod.string().optional(),
+                        manufacturer: zod.string().optional(),
+                        model: zod.string().optional(),
+                        ownerId: zod.string().optional(),
+                        homeHubId: zod.string().optional(),
+                        currentHubId: zod.string().optional(),
                         batteryCapacityWh: zod
                             .number()
                             .min(getDronesResponseItemsItemBatteryCapacityWhMin)
-                            .optional()
-                            .describe("Rated battery capacity in Watt-hours (Wh)"),
+                            .optional(),
+                        currentBatteryPct: zod.number().optional(),
                         maxPayload: zod
                             .number()
                             .min(getDronesResponseItemsItemMaxPayloadMin)
-                            .optional()
-                            .describe("Maximum payload capacity in kilograms (kg)"),
+                            .optional(),
+                        maxAltitude: zod.number().optional(),
+                        maxSpeed: zod.number().optional(),
+                        hoverPowerW: zod.number().optional(),
+                        cruisePowerW: zod.number().optional(),
+                        cruiseSpeedMs: zod.number().optional(),
+                        batteryHealthPct: zod.number().optional(),
+                        windToleranceMs: zod.number().optional(),
+                        maxFlightTimeMin: zod.number().optional(),
+                        maxRangeM: zod.number().optional(),
+                        communicationProtocol: zod
+                            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+                            .optional(),
+                        remoteId: zod.string().optional(),
+                        capabilities: zod.array(zod.string()).optional(),
+                        specifications: zod.record(zod.string(), zod.any()).optional(),
+                        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+                        lastMaintenance: zod.iso.datetime({}).optional(),
+                        nextMaintenance: zod.iso.datetime({}).optional(),
+                        totalFlightHours: zod.number().optional(),
+                        totalFlights: zod.number().optional(),
                         status: zod
-                            .enum(["available", "in_flight", "maintenance", "charging", "offline"])
-                            .optional()
-                            .describe("Current operational status"),
+                            .enum([
+                                "available",
+                                "standby",
+                                "in_flight",
+                                "maintenance",
+                                "charging",
+                                "emergency",
+                                "offline",
+                                "retired",
+                            ])
+                            .optional(),
                         owner: zod
                             .object({
                                 id: zod
@@ -350,6 +715,7 @@ export const getDronesResponse = zod
                                     .string()
                                     .optional()
                                     .describe("Organization classification type"),
+                                status: zod.string().optional().describe("Operational status"),
                             })
                             .optional()
                             .describe("Brief summary of owner organization"),
@@ -364,6 +730,7 @@ export const getDronesResponse = zod
                                     .optional()
                                     .describe("Hub callsign / identification code"),
                                 name: zod.string().min(1).optional().describe("Hub display name"),
+                                status: zod.string().optional().describe("Hub operational status"),
                             })
                             .optional()
                             .describe("Brief summary of base hub / vertiport station"),
@@ -390,22 +757,10 @@ export const getDronesResponse = zod
                             .describe(
                                 "Brief summary of hardware device registration and connectivity status"
                             ),
-                        createdOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Record creation timestamp"),
-                        createdBy: zod
-                            .string()
-                            .optional()
-                            .describe("User or client ID that created the record"),
-                        lastModifiedOn: zod.iso
-                            .datetime({})
-                            .optional()
-                            .describe("Last modification timestamp"),
-                        lastModifiedBy: zod
-                            .string()
-                            .optional()
-                            .describe("User or client ID that last modified the record"),
+                        createdOn: zod.iso.datetime({}).optional(),
+                        createdBy: zod.string().optional(),
+                        lastModifiedOn: zod.iso.datetime({}).optional(),
+                        lastModifiedBy: zod.string().optional(),
                     })
                     .describe("Detailed profile and specifications of a Drone / UAS")
             )
@@ -425,8 +780,14 @@ export const getDronesResponse = zod
 export const createDroneBodyRegistrationNumberMin = 3;
 export const createDroneBodyRegistrationNumberMax = 50;
 export const createDroneBodyRegistrationNumberRegExp = new RegExp("^[A-Za-z0-9_-]+$");
+export const createDroneBodyManufacturerMax = 100;
+export const createDroneBodyModelMax = 100;
 export const createDroneBodyBatteryCapacityWhMin = 0;
 export const createDroneBodyMaxPayloadMin = 0;
+export const createDroneBodyCurrentBatteryPctMax = 100;
+export const createDroneBodyBatteryHealthPctMax = 100;
+export const createDroneBodySerialNumberMin = 0;
+export const createDroneBodySerialNumberMax = 100;
 
 export const createDroneBody = zod
     .object({
@@ -435,22 +796,38 @@ export const createDroneBody = zod
             .min(createDroneBodyRegistrationNumberMin)
             .max(createDroneBodyRegistrationNumberMax)
             .regex(createDroneBodyRegistrationNumberRegExp)
-            .optional()
-            .describe(
-                "Aircraft registration number / tail identifier. If omitted or blank, a unique number will be auto-generated (e.g. DRN-YYYY-XXXX)."
-            ),
-        manufacturer: zod.string().min(1).describe("Manufacturer name"),
-        model: zod.string().min(1).describe("Model / airframe designation"),
-        ownerId: zod.string().optional().describe("Identifier of the owner organization"),
-        homeHubId: zod.string().optional().describe("Identifier of base / home hub station"),
-        batteryCapacityWh: zod
-            .number()
-            .min(createDroneBodyBatteryCapacityWhMin)
-            .describe("Rated battery capacity in Watt-hours (Wh)"),
-        maxPayload: zod
-            .number()
-            .min(createDroneBodyMaxPayloadMin)
-            .describe("Maximum payload capacity in kilograms (kg)"),
+            .optional(),
+        manufacturer: zod.string().min(1).max(createDroneBodyManufacturerMax),
+        model: zod.string().min(1).max(createDroneBodyModelMax),
+        ownerId: zod.string().optional(),
+        homeHubId: zod.string().optional(),
+        batteryCapacityWh: zod.number().min(createDroneBodyBatteryCapacityWhMin),
+        maxPayload: zod.number().min(createDroneBodyMaxPayloadMin),
+        currentHubId: zod.string().optional(),
+        currentBatteryPct: zod.number().max(createDroneBodyCurrentBatteryPctMax).optional(),
+        hoverPowerW: zod.number().optional(),
+        cruisePowerW: zod.number().optional(),
+        cruiseSpeedMs: zod.number().optional(),
+        batteryHealthPct: zod.number().max(createDroneBodyBatteryHealthPctMax).optional(),
+        windToleranceMs: zod.number().optional(),
+        maxFlightTimeMin: zod.number().optional(),
+        maxRangeM: zod.number().optional(),
+        serialNumber: zod
+            .string()
+            .min(createDroneBodySerialNumberMin)
+            .max(createDroneBodySerialNumberMax)
+            .optional(),
+        maxAltitude: zod.number().optional(),
+        maxSpeed: zod.number().optional(),
+        communicationProtocol: zod
+            .enum(["mavlink", "dji_sdk", "custom_api", "rest_api", "websocket"])
+            .optional(),
+        remoteId: zod.string().optional(),
+        capabilities: zod.array(zod.string()).optional(),
+        specifications: zod.record(zod.string(), zod.any()).optional(),
+        telemetryConfig: zod.record(zod.string(), zod.any()).optional(),
+        lastMaintenance: zod.iso.datetime({}).optional(),
+        nextMaintenance: zod.iso.datetime({}).optional(),
     })
     .describe("Request payload for registering a new Drone / UAS");
 
@@ -487,6 +864,7 @@ export const getCommandsQueryParams = zod.object({
         ])
         .optional()
         .describe("Filter by tactical command type"),
+    flightId: zod.string().optional().describe("Filter by associated flight ID"),
     limit: zod
         .number()
         .default(getCommandsQueryLimitDefault)
@@ -839,3 +1217,68 @@ export const getActiveCommandsResponse = zod
         lastModifiedBy: zod.string().optional().describe("Last modifier username / ID"),
     })
     .describe("Detailed Drone Command view model");
+
+/**
+ * @summary Get all commands associated with a Flight ID
+ */
+export const getCommandsByFlightIdParams = zod.object({
+    flightId: zod.string(),
+});
+
+export const getCommandsByFlightIdResponseItem = zod
+    .object({
+        id: zod.string().optional().describe("Unique UUID identifier of the command"),
+        droneId: zod.string().optional().describe("Target drone UUID"),
+        flightId: zod.string().optional().describe("Associated flight UUID if applicable"),
+        commandType: zod
+            .enum([
+                "takeoff",
+                "land",
+                "rtl",
+                "emergency_stop",
+                "pause",
+                "hover",
+                "resume",
+                "goto",
+                "set_altitude",
+                "update_mission",
+                "set_home",
+                "configure",
+            ])
+            .optional()
+            .describe("Type of command"),
+        parameters: zod.string().optional().describe("Command parameters in JSON string"),
+        status: zod
+            .enum([
+                "pending",
+                "sent",
+                "acknowledged",
+                "executing",
+                "completed",
+                "failed",
+                "cancelled",
+            ])
+            .optional()
+            .describe("Current lifecycle execution status of the command"),
+        issuedBy: zod.string().optional().describe("User ID who issued the command"),
+        issuedAt: zod.iso.datetime({}).optional().describe("Timestamp when the command was issued"),
+        acknowledgedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the drone acknowledged receipt of command"),
+        completedAt: zod.iso
+            .datetime({})
+            .optional()
+            .describe("Timestamp when the command completed or failed"),
+        errorMessage: zod.string().optional().describe("Error details if the command failed"),
+        priority: zod.number().optional().describe("Command execution priority"),
+        timeoutMs: zod.number().optional().describe("Timeout in milliseconds"),
+        retryCount: zod.number().optional().describe("Retry attempts executed"),
+        maxRetries: zod.number().optional().describe("Maximum retry attempts allowed"),
+        createdOn: zod.iso.datetime({}).optional().describe("Record creation timestamp"),
+        createdBy: zod.string().optional().describe("Creator username / ID"),
+        lastModifiedOn: zod.iso.datetime({}).optional().describe("Last modification timestamp"),
+        lastModifiedBy: zod.string().optional().describe("Last modifier username / ID"),
+    })
+    .describe("Detailed Drone Command view model");
+export const getCommandsByFlightIdResponse = zod.array(getCommandsByFlightIdResponseItem);

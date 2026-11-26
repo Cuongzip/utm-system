@@ -10,23 +10,25 @@ export interface ActionMenuItem {
     icon?: React.ReactNode;
     onClick: () => void;
     danger?: boolean;
+    disabled?: boolean;
 }
 
 interface ActionMenuProps {
     items: ActionMenuItem[];
+    ariaLabel?: string;
 }
 
-export function ActionMenu({ items }: ActionMenuProps) {
+export function ActionMenu({ items, ariaLabel = "Actions" }: ActionMenuProps) {
     return (
         <DropdownMenuPrimitive.Root>
             <DropdownMenuPrimitive.Trigger asChild>
                 <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
-                    className="w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs focus:outline-none"
-                    aria-label="Actions"
+                    className="w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+                    aria-label={ariaLabel}
                 >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
                 </button>
             </DropdownMenuPrimitive.Trigger>
 
@@ -37,19 +39,20 @@ export function ActionMenu({ items }: ActionMenuProps) {
                     collisionPadding={8}
                     onClick={(e) => e.stopPropagation()}
                     className={cn(
-                        "z-[9999] min-w-[8.5rem] overflow-hidden rounded-md border border-slate-200 bg-white p-1 text-slate-700 shadow-md",
+                        "z-[9999] min-w-[9.5rem] overflow-hidden rounded-md border border-slate-200 bg-white p-1 text-slate-700 shadow-md",
                         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2"
                     )}
                 >
                     {items.map((item, index) => (
                         <DropdownMenuPrimitive.Item
                             key={index}
+                            disabled={item.disabled}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                item.onClick();
+                                if (!item.disabled) item.onClick();
                             }}
                             className={cn(
-                                "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2.5 py-1.5 text-xs font-medium outline-none transition-colors",
+                                "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2.5 py-1.5 text-xs font-medium outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
                                 item.danger
                                     ? "text-red-600 focus:bg-red-50 focus:text-red-700 hover:bg-red-50 hover:text-red-700"
                                     : "text-slate-700 focus:bg-slate-100 focus:text-slate-900 hover:bg-slate-100 hover:text-slate-900"

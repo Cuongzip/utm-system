@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, Pause, Square, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ChamferCard, ChamferButton, ConfirmDialog } from "@/components/ui";
+import { ChamferButton, ConfirmDialog } from "@/components/ui";
 import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
 import { SIMULATION_STATUS, type SimulationSession } from "@/types";
@@ -87,119 +87,111 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
 
     return (
         <>
-            <ChamferCard size="lg" className="w-full">
-                <div className="p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <span className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider">
-                            SPEED FACTOR:
-                        </span>
+            <div className="flex flex-wrap items-center gap-2">
+                <div
+                    role="group"
+                    aria-label="Simulation speed factor"
+                    className="inline-flex items-center bg-[var(--color-surface-panel)] p-0.5 rounded-md border border-[var(--color-border-default)]"
+                >
+                    {TIME_SCALE_OPTIONS.map((scale) => {
+                        const isSelected = Math.abs(currentTimeScale - scale) < 0.1;
+                        const isPending =
+                            updateTimeScaleMutation.isPending &&
+                            updateTimeScaleMutation.variables === scale;
 
-                        <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
-                            {TIME_SCALE_OPTIONS.map((scale) => {
-                                const isSelected = Math.abs(currentTimeScale - scale) < 0.1;
-                                const isPending =
-                                    updateTimeScaleMutation.isPending &&
-                                    updateTimeScaleMutation.variables === scale;
-
-                                return (
-                                    <button
-                                        key={scale}
-                                        type="button"
-                                        disabled={!isRunning || updateTimeScaleMutation.isPending}
-                                        onClick={() => updateTimeScaleMutation.mutate(scale)}
-                                        className={`px-3 py-1 text-xs font-mono font-bold rounded transition-colors flex items-center gap-1 cursor-pointer ${
-                                            isSelected
-                                                ? "bg-slate-900 text-white shadow-2xs"
-                                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        }`}
-                                    >
-                                        {isPending ? (
-                                            <Loader2 className="w-3 h-3 animate-spin text-white" />
-                                        ) : null}
-                                        <span>{scale}x</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2.5">
-                        {isRunning && (
-                            <ChamferButton
-                                size="sm"
-                                variant="dark"
-                                clip="xs"
-                                disabled={pauseMutation.isPending}
-                                onClick={() => pauseMutation.mutate()}
+                        return (
+                            <button
+                                key={scale}
+                                type="button"
+                                disabled={!isRunning || updateTimeScaleMutation.isPending}
+                                onClick={() => updateTimeScaleMutation.mutate(scale)}
+                                className={`px-2.5 py-1 text-xs font-mono font-bold rounded transition-colors flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                                    isSelected
+                                        ? "bg-slate-900 text-white"
+                                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                }`}
                             >
-                                {pauseMutation.isPending ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                    <Pause className="w-3.5 h-3.5" />
-                                )}
-                                <span>Pause</span>
-                            </ChamferButton>
-                        )}
-
-                        {isPaused && (
-                            <ChamferButton
-                                size="sm"
-                                variant="dark"
-                                clip="xs"
-                                disabled={resumeMutation.isPending}
-                                onClick={() => resumeMutation.mutate()}
-                            >
-                                {resumeMutation.isPending ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                    <Play className="w-3.5 h-3.5" />
-                                )}
-                                <span>Resume</span>
-                            </ChamferButton>
-                        )}
-
-                        {!isStopped && (
-                            <ChamferButton
-                                variant="outline"
-                                size="sm"
-                                clip="xs"
-                                disabled={stopMutation.isPending}
-                                onClick={() => stopMutation.mutate()}
-                            >
-                                {stopMutation.isPending ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                    <Square className="w-3.5 h-3.5" />
-                                )}
-                                <span>Stop</span>
-                            </ChamferButton>
-                        )}
-
-                        <ChamferButton
-                            variant="outline"
-                            size="sm"
-                            clip="xs"
-                            disabled={deleteMutation.isPending}
-                            onClick={() => setShowDeleteConfirm(true)}
-                            title="Delete simulation session"
-                        >
-                            {deleteMutation.isPending ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                                <Trash2 className="w-3.5 h-3.5" />
-                            )}
-                            <span>Delete</span>
-                        </ChamferButton>
-                    </div>
+                                {isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                                <span>{scale}x</span>
+                            </button>
+                        );
+                    })}
                 </div>
-            </ChamferCard>
+
+                {isRunning && (
+                    <ChamferButton
+                        size="sm"
+                        variant="dark"
+                        clip="xs"
+                        disabled={pauseMutation.isPending}
+                        onClick={() => pauseMutation.mutate()}
+                    >
+                        {pauseMutation.isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Pause className="w-3.5 h-3.5" />
+                        )}
+                        <span>Pause</span>
+                    </ChamferButton>
+                )}
+
+                {isPaused && (
+                    <ChamferButton
+                        size="sm"
+                        variant="dark"
+                        clip="xs"
+                        disabled={resumeMutation.isPending}
+                        onClick={() => resumeMutation.mutate()}
+                    >
+                        {resumeMutation.isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Play className="w-3.5 h-3.5" />
+                        )}
+                        <span>Resume</span>
+                    </ChamferButton>
+                )}
+
+                {!isStopped && (
+                    <ChamferButton
+                        variant="outline"
+                        size="sm"
+                        clip="xs"
+                        disabled={stopMutation.isPending}
+                        onClick={() => stopMutation.mutate()}
+                    >
+                        {stopMutation.isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Square className="w-3.5 h-3.5" />
+                        )}
+                        <span>Stop</span>
+                    </ChamferButton>
+                )}
+
+                <ChamferButton
+                    variant="outline"
+                    size="sm"
+                    clip="xs"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => setShowDeleteConfirm(true)}
+                    title="Delete simulation session"
+                >
+                    {deleteMutation.isPending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Delete</span>
+                </ChamferButton>
+            </div>
 
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
                 onConfirm={() => deleteMutation.mutate()}
                 title="Delete Simulation Session"
-                description={`Are you sure you want to permanently delete session "${sessionId}"? This will stop any active simulation and erase session history.`}
+                description={`Are you sure you want to permanently delete session SIM-${sessionId.slice(0, 8).toUpperCase()}? This will stop any active simulation and erase session history.`}
                 confirmText="Delete Session"
                 loading={deleteMutation.isPending}
             />

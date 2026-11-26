@@ -7,11 +7,13 @@ import {
     CheckCircle2,
     AlertTriangle,
     ShieldCheck,
+    FileSearch,
     Pencil,
     Eye,
 } from "lucide-react";
 import {
     ChamferCard,
+    ChamferButton,
     StatusBadge,
     ActionMenu,
     type ActionMenuItem,
@@ -41,8 +43,12 @@ import { formatDateTime, formatHubName } from "@/utils";
 export interface FlightsTableProps {
     flights: Flight[];
     loading: boolean;
+    canAuthorize: boolean;
     selectedFlightId?: string | null;
+    hasFilters?: boolean;
+    onClearFilters?: () => void;
     onSelectFlight: (flight: Flight) => void;
+    onOpenBriefing: (flight: Flight) => void;
     onAuthorizeFlight: (flight: Flight) => void;
     onStartFlight: (flight: Flight) => void;
     onCompleteFlight: (flight: Flight) => void;
@@ -55,8 +61,12 @@ export interface FlightsTableProps {
 export function FlightsTable({
     flights = [],
     loading = false,
+    canAuthorize,
     selectedFlightId,
+    hasFilters = false,
+    onClearFilters,
     onSelectFlight,
+    onOpenBriefing,
     onAuthorizeFlight,
     onStartFlight,
     onCompleteFlight,
@@ -79,21 +89,27 @@ export function FlightsTable({
             {
                 label: isEditable ? "Edit Flight Plan" : "View Details",
                 icon: isEditable ? (
-                    <Pencil className="w-3.5 h-3.5 text-cyan-500" />
+                    <Pencil className="w-3.5 h-3.5 text-slate-500" />
                 ) : (
                     <Eye className="w-3.5 h-3.5 text-slate-500" />
                 ),
                 onClick: () => onSelectFlight(flight),
             },
+            {
+                label: "Pre-Flight Briefing",
+                icon: <FileSearch className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onOpenBriefing(flight),
+            },
         ];
 
         if (
+            canAuthorize &&
             (status === FLIGHT_STATUS.PLANNED || status === FLIGHT_STATUS.SCHEDULED) &&
             authStatus === FLIGHT_AUTHORIZATION_STATUS.PENDING
         ) {
             items.push({
                 label: "Authorize Flight",
-                icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />,
+                icon: <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onAuthorizeFlight(flight),
             });
         }
@@ -101,7 +117,7 @@ export function FlightsTable({
         if (status === FLIGHT_STATUS.AUTHORIZED) {
             items.push({
                 label: "Start Flight",
-                icon: <Play className="w-3.5 h-3.5 text-emerald-600" />,
+                icon: <Play className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onStartFlight(flight),
             });
         }
@@ -109,12 +125,12 @@ export function FlightsTable({
         if (status === FLIGHT_STATUS.ACTIVE) {
             items.push({
                 label: "Complete Flight",
-                icon: <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600" />,
+                icon: <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onCompleteFlight(flight),
             });
             items.push({
                 label: "Abort Flight",
-                icon: <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
+                icon: <AlertTriangle className="w-3.5 h-3.5" />,
                 danger: true,
                 onClick: () => setFlightToAbort(flight),
             });
@@ -126,18 +142,16 @@ export function FlightsTable({
     return (
         <div className="flex flex-col gap-4 w-full">
             <ChamferCard size="lg" className="w-full">
-                <Table fixed>
+                <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="180px">FLIGHT NUMBER</TableHead>
-                            <TableHead width="160px">DRONE</TableHead>
-                            <TableHead width="180px">DEPARTURE HUB</TableHead>
-                            <TableHead width="180px">ARRIVAL HUB</TableHead>
-                            <TableHead width="130px">STATUS</TableHead>
-                            <TableHead width="160px">PLANNED DEPARTURE</TableHead>
-                            <TableHead width="100px" align="right">
-                                ACTIONS
-                            </TableHead>
+                            <TableHead>FLIGHT NUMBER</TableHead>
+                            <TableHead>DRONE</TableHead>
+                            <TableHead>DEPARTURE HUB</TableHead>
+                            <TableHead>ARRIVAL HUB</TableHead>
+                            <TableHead>STATUS</TableHead>
+                            <TableHead>DEPARTURE</TableHead>
+                            <TableHead align="right">ACTIONS</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -148,21 +162,37 @@ export function FlightsTable({
                                 <TableCell colSpan={7} className="py-10 text-center">
                                     <EmptyState
                                         icon={PlaneTakeoff}
-                                        title="No flights found"
-                                        description="Register a new flight operation or corridor mission"
-                                        action={{
-                                            label: "+ New Flight",
-                                            onClick: onNewFlight,
-                                        }}
+                                        title={
+                                            hasFilters ? "No matching flights" : "No flights found"
+                                        }
+                                        description={
+                                            hasFilters
+                                                ? "No flight plans match the active search or status filter."
+                                                : "Register a new flight operation or corridor mission."
+                                        }
+                                        action={
+                                            hasFilters && onClearFilters ? (
+                                                <ChamferButton
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={onClearFilters}
+                                                >
+                                                    Clear Filters
+                                                </ChamferButton>
+                                            ) : (
+                                                {
+                                                    label: "+ New Flight",
+                                                    onClick: onNewFlight,
+                                                }
+                                            )
+                                        }
                                     />
                                 </TableCell>
                             </TableRow>
                         ) : (
                             paginatedItems.map((flight) => {
                                 const isSelected = selectedFlightId === flight.id;
-                                const flightNum =
-                                    flight.flightNumber ||
-                                    `DRP-${flight.id.slice(0, 6).toUpperCase()}`;
+                                const flightNum = flight.flightNumber || "Unnumbered";
 
                                 const droneName = flight.droneId
                                     ? droneMap.get(flight.droneId) || flight.droneId.slice(0, 8)
@@ -190,16 +220,37 @@ export function FlightsTable({
                                         selected={isSelected}
                                         onClick={() => onSelectFlight(flight)}
                                     >
-                                        <TableCell mono bold truncate tooltip={flightNum}>
+                                        <TableCell
+                                            mono
+                                            bold
+                                            truncate
+                                            className="max-w-[140px]"
+                                            tooltip={flightNum}
+                                        >
                                             {flightNum}
                                         </TableCell>
-                                        <TableCell darkText truncate tooltip={droneName}>
+                                        <TableCell
+                                            darkText
+                                            truncate
+                                            className="max-w-[130px]"
+                                            tooltip={droneName}
+                                        >
                                             {droneName}
                                         </TableCell>
-                                        <TableCell muted truncate tooltip={depName}>
+                                        <TableCell
+                                            muted
+                                            truncate
+                                            className="max-w-[165px]"
+                                            tooltip={depName}
+                                        >
                                             {depName}
                                         </TableCell>
-                                        <TableCell muted truncate tooltip={arrName}>
+                                        <TableCell
+                                            muted
+                                            truncate
+                                            className="max-w-[165px]"
+                                            tooltip={arrName}
+                                        >
                                             {arrName}
                                         </TableCell>
                                         <TableCell>
@@ -208,7 +259,7 @@ export function FlightsTable({
                                                 showDot={true}
                                             />
                                         </TableCell>
-                                        <TableCell mono darkText>
+                                        <TableCell mono darkText className="whitespace-nowrap">
                                             {departureTime}
                                         </TableCell>
                                         <TableCell
@@ -228,6 +279,7 @@ export function FlightsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
+                    itemLabel="flights"
                 />
             </ChamferCard>
 

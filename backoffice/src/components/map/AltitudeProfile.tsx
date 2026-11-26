@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { Hub, ProfilePoint } from "@/types";
 import { calculateDistance, formatAltitude, formatDistance } from "@/utils";
 import { isDuplicateCoord } from "@/utils/geo";
+
+const CHART_PADDING = { top: 18, bottom: 22, left: 36, right: 36 } as const;
 
 export interface BaseAltitudeWaypoint {
     id?: string;
@@ -93,7 +95,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                     altitude: alt,
                     latitude: lat,
                     longitude: lng,
-                    waypoint: wp as any,
+                    waypoint: wp as unknown as ProfilePoint["waypoint"],
                 });
             }
         });
@@ -148,21 +150,26 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         };
     }, [waypoints, departureHub, arrivalHub]);
 
-    const chartPadding = { top: 18, bottom: 22, left: 36, right: 36 };
-    const innerW = Math.max(10, chartWidth - chartPadding.left - chartPadding.right);
-    const innerH = Math.max(10, chartHeight - chartPadding.top - chartPadding.bottom);
+    const innerW = Math.max(10, chartWidth - CHART_PADDING.left - CHART_PADDING.right);
+    const innerH = Math.max(10, chartHeight - CHART_PADDING.top - CHART_PADDING.bottom);
 
-    const getX = (dist: number) => {
-        if (totalDistance === 0) return chartPadding.left;
-        return chartPadding.left + (dist / totalDistance) * innerW;
-    };
+    const getX = useCallback(
+        (dist: number) => {
+            if (totalDistance === 0) return CHART_PADDING.left;
+            return CHART_PADDING.left + (dist / totalDistance) * innerW;
+        },
+        [totalDistance, innerW]
+    );
 
-    const getY = (alt: number) => {
-        const diff = maxAlt - minAlt;
-        const range = diff === 0 ? 1 : diff;
-        const ratio = (alt - minAlt) / range;
-        return chartPadding.top + innerH * (1 - ratio);
-    };
+    const getY = useCallback(
+        (alt: number) => {
+            const diff = maxAlt - minAlt;
+            const range = diff === 0 ? 1 : diff;
+            const ratio = (alt - minAlt) / range;
+            return CHART_PADDING.top + innerH * (1 - ratio);
+        },
+        [maxAlt, minAlt, innerH]
+    );
 
     const pathD = useMemo(() => {
         if (segments.length === 0) return "";
@@ -171,15 +178,15 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
             const y = getY(seg.point.altitude);
             return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
         }, "");
-    }, [segments, totalDistance, maxAlt, minAlt, innerW, innerH]);
+    }, [segments, getX, getY]);
 
     const areaD = useMemo(() => {
         if (segments.length === 0) return "";
-        const baseY = chartPadding.top + innerH;
+        const baseY = CHART_PADDING.top + innerH;
         const firstX = getX(segments[0].distance);
         const lastX = getX(segments[segments.length - 1].distance);
         return `${pathD} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
-    }, [pathD, segments, totalDistance, maxAlt, minAlt, innerW, innerH]);
+    }, [pathD, segments, innerH, getX]);
 
     const altSteps = [maxAlt, Math.round((maxAlt + minAlt) / 2), minAlt];
 
@@ -233,8 +240,8 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                             y2={chartHeight}
                             gradientUnits="userSpaceOnUse"
                         >
-                            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
-                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+                            <stop offset="0%" stopColor="#475569" stopOpacity="0.18" />
+                            <stop offset="100%" stopColor="#475569" stopOpacity="0.0" />
                         </linearGradient>
                     </defs>
 
@@ -243,16 +250,16 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                         return (
                             <g key={i}>
                                 <line
-                                    x1={chartPadding.left}
+                                    x1={CHART_PADDING.left}
                                     y1={y}
-                                    x2={chartWidth - chartPadding.right}
+                                    x2={chartWidth - CHART_PADDING.right}
                                     y2={y}
                                     stroke="var(--color-border-subtle)"
                                     strokeWidth="1"
                                     strokeDasharray={i === altSteps.length - 1 ? undefined : "3 3"}
                                 />
                                 <text
-                                    x={chartPadding.left - 8}
+                                    x={CHART_PADDING.left - 8}
                                     y={y + 3.5}
                                     textAnchor="end"
                                     className="text-[10px] fill-[var(--color-text-muted)] font-mono"
@@ -268,7 +275,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                     <path
                         d={pathD}
                         fill="none"
-                        stroke="var(--color-tech-cyan, #06b6d4)"
+                        stroke="#334155"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -286,10 +293,10 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                         seg.point.waypoint.tempId === selectedWaypointId)));
 
                         const pointColor = seg.point.isDeparture
-                            ? "var(--color-status-online, #10b981)"
+                            ? "#334155"
                             : seg.point.isArrival
-                              ? "var(--color-tech-cyan, #06b6d4)"
-                              : "#06b6d4";
+                              ? "#475569"
+                              : "#64748b";
 
                         return (
                             <g
@@ -314,13 +321,13 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                     cy={y}
                                     r={isSelected ? 9 : 7}
                                     className="opacity-0 group-hover:opacity-25 transition-opacity"
-                                    fill={isSelected ? "#38bdf8" : pointColor}
+                                    fill={isSelected ? "#0f172a" : pointColor}
                                 />
                                 <circle
                                     cx={x}
                                     cy={y}
                                     r={isSelected ? 6 : 4.5}
-                                    fill={isSelected ? "#38bdf8" : pointColor}
+                                    fill={isSelected ? "#0f172a" : pointColor}
                                     stroke="#ffffff"
                                     strokeWidth={isSelected ? 2.5 : 1.5}
                                 />
@@ -330,8 +337,8 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                     textAnchor="middle"
                                     className={`text-[10px] font-bold font-mono pointer-events-none transition-colors ${
                                         isSelected
-                                            ? "fill-cyan-400 font-bold"
-                                            : "fill-[var(--color-text-primary)] group-hover:fill-[var(--color-tech-cyan)]"
+                                            ? "fill-slate-900 font-bold"
+                                            : "fill-[var(--color-text-secondary)] group-hover:fill-slate-900"
                                     }`}
                                 >
                                     {seg.point.label}

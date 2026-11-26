@@ -1,3 +1,4 @@
+export * from "./HubsKpiStrip";
 export * from "./HubsTable";
-export * from "./AddHubModal";
+export * from "./HubEditorPanel";
 export * from "./HubsMap";

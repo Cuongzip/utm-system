@@ -103,121 +103,70 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
     const isActionPending = injectMutation.isPending || clearMutation.isPending;
 
     return (
-        <div className="flex flex-col gap-3 w-full">
-            <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold tracking-wider text-slate-800 uppercase font-mono">
-                    EMERGENCY SCENARIO INJECTION
-                </h2>
-                {activeScenario && (
-                    <ChamferButton
-                        size="xs"
-                        variant="danger"
-                        disabled={!isRunning || isActionPending}
-                        onClick={() => clearMutation.mutate()}
-                    >
-                        {clearMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                        ) : (
-                            <TriangleAlert className="w-3 h-3 mr-1" />
-                        )}
-                        <span>Clear Scenario</span>
-                    </ChamferButton>
+        <ChamferCard size="md" className="w-full" innerClassName="overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[var(--color-border-default)] flex items-center justify-between gap-2 bg-[var(--color-surface-subtle)]">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                    FAULT & EMERGENCY SCENARIO INJECTION
+                </span>
+                {!isRunning && (
+                    <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
+                        Session must be RUNNING to inject faults
+                    </span>
                 )}
             </div>
 
-            {activeScenario && (
-                <div className="flex items-center justify-between p-3 px-4 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-900">
-                    <div className="flex items-center gap-2">
-                        <TriangleAlert className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span className="text-xs font-mono font-bold uppercase">
-                            ACTIVE SCENARIO:{" "}
-                            <span className="text-rose-600">
-                                {CHAOS_SCENARIOS.find(
-                                    (s) => s.type.toLowerCase() === activeScenario.toLowerCase()
-                                )?.name || activeScenario}
-                            </span>
-                        </span>
-                    </div>
-                    <span className="text-xs font-mono text-amber-700">
-                        Flight in emergency failsafe mode. Click &apos;Clear Scenario&apos; to
-                        restore cruise flight.
-                    </span>
-                </div>
-            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-[var(--color-border-default)]">
+                {CHAOS_SCENARIOS.map((sc) => {
+                    const Icon = sc.icon;
+                    const isThisInjecting =
+                        injectMutation.isPending && injectMutation.variables?.type === sc.type;
+                    const isThisActive = activeScenario?.toLowerCase() === sc.type.toLowerCase();
+                    const isThisClearing = clearMutation.isPending && isThisActive;
 
-            <ChamferCard size="lg" className="w-full">
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    {CHAOS_SCENARIOS.map((sc) => {
-                        const Icon = sc.icon;
-                        const isThisInjecting =
-                            injectMutation.isPending && injectMutation.variables?.type === sc.type;
-                        const isThisActive =
-                            activeScenario?.toLowerCase() === sc.type.toLowerCase();
-                        const isThisClearing = clearMutation.isPending && isThisActive;
-
-                        return (
-                            <ChamferCard
-                                key={sc.type}
-                                size="sm"
-                                className="w-full flex-1 min-h-[170px]"
-                                innerClassName={cn(
-                                    "p-3.5 flex flex-col justify-between h-full transition-colors",
-                                    isThisActive
-                                        ? "bg-red-50/40"
-                                        : "bg-[var(--color-surface-panel)]"
+                    return (
+                        <div
+                            key={sc.type}
+                            className={cn(
+                                "p-3.5 flex flex-col justify-between gap-3 transition-colors",
+                                isThisActive ? "bg-amber-50/40" : "bg-[var(--color-surface-panel)]"
+                            )}
+                        >
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <Icon
+                                        className={cn(
+                                            "w-4 h-4 shrink-0",
+                                            isThisActive ? "text-amber-600" : "text-slate-500"
+                                        )}
+                                    />
+                                    <span className="text-xs font-mono font-bold text-slate-900 truncate">
+                                        {sc.name}
+                                    </span>
+                                </div>
+                                {isThisActive && (
+                                    <StatusBadge status="alert" label="ACTIVE" dotShape="circle" />
                                 )}
-                            >
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex items-center justify-between">
-                                        <div
-                                            className={`w-8 h-8 rounded-md flex items-center justify-center bg-white border shadow-2xs ${
-                                                isThisActive
-                                                    ? "text-rose-600 border-rose-200"
-                                                    : "text-slate-600 border-slate-200"
-                                            }`}
-                                        >
-                                            <Icon className="w-4 h-4" />
-                                        </div>
-                                        {isThisActive && (
-                                            <StatusBadge
-                                                status="alert"
-                                                label="ACTIVE"
-                                                dotShape="circle"
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-slate-900 font-mono tracking-tight">
-                                            {sc.name}
-                                        </span>
-                                        <span className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-snug">
-                                            {sc.description}
-                                        </span>
-                                    </div>
-                                </div>
+                            </div>
 
-                                <div className="mt-3.5 pt-2.5 border-t border-[var(--color-border-subtle)]">
-                                    <ChamferButton
-                                        size="xs"
-                                        variant={isThisActive ? "danger" : "outline"}
-                                        disabled={!isRunning || isActionPending}
-                                        onClick={() => handleAction(sc, isThisActive)}
-                                        className="w-full"
-                                    >
-                                        {isThisInjecting || isThisClearing ? (
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                        ) : isThisActive ? (
-                                            <span>Clear Scenario</span>
-                                        ) : (
-                                            <span>Inject</span>
-                                        )}
-                                    </ChamferButton>
-                                </div>
-                            </ChamferCard>
-                        );
-                    })}
-                </div>
-            </ChamferCard>
-        </div>
+                            <ChamferButton
+                                size="xs"
+                                variant={isThisActive ? "dark" : "outline"}
+                                disabled={!isRunning || isActionPending}
+                                onClick={() => handleAction(sc, isThisActive)}
+                                className="w-full"
+                            >
+                                {isThisInjecting || isThisClearing ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : isThisActive ? (
+                                    <span>Clear Fault</span>
+                                ) : (
+                                    <span>Inject</span>
+                                )}
+                            </ChamferButton>
+                        </div>
+                    );
+                })}
+            </div>
+        </ChamferCard>
     );
 }

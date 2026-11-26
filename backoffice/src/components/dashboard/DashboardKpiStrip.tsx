@@ -1,7 +1,7 @@
 "use client";
 
 import { Plane, Building2, Bot, AlertTriangle } from "lucide-react";
-import { MetricCard } from "@/components/ui";
+import { KpiStrip, type KpiItem } from "@/components/ui";
 
 export interface DashboardKpiStripProps {
     activeFlightsCount: number;
@@ -22,58 +22,43 @@ export function DashboardKpiStrip({
     activeTelemetryCount = 0,
     isLoading = false,
 }: DashboardKpiStripProps) {
-    const kpiCards = [
+    const items: KpiItem[] = [
         {
             id: "active-flights",
-            title: "ACTIVE FLIGHTS",
-            value: isLoading ? "--" : String(activeFlightsCount).padStart(2, "0"),
+            label: "Active Flights",
+            value: activeFlightsCount,
             subValue:
                 activeTelemetryCount > 0
-                    ? `${activeTelemetryCount} STREAMING`
+                    ? `${activeTelemetryCount} streaming`
                     : activeFlightsCount > 0
-                      ? "AIRBORNE"
-                      : "STANDBY",
+                      ? "Airborne"
+                      : "Standby",
             icon: Plane,
-            iconClassName: "text-cyan-600",
         },
         {
             id: "hubs-online",
-            title: "HUBS ONLINE",
-            value: isLoading ? "--" : String(hubsCount).padStart(2, "0"),
-            subValue: `OF ${totalHubsCount} TOTAL`,
+            label: "Hubs Online",
+            value: hubsCount,
+            subValue: `of ${totalHubsCount} total`,
             icon: Building2,
-            iconClassName: "text-emerald-600",
         },
         {
             id: "fleet",
-            title: "FLEET",
-            value: isLoading ? "--" : String(fleetCount).padStart(2, "0"),
-            subValue: "REGISTERED",
+            label: "Registered Fleet",
+            value: fleetCount,
+            subValue: "UAV units",
             icon: Bot,
-            iconClassName: "text-amber-600",
         },
         {
             id: "conflicts",
-            title: "CONFLICTS",
-            value: isLoading ? "--" : String(conflictsCount).padStart(2, "0"),
-            subValue: conflictsCount > 0 ? "ACTION REQUIRED" : "ALL CLEAR",
+            label: "Airspace Conflicts",
+            value: conflictsCount,
+            subValue: conflictsCount > 0 ? "Action required" : "Clear",
             icon: AlertTriangle,
-            iconClassName: conflictsCount > 0 ? "text-rose-600" : "text-emerald-600",
+            iconClassName: conflictsCount > 0 ? "text-red-600" : undefined,
+            statusDot: conflictsCount > 0 ? "critical" : undefined,
         },
     ];
 
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
-            {kpiCards.map((card) => (
-                <MetricCard
-                    key={card.id}
-                    title={card.title}
-                    value={card.value}
-                    subValue={card.subValue}
-                    icon={card.icon}
-                    iconClassName={card.iconClassName}
-                />
-            ))}
-        </div>
-    );
+    return <KpiStrip items={items} loading={isLoading} columns={4} />;
 }

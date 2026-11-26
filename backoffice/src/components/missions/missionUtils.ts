@@ -1,22 +1,77 @@
 import { addWaypointBody } from "@/generated/mission";
 import { isDuplicateCoord } from "@/utils/geo";
-import type { Hub, Waypoint, AddWaypointPayload, ProfilePoint } from "@/types";
+import { extractIntermediateWaypoints } from "@/components/waypoints";
+import {
+    STOPOVER_TYPE,
+    WAYPOINT_TYPE,
+    type Hub,
+    type Waypoint,
+    type AddWaypointPayload,
+    type ProfilePoint,
+} from "@/types";
 import { missionService } from "@/services/missionService";
 import zod from "zod";
 
+const missionWaypointBody = addWaypointBody.superRefine((wp, ctx) => {
+    const isHub = wp.waypointType === WAYPOINT_TYPE.HUB || Boolean(wp.hubId);
+    if (isHub) {
+        if (!wp.hubId) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["hubId"],
+                message: "Stopover hub is required for HUB waypoints",
+            });
+        }
+        if (!wp.stopoverType || wp.stopoverType === STOPOVER_TYPE.NONE) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["stopoverType"],
+                message: "HUB waypoint requires a non-NONE stopover type",
+            });
+        }
+    } else if (wp.altitude !== undefined && wp.altitude <= 0) {
+        ctx.addIssue({
+            code: "custom",
+            path: ["altitude"],
+            message: "Altitude must be greater than 0m AGL for coordinate waypoints",
+        });
+    }
+});
+
 export const waypointsValidationSchema = zod.object({
-    waypoints: zod.array(addWaypointBody),
+    waypoints: zod.array(missionWaypointBody),
 });
 
 export function sanitizeWaypointForApi(
     wp: Partial<Waypoint>,
     defaultAltitude = 50
 ): AddWaypointPayload {
+    const isStopover = Boolean(wp.stopoverType && wp.stopoverType !== STOPOVER_TYPE.NONE);
+    const isHub = wp.waypointType === WAYPOINT_TYPE.HUB || (isStopover && Boolean(wp.hubId));
+    const resolvedAltitude = Number.isFinite(wp.altitude)
+        ? Number(wp.altitude)
+        : isHub
+          ? 0
+          : defaultAltitude;
     return {
         name: wp.name?.trim() || undefined,
+        waypointType: isHub ? WAYPOINT_TYPE.HUB : WAYPOINT_TYPE.COORDINATE,
         latitude: Number(wp.latitude),
         longitude: Number(wp.longitude),
-        altitude: Number.isFinite(wp.altitude) ? Number(wp.altitude) : defaultAltitude,
+        altitude: resolvedAltitude,
+        hubId: isHub && wp.hubId ? wp.hubId : undefined,
+        stopoverType: isHub
+            ? isStopover
+                ? wp.stopoverType
+                : STOPOVER_TYPE.RECHARGE
+            : STOPOVER_TYPE.NONE,
+        groundTimeMinutes: isHub ? wp.groundTimeMinutes : undefined,
+        payloadDeltaKg: isHub ? wp.payloadDeltaKg : undefined,
+        hoverDurationSec: wp.hoverDurationSec,
+        speedToWaypoint: wp.speedToWaypoint,
+        headingAtWaypoint: wp.headingAtWaypoint,
+        turnRadius: wp.turnRadius,
+        waitForConfirmation: wp.waitForConfirmation,
         actions:
             wp.actions && typeof wp.actions === "object" && Object.keys(wp.actions).length > 0
                 ? wp.actions
@@ -50,7 +105,7 @@ export function buildMissionRoutePoints(
         pts.push({
             id: "hub-dep",
             label: departureHub.code || departureHub.name || "DEP",
-            altitude: departureHub.altitudeMsl ?? 0,
+            altitude: 0,
             latitude: departureHub.location!.latitude,
             longitude: departureHub.location!.longitude,
             isDeparture: true,
@@ -87,7 +142,7 @@ export function buildMissionRoutePoints(
             pts.push({
                 id: "hub-arr",
                 label: arrivalHub.code || arrivalHub.name || "ARR",
-                altitude: arrivalHub.altitudeMsl ?? 0,
+                altitude: 0,
                 latitude: arrLat,
                 longitude: arrLng,
                 isArrival: true,
@@ -143,15 +198,22 @@ export async function syncMissionWaypoints(
     missionId: string,
     initialWaypoints: Waypoint[],
     currentWaypoints: Waypoint[],
-    defaultAltitude = 50
+    defaultAltitude = 50,
+    departureHub?: Hub | null,
+    arrivalHub?: Hub | null
 ): Promise<void> {
+    const initialIntermediates = extractIntermediateWaypoints(
+        initialWaypoints,
+        departureHub,
+        arrivalHub
+    );
     const currentWpIds = new Set(currentWaypoints.map((w) => w.id).filter(Boolean));
-    const toDelete = initialWaypoints.filter((w) => w.id && !currentWpIds.has(w.id));
+    const toDelete = initialIntermediates.filter((w) => w.id && !currentWpIds.has(w.id));
     for (const delWp of toDelete) {
         await missionService.deleteWaypoint(missionId, delWp.id!);
     }
 
-    const initialMap = new Map(initialWaypoints.map((w) => [w.id, w]));
+    const initialMap = new Map(initialIntermediates.map((w) => [w.id, w]));
     for (const wp of currentWaypoints) {
         if (wp.id && initialMap.has(wp.id)) {
             const init = initialMap.get(wp.id)!;
@@ -160,6 +222,13 @@ export async function syncMissionWaypoints(
                 init.longitude !== wp.longitude ||
                 init.altitude !== wp.altitude ||
                 init.name !== wp.name ||
+                (init.waypointType ?? WAYPOINT_TYPE.COORDINATE) !==
+                    (wp.waypointType ?? WAYPOINT_TYPE.COORDINATE) ||
+                (init.hubId ?? undefined) !== (wp.hubId ?? undefined) ||
+                (init.stopoverType ?? STOPOVER_TYPE.NONE) !==
+                    (wp.stopoverType ?? STOPOVER_TYPE.NONE) ||
+                (init.groundTimeMinutes ?? undefined) !== (wp.groundTimeMinutes ?? undefined) ||
+                (init.payloadDeltaKg ?? undefined) !== (wp.payloadDeltaKg ?? undefined) ||
                 JSON.stringify(init.actions || null) !== JSON.stringify(wp.actions || null) ||
                 JSON.stringify(init.conditions || null) !== JSON.stringify(wp.conditions || null);
 
@@ -182,9 +251,11 @@ export async function syncMissionWaypoints(
         }
     }
 
-    const orderChanged = currentWaypoints.some(
-        (wp, idx) => wp.id && initialMap.get(wp.id)?.sequence !== idx + 1
-    );
+    const initialOrderIds = initialIntermediates.map((w) => w.id).filter(Boolean);
+    const currentOrderIds = currentWaypoints.map((w) => w.id).filter(Boolean);
+    const orderChanged =
+        initialOrderIds.length === currentOrderIds.length &&
+        currentOrderIds.some((id, idx) => id !== initialOrderIds[idx]);
     if (orderChanged && toDelete.length === 0 && currentWaypoints.every((w) => Boolean(w.id))) {
         await missionService.reorderWaypoints(missionId, {
             order: currentWaypoints.map((wp, idx) => ({

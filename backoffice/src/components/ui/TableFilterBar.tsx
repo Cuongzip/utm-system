@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { X } from "lucide-react";
 import { SearchInput } from "./SearchInput";
 import { CustomSelect, type SelectOption } from "./CustomSelect";
 
@@ -12,6 +13,11 @@ export interface TableFilterBarProps {
     onStatusFilterChange: (value: string) => void;
     statusOptions: SelectOption[];
     statusPlaceholder?: string;
+    onClearFilters?: () => void;
+    totalCount?: number;
+    filteredCount?: number;
+    itemLabel?: string;
+    extraSlot?: React.ReactNode;
 }
 
 export function TableFilterBar({
@@ -22,24 +28,62 @@ export function TableFilterBar({
     onStatusFilterChange,
     statusOptions,
     statusPlaceholder = "All Statuses",
+    onClearFilters,
+    totalCount,
+    filteredCount,
+    itemLabel = "records",
+    extraSlot,
 }: TableFilterBarProps) {
+    const hasActiveFilters =
+        Boolean(searchQuery.trim()) ||
+        (statusFilter !== "all" && statusFilter !== "__all__" && statusFilter !== "");
+
+    const handleClear = () => {
+        if (onClearFilters) {
+            onClearFilters();
+        } else {
+            onSearchChange("");
+            onStatusFilterChange("all");
+        }
+    };
+
     return (
-        <div className="flex items-center gap-3">
-            <SearchInput
-                value={searchQuery}
-                onChange={onSearchChange}
-                placeholder={searchPlaceholder}
-                className="w-72"
-            />
-            <div className="w-48">
-                <CustomSelect
-                    value={statusFilter}
-                    onValueChange={(val) => onStatusFilterChange(val || "all")}
-                    options={statusOptions}
-                    placeholder={statusPlaceholder}
-                    className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
+        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 w-full">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                <SearchInput
+                    value={searchQuery}
+                    onChange={onSearchChange}
+                    placeholder={searchPlaceholder}
+                    className="w-full sm:w-72"
                 />
+                <div className="w-full sm:w-48">
+                    <CustomSelect
+                        value={statusFilter}
+                        onValueChange={(val) => onStatusFilterChange(val || "all")}
+                        options={statusOptions}
+                        placeholder={statusPlaceholder}
+                        ariaLabel={statusPlaceholder}
+                        className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
+                    />
+                </div>
+                {extraSlot}
+                {hasActiveFilters && (
+                    <button
+                        type="button"
+                        onClick={handleClear}
+                        className="inline-flex items-center gap-1 h-[34px] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-surface-panel)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    >
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Clear</span>
+                    </button>
+                )}
             </div>
+
+            {hasActiveFilters && totalCount !== undefined && filteredCount !== undefined && (
+                <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary)]">
+                    Showing {filteredCount} of {totalCount} {itemLabel}
+                </span>
+            )}
         </div>
     );
 }

@@ -3,30 +3,51 @@ import {
     getIncidentResponse,
     getIncidentsResponse,
     getIncidentsQueryParams,
+    getStatsQueryParams,
     getStatsResponse,
+    getTrendsQueryParams,
     getTrendsResponseItem,
     getConfigResponse,
     setModeBody,
     getProtocolsResponseItem,
+    updateProtocolBody,
     confirmIncidentBody,
+    resolveIncidentBody,
+    updateRootCauseBody,
+    getFlightBlackboxResponseItem,
 } from "@/generated/emergency";
 
-const INCIDENT_STATUSES = getIncidentResponse.shape.status.unwrap().options;
-const EMERGENCY_SEVERITIES = getIncidentResponse.shape.severity.unwrap().options;
-const RESPONSE_ACTIONS = getIncidentResponse.shape.responseAction.unwrap().options;
-const OPERATION_MODES = setModeBody.shape.mode.options;
+export const RESPONSE_ACTIONS = getIncidentResponse.shape.responseAction.unwrap().options;
+export const ROOT_CAUSES = updateRootCauseBody.shape.rootCause.options;
+export const EMERGENCY_TYPES = getIncidentResponse.shape.emergencyType.unwrap().options;
+export const EMERGENCY_SEVERITIES = getIncidentResponse.shape.severity.unwrap().options;
+export const INCIDENT_STATUSES = getIncidentResponse.shape.status.unwrap().options;
+
+export type EmergencySeverity = NonNullable<zod.infer<typeof getIncidentResponse>["severity"]>;
+export type EmergencyType = NonNullable<zod.infer<typeof getIncidentResponse>["emergencyType"]>;
+export type IncidentStatus = NonNullable<zod.infer<typeof getIncidentResponse>["status"]>;
+export type ResponseAction = NonNullable<zod.infer<typeof getIncidentResponse>["responseAction"]>;
+export type OperationMode = NonNullable<zod.infer<typeof setModeBody>["mode"]>;
+export type RootCause = (typeof ROOT_CAUSES)[number];
 
 export const INCIDENT_STATUS = {
     ACTIVE: "active",
     PENDING_CONFIRMATION: "pending_confirmation",
     EXECUTING: "executing",
     RESOLVED: "resolved",
+    REJECTED: "rejected",
     ESCALATED: "escalated",
-} as const satisfies Record<string, (typeof INCIDENT_STATUSES)[number]>;
+} as const satisfies Record<string, IncidentStatus>;
 
 export const ACTIVE_INCIDENT_STATUSES: readonly IncidentStatus[] = [
     INCIDENT_STATUS.ACTIVE,
     INCIDENT_STATUS.EXECUTING,
+    INCIDENT_STATUS.ESCALATED,
+] as const;
+
+export const CLOSED_INCIDENT_STATUSES: readonly IncidentStatus[] = [
+    INCIDENT_STATUS.RESOLVED,
+    INCIDENT_STATUS.REJECTED,
 ] as const;
 
 export const DEFAULT_INCIDENT_STATUS: IncidentStatus = INCIDENT_STATUS.ACTIVE;
@@ -35,12 +56,12 @@ export const EMERGENCY_SEVERITY = {
     WARNING: "warning",
     CRITICAL: "critical",
     EMERGENCY: "emergency",
-} as const satisfies Record<string, (typeof EMERGENCY_SEVERITIES)[number]>;
+} as const satisfies Record<string, EmergencySeverity>;
 
 export const OPERATION_MODE = {
     AUTO: "auto",
     SUPERVISED: "supervised",
-} as const satisfies Record<string, (typeof OPERATION_MODES)[number]>;
+} as const satisfies Record<string, OperationMode>;
 
 export const DEFAULT_OPERATION_MODE: OperationMode = OPERATION_MODE.SUPERVISED;
 
@@ -53,15 +74,12 @@ export const RESPONSE_ACTION = {
     CLIMB: "CLIMB",
     ESTOP: "ESTOP",
     NONE: "NONE",
-} as const satisfies Record<string, (typeof RESPONSE_ACTIONS)[number]>;
-
-export type EmergencySeverity = NonNullable<zod.infer<typeof getIncidentResponse>["severity"]>;
-export type EmergencyType = NonNullable<zod.infer<typeof getIncidentResponse>["emergencyType"]>;
-export type IncidentStatus = NonNullable<zod.infer<typeof getIncidentResponse>["status"]>;
-export type ResponseAction = NonNullable<zod.infer<typeof getIncidentResponse>["responseAction"]>;
-export type OperationMode = NonNullable<zod.infer<typeof setModeBody>["mode"]>;
+} as const satisfies Record<string, ResponseAction>;
 
 export type ConfirmIncidentPayload = zod.infer<typeof confirmIncidentBody>;
+export type ResolveIncidentPayload = zod.infer<typeof resolveIncidentBody>;
+export type RootCausePayload = zod.infer<typeof updateRootCauseBody>;
+export type UpdateEmergencyProtocolPayload = zod.infer<typeof updateProtocolBody>;
 
 type EmergencyIncidentGenerated = NonNullable<zod.infer<typeof getIncidentResponse>>;
 
@@ -131,10 +149,31 @@ export type EmergencyStatsVm = Omit<
 };
 
 export type EmergencyTrendVm = NonNullable<zod.infer<typeof getTrendsResponseItem>>;
-
 export type EmergencySystemConfigVm = NonNullable<zod.infer<typeof getConfigResponse>>;
-
 export type OperationModeVm = zod.infer<typeof setModeBody>;
+
+export const ROOT_CAUSE = {
+    EQUIPMENT: "equipment",
+    WEATHER: "weather",
+    PILOT_ERROR: "pilot_error",
+    SOFTWARE: "software",
+    EXTERNAL: "external",
+    UNKNOWN: "unknown",
+} as const satisfies Record<string, RootCause>;
+
+export const ROOT_CAUSE_LABELS: Record<RootCause, string> = {
+    equipment: "Equipment / Battery Failure",
+    weather: "Weather / Wind",
+    pilot_error: "Pilot / Operator Error",
+    software: "Software / Firmware",
+    external: "External / RF Interference",
+    unknown: "Unknown / Under Investigation",
+};
+
+export type BlackboxEntryVm = NonNullable<zod.infer<typeof getFlightBlackboxResponseItem>> & {
+    id: string;
+    timestamp: string;
+};
 
 export type EmergencyProtocolVm = NonNullable<zod.infer<typeof getProtocolsResponseItem>> & {
     id: string;
@@ -145,4 +184,6 @@ export type EmergencyProtocolVm = NonNullable<zod.infer<typeof getProtocolsRespo
     isActive: boolean;
 };
 
-export type IncidentQueryParams = zod.infer<typeof getIncidentsQueryParams>;
+export type IncidentQueryParams = Partial<zod.infer<typeof getIncidentsQueryParams>>;
+export type EmergencyStatsQueryParams = Partial<zod.infer<typeof getStatsQueryParams>>;
+export type EmergencyTrendsQueryParams = Partial<zod.infer<typeof getTrendsQueryParams>>;

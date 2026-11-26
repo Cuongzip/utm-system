@@ -12,6 +12,7 @@ export interface SelectOption {
 }
 
 export interface CustomSelectProps {
+    id?: string;
     value: string;
     onValueChange: (value: string) => void;
     options: SelectOption[];
@@ -19,18 +20,21 @@ export interface CustomSelectProps {
     disabled?: boolean;
     className?: string;
     error?: boolean;
+    ariaLabel?: string;
 }
 
 const EMPTY_VALUE = "__EMPTY_VALUE__";
 
 export function CustomSelect({
+    id,
     value,
     onValueChange,
     options,
-    placeholder = "Select an option...",
+    placeholder = "Select an option…",
     disabled = false,
     className,
     error = false,
+    ariaLabel,
 }: CustomSelectProps) {
     const internalValue = value === "" ? EMPTY_VALUE : value;
 
@@ -45,9 +49,11 @@ export function CustomSelect({
             disabled={disabled}
         >
             <SelectPrimitive.Trigger
+                id={id}
+                aria-label={ariaLabel}
                 className={cn(
-                    "flex h-[38px] w-full items-center justify-between rounded-[6px] border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-800 shadow-2xs transition-colors hover:border-slate-400 focus:border-slate-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
-                    error && "border-red-400 bg-red-50 text-red-900 focus:border-red-500",
+                    "flex h-[38px] w-full items-center justify-between rounded-[6px] border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-800 shadow-2xs transition-colors hover:border-slate-400 focus-visible:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
+                    error && "border-red-400 bg-red-50 text-red-900 focus-visible:border-red-500",
                     className
                 )}
             >

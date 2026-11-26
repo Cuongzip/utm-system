@@ -20,11 +20,11 @@ export function Toaster() {
             }}
             toastOptions={{
                 classNames: {
-                    toast: "chamfer-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-3 pr-10 text-xs shadow-lg flex items-center gap-2.5 w-[356px] text-slate-900 dark:text-slate-100",
-                    title: "text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight",
-                    description: "text-[11px] text-slate-500 dark:text-slate-400 mt-0.5",
+                    toast: "chamfer-sm bg-white border border-slate-300 p-3 pr-10 text-xs shadow-lg flex items-center gap-2.5 w-[356px] max-w-[calc(100vw-2rem)] text-slate-900",
+                    title: "text-xs font-semibold text-slate-900 leading-tight",
+                    description: "text-[11px] text-slate-500 mt-0.5",
                     closeButton:
-                        "!left-auto !right-2.5 !top-2.5 !transform-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
+                        "!left-auto !right-2.5 !top-2.5 !transform-none border border-slate-200 bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors",
                 },
             }}
         />

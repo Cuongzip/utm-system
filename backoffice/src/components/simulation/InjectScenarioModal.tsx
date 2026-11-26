@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Modal, CustomSelect, FormInput } from "@/components/ui";
 import { simulationService } from "@/services/simulationService";
@@ -18,24 +18,15 @@ export interface InjectScenarioModalProps {
     onSuccess: () => void;
 }
 
-export function InjectScenarioModal({
-    isOpen,
+function InjectScenarioModalBody({
     onClose,
     sessionId,
     onSuccess,
-}: InjectScenarioModalProps) {
+}: Omit<InjectScenarioModalProps, "isOpen">) {
     const queryClient = useQueryClient();
     const [scenario, setScenario] = useState<InjectScenarioType>(SIMULATION_SCENARIO.GPS_FAILURE);
     const [durationSeconds, setDurationSeconds] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (isOpen) {
-            setScenario(SIMULATION_SCENARIO.GPS_FAILURE);
-            setDurationSeconds("");
-            setError(null);
-        }
-    }, [isOpen]);
 
     const injectMutation = useMutation({
         mutationFn: (payload: InjectScenarioPayload) =>
@@ -70,7 +61,7 @@ export function InjectScenarioModal({
 
     return (
         <Modal
-            isOpen={isOpen}
+            isOpen
             onClose={onClose}
             title="Inject Emergency Scenario"
             onSubmit={handleSubmit}
@@ -84,6 +75,7 @@ export function InjectScenarioModal({
                     Scenario Type <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
+                    id="scenarioSelect"
                     value={scenario}
                     onValueChange={(val: string) => {
                         setScenario(val as InjectScenarioType);
@@ -97,7 +89,7 @@ export function InjectScenarioModal({
                     placeholder="Select emergency scenario"
                     error={Boolean(error)}
                 />
-                {error && <span className="text-xs text-red-500 mt-1 block">{error}</span>}
+                {error && <span className="form-error-msg">{error}</span>}
             </div>
 
             <FormInput
@@ -110,5 +102,23 @@ export function InjectScenarioModal({
                 onChange={(e) => setDurationSeconds(e.target.value)}
             />
         </Modal>
+    );
+}
+
+export function InjectScenarioModal({
+    isOpen,
+    onClose,
+    sessionId,
+    onSuccess,
+}: InjectScenarioModalProps) {
+    if (!isOpen) return null;
+
+    return (
+        <InjectScenarioModalBody
+            key={sessionId}
+            onClose={onClose}
+            sessionId={sessionId}
+            onSuccess={onSuccess}
+        />
     );
 }

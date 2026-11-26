@@ -1,5 +1,10 @@
 import type { SelectOption } from "@/components/ui";
-import { WAYPOINT_ACTION_TYPES, WAYPOINT_ACTION_LABELS, DEFAULT_WAYPOINT_ACTION } from "@/types";
+import {
+    WAYPOINT_ACTION_TYPES,
+    WAYPOINT_ACTION_LABELS,
+    DEFAULT_WAYPOINT_ACTION,
+    type StopoverType,
+} from "@/types";
 
 export interface WaypointItem {
     id?: string;
@@ -9,6 +14,11 @@ export interface WaypointItem {
     latitude?: number;
     longitude?: number;
     altitude?: number;
+    waypointType?: "coordinate" | "hub";
+    hubId?: string;
+    stopoverType?: StopoverType;
+    groundTimeMinutes?: number;
+    payloadDeltaKg?: number;
     actions?: Record<string, unknown>;
     conditions?: Record<string, unknown>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Drone, ChevronRight, Plane, Check } from "lucide-react";
+import { Drone, ChevronDown, Plane, Check } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
@@ -17,11 +17,12 @@ export interface FlightSelectorPopoverProps {
     onOpenChange: (open: boolean) => void;
     flight: Flight | null;
     flights: Flight[];
+    droneRegMap?: Map<string, string>;
     selectedFlightId: string | null;
     onSelectFlight: (flightId: string) => void;
     telemetryMap: Record<string, TelemetryRecord>;
     hasAlert: boolean;
-    serialNumber: string;
+    droneRegistration: string;
     uavId: string;
 }
 
@@ -30,11 +31,12 @@ export function FlightSelectorPopover({
     onOpenChange,
     flight,
     flights = [],
+    droneRegMap,
     selectedFlightId,
     onSelectFlight,
     telemetryMap = {},
     hasAlert = false,
-    serialNumber = "—",
+    droneRegistration = "—",
     uavId = "STANDBY",
 }: FlightSelectorPopoverProps) {
     return (
@@ -42,37 +44,29 @@ export function FlightSelectorPopover({
             <PopoverTrigger asChild>
                 <button
                     type="button"
-                    className="w-full mt-3 text-left cursor-pointer focus:outline-none"
+                    className="w-full rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] hover:bg-slate-100 px-3 py-2.5 flex items-center justify-between gap-2 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 >
-                    <ChamferCard
-                        size="md"
-                        className={`transition-all ${isOpen ? "ring-2 ring-cyan-500/50" : "hover:opacity-95"}`}
-                    >
-                        <div className="p-3 bg-slate-50 flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-9 h-9 chamfer-sm bg-white border border-slate-300 flex items-center justify-center text-slate-700 shadow-2xs">
-                                    <Drone className="h-4 w-4 text-slate-700" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-xs font-bold font-mono text-slate-900">
-                                            {uavId}
-                                        </span>
-                                        {hasAlert && <StatusBadge status="alert" label="ALERT" />}
-                                    </div>
-                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                                        {flight
-                                            ? `Flight ${flight.flightNumber || flight.id.slice(0, 8)}`
-                                            : "No Active Flight"}{" "}
-                                        • SN: {serialNumber}
-                                    </div>
-                                </div>
-                            </div>
-                            <ChevronRight
-                                className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? "rotate-90 text-slate-700" : ""}`}
-                            />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+                            <Drone className="h-4 w-4 text-slate-700" />
                         </div>
-                    </ChamferCard>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold font-mono text-slate-900 truncate">
+                                    {uavId}
+                                </span>
+                                {hasAlert && <StatusBadge status="alert" label="LOW BAT" />}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono truncate">
+                                {flight ? `Aircraft: ${droneRegistration}` : "No active flight"}
+                            </div>
+                        </div>
+                    </div>
+                    <ChevronDown
+                        className={`h-4 w-4 text-slate-400 shrink-0 transition-transform ${
+                            isOpen ? "rotate-180 text-slate-700" : ""
+                        }`}
+                    />
                 </button>
             </PopoverTrigger>
             <PopoverContent
@@ -88,13 +82,16 @@ export function FlightSelectorPopover({
                                 compact
                                 icon={Drone}
                                 title="No active flights"
-                                description="No airborne drones transmitting telemetry"
                                 className="py-5"
                             />
                         ) : (
                             flights.map((item) => {
                                 const isSelected = item.id === (flight?.id || selectedFlightId);
-                                const hasLiveTelemetry = !!telemetryMap[item.id];
+                                const hasLiveTelemetry = Boolean(telemetryMap[item.id]);
+                                const reg = item.droneId
+                                    ? droneRegMap?.get(item.droneId) || "Assigned UAV"
+                                    : "Unassigned";
+
                                 return (
                                     <button
                                         key={item.id}
@@ -104,24 +101,26 @@ export function FlightSelectorPopover({
                                             onOpenChange(false);
                                         }}
                                         className={cn(
-                                            "w-full flex items-center justify-between p-2.5 chamfer-sm text-left transition-colors cursor-pointer",
-                                            isSelected ? "text-slate-900" : "text-slate-700",
-                                            "hover:bg-slate-100/70"
+                                            "w-full flex items-center justify-between p-2.5 rounded text-left transition-colors cursor-pointer",
+                                            isSelected
+                                                ? "text-slate-900 bg-slate-50"
+                                                : "text-slate-700",
+                                            "hover:bg-slate-100"
                                         )}
                                     >
-                                        <div className="flex items-center space-x-2.5 min-w-0">
+                                        <div className="flex items-center gap-2.5 min-w-0">
                                             <Plane
                                                 className={cn(
                                                     "h-4 w-4 shrink-0",
                                                     hasLiveTelemetry
                                                         ? "text-emerald-500"
                                                         : isSelected
-                                                          ? "text-cyan-600"
+                                                          ? "text-slate-800"
                                                           : "text-slate-400"
                                                 )}
                                             />
                                             <div className="truncate">
-                                                <div className="flex items-center space-x-2">
+                                                <div className="flex items-center gap-2">
                                                     <span
                                                         className={cn(
                                                             "text-xs",
@@ -130,17 +129,14 @@ export function FlightSelectorPopover({
                                                                 : "font-semibold text-slate-800"
                                                         )}
                                                     >
-                                                        {item.flightNumber || item.id.slice(0, 8)}
+                                                        {item.flightNumber || "Flight"}
                                                     </span>
                                                     {hasLiveTelemetry && (
                                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
                                                     )}
                                                 </div>
                                                 <div className="text-[10px] truncate text-slate-500">
-                                                    {item.droneId
-                                                        ? `SN: ${item.droneId.slice(0, 8)}`
-                                                        : "No Drone"}{" "}
-                                                    •{" "}
+                                                    {reg} ·{" "}
                                                     {(
                                                         item.status ?? DEFAULT_FLIGHT_STATUS
                                                     ).toUpperCase()}
@@ -148,7 +144,7 @@ export function FlightSelectorPopover({
                                             </div>
                                         </div>
                                         {isSelected && (
-                                            <Check className="h-4 w-4 text-cyan-600 shrink-0 ml-2 stroke-[2.5]" />
+                                            <Check className="h-4 w-4 text-slate-800 shrink-0 ml-2 stroke-[2.5]" />
                                         )}
                                     </button>
                                 );

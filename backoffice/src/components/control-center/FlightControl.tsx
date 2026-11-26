@@ -1,44 +1,100 @@
 "use client";
 
-import { PlaneTakeoff, PlaneLanding, Home, Loader2, AlertCircle } from "lucide-react";
-import { ChamferCard } from "@/components/ui";
+import { useState } from "react";
+import {
+    PlaneTakeoff,
+    PlaneLanding,
+    Home,
+    Pause,
+    CircleDot,
+    Play,
+    OctagonAlert,
+    Loader2,
+} from "lucide-react";
+import { ChamferCard, ConfirmDialog } from "@/components/ui";
 import { droneService } from "@/services";
 import { QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { type CommandType, COMMAND_TYPE } from "@/types";
+import { ACTIVE_FLIGHT_STATUSES, COMMAND_TYPE, type CommandType, type FlightStatus } from "@/types";
 
 interface FlightControlProps {
     droneId?: string | null;
     flightId?: string | null;
+    flightStatus?: FlightStatus | null;
+    altitudeM?: number | null;
+    hasLiveLink?: boolean;
 }
 
-const COMMAND_ACTIONS = [
+interface CommandActionConfig {
+    type: CommandType;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    confirmTitle?: string;
+    confirmDescription?: string;
+    confirmText?: string;
+}
+
+const GRID_COMMANDS: readonly CommandActionConfig[] = [
     {
         type: COMMAND_TYPE.TAKEOFF,
         label: "TKOF",
         icon: PlaneTakeoff,
-        className: "bg-slate-800 hover:bg-slate-700 text-white",
-        iconColor: "text-white",
     },
     {
         type: COMMAND_TYPE.LAND,
         label: "LAND",
         icon: PlaneLanding,
-        className: "bg-slate-50 hover:bg-slate-100 text-slate-800",
-        iconColor: "text-slate-600",
+        confirmTitle: "Confirm Immediate Landing",
+        confirmDescription:
+            "Instruct the selected aircraft to initiate vertical descent and land at its current GPS coordinates immediately.",
+        confirmText: "Execute Land",
     },
     {
         type: COMMAND_TYPE.RTL,
         label: "RTH",
         icon: Home,
-        className: "bg-slate-50 hover:bg-slate-100 text-slate-800",
-        iconColor: "text-slate-600",
+        confirmTitle: "Confirm Return to Home (RTH)",
+        confirmDescription:
+            "Abort current route progress and command the aircraft to return directly to its assigned home vertiport.",
+        confirmText: "Execute RTH",
     },
-] as const;
+    {
+        type: COMMAND_TYPE.PAUSE,
+        label: "PAUSE",
+        icon: Pause,
+    },
+    {
+        type: COMMAND_TYPE.HOVER,
+        label: "HOVER",
+        icon: CircleDot,
+    },
+    {
+        type: COMMAND_TYPE.RESUME,
+        label: "RESUME",
+        icon: Play,
+    },
+];
 
-export function FlightControl({ droneId, flightId }: FlightControlProps) {
+const EMERGENCY_STOP_CONFIG: CommandActionConfig = {
+    type: COMMAND_TYPE.EMERGENCY_STOP,
+    label: "EMERGENCY STOP",
+    icon: OctagonAlert,
+    confirmTitle: "Confirm Emergency Stop (ESTOP)",
+    confirmDescription:
+        "CRITICAL SAFETY ACTION: This will trigger an immediate emergency flight termination / failsafe stop on the active aircraft. Proceed only if an unrecoverable hazard is imminent.",
+    confirmText: "Dispatch ESTOP",
+};
+
+export function FlightControl({
+    droneId,
+    flightId,
+    flightStatus,
+    altitudeM,
+    hasLiveLink,
+}: FlightControlProps) {
     const queryClient = useQueryClient();
+    const [pendingConfirm, setPendingConfirm] = useState<CommandActionConfig | null>(null);
 
     const sendCommandMutation = useMutation({
         mutationFn: async (commandType: CommandType) => {
@@ -51,7 +107,8 @@ export function FlightControl({ droneId, flightId }: FlightControlProps) {
             });
         },
         onSuccess: (_data, type) => {
-            toast.success(`Dispatched ${type} command successfully`);
+            toast.success(`Dispatched ${type.toUpperCase()} command successfully`);
+            setPendingConfirm(null);
             if (droneId) {
                 queryClient.invalidateQueries({ queryKey: QUERY_KEYS.droneCommands(droneId) });
             }
@@ -60,58 +117,118 @@ export function FlightControl({ droneId, flightId }: FlightControlProps) {
     });
 
     const isAvailable = Boolean(droneId);
+    const isAirborne = Boolean(
+        (flightStatus && ACTIVE_FLIGHT_STATUSES.includes(flightStatus)) ||
+        (altitudeM != null && altitudeM > 2)
+    );
+    const isGroundedPreFlight = Boolean(
+        !isAirborne && flightStatus && !ACTIVE_FLIGHT_STATUSES.includes(flightStatus)
+    );
+
+    const getDisabledReason = (commandType: CommandType): string | null => {
+        if (!isAvailable) return "Select an active aircraft first";
+        if (commandType === COMMAND_TYPE.TAKEOFF && isAirborne) {
+            return "Takeoff disabled while aircraft is already airborne";
+        }
+        if (commandType !== COMMAND_TYPE.TAKEOFF && isGroundedPreFlight) {
+            return "In-flight command disabled while aircraft has not departed";
+        }
+        return null;
+    };
+
+    const handleTriggerCommand = (action: CommandActionConfig) => {
+        if (action.confirmTitle) {
+            setPendingConfirm(action);
+            return;
+        }
+        sendCommandMutation.mutate(action.type);
+    };
+
+    const isEstopExecuting =
+        sendCommandMutation.isPending &&
+        sendCommandMutation.variables === EMERGENCY_STOP_CONFIG.type;
+
+    const statusIndicator = !isAvailable
+        ? "NO TARGET"
+        : hasLiveLink === false
+          ? "LINK STANDBY"
+          : "C2 ARMED";
 
     return (
-        <ChamferCard size="lg" className="h-[273px]">
-            <div className="p-4 flex flex-col justify-between h-full">
-                <div>
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                        <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 font-mono tracking-wider">
+        <>
+            <ChamferCard size="lg" className="h-[272px]">
+                <div className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-200">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 font-mono tracking-wider uppercase">
                             <PlaneTakeoff className="h-4 w-4 text-slate-600" />
                             <span>FLIGHT CONTROL</span>
                         </div>
-                        {!isAvailable && (
-                            <span className="flex items-center text-[10px] text-amber-600 font-mono">
-                                <AlertCircle className="w-3 h-3 mr-1" />
-                                Standby
-                            </span>
-                        )}
+                        <span className="text-[10px] font-mono font-semibold text-slate-400">
+                            {statusIndicator}
+                        </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 mt-4">
-                        {COMMAND_ACTIONS.map(
-                            ({ type, label, icon: Icon, className, iconColor }) => {
-                                const isExecuting =
-                                    sendCommandMutation.isPending &&
-                                    sendCommandMutation.variables === type;
-                                return (
-                                    <ChamferCard key={type} size="md">
-                                        <button
-                                            type="button"
-                                            disabled={!isAvailable || sendCommandMutation.isPending}
-                                            onClick={() => sendCommandMutation.mutate(type)}
-                                            className={`w-full h-28 flex flex-col items-center justify-center p-2 disabled:opacity-50 shadow-xs transition-colors group cursor-pointer disabled:cursor-not-allowed border-none ${className}`}
-                                        >
-                                            {isExecuting ? (
-                                                <Loader2
-                                                    className={`h-5 w-5 mb-2 animate-spin ${iconColor}`}
-                                                />
-                                            ) : (
-                                                <Icon
-                                                    className={`h-5 w-5 mb-2 ${iconColor} group-hover:-translate-y-0.5 transition-transform`}
-                                                />
-                                            )}
-                                            <span className="text-sm font-bold font-mono tracking-wider">
-                                                {label}
-                                            </span>
-                                        </button>
-                                    </ChamferCard>
-                                );
-                            }
-                        )}
+                    <div className="grid grid-cols-3 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden">
+                        {GRID_COMMANDS.map((action) => {
+                            const Icon = action.icon;
+                            const isExecuting =
+                                sendCommandMutation.isPending &&
+                                sendCommandMutation.variables === action.type;
+                            const disabledReason = getDisabledReason(action.type);
+                            const isDisabled =
+                                Boolean(disabledReason) || sendCommandMutation.isPending;
+
+                            return (
+                                <button
+                                    key={action.type}
+                                    type="button"
+                                    disabled={isDisabled}
+                                    title={disabledReason ?? `Dispatch ${action.label}`}
+                                    onClick={() => handleTriggerCommand(action)}
+                                    className="h-[62px] bg-[var(--color-surface-panel)] hover:bg-slate-100 active:bg-slate-200/70 text-slate-800 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-35 disabled:hover:bg-[var(--color-surface-panel)] disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+                                >
+                                    {isExecuting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                                    ) : (
+                                        <Icon className="h-4 w-4 text-slate-600" />
+                                    )}
+                                    <span className="text-[11px] font-bold font-mono tracking-wider leading-none">
+                                        {action.label}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
+
+                    <button
+                        type="button"
+                        disabled={!isAvailable || sendCommandMutation.isPending}
+                        onClick={() => handleTriggerCommand(EMERGENCY_STOP_CONFIG)}
+                        className="chamfer-sm w-full h-9 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 text-xs font-bold font-mono tracking-wider transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                    >
+                        {isEstopExecuting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <OctagonAlert className="h-4 w-4" />
+                        )}
+                        <span>{EMERGENCY_STOP_CONFIG.label}</span>
+                    </button>
                 </div>
-            </div>
-        </ChamferCard>
+            </ChamferCard>
+
+            <ConfirmDialog
+                isOpen={Boolean(pendingConfirm)}
+                onClose={() => setPendingConfirm(null)}
+                onConfirm={() => {
+                    if (pendingConfirm) {
+                        sendCommandMutation.mutate(pendingConfirm.type);
+                    }
+                }}
+                title={pendingConfirm?.confirmTitle ?? "Confirm Flight Command"}
+                description={pendingConfirm?.confirmDescription ?? ""}
+                confirmText={pendingConfirm?.confirmText ?? "Confirm"}
+                loading={sendCommandMutation.isPending}
+            />
+        </>
     );
 }

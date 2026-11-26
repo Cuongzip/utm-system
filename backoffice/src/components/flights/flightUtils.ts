@@ -131,12 +131,21 @@ export function estimateRouteFeasibility(
     drone?: Drone | null
 ): RouteFeasibilityEstimate {
     const batteryCapacityWh =
-        drone?.batteryCapacityWh && drone.batteryCapacityWh > 0 ? drone.batteryCapacityWh : 500;
-    const usableWh = batteryCapacityWh * 0.95 * 0.8;
+        drone?.batteryCapacityWh != null && drone.batteryCapacityWh > 0
+            ? drone.batteryCapacityWh
+            : 400;
+    const batteryHealthRatio =
+        drone?.batteryHealthPct != null && drone.batteryHealthPct > 0
+            ? Math.min(1, drone.batteryHealthPct / 100)
+            : 1.0;
+    const usableWh = batteryCapacityWh * batteryHealthRatio * 0.8;
 
-    const cruisePowerW = 250;
-    const hoverPowerW = 400;
-    const cruiseSpeedMs = 15;
+    const cruisePowerW =
+        drone?.cruisePowerW != null && drone.cruisePowerW > 0 ? drone.cruisePowerW : 280;
+    const hoverPowerW =
+        drone?.hoverPowerW != null && drone.hoverPowerW > 0 ? drone.hoverPowerW : 350;
+    const cruiseSpeedMs =
+        drone?.cruiseSpeedMs != null && drone.cruiseSpeedMs > 0 ? drone.cruiseSpeedMs : 15;
     const hoverTimeS = 60;
 
     const cruiseTimeHours = distanceM / cruiseSpeedMs / 3600;

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
+import { useHubsAll, useDronesAll, useCurrentUser, QUERY_KEYS } from "@/hooks";
 import { missionService } from "@/services/missionService";
 import { createMissionWaypoints, MissionEditor, type MissionSaveData } from "@/components/missions";
 import { showApiError } from "@/utils";
@@ -13,6 +13,7 @@ export default function NewMissionPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
 
+    const { data: currentUser } = useCurrentUser();
     const { data: hubs = [], isLoading: hubsLoading } = useHubsAll();
     const { data: drones = [], isLoading: dronesLoading } = useDronesAll();
 
@@ -26,13 +27,20 @@ export default function NewMissionPage() {
             }
 
             if (savedMissionId && droneId) {
-                try {
-                    await missionService.executeMission(savedMissionId, {
-                        droneId,
-                        pilotId: "operator",
-                    });
-                } catch (err) {
-                    showApiError(err, "Mission created, but failed to schedule execution");
+                const pilotId = currentUser?.username?.trim() || currentUser?.email?.trim();
+                if (!pilotId) {
+                    toast.warning(
+                        "Mission saved as draft — open Execute Mission to assign pilot and launch."
+                    );
+                } else {
+                    try {
+                        await missionService.executeMission(savedMissionId, {
+                            droneId,
+                            pilotId,
+                        });
+                    } catch (err) {
+                        showApiError(err, "Mission created, but failed to schedule execution");
+                    }
                 }
             }
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
-import type { Waypoint, Hub } from "@/types";
+import { WAYPOINT_TYPE, type Waypoint, type Hub } from "@/types";
 import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { buildMissionRoutePoints } from "@/components/missions";
@@ -136,6 +136,17 @@ export function MissionLayer({
             }
 
             sortedWaypoints.forEach((wp, idx) => {
+                const isHubNode = wp.waypointType === WAYPOINT_TYPE.HUB || Boolean(wp.hubId);
+                if (
+                    isHubNode &&
+                    ((idx === 0 && departureHub?.id && wp.hubId === departureHub.id) ||
+                        (idx === sortedWaypoints.length - 1 &&
+                            arrivalHub?.id &&
+                            wp.hubId === arrivalHub.id))
+                ) {
+                    return;
+                }
+
                 const wpId = `wp-${wp.id || wp.tempId || idx}`;
                 const isSelected = Boolean(
                     (selectedWaypointId && wp.id === selectedWaypointId) ||
@@ -146,7 +157,10 @@ export function MissionLayer({
                     wp.altitude !== undefined && wp.altitude !== null
                         ? formatAltitude(wp.altitude)
                         : "";
-                const labelText = `WP${seqNum} ${altText}`.trim();
+                const compactHubLabel = wp.hub?.code || wp.name || "HUB";
+                const labelText = isHubNode
+                    ? `STOP #${seqNum}: ${compactHubLabel}`
+                    : `WP${seqNum} ${altText}`.trim();
 
                 const entity = viewer.entities.add({
                     id: wpId,
@@ -154,19 +168,21 @@ export function MissionLayer({
                     position: Cesium.Cartesian3.fromDegrees(
                         wp.longitude ?? 0,
                         wp.latitude ?? 0,
-                        wp.altitude ?? 50
+                        isHubNode ? Math.max(10, wp.altitude ?? 0) : (wp.altitude ?? 50)
                     ),
                     billboard: {
-                        image: getWaypointIconUri(seqNum, isSelected),
-                        width: isSelected ? 30 : 24,
-                        height: isSelected ? 30 : 24,
+                        image: isHubNode
+                            ? getHubIconUri("#f59e0b", isSelected)
+                            : getWaypointIconUri(seqNum, isSelected),
+                        width: isSelected ? 30 : isHubNode ? 26 : 24,
+                        height: isSelected ? 30 : isHubNode ? 26 : 24,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: labelText,
                         isSelected,
-                        accentColor: isSelected ? "#00e5ff" : undefined,
+                        accentColor: isSelected ? "#00e5ff" : isHubNode ? "#f59e0b" : undefined,
                         pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
                     }),
                 });

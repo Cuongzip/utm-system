@@ -10,6 +10,7 @@ import {
 import { QUERY_KEYS, useActiveAlerts, useEmergencyActiveIncidents } from "@/hooks/useQueries";
 import {
     ALERT_STATUS,
+    CLOSED_INCIDENT_STATUSES,
     INCIDENT_STATUS,
     type LiveAlertItem,
     type LiveAlertSeverity,
@@ -17,6 +18,40 @@ import {
     type AlertVm,
     type EmergencyIncidentVm,
 } from "@/types";
+
+const DISMISSED_STORAGE_KEY = "utm:dismissed-live-alerts";
+const STALE_ALERT_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+function readPersistedDismissedIds(): Set<string> {
+    if (typeof window === "undefined") return new Set();
+    try {
+        const raw = window.sessionStorage.getItem(DISMISSED_STORAGE_KEY);
+        if (!raw) return new Set();
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            return new Set(parsed.filter((v): v is string => typeof v === "string"));
+        }
+    } catch {
+        return new Set();
+    }
+    return new Set();
+}
+
+function persistDismissedIds(ids: Set<string>) {
+    if (typeof window === "undefined") return;
+    try {
+        window.sessionStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+    } catch {
+        // Ignore storage quota errors
+    }
+}
+
+function isFreshAlert(timestampIso?: string, alwaysKeep = false): boolean {
+    if (alwaysKeep || !timestampIso) return true;
+    const parsed = Date.parse(timestampIso);
+    if (Number.isNaN(parsed)) return true;
+    return Date.now() - parsed <= STALE_ALERT_MAX_AGE_MS;
+}
 
 function normalizeAlertSeverity(sev?: string): LiveAlertSeverity {
     const s = (sev || "").toUpperCase();
@@ -43,10 +78,10 @@ function normalizeAlertItem(alert: AlertVm): LiveAlertItem {
           : "/dashboard/conflicts";
 
     const actionLabel = alert.flightId
-        ? "VIEW FLIGHT"
+        ? "View Flight"
         : alert.droneId
-          ? "VIEW DRONE"
-          : "VIEW CONFLICTS";
+          ? "View Drone"
+          : "View Conflicts";
 
     return {
         id: alert.id,
@@ -85,8 +120,8 @@ function normalizeIncidentItem(incident: EmergencyIncidentVm): LiveAlertItem {
         actionUrl: "/dashboard/emergency",
         actionLabel:
             incident.status === INCIDENT_STATUS.PENDING_CONFIRMATION
-                ? "CONFIRM ACTION"
-                : "MANAGE INCIDENT",
+                ? "Confirm Action"
+                : "Manage Incident",
         raw: incident,
     };
 }
@@ -104,7 +139,7 @@ function normalizePendingItem(pending: PendingConfirmationVm): LiveAlertItem {
         status: INCIDENT_STATUS.PENDING_CONFIRMATION,
         timestamp: pending.timeoutAt || new Date().toISOString(),
         actionUrl: "/dashboard/emergency",
-        actionLabel: "CONFIRM ACTION",
+        actionLabel: "Confirm Action",
         raw: pending,
     };
 }
@@ -115,45 +150,69 @@ export function useLiveAlerts() {
     const [alertConnected, setAlertConnected] = useState(false);
     const [emergencyConnected, setEmergencyConnected] = useState(false);
 
-    const [alerts, setAlerts] = useState<LiveAlertItem[]>([]);
+    const [realtimeMap, setRealtimeMap] = useState<Map<string, LiveAlertItem>>(() => new Map());
+    const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => new Set());
+    const [dismissedIds, setDismissedIds] = useState<Set<string>>(() =>
+        readPersistedDismissedIds()
+    );
     const dismissedIdsRef = useRef<Set<string>>(dismissedIds);
+
+    useEffect(() => {
+        dismissedIdsRef.current = dismissedIds;
+    }, [dismissedIds]);
 
     const { data: initialAlerts = [] } = useActiveAlerts();
     const { data: initialIncidents = [] } = useEmergencyActiveIncidents();
 
-    useEffect(() => {
-        setAlerts((prev) => {
-            const currentMap = new Map(prev.map((item) => [item.id, item]));
+    const alerts = useMemo(() => {
+        const merged = new Map<string, LiveAlertItem>();
+        const activeIncidentIds = new Set<string>();
+        const activeIncidentFlights = new Set<string>();
+        const activeIncidentDrones = new Set<string>();
 
-            for (const a of initialAlerts) {
-                if (a.id && !dismissedIds.has(a.id)) {
-                    if (a.status === ALERT_STATUS.RESOLVED || a.status === ALERT_STATUS.DISMISSED) {
-                        currentMap.delete(a.id);
-                    } else if (!currentMap.has(a.id)) {
-                        currentMap.set(a.id, normalizeAlertItem(a));
-                    }
-                }
+        for (const inc of initialIncidents) {
+            if (!inc.id || dismissedIds.has(inc.id) || removedIds.has(inc.id)) continue;
+            if (CLOSED_INCIDENT_STATUSES.includes(inc.status)) continue;
+            const isPending = inc.status === INCIDENT_STATUS.PENDING_CONFIRMATION;
+            if (!isFreshAlert(inc.detectedAt || inc.createdOn, isPending)) continue;
+
+            activeIncidentIds.add(inc.id);
+            if (inc.flightId) activeIncidentFlights.add(inc.flightId);
+            if (inc.droneId) activeIncidentDrones.add(inc.droneId);
+            merged.set(inc.id, normalizeIncidentItem(inc));
+        }
+
+        for (const a of initialAlerts) {
+            if (!a.id || dismissedIds.has(a.id) || removedIds.has(a.id)) continue;
+            if (
+                a.status === ALERT_STATUS.RESOLVED ||
+                a.status === ALERT_STATUS.DISMISSED ||
+                a.status === ALERT_STATUS.ACKNOWLEDGED
+            ) {
+                continue;
             }
+            if (!isFreshAlert(a.createdOn, false)) continue;
 
-            for (const inc of initialIncidents) {
-                if (inc.id && !dismissedIds.has(inc.id)) {
-                    if (inc.status === INCIDENT_STATUS.RESOLVED) {
-                        currentMap.delete(inc.id);
-                    } else if (!currentMap.has(inc.id)) {
-                        currentMap.set(inc.id, normalizeIncidentItem(inc));
-                    }
-                }
-            }
+            const rawRecord = a as Record<string, unknown>;
+            const linkedIncidentId =
+                typeof rawRecord.incidentId === "string" ? rawRecord.incidentId : undefined;
+            if (linkedIncidentId && activeIncidentIds.has(linkedIncidentId)) continue;
+            if (a.flightId && activeIncidentFlights.has(a.flightId)) continue;
+            if (a.droneId && activeIncidentDrones.has(a.droneId)) continue;
 
-            const sorted = Array.from(currentMap.values()).sort(
-                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-            );
+            merged.set(a.id, normalizeAlertItem(a));
+        }
 
-            return sorted.slice(0, 50);
-        });
-    }, [initialAlerts, initialIncidents, dismissedIds]);
+        for (const [id, item] of realtimeMap.entries()) {
+            if (dismissedIds.has(id) || removedIds.has(id)) continue;
+            merged.set(id, item);
+        }
+
+        return Array.from(merged.values())
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 50);
+    }, [initialAlerts, initialIncidents, realtimeMap, dismissedIds, removedIds]);
 
     useEffect(() => {
         connectServiceStomp("alert");
@@ -169,25 +228,49 @@ export function useLiveAlerts() {
     }, []);
 
     useEffect(() => {
+        const markRemoved = (id: string) => {
+            setRemovedIds((prev) => {
+                const next = new Set(prev);
+                next.add(id);
+                return next;
+            });
+            setRealtimeMap((prev) => {
+                if (!prev.has(id)) return prev;
+                const next = new Map(prev);
+                next.delete(id);
+                return next;
+            });
+        };
+
+        const upsertRealtime = (normalized: LiveAlertItem) => {
+            setRemovedIds((prev) => {
+                if (!prev.has(normalized.id)) return prev;
+                const next = new Set(prev);
+                next.delete(normalized.id);
+                return next;
+            });
+            setRealtimeMap((prev) => {
+                const next = new Map(prev);
+                next.set(normalized.id, normalized);
+                return next;
+            });
+        };
+
         const handleAlertMessage = (incoming: AlertVm) => {
             if (!incoming || !incoming.id) return;
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alertsActive });
 
             if (
                 incoming.status === ALERT_STATUS.RESOLVED ||
-                incoming.status === ALERT_STATUS.DISMISSED
+                incoming.status === ALERT_STATUS.DISMISSED ||
+                incoming.status === ALERT_STATUS.ACKNOWLEDGED
             ) {
-                setAlerts((prev) => prev.filter((item) => item.id !== incoming.id));
+                markRemoved(incoming.id);
                 return;
             }
 
             if (dismissedIdsRef.current.has(incoming.id)) return;
-
-            const normalized = normalizeAlertItem(incoming);
-            setAlerts((prev) => {
-                const filtered = prev.filter((item) => item.id !== normalized.id);
-                return [normalized, ...filtered].slice(0, 50);
-            });
+            upsertRealtime(normalizeAlertItem(incoming));
         };
 
         const unsubLiveAlerts = subscribeServiceStomp<AlertVm>(
@@ -202,18 +285,13 @@ export function useLiveAlerts() {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
 
-            if (incoming.status === INCIDENT_STATUS.RESOLVED) {
-                setAlerts((prev) => prev.filter((item) => item.id !== incoming.id));
+            if (CLOSED_INCIDENT_STATUSES.includes(incoming.status)) {
+                markRemoved(incoming.id);
                 return;
             }
 
             if (dismissedIdsRef.current.has(incoming.id)) return;
-
-            const normalized = normalizeIncidentItem(incoming);
-            setAlerts((prev) => {
-                const filtered = prev.filter((item) => item.id !== normalized.id);
-                return [normalized, ...filtered].slice(0, 50);
-            });
+            upsertRealtime(normalizeIncidentItem(incoming));
         };
 
         const handleEmergencyPending = (incoming: PendingConfirmationVm) => {
@@ -223,11 +301,7 @@ export function useLiveAlerts() {
 
             const normalized = normalizePendingItem(incoming);
             if (dismissedIdsRef.current.has(normalized.id)) return;
-
-            setAlerts((prev) => {
-                const filtered = prev.filter((item) => item.id !== normalized.id);
-                return [normalized, ...filtered].slice(0, 50);
-            });
+            upsertRealtime(normalized);
         };
 
         const unsubIncidents = subscribeServiceStomp<EmergencyIncidentVm>(
@@ -274,16 +348,20 @@ export function useLiveAlerts() {
     }, [totalCount]);
 
     const dismissAlert = useCallback((id: string) => {
-        dismissedIdsRef.current.add(id);
-        setDismissedIds(new Set(dismissedIdsRef.current));
-        setAlerts((prev) => prev.filter((a) => a.id !== id));
+        const next = new Set(dismissedIdsRef.current);
+        next.add(id);
+        dismissedIdsRef.current = next;
+        persistDismissedIds(next);
+        setDismissedIds(next);
         setCurrentIndex(0);
     }, []);
 
     const dismissAll = useCallback(() => {
-        alerts.forEach((a) => dismissedIdsRef.current.add(a.id));
-        setDismissedIds(new Set(dismissedIdsRef.current));
-        setAlerts([]);
+        const next = new Set(dismissedIdsRef.current);
+        alerts.forEach((a) => next.add(a.id));
+        dismissedIdsRef.current = next;
+        persistDismissedIds(next);
+        setDismissedIds(next);
         setCurrentIndex(0);
     }, [alerts]);
 

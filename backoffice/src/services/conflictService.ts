@@ -5,6 +5,9 @@ import type {
     ConflictQueryParams,
     ResolveConflictPayload,
     ConflictScanResult,
+    ConflictResolutionAdvice,
+    StrategicTrajectoryCheckPayload,
+    StrategicTrajectoryCheckResult,
 } from "@/types";
 
 export const conflictService = {
@@ -17,6 +20,14 @@ export const conflictService = {
     getActive: async (): Promise<Conflict[]> => {
         const res = await apiClient<Conflict[]>(API_ENDPOINTS.CONFLICTS.ACTIVE);
         return Array.isArray(res) ? res : [];
+    },
+
+    getById: async (id: string): Promise<Conflict> => {
+        return apiClient<Conflict>(API_ENDPOINTS.CONFLICTS.BY_ID(id));
+    },
+
+    getAdvice: async (id: string): Promise<ConflictResolutionAdvice> => {
+        return apiClient<ConflictResolutionAdvice>(API_ENDPOINTS.CONFLICTS.ADVICE(id));
     },
 
     acknowledge: async (id: string): Promise<Conflict> => {
@@ -35,6 +46,15 @@ export const conflictService = {
     evaluate: async (): Promise<ConflictScanResult> => {
         return apiClient<ConflictScanResult>(API_ENDPOINTS.CONFLICTS.EVALUATE, {
             method: "POST",
+        });
+    },
+
+    checkTrajectory: async (
+        payload: StrategicTrajectoryCheckPayload
+    ): Promise<StrategicTrajectoryCheckResult> => {
+        return apiClient<StrategicTrajectoryCheckResult>(API_ENDPOINTS.CONFLICTS.CHECK_TRAJECTORY, {
+            method: "POST",
+            body: JSON.stringify(payload),
         });
     },
 };

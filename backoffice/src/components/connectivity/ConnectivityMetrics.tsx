@@ -1,65 +1,56 @@
 "use client";
 
-import { Radio, Wifi, Activity, CheckCircle2 } from "lucide-react";
-import { MetricCard } from "@/components/ui";
+import { Radio, Wifi, ShieldCheck, Send } from "lucide-react";
+import { KpiStrip, type KpiItem } from "@/components/ui";
 
 export interface ConnectivityMetricsProps {
     totalDevices: number;
-    activeDevices: number;
     onlineDevices: number;
-    pendingCommands: number;
-    protocolStatusCount: number;
+    certProvisionedCount: number;
+    totalRoutedCommands?: number;
+    loading?: boolean;
 }
 
 export function ConnectivityMetrics({
     totalDevices = 0,
-    activeDevices = 0,
     onlineDevices = 0,
-    pendingCommands = 0,
-    protocolStatusCount = 0,
+    certProvisionedCount = 0,
+    totalRoutedCommands = 0,
+    loading = false,
 }: ConnectivityMetricsProps) {
-    const onlinePercent = totalDevices > 0 ? (onlineDevices / totalDevices) * 100 : 0;
+    const onlinePct = totalDevices > 0 ? Math.round((onlineDevices / totalDevices) * 100) : 0;
 
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-            <MetricCard
-                title="TOTAL DEVICES"
-                value={totalDevices}
-                subValue={`${activeDevices} active`}
-                subValuePosition="bottom"
-                icon={Radio}
-            />
+    const items: KpiItem[] = [
+        {
+            id: "total-devices",
+            label: "Registered Devices",
+            value: totalDevices,
+            subValue: `${Math.max(0, totalDevices - onlineDevices)} offline`,
+            icon: Radio,
+        },
+        {
+            id: "online-devices",
+            label: "Online Links",
+            value: onlineDevices,
+            subValue: totalDevices > 0 ? `${onlinePct}% connected` : "Standby",
+            icon: Wifi,
+            statusDot: onlineDevices > 0 ? "online" : undefined,
+        },
+        {
+            id: "mtls-certs",
+            label: "mTLS Provisioned",
+            value: certProvisionedCount,
+            subValue: totalDevices > 0 ? `of ${totalDevices} devices` : "X.509 RSA-2048",
+            icon: ShieldCheck,
+        },
+        {
+            id: "routed-commands",
+            label: "Commands Dispatched",
+            value: totalRoutedCommands,
+            subValue: "C2 downlink total",
+            icon: Send,
+        },
+    ];
 
-            <MetricCard
-                title="ONLINE"
-                value={onlineDevices}
-                icon={Wifi}
-                iconClassName="text-emerald-600"
-            >
-                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                        style={{ width: `${onlinePercent}%` }}
-                    />
-                </div>
-            </MetricCard>
-
-            <MetricCard
-                title="PENDING COMMANDS"
-                value={pendingCommands}
-                subValue="In queue for delivery"
-                subValuePosition="bottom"
-                icon={Activity}
-            />
-
-            <MetricCard
-                title="PROTOCOL STATUS"
-                value={protocolStatusCount}
-                subValue="WebSocket connections"
-                subValuePosition="bottom"
-                icon={CheckCircle2}
-                iconClassName="text-emerald-600"
-            />
-        </div>
-    );
+    return <KpiStrip items={items} loading={loading} columns={4} />;
 }

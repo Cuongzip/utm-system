@@ -37,7 +37,7 @@ export function ConfirmDialog({
                             <ChamferCard size="lg" className="w-full">
                                 <div className="p-5 flex flex-col gap-4">
                                     <div className="flex items-start gap-3.5">
-                                        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600 border border-red-200">
+                                        <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 bg-slate-100 text-slate-700 border border-slate-200">
                                             <AlertTriangle className="w-5 h-5" />
                                         </div>
 

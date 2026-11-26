@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, FileSearch } from "lucide-react";
 import { SplitMapLayout, ChamferButton, StatusBadge } from "@/components/ui";
 import {
     FlightMapEditor,
     FlightFormSidebar,
+    PreFlightBriefingModal,
     useFlightRoute,
     type FlightWaypoint,
+    type FlightLineStringGeometry,
     determineActiveTabFromFlightErrors,
     estimateRouteFeasibility,
 } from "@/components/flights";
@@ -20,6 +22,7 @@ import {
     DEFAULT_FLIGHT_STATUS,
     FEASIBILITY_VERDICT,
     WAYPOINT_ACTION_TYPE,
+    HUB_STATUS,
     type Hub,
     type Drone,
     type Flight,
@@ -49,9 +52,33 @@ export function FlightEditor({
     const router = useRouter();
 
     const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState<FlightFormPayload>(() =>
+    const [briefingOpen, setBriefingOpen] = useState(false);
+    const [prevInitialData, setPrevInitialData] = useState(initialData);
+    const [rawFormData, setRawFormData] = useState<FlightFormPayload>(() =>
         getInitialFlightFormPayload(initialData)
     );
+
+    if (initialData && initialData !== prevInitialData) {
+        setPrevInitialData(initialData);
+        setRawFormData(getInitialFlightFormPayload(initialData));
+    }
+
+    const activeHubs = useMemo(
+        () => hubs.filter((h) => (h.status || "").toLowerCase() !== HUB_STATUS.INACTIVE),
+        [hubs]
+    );
+
+    const formData = useMemo<FlightFormPayload>(() => {
+        if (mode !== "create") return rawFormData;
+        const defaultHubPool = activeHubs.length > 0 ? activeHubs : hubs;
+        return {
+            ...rawFormData,
+            droneId: rawFormData.droneId || (drones[0]?.id ?? ""),
+            departureHubId: rawFormData.departureHubId || (defaultHubPool[0]?.id ?? ""),
+            arrivalHubId:
+                rawFormData.arrivalHubId || (defaultHubPool[1]?.id ?? defaultHubPool[0]?.id ?? ""),
+        };
+    }, [mode, rawFormData, drones, hubs, activeHubs]);
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
         "details"
@@ -64,39 +91,11 @@ export function FlightEditor({
 
     const handleFormChange = useCallback(
         <K extends keyof FlightFormPayload>(field: K, value: FlightFormPayload[K]) => {
-            setFormData((prev) => ({ ...prev, [field]: value }));
+            setRawFormData((prev) => ({ ...prev, [field]: value }));
             handleClearFieldError(field);
         },
         [handleClearFieldError]
     );
-
-    useEffect(() => {
-        if (initialData) {
-            setFormData(getInitialFlightFormPayload(initialData));
-        }
-    }, [initialData]);
-
-    useEffect(() => {
-        if (mode === "create") {
-            setFormData((prev) => {
-                let updated = false;
-                const next = { ...prev };
-                if (!next.droneId && drones.length > 0) {
-                    next.droneId = drones[0].id;
-                    updated = true;
-                }
-                if (!next.departureHubId && hubs.length > 0) {
-                    next.departureHubId = hubs[0].id;
-                    updated = true;
-                }
-                if (!next.arrivalHubId && hubs.length > 1) {
-                    next.arrivalHubId = hubs[1].id;
-                    updated = true;
-                }
-                return updated ? next : prev;
-            });
-        }
-    }, [mode, drones, hubs]);
 
     const isReadOnly = Boolean(
         mode === "edit" &&
@@ -145,7 +144,7 @@ export function FlightEditor({
         totalDistanceM,
     } = useFlightRoute({
         initialWaypoints: initialData?.waypoints,
-        initialRoute: initialData?.plannedRoute as any,
+        initialRoute: initialData?.plannedRoute as FlightLineStringGeometry | string | null,
         departureHub: selectedDepHub,
         arrivalHub: selectedArrHub,
         cruisingAltitude: formData.cruisingAltitudeM ?? 120,
@@ -303,82 +302,106 @@ export function FlightEditor({
               : `EDIT FLIGHT PLAN: ${formData.flightNumber || initialData?.flightNumber || ""}`;
 
     return (
-        <SplitMapLayout
-            title={pageTitle}
-            badges={mode === "edit" ? <StatusBadge status={flightStatus} showDot /> : null}
-            headerActions={
-                <div className="flex items-center gap-2">
-                    <ChamferButton
-                        variant="outline"
-                        size="sm"
-                        clip="xs"
-                        onClick={() => router.push("/dashboard/flights")}
-                        disabled={submitting}
-                    >
-                        <ArrowLeft className="w-3.5 h-3.5 text-current" />
-                        <span>Cancel</span>
-                    </ChamferButton>
+        <>
+            <SplitMapLayout
+                title={pageTitle}
+                badges={mode === "edit" ? <StatusBadge status={flightStatus} showDot /> : null}
+                headerActions={
+                    <div className="flex items-center gap-2">
+                        {mode === "edit" && initialData?.id && (
+                            <ChamferButton
+                                variant="outline"
+                                size="sm"
+                                clip="xs"
+                                onClick={() => setBriefingOpen(true)}
+                            >
+                                <FileSearch className="w-3.5 h-3.5 text-current" />
+                                <span>Briefing</span>
+                            </ChamferButton>
+                        )}
 
-                    {!isReadOnly && (
                         <ChamferButton
-                            variant="dark"
+                            variant="outline"
                             size="sm"
-                            clip="sm"
-                            onClick={handleSave}
-                            disabled={submitting || loading}
+                            clip="xs"
+                            onClick={() => router.push("/dashboard/flights")}
+                            disabled={submitting}
                         >
-                            {submitting ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                            ) : (
-                                <Save className="w-4 h-4 text-white" />
-                            )}
-                            <span>{mode === "create" ? "Save Flight" : "Update Plan"}</span>
+                            <ArrowLeft className="w-3.5 h-3.5 text-current" />
+                            <span>{isReadOnly ? "Back" : "Cancel"}</span>
                         </ChamferButton>
-                    )}
-                </div>
-            }
-            mapContent={
-                <FlightMapEditor
-                    departureHub={selectedDepHub}
-                    arrivalHub={selectedArrHub}
-                    waypoints={waypoints}
-                    cruisingAltitude={formData.cruisingAltitudeM ?? 120}
-                    onCruisingAltitudeChange={(alt) => handleFormChange("cruisingAltitudeM", alt)}
-                    selectedWaypointId={selectedWaypointId}
-                    onAddWaypoint={addWaypoint}
-                    onMoveWaypoint={moveWaypoint}
-                    onSelectWaypoint={handleSelectWaypoint}
-                    onUndoWaypoint={undoWaypoint}
-                    onClearWaypoints={clearWaypoints}
-                    isReadOnly={isReadOnly}
-                    className="h-full"
-                />
-            }
-            sidebarContent={
-                <FlightFormSidebar
-                    formData={formData}
-                    onFormChange={handleFormChange}
-                    mode={mode}
-                    drones={drones}
-                    hubs={hubs}
-                    departureHub={selectedDepHub}
-                    arrivalHub={selectedArrHub}
-                    waypoints={waypoints}
-                    selectedWaypoint={selectedWaypoint}
-                    onSelectWaypoint={handleSelectWaypoint}
-                    onUpdateWaypoint={updateWaypoint}
-                    onDeleteWaypoint={deleteWaypoint}
-                    onMoveWaypointOrder={moveWaypointOrder}
-                    totalDistanceM={totalDistanceM}
-                    feasibilityVerdict={routeFeasibility.verdict}
-                    isFeasibilityWarning={isFeasibilityWarning}
-                    activeTab={activeSidebarTab}
-                    onTabChange={setActiveSidebarTab}
-                    fieldErrors={fieldErrors}
-                    onClearFieldError={handleClearFieldError}
-                    isReadOnly={isReadOnly}
-                />
-            }
-        />
+
+                        {!isReadOnly && (
+                            <ChamferButton
+                                variant="dark"
+                                size="sm"
+                                clip="sm"
+                                onClick={handleSave}
+                                disabled={submitting || loading}
+                            >
+                                {submitting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                ) : (
+                                    <Save className="w-4 h-4 text-white" />
+                                )}
+                                <span>{mode === "create" ? "Save Flight" : "Update Plan"}</span>
+                            </ChamferButton>
+                        )}
+                    </div>
+                }
+                mapContent={
+                    <FlightMapEditor
+                        departureHub={selectedDepHub}
+                        arrivalHub={selectedArrHub}
+                        waypoints={waypoints}
+                        cruisingAltitude={formData.cruisingAltitudeM ?? 120}
+                        onCruisingAltitudeChange={(alt) =>
+                            handleFormChange("cruisingAltitudeM", alt)
+                        }
+                        selectedWaypointId={selectedWaypointId}
+                        onAddWaypoint={addWaypoint}
+                        onMoveWaypoint={moveWaypoint}
+                        onSelectWaypoint={handleSelectWaypoint}
+                        onUndoWaypoint={undoWaypoint}
+                        onClearWaypoints={clearWaypoints}
+                        isReadOnly={isReadOnly}
+                        className="h-full"
+                    />
+                }
+                sidebarContent={
+                    <FlightFormSidebar
+                        flightId={mode === "edit" ? initialData?.id : undefined}
+                        formData={formData}
+                        onFormChange={handleFormChange}
+                        mode={mode}
+                        drones={drones}
+                        hubs={hubs}
+                        departureHub={selectedDepHub}
+                        arrivalHub={selectedArrHub}
+                        waypoints={waypoints}
+                        selectedWaypoint={selectedWaypoint}
+                        onSelectWaypoint={handleSelectWaypoint}
+                        onUpdateWaypoint={updateWaypoint}
+                        onDeleteWaypoint={deleteWaypoint}
+                        onMoveWaypointOrder={moveWaypointOrder}
+                        totalDistanceM={totalDistanceM}
+                        feasibilityVerdict={routeFeasibility.verdict}
+                        isFeasibilityWarning={isFeasibilityWarning}
+                        activeTab={activeSidebarTab}
+                        onTabChange={setActiveSidebarTab}
+                        fieldErrors={fieldErrors}
+                        onClearFieldError={handleClearFieldError}
+                        isReadOnly={isReadOnly}
+                    />
+                }
+            />
+
+            <PreFlightBriefingModal
+                isOpen={briefingOpen}
+                flightId={initialData?.id}
+                flightNumber={formData.flightNumber || initialData?.flightNumber}
+                onClose={() => setBriefingOpen(false)}
+            />
+        </>
     );
 }

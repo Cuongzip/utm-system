@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { MousePointer, Plus, Pencil, Route, Compass } from "lucide-react";
+import { useState, useMemo } from "react";
+import { MousePointer, Plus, Pencil, Route } from "lucide-react";
 import {
     TacticalMapContainer,
     MissionLayer,
@@ -12,7 +12,7 @@ import {
 } from "@/components/map";
 import { useAirspaceAll } from "@/hooks";
 import { cn } from "@/lib";
-import type { Waypoint, Hub, ProfilePoint } from "@/types";
+import { AIRSPACE_ZONE_STATUS, type Waypoint, type Hub, type ProfilePoint } from "@/types";
 import { MissionInteractionController, type EditorMode } from "./MissionInteractionController";
 import { MissionCameraController } from "./MissionCameraController";
 
@@ -50,7 +50,7 @@ export function MissionMapEditor({
     className = "",
 }: MissionMapEditorProps) {
     const [mode, setMode] = useState<EditorMode>(isReadOnly ? "select" : "add");
-    const [altInput, setAltInput] = useState(String(defaultAltitude));
+    const [altDraft, setAltDraft] = useState<string | null>(null);
     const [showZones, setShowZones] = useState(false);
     const { data: zones = [] } = useAirspaceAll();
     const [flyToTarget, setFlyToTarget] = useState<{
@@ -60,9 +60,10 @@ export function MissionMapEditor({
         key: number;
     } | null>(null);
 
-    useEffect(() => {
-        setAltInput(String(defaultAltitude));
-    }, [defaultAltitude]);
+    const activeZones = useMemo(
+        () => zones.filter((z) => z.status === AIRSPACE_ZONE_STATUS.ACTIVE),
+        [zones]
+    );
 
     const allMissionPoints = useMemo(() => {
         const pts: { lat: number; lng: number }[] = [];
@@ -102,7 +103,7 @@ export function MissionMapEditor({
     };
 
     const handleAltChange = (val: string) => {
-        setAltInput(val);
+        setAltDraft(val);
         const parsed = parseFloat(val);
         if (!isNaN(parsed) && parsed > 0) {
             onDefaultAltitudeChange(parsed);
@@ -113,16 +114,17 @@ export function MissionMapEditor({
         <TacticalMapContainer
             className={className}
             header={
-                <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
+                <div className="px-4 py-2 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-2 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (
-                        <div className="inline-flex items-center h-[34px] gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <div className="inline-flex items-center h-[34px] gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                             <span>READ-ONLY VIEW</span>
                         </div>
                     ) : (
-                        <div className="flex items-center h-[34px] gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
+                        <div className="flex flex-wrap items-center min-h-[34px] gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                             <button
                                 type="button"
+                                aria-pressed={mode === "select"}
                                 onClick={() => setMode("select")}
                                 className={cn(
                                     "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
@@ -138,6 +140,7 @@ export function MissionMapEditor({
 
                             <button
                                 type="button"
+                                aria-pressed={mode === "add"}
                                 onClick={() => setMode("add")}
                                 className={cn(
                                     "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
@@ -153,6 +156,7 @@ export function MissionMapEditor({
 
                             <button
                                 type="button"
+                                aria-pressed={mode === "draw"}
                                 onClick={() => setMode("draw")}
                                 className={cn(
                                     "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
@@ -178,7 +182,7 @@ export function MissionMapEditor({
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {!isReadOnly && (
                             <>
                                 <MapUndoClear
@@ -193,10 +197,12 @@ export function MissionMapEditor({
                                     </span>
                                     <input
                                         type="number"
+                                        aria-label="Default waypoint altitude in meters"
                                         min="5"
                                         max="500"
-                                        value={altInput}
+                                        value={altDraft ?? String(defaultAltitude)}
                                         onChange={(e) => handleAltChange(e.target.value)}
+                                        onBlur={() => setAltDraft(null)}
                                         className="w-12 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
                                     />
                                     <span className="font-mono text-slate-400 text-[11px]">m</span>
@@ -207,25 +213,18 @@ export function MissionMapEditor({
                         <MapZoneAction
                             active={showZones}
                             onToggle={() => setShowZones((prev) => !prev)}
-                            count={zones.length}
+                            count={activeZones.length}
                         />
                     </div>
                 </div>
             }
             overlay={
-                isReadOnly ? (
-                    <div className="absolute top-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                        <Compass className="w-3.5 h-3.5 text-[var(--color-tech-amber)]" />
-                        <span>Click waypoint to inspect parameters</span>
+                !isReadOnly && (mode === "add" || mode === "draw") ? (
+                    <div className="absolute bottom-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 chamfer-sm backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
+                        <Plus className="w-3.5 h-3.5 text-white" />
+                        <span>Click map to add · Drag point to move</span>
                     </div>
-                ) : (
-                    (mode === "add" || mode === "draw") && (
-                        <div className="absolute top-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                            <Plus className="w-3.5 h-3.5 text-white animate-pulse" />
-                            <span>Click to add • Drag point to move</span>
-                        </div>
-                    )
-                )
+                ) : null
             }
             footer={
                 <AltitudeProfile
@@ -260,7 +259,7 @@ export function MissionMapEditor({
                 missionPoints={allMissionPoints}
             />
 
-            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} />}
+            {showZones && activeZones.length > 0 && <AirspaceLayer zones={activeZones} />}
         </TacticalMapContainer>
     );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib";
 
 export interface SearchInputProps extends Omit<
@@ -18,22 +18,38 @@ export function SearchInput({
     onChange,
     placeholder = "Search...",
     className,
+    "aria-label": ariaLabel,
     ...props
 }: SearchInputProps) {
     return (
-        <div className="relative flex items-center">
-            <Search className="absolute left-3 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
+        <div className="relative flex items-center w-full sm:w-auto">
+            <Search
+                className="absolute left-3 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none"
+                aria-hidden="true"
+            />
             <input
-                type="text"
+                type="search"
                 placeholder={placeholder}
+                aria-label={ariaLabel || placeholder}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 className={cn(
-                    "pl-9 pr-3 py-1.5 text-xs rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] outline-none min-w-[220px] transition-all focus:border-[var(--color-border-dark)] focus:ring-1 focus:ring-[var(--color-border-dark)] placeholder:text-[var(--color-text-muted)]",
+                    "w-full pl-9 py-1.5 text-xs rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] outline-none transition-all focus-visible:border-[var(--color-border-dark)] focus-visible:ring-2 focus-visible:ring-slate-300 placeholder:text-[var(--color-text-muted)] [&::-webkit-search-cancel-button]:hidden",
+                    value ? "pr-8" : "pr-3",
                     className
                 )}
                 {...props}
             />
+            {value && (
+                <button
+                    type="button"
+                    onClick={() => onChange("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors cursor-pointer"
+                >
+                    <X className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+            )}
         </div>
     );
 }

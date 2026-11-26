@@ -6,6 +6,10 @@ import type {
     FlightQueryParams,
     CreateFlightPayload,
     UpdateFlightPayload,
+    FeasibilityCheckPayload,
+    FeasibilityOverridePayload,
+    FeasibilityResult,
+    FlightConformance,
 } from "@/types";
 
 export const flightService = {
@@ -58,6 +62,36 @@ export const flightService = {
 
     abortFlight: async (id: string): Promise<Flight> => {
         return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.ABORT(id), {
+            method: "POST",
+        });
+    },
+
+    checkFeasibility: async (
+        id: string,
+        payload?: FeasibilityCheckPayload
+    ): Promise<FeasibilityResult> => {
+        return apiClient<FeasibilityResult>(API_ENDPOINTS.FLIGHTS.FEASIBILITY_CHECK(id), {
+            method: "POST",
+            body: JSON.stringify(payload ?? {}),
+        });
+    },
+
+    overrideFeasibility: async (
+        id: string,
+        payload: FeasibilityOverridePayload
+    ): Promise<Flight> => {
+        return apiClient<Flight>(API_ENDPOINTS.FLIGHTS.FEASIBILITY_OVERRIDE(id), {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+    },
+
+    getConformance: async (id: string): Promise<FlightConformance> => {
+        return apiClient<FlightConformance>(API_ENDPOINTS.FLIGHTS.CONFORMANCE(id));
+    },
+
+    evaluateConformance: async (id: string): Promise<FlightConformance> => {
+        return apiClient<FlightConformance>(API_ENDPOINTS.FLIGHTS.CONFORMANCE_EVALUATE(id), {
             method: "POST",
         });
     },

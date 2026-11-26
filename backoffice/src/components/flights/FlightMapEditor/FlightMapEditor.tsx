@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { MousePointer, Plus, Compass } from "lucide-react";
+import { useState, useMemo } from "react";
+import { MousePointer, Plus } from "lucide-react";
 import {
     TacticalMapContainer,
     AltitudeProfile,
@@ -11,7 +11,7 @@ import {
 } from "@/components/map";
 import { useAirspaceAll } from "@/hooks";
 import { cn } from "@/lib";
-import type { Hub, ProfilePoint } from "@/types";
+import { AIRSPACE_ZONE_STATUS, type Hub, type ProfilePoint } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 import { FlightInteractionController, type FlightEditorMode } from "./FlightInteractionController";
 import { FlightCameraController } from "./FlightCameraController";
@@ -49,7 +49,7 @@ export function FlightMapEditor({
     className = "",
 }: FlightMapEditorProps) {
     const [mode, setMode] = useState<FlightEditorMode>(isReadOnly ? "select" : "add");
-    const [altInput, setAltInput] = useState(String(cruisingAltitude));
+    const [altDraft, setAltDraft] = useState<string | null>(null);
     const [showZones, setShowZones] = useState(false);
     const { data: zones = [] } = useAirspaceAll();
     const [flyToTarget, setFlyToTarget] = useState<{
@@ -58,6 +58,11 @@ export function FlightMapEditor({
         altitude?: number;
         key: number;
     } | null>(null);
+
+    const activeZones = useMemo(
+        () => zones.filter((z) => z.status === AIRSPACE_ZONE_STATUS.ACTIVE),
+        [zones]
+    );
 
     const allRoutePoints = useMemo(() => {
         const pts: { lat: number; lng: number }[] = [];
@@ -80,12 +85,8 @@ export function FlightMapEditor({
         return pts;
     }, [departureHub, arrivalHub, waypoints]);
 
-    useEffect(() => {
-        setAltInput(String(cruisingAltitude));
-    }, [cruisingAltitude]);
-
     const handleAltChange = (val: string) => {
-        setAltInput(val);
+        setAltDraft(val);
         const parsed = parseFloat(val);
         if (!isNaN(parsed) && parsed > 0) {
             onCruisingAltitudeChange(parsed);
@@ -110,16 +111,17 @@ export function FlightMapEditor({
         <TacticalMapContainer
             className={className}
             header={
-                <div className="px-[18px] py-2.5 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface-panel)] z-10">
+                <div className="px-4 py-2 border-b border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-2 bg-[var(--color-surface-panel)] z-10">
                     {isReadOnly ? (
-                        <div className="inline-flex items-center h-[34px] gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-mono">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <div className="inline-flex items-center h-[34px] gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                             <span>READ-ONLY VIEW</span>
                         </div>
                     ) : (
                         <div className="flex items-center h-[34px] gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                             <button
                                 type="button"
+                                aria-pressed={mode === "select"}
                                 onClick={() => setMode("select")}
                                 className={cn(
                                     "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
@@ -135,6 +137,7 @@ export function FlightMapEditor({
 
                             <button
                                 type="button"
+                                aria-pressed={mode === "add"}
                                 onClick={() => setMode("add")}
                                 className={cn(
                                     "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
@@ -150,7 +153,7 @@ export function FlightMapEditor({
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {!isReadOnly && (
                             <>
                                 <MapUndoClear
@@ -165,10 +168,12 @@ export function FlightMapEditor({
                                     </span>
                                     <input
                                         type="number"
+                                        aria-label="Cruising altitude in meters"
                                         min="10"
                                         max="1000"
-                                        value={altInput}
+                                        value={altDraft ?? String(cruisingAltitude)}
                                         onChange={(e) => handleAltChange(e.target.value)}
+                                        onBlur={() => setAltDraft(null)}
                                         className="w-14 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
                                     />
                                     <span className="font-mono text-slate-400 text-[11px]">m</span>
@@ -179,25 +184,18 @@ export function FlightMapEditor({
                         <MapZoneAction
                             active={showZones}
                             onToggle={() => setShowZones((prev) => !prev)}
-                            count={zones.length}
+                            count={activeZones.length}
                         />
                     </div>
                 </div>
             }
             overlay={
-                isReadOnly ? (
-                    <div className="absolute top-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                        <Compass className="w-3.5 h-3.5 text-[var(--color-tech-amber)]" />
-                        <span>Click waypoint to inspect parameters</span>
+                !isReadOnly && mode === "add" ? (
+                    <div className="absolute bottom-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 chamfer-sm backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
+                        <Plus className="w-3.5 h-3.5 text-white" />
+                        <span>Click map to add · Drag point to move</span>
                     </div>
-                ) : (
-                    mode === "add" && (
-                        <div className="absolute top-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 rounded backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
-                            <Plus className="w-3.5 h-3.5 text-white animate-pulse" />
-                            <span>Click to add • Drag point to move</span>
-                        </div>
-                    )
-                )
+                ) : null
             }
             footer={
                 <AltitudeProfile
@@ -230,7 +228,7 @@ export function FlightMapEditor({
 
             <FlightCameraController targetLocation={flyToTarget} routePoints={allRoutePoints} />
 
-            {showZones && zones.length > 0 && <AirspaceLayer zones={zones} />}
+            {showZones && activeZones.length > 0 && <AirspaceLayer zones={activeZones} />}
         </TacticalMapContainer>
     );
 }

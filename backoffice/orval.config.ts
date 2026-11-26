@@ -123,4 +123,34 @@ export default defineConfig({
             client: "zod",
         },
     },
+    weatherAis: {
+        input: {
+            target: "http://localhost:8081/weather-ais/v3/api-docs",
+            override: { transformer },
+        },
+        output: {
+            target: "src/generated/weather-ais.ts",
+            client: "zod",
+        },
+    },
+    fleet: {
+        input: {
+            target: "http://localhost:8081/fleet/v3/api-docs",
+            override: { transformer },
+        },
+        output: {
+            target: "src/generated/fleet.ts",
+            client: "zod",
+        },
+    },
+    intelligence: {
+        input: {
+            target: "http://localhost:8081/intelligence/v3/api-docs",
+            override: { transformer },
+        },
+        output: {
+            target: "src/generated/intelligence.ts",
+            client: "zod",
+        },
+    },
 });

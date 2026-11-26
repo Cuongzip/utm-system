@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { PlayCircle, Pause, Play, Square, Trash2, Eye, AlertTriangle } from "lucide-react";
+import { PlayCircle, Pause, Play, Square, Trash2, Eye, AlertTriangle, Search } from "lucide-react";
 import {
     ChamferCard,
     StatusBadge,
     ActionMenu,
     type ActionMenuItem,
     ConfirmDialog,
+    TableFilterBar,
     Table,
     TableHeader,
     TableBody,
@@ -22,7 +23,12 @@ import {
 import { InjectScenarioModal } from "./InjectScenarioModal";
 import { useFlightsAll, useDronesAll, usePagination } from "@/hooks";
 import { formatDistance } from "@/utils";
-import { SIMULATION_STATUS, DEFAULT_SIMULATION_STATUS, type SimulationSession } from "@/types";
+import {
+    SIMULATION_STATUS,
+    SIMULATION_SESSION_STATUSES,
+    DEFAULT_SIMULATION_STATUS,
+    type SimulationSession,
+} from "@/types";
 
 interface SimulationTableProps {
     sessions: SimulationSession[];
@@ -33,6 +39,14 @@ interface SimulationTableProps {
     onDeleteSession: (id: string) => void;
     onRefresh: () => void;
 }
+
+const STATUS_OPTIONS = [
+    { value: "all", label: "All Statuses" },
+    ...SIMULATION_SESSION_STATUSES.map((s) => ({
+        value: s,
+        label: s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(),
+    })),
+];
 
 export function SimulationTable({
     sessions = [],
@@ -46,10 +60,10 @@ export function SimulationTable({
     const router = useRouter();
     const { data: flights = [] } = useFlightsAll();
     const { data: drones = [] } = useDronesAll();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
     const [sessionToDelete, setSessionToDelete] = useState<SimulationSession | null>(null);
     const [sessionForInject, setSessionForInject] = useState<SimulationSession | null>(null);
-    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
-        usePagination(sessions);
 
     const flightMap = useMemo(
         () => new Map(flights.filter((f) => f.id).map((f) => [f.id, f])),
@@ -66,6 +80,35 @@ export function SimulationTable({
         [drones]
     );
 
+    const filteredSessions = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        return sessions.filter((s) => {
+            if (statusFilter !== "all") {
+                const norm = String(s.status || "").toLowerCase();
+                if (norm !== statusFilter.toLowerCase()) return false;
+            }
+            if (!q) return true;
+            const flight = s.flightId ? flightMap.get(s.flightId) : undefined;
+            const flightNum = flight?.flightNumber || s.flightId || "";
+            const effectiveDroneId = s.droneId || flight?.droneId;
+            const droneReg = effectiveDroneId ? droneMap.get(effectiveDroneId) || "" : "";
+            return (
+                s.id.toLowerCase().includes(q) ||
+                flightNum.toLowerCase().includes(q) ||
+                droneReg.toLowerCase().includes(q)
+            );
+        });
+    }, [sessions, statusFilter, searchQuery, flightMap, droneMap]);
+
+    const hasActiveFilters = searchQuery.trim() !== "" || statusFilter !== "all";
+    const clearFilters = () => {
+        setSearchQuery("");
+        setStatusFilter("all");
+    };
+
+    const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
+        usePagination(filteredSessions);
+
     const getActions = (session: SimulationSession): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
             {
@@ -80,12 +123,12 @@ export function SimulationTable({
             items.push(
                 {
                     label: "Inject Scenario",
-                    icon: <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />,
+                    icon: <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => setSessionForInject(session),
                 },
                 {
                     label: "Pause",
-                    icon: <Pause className="w-3.5 h-3.5 text-amber-500" />,
+                    icon: <Pause className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onPauseSession(session.id),
                 },
                 {
@@ -98,7 +141,7 @@ export function SimulationTable({
             items.push(
                 {
                     label: "Resume",
-                    icon: <Play className="w-3.5 h-3.5 text-emerald-500" />,
+                    icon: <Play className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onResumeSession(session.id),
                 },
                 {
@@ -121,47 +164,82 @@ export function SimulationTable({
 
     return (
         <div className="flex flex-col gap-4 w-full">
+            <TableFilterBar
+                searchPlaceholder="Search flight number, drone, or session..."
+                searchQuery={searchQuery}
+                onSearchChange={(val) => {
+                    setSearchQuery(val);
+                    setCurrentPage(1);
+                }}
+                statusFilter={statusFilter}
+                onStatusFilterChange={(val) => {
+                    setStatusFilter(val);
+                    setCurrentPage(1);
+                }}
+                statusOptions={STATUS_OPTIONS}
+                onClearFilters={hasActiveFilters ? clearFilters : undefined}
+                totalCount={sessions.length}
+                filteredCount={filteredSessions.length}
+                itemLabel="sessions"
+            />
+
             <ChamferCard size="lg" className="w-full">
-                <Table fixed>
+                <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead width="160px">SESSION ID</TableHead>
-                            <TableHead width="170px">FLIGHT NUMBER</TableHead>
-                            <TableHead width="200px">DRONE REGISTER NUMBER</TableHead>
-                            <TableHead width="130px">STATUS</TableHead>
-                            <TableHead width="140px">SPEED & ACCEL</TableHead>
-                            <TableHead width="100px">BATTERY</TableHead>
-                            <TableHead width="170px">PROGRESS</TableHead>
-                            <TableHead width="90px" align="right">
-                                ACTIONS
-                            </TableHead>
+                            <TableHead>FLIGHT / SESSION</TableHead>
+                            <TableHead>DRONE</TableHead>
+                            <TableHead>STATUS</TableHead>
+                            <TableHead>SPEED & SCALE</TableHead>
+                            <TableHead>BATTERY</TableHead>
+                            <TableHead>PROGRESS</TableHead>
+                            <TableHead align="right">ACTIONS</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={8} message="Loading simulation sessions..." />
-                        ) : sessions.length === 0 ? (
+                            <TableLoading colSpan={7} message="Loading simulation sessions..." />
+                        ) : filteredSessions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="py-10 text-center">
-                                    <EmptyState
-                                        icon={PlayCircle}
-                                        title="No simulation sessions"
-                                        description="Launch a virtual simulation to test drone flight trajectory and telemetry generation"
-                                    />
+                                <TableCell colSpan={7} className="py-10 text-center">
+                                    {hasActiveFilters ? (
+                                        <EmptyState
+                                            icon={Search}
+                                            title="No matching simulation sessions"
+                                            description="Try adjusting your search query or status filter."
+                                            action={{
+                                                label: "Clear Filters",
+                                                onClick: clearFilters,
+                                                variant: "outline",
+                                            }}
+                                        />
+                                    ) : (
+                                        <EmptyState
+                                            icon={PlayCircle}
+                                            title="No simulation sessions"
+                                            description="Launch a virtual simulation to test drone flight trajectory and telemetry generation"
+                                        />
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             paginatedItems.map((session) => {
-                                const sessionIdText = session.id || "—";
                                 const flight = session.flightId
                                     ? flightMap.get(session.flightId)
                                     : undefined;
                                 const flightNumText =
-                                    flight?.flightNumber || session.flightId || "—";
+                                    flight?.flightNumber ||
+                                    (session.flightId
+                                        ? `FLT-${session.flightId.slice(0, 8).toUpperCase()}`
+                                        : "—");
+                                const shortSessionTag = session.id
+                                    ? `SIM-${session.id.slice(0, 6).toUpperCase()}`
+                                    : "—";
 
                                 const effectiveDroneId = session.droneId || flight?.droneId;
                                 const droneRegText = effectiveDroneId
-                                    ? droneMap.get(effectiveDroneId) || effectiveDroneId
+                                    ? droneMap.get(effectiveDroneId) ||
+                                      `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
                                     : "—";
 
                                 const speedScaleText = `${(session.speed ?? 15).toFixed(1)} m/s (${(session.timeScale ?? 1).toFixed(1)}x)`;
@@ -171,8 +249,8 @@ export function SimulationTable({
                                     battery > 50
                                         ? "text-emerald-600 font-semibold"
                                         : battery > 20
-                                          ? "text-amber-500 font-semibold"
-                                          : "text-red-500 font-semibold";
+                                          ? "text-amber-600 font-semibold"
+                                          : "text-red-600 font-semibold";
 
                                 const progress = Math.min(100, Math.max(0, session.progress ?? 0));
                                 const distText =
@@ -188,13 +266,27 @@ export function SimulationTable({
                                             router.push(`/dashboard/simulation/${session.id}`)
                                         }
                                     >
-                                        <TableCell mono bold truncate tooltip={sessionIdText}>
-                                            {sessionIdText}
+                                        <TableCell
+                                            truncate
+                                            className="max-w-[180px]"
+                                            tooltip={`Flight: ${flightNumText} · Session ID: ${session.id}`}
+                                        >
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="font-mono font-bold text-slate-900 truncate">
+                                                    {flightNumText}
+                                                </span>
+                                                <span className="text-[11px] font-mono text-slate-400">
+                                                    {shortSessionTag}
+                                                </span>
+                                            </div>
                                         </TableCell>
-                                        <TableCell mono truncate tooltip={flightNumText}>
-                                            {flightNumText}
-                                        </TableCell>
-                                        <TableCell darkText truncate tooltip={droneRegText}>
+                                        <TableCell
+                                            mono
+                                            darkText
+                                            truncate
+                                            className="max-w-[150px]"
+                                            tooltip={droneRegText}
+                                        >
                                             {droneRegText}
                                         </TableCell>
                                         <TableCell>
@@ -211,8 +303,8 @@ export function SimulationTable({
                                             </span>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col gap-1 w-full max-w-[140px]">
-                                                <div className="flex justify-between text-[11px] font-mono">
+                                            <div className="flex flex-col gap-1 w-full min-w-[120px] max-w-[160px]">
+                                                <div className="flex justify-between text-[11px] font-mono tabular-nums">
                                                     <span className="text-slate-700 font-medium">
                                                         {progress.toFixed(1)}%
                                                     </span>
@@ -220,9 +312,9 @@ export function SimulationTable({
                                                         {distText}
                                                     </span>
                                                 </div>
-                                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-slate-600 rounded-full transition-all duration-300"
+                                                        className="h-full bg-slate-700 rounded-full transition-all duration-300"
                                                         style={{ width: `${progress}%` }}
                                                     />
                                                 </div>
@@ -245,6 +337,7 @@ export function SimulationTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
+                    itemLabel="sessions"
                 />
             </ChamferCard>
 
@@ -261,8 +354,12 @@ export function SimulationTable({
                 description={
                     <span>
                         Are you sure you want to stop and delete simulation session{" "}
-                        <strong className="text-slate-900">{sessionToDelete?.id}</strong>? All
-                        telemetry playback data for this session will be removed.
+                        <strong className="text-slate-900 font-mono">
+                            {sessionToDelete?.id
+                                ? `SIM-${sessionToDelete.id.slice(0, 8).toUpperCase()}`
+                                : ""}
+                        </strong>
+                        ? All telemetry playback data for this session will be removed.
                     </span>
                 }
                 confirmText="Delete Session"
