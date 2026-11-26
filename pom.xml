@@ -28,7 +28,10 @@
         <module>connectivity</module>
         <module>mission</module>
         <module>backoffice-bff</module>
-            <module>emergency</module>
+        <module>emergency</module>
+        <module>weather-ais</module>
+        <module>fleet</module>
+        <module>intelligence</module>
     </modules>
 
     <properties>

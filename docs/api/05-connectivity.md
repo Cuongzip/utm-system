@@ -14,12 +14,24 @@ Quản lý định danh phần cứng bay (IMEI / MAC / Secure Chip), giám sát
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, **UNIQUE** | Khóa ngoại 1 - 1 với máy bay Drone |
-| `device_identifier` | `varchar(100)` | `string` | NOT NULL, **UNIQUE** | Mã phần cứng duy nhất (IMEI, MAC hoặc Chip ID) |
-| `connection_status` | `varchar(50)` | `DeviceConnectionStatus` | NOT NULL, Default: `'offline'` | Trạng thái kết nối thực tế |
+| `drone_id` | `varchar(36)` | `string` | NULLABLE, Partial UNIQUE (`WHERE drone_id IS NOT NULL AND registration_status <> 'REVOKED'`) | Khóa tham chiếu 1 - 1 với Drone (NULL đối với `GATEWAY` hoặc `GCS`) |
+| `hub_id` | `varchar(36)` | `string` | NULLABLE, Index | Trạm Vertiport quản lý thiết bị trạm mặt đất |
+| `device_type` | `varchar(30)` | `DeviceType` | NOT NULL, Default: `'DRONE'` | Phân loại thiết bị (`DRONE`, `GATEWAY`, `GCS`) |
+| `device_identifier` | `varchar(100)` | `string` | NOT NULL, Partial UNIQUE (`WHERE registration_status <> 'REVOKED'`) | Mã phần cứng duy nhất (IMEI, MAC, hoặc Chip ID) |
+| `registration_status` | `varchar(30)` | `DeviceRegistrationStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái đăng ký thiết bị (`PENDING`, `ACTIVE`, `REVOKED`) |
+| `connection_status` | `varchar(50)` | `DeviceConnectionStatus` | NOT NULL, Default: `'OFFLINE'` | Trạng thái kết nối thực tế (`OFFLINE`, `ONLINE`, `CONNECTING`) |
+| `telemetry_mode` | `varchar(30)` | `TelemetryRateMode` | NOT NULL, Default: `'NORMAL'` | Chế độ tần số phát viễn trắc thích ứng (`IDLE`, `NORMAL`, `ENHANCED`, `EMERGENCY`) |
+| `telemetry_mode_reason` | `varchar(255)` | `string` | NULLABLE | Lý do chuyển đổi tần số phát tự động/thủ công |
+| `supported_protocols` | `jsonb` | `string[]` | NULLABLE | Danh sách giao thức hỗ trợ (`websocket`, `mqtt`, `mavlink`, `rest`) |
+| `metadata` | `jsonb` | `Record<string, unknown>` | NULLABLE | Thông tin firmware, modem 5G/SatCom |
 | `socket_id` | `varchar(100)` | `string` | NULLABLE | ID phiên kết nối WebSocket Gateway hiện tại |
-| `certificate_fingerprint` | `varchar(128)` | `string` | NULLABLE | Chuỗi vân tay chứng thư bảo mật thiết bị |
+| `certificate_fingerprint` | `varchar(128)` | `string` | NULLABLE | Chuỗi vân tay SHA-256 chứng thư X.509 thiết bị |
 | `last_seen_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm gửi tín hiệu nhịp tim gần nhất |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
+
+### Bảng Phụ Trợ PKI & OEM Integration
+- **`device_certificates`** *(kế thừa `AbstractAuditEntity`)*: Quản lý chứng thư số X.509 RSA-2048 cấp bởi UTM Root CA (`device_registration_id`, `certificate_pem`, `fingerprint`, `common_name`, `serial_number`, `issued_at`, `expires_at`, `revoked_at`, `revocation_reason`).
+- **`manufacturer_api_keys`** *(kế thừa `AbstractAuditEntity`)*: Quản lý khóa tích hợp OEM đám mây (`name`, `manufacturer_name`, `key_prefix`, `key_hash` SHA-256, `scopes`, `is_active`, `expires_at`, `last_used_at`, `revoked_at`).
 
 ---
 
@@ -27,6 +39,7 @@ Quản lý định danh phần cứng bay (IMEI / MAC / Secure Chip), giám sát
 
 ```typescript
 export type DeviceConnectionStatus = "offline" | "online" | "connecting";
+export type DeviceRegistrationStatus = "pending" | "active" | "revoked";
 ```
 
 ---
@@ -159,6 +172,7 @@ Hủy bỏ liên kết phần cứng thiết bị.
 - **Chốt chặn an toàn bay (Domain Safety Guard)**:
   - Tra cứu thông tin Drone liên đới qua `DroneClientService`.
   - Không cho phép hủy kết nối nếu Drone đang bay (`status == 'in_flight'` hoặc `'in_mission'`) $\rightarrow$ Ném `400 Bad Request`.
+  - Thực hiện thu hồi mềm (**Soft-Revoke**): chuyển `registration_status = 'REVOKED'`, `connection_status = 'OFFLINE'`, xóa `socket_id` để bảo toàn lịch sử kiểm toán bảo mật.
 - **Phản hồi thành công**: `200 OK` - Model: `RevokeResultVm`:
   ```json
   {
@@ -166,3 +180,18 @@ Hủy bỏ liên kết phần cứng thiết bị.
   }
   ```
 - **Phản hồi lỗi**: `400 Bad Request`, `404 Not Found`.
+
+---
+
+### 5.4.7 Nhóm PKI X.509, Adaptive Telemetry Rate & Command Router (`/api/v1/connectivity`)
+- **`GET /api/v1/connectivity/ca-certificate`** *(Authenticated)*: Tải chứng thư gốc UTM Root CA (PEM).
+- **`GET /api/v1/connectivity/devices/{id}/certificate`**, **`POST /api/v1/connectivity/devices/{id}/certificate/renew`**, **`POST /api/v1/connectivity/devices/{id}/certificate/revoke`** *(`admin, hub_operator`)*: Xem, cấp mới/gia hạn hoặc thu hồi chứng thư X.509 của thiết bị.
+- **`GET /api/v1/connectivity/telemetry/modes`** *(Authenticated)*: Danh mục cấu hình tần số thích ứng (`IDLE: 0.2Hz`, `NORMAL: 1Hz`, `ENHANCED: 5Hz`, `EMERGENCY: 10Hz`).
+- **`GET /api/v1/connectivity/devices/{id}/telemetry-mode`** & **`PUT /api/v1/connectivity/devices/{id}/telemetry-mode`** *(`admin, atc, hub_operator, pilot`)*: Xem hoặc chuyển chế độ tần số phát viễn trắc của thiết bị (cũng tự động nâng lên `EMERGENCY` khi nhận sự kiện khẩn cấp từ Kafka `utm.emergency.events`).
+- **`GET /api/v1/connectivity/telemetry/stats`**, **`GET /api/v1/connectivity/protocols/stats`**, **`GET /api/v1/connectivity/commands/stats`**, **`GET /api/v1/connectivity/status`** *(Authenticated)*: Thống kê băng thông viễn trắc, phân bố giao thức, độ trễ định tuyến lệnh C2 (Kafka `utm.drone.commands` -> `utm.drone.command.acks`) và tổng quan sức khỏe kết nối.
+
+---
+
+### 5.4.8 Nhóm Cổng Tích Hợp Hãng Sản Xuất OEM (`/api/v1/integration`)
+- **`POST /api/v1/integration/keys`**, **`GET /api/v1/integration/keys`**, **`POST /api/v1/integration/keys/{id}/revoke`** *(`admin` via JWT)*: Cấp khóa API OEM mới (trả về khóa gốc một lần duy nhất, lưu băm SHA-256), liệt kê và thu hồi khóa.
+- **`POST /api/v1/integration/register`**, **`POST /api/v1/integration/telemetry`**, **`GET /api/v1/integration/status`** *(Xác thực qua header `X-API-Key`)*: Cho phép nền tảng đám mây của hãng chế tạo (DJI Cloud, Wingtra, Autel) tự động đăng ký thiết bị, đẩy luồng telemetry chuẩn hóa sang `telemetry` service và kiểm tra trạng thái tích hợp.

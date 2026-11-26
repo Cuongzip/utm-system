@@ -17,10 +17,16 @@ Quản lý không phận, vùng cấm bay tuyệt đối (No-Fly Zone - NFZ), v�
 | `name` | `varchar(255)` | `string` | NOT NULL, **UNIQUE** | Tên định danh vùng không phận |
 | `code` | `varchar(50)` | `string` | **UNIQUE**, NOT NULL | Mã định danh nghiệp vụ vùng không phận (`ASZ-XXXX`) |
 | `hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id`, NULLABLE | Thuộc Hub nào (NULL nếu là vùng cấm cấp quốc gia) |
-| `zone_type` | `varchar(50)` | `AirspaceZoneType` | NOT NULL | Phân loại vùng không phận |
-| `geometry` | `text` | `GeoJsonPolygonVm` | NOT NULL | Tọa độ đa giác bao quanh vùng trời (GeoJSON Polygon Object) |
-| `altitude_ceiling` | `double precision` | `number` | NOT NULL, Default: `120.0` | Trần bay tối đa cho phép (mét) |
-| `status` | `varchar(50)` | `AirspaceZoneStatus` | NOT NULL, Default: `'active'` | Trạng thái hiệu lực |
+| `zone_type` | `varchar(50)` | `AirspaceZoneType` | NOT NULL (DB UPPERCASE) | Phân loại vùng không phận |
+| `geometry` | `jsonb` | `GeoJsonPolygonVm` | NOT NULL | Tọa độ đa giác bao quanh vùng trời (GeoJSON Polygon Object) |
+| `altitude_floor` | `double precision` | `number` | NOT NULL, Default: `0.0` | Cao độ đáy hiệu lực của vùng không phận (mét MSL, `< altitude_ceiling`) |
+| `altitude_ceiling` | `double precision` | `number` | NOT NULL, Default: `120.0` | Trần bay tối đa cho phép (mét MSL) |
+| `effective_start` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm bắt đầu hiệu lực (NOTAM/vùng tạm thời; NULL = hiệu lực ngay) |
+| `effective_end` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm hết hiệu lực (NULL = vô thời hạn; bắt buộc `> effective_start`) |
+| `priority` | `integer` | `number` | NOT NULL, Default: `0` | Độ ưu tiên áp dụng quy tắc khi chồng lấn vùng không phận |
+| `rules` | `jsonb` | `Record<string, unknown>` | NULLABLE | Quy tắc khai thác chi tiết (`maxSpeedMs`, `authorizationRequired`, `remoteIdRequired`) |
+| `schedule` | `jsonb` | `Record<string, unknown>` | NULLABLE | Khung giờ hiệu lực định kỳ theo ngày/tuần |
+| `status` | `varchar(50)` | `AirspaceZoneStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái hiệu lực (DB UPPERCASE) |
 | `description` | `text` | `string` | NULLABLE | Mô tả chi tiết lý do hạn chế / quy định bay |
 
 ---
@@ -29,10 +35,15 @@ Quản lý không phận, vùng cấm bay tuyệt đối (No-Fly Zone - NFZ), v�
 
 ```typescript
 export type AirspaceZoneType =
-  | "no_fly_zone"   // Vùng cấm bay tuyệt đối (khu quân sự, cơ quan đầu não, sân bay dân dụng)
-  | "restricted"    // Vùng hạn chế (yêu cầu cấp phép đặc biệt từ ATC)
-  | "hub_corridor"  // Hành lang bay an toàn dẫn vào Vertiport
-  | "warning";      // Khu vực cảnh báo chướng ngại vật / thời tiết xấu
+  | "no_fly_zone"
+  | "prohibited"
+  | "restricted"
+  | "controlled"
+  | "hub_corridor"
+  | "hub_zone"
+  | "warning"
+  | "temporary_restriction"
+  | "emergency_exclusion";
 
 export type AirspaceZoneStatus = "active" | "inactive";
 ```

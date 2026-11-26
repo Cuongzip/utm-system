@@ -14,11 +14,11 @@ Phát hiện, cảnh báo thời gian thực và tự động tính toán phươ
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `varchar(36)` | `string` | **PK**, NOT NULL | UUID định danh bản ghi xung đột |
-| `conflict_type` | `varchar(50)` | `ConflictType` | NOT NULL, Default: `'separation_minimum'` | Phân loại xung đột không gian |
-| `severity` | `varchar(20)` | `ConflictSeverity` | NOT NULL, Default: `'MEDIUM'` | Mức độ nghiêm trọng của nguy cơ va chạm |
-| `status` | `varchar(50)` | `ConflictStatus` | NOT NULL, Default: `'detected'` | Trạng thái vòng đời xử lý xung đột |
-| `primary_flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NOT NULL | Chuyến bay thứ nhất (Chủ thể) |
-| `secondary_flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NULLABLE | Chuyến bay thứ hai (đối tượng có nguy cơ va chạm) |
+| `conflict_type` | `varchar(50)` | `ConflictType` | NOT NULL, Default: `'SEPARATION_MINIMUM'` | Phân loại xung đột không gian (DB UPPERCASE) |
+| `severity` | `varchar(20)` | `ConflictSeverity` | NOT NULL, Default: `'MEDIUM'` | Mức độ nghiêm trọng của nguy cơ va chạm (DB UPPERCASE) |
+| `status` | `varchar(50)` | `ConflictStatus` | NOT NULL, Default: `'DETECTED'` | Trạng thái vòng đời xử lý xung đột (DB UPPERCASE) |
+| `primary_flight_id` | `varchar(36)` | `string` | NOT NULL | Chuyến bay thứ nhất (Chủ thể) |
+| `secondary_flight_id` | `varchar(36)` | `string` | NULLABLE | Chuyến bay thứ hai (đối tượng có nguy cơ va chạm) |
 | `hub_id` | `varchar(36)` | `string` | NULLABLE | Trạm trung chuyển (Hub) liên quan gần nhất |
 | `detected_at` | `timestamptz` | `string (ISO 8601)` | NOT NULL | Thời điểm phát hiện xung đột |
 | `detection_method` | `varchar(50)` | `string` | NULLABLE | Cơ chế phát hiện (`automated_telemetry`, `airspace_geofence_check`, `automated_conformance`) |
@@ -31,10 +31,12 @@ Phát hiện, cảnh báo thời gian thực và tự động tính toán phươ
 | `max_severity` | `varchar(20)` | `ConflictSeverity` | NULLABLE | Mức độ nghiêm trọng cao nhất từng đạt tới |
 | `time_to_conflict_sec` | `integer` | `number` | NULLABLE | Thời gian ước tính tới điểm tiếp cận gần nhất (TCPA, giây) |
 | `description` | `text` | `string` | NULLABLE | Mô tả chi tiết nguyên nhân vi phạm/xung đột |
-| `resolution_strategy` | `varchar(50)` | `ResolutionStrategy` | NULLABLE | Chiến lược giải tỏa xung đột được chọn |
-| `resolution_actions` | `text` | `Record<string, unknown>` | NULLABLE | Chỉ thị điều hành JSON chi tiết (đổi độ cao, tốc độ, đổi hướng) |
+| `resolution_strategy` | `varchar(50)` | `ResolutionStrategy` | NULLABLE | Chiến lược giải tỏa xung đột được chọn (DB UPPERCASE) |
+| `resolution_actions` | `jsonb` | `Record<string, unknown>` | NULLABLE | Chỉ thị điều hành JSONB chi tiết (đổi độ cao, tốc độ, đổi hướng) |
+| `data` | `jsonb` | `Record<string, unknown>` | NULLABLE | Siêu dữ liệu hình học 4D bổ sung (vận tốc leo/hạ `verticalSpeed`, dự báo CPA 4D) |
 | `resolved_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm giải quyết xong |
 | `resolved_by` | `varchar(100)` | `string` | NULLABLE | Người xử lý hoặc hệ thống AI tự động giải quyết |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
 
 ---
 

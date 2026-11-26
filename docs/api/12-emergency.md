@@ -14,18 +14,18 @@ Bộ não an toàn thời gian thực & Hệ thống tự động cứu nạn (F
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `id` | `varchar(36)` | `string` | **PK**, UUID | Khóa chính sự cố |
 | `incident_number` | `varchar(50)` | `string` | **UNIQUE**, NOT NULL | Mã định danh sự cố theo chuẩn ATC (`INC-YYYYMMDD-XXXX`) |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NOT NULL | Phương tiện gặp sự cố |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NULLABLE | Chuyến bay liên đới |
-| `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL | Loại sự cố an toàn |
-| `severity` | `varchar(50)` | `EmergencySeverity` | NOT NULL | Mức độ nguy cấp (`warning`, `critical`, `emergency`) |
-| `status` | `varchar(50)` | `IncidentStatus` | NOT NULL, Default: `'active'` | Trạng thái vòng đời (`active`, `pending_confirmation`, `executing`, `resolved`, `escalated`) |
+| `drone_id` | `varchar(36)` | `string` | NOT NULL | Phương tiện gặp sự cố |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE | Chuyến bay liên đới |
+| `protocol_id` | `varchar(36)` | `string` | **FK** -> `emergency_protocols.id` (`ON DELETE SET NULL`), NULLABLE | Kịch bản ứng phó đã khớp |
+| `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL (DB UPPERCASE) | Loại sự cố an toàn |
+| `severity` | `varchar(50)` | `EmergencySeverity` | NOT NULL (DB UPPERCASE) | Mức độ nguy cấp (`warning`, `critical`, `emergency`) |
+| `status` | `varchar(50)` | `IncidentStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái vòng đời (`active`, `pending_confirmation`, `executing`, `resolved`, `rejected`, `escalated`) |
 | `message` | `text` | `string` | NOT NULL | Thông điệp cảnh báo sự cố |
-| `detection_data` | `text` | `string` / JSON | NULLABLE | Dữ liệu đo đạc cảm biến lúc phát hiện |
-| `latitude` | `numeric(10, 7)` | `Double` | NULLABLE | Vĩ độ thời điểm phát sinh sự cố |
-| `longitude` | `numeric(10, 7)` | `Double` | NULLABLE | Kinh độ thời điểm phát sinh sự cố |
-| `altitude` | `numeric(8, 2)` | `Double` | NULLABLE | Cao độ thời điểm phát sinh sự cố (mét) |
+| `detection_data` | `jsonb` | `Record<string, unknown>` | NULLABLE | Dữ liệu đo đạc cảm biến lúc phát hiện |
+| `latitude` | `double precision` | `Double` | NULLABLE | Vĩ độ thời điểm phát sinh sự cố |
+| `longitude` | `double precision` | `Double` | NULLABLE | Kinh độ thời điểm phát sinh sự cố |
+| `altitude` | `double precision` | `Double` | NULLABLE | Cao độ MSL thời điểm phát sinh sự cố (mét) |
 | `response_action` | `varchar(50)` | `ResponseAction` | NULLABLE | Hành động can thiệp cứu nạn (`RTH`, `LAND`, `HOVER`, v.v.) |
 | `was_auto_executed` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đã tự động kích hoạt hay chờ người phê duyệt |
 | `confirmation_required`| `boolean` | `boolean` | NOT NULL, Default: `false` | Có yêu cầu xác nhận của người vận hành |
@@ -42,36 +42,28 @@ Bộ não an toàn thời gian thực & Hệ thống tự động cứu nạn (F
 | `root_cause` | `varchar(50)` | `RootCause` | NULLABLE | Kết luận nguyên nhân gốc rễ sau điều tra |
 | `root_cause_notes` | `text` | `string` | NULLABLE | Phân tích chi tiết nguyên nhân gốc |
 | `lessons_learned` | `text` | `string` | NULLABLE | Bài học rút ra phục vụ phòng ngừa |
-| `timeline` | `text` | `string` / JSON | NULLABLE | Chuỗi sự kiện diễn tiến của sự cố |
+| `timeline` | `jsonb` | `IncidentTimelineEventVm[]` | NULLABLE | Chuỗi sự kiện diễn tiến của sự cố |
 | `detected_at` | `timestamptz` | `ZonedDateTime` | NOT NULL | Thời điểm hệ thống phát hiện sự cố |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
 
 ---
 
 ### 12.1.2 Bảng `emergency_protocols` (Kịch bản ứng phó an toàn)
 
-Quy định ma trận hành động chuẩn (`response_action`, `fallback_action`, `confirmation_timeout_seconds`, `auto_execute_on_timeout`) theo từng loại sự cố và mức độ nguy cấp.
+Quy định ma trận hành động chuẩn (`response_action`, `fallback_action`, `confirmation_timeout_seconds`, `auto_execute_on_timeout`) theo từng cặp duy nhất `(emergency_type, severity)`.
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `id` | `varchar(36)` | `string` | **PK**, UUID | Khóa chính kịch bản |
 | `name` | `varchar(100)` | `string` | NOT NULL, UNIQUE | Tên kịch bản ứng phó |
 | `description` | `text` | `string` | NULLABLE | Mô tả chi tiết quy trình |
-| `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL | Loại sự cố áp dụng |
-| `severity` | `varchar(50)` | `EmergencySeverity` | NOT NULL | Cấp độ nguy cấp áp dụng |
+| `emergency_type` | `varchar(50)` | `EmergencyType` | NOT NULL, UNIQUE với `severity` | Loại sự cố áp dụng |
+| `severity` | `varchar(50)` | `EmergencySeverity` | NOT NULL, UNIQUE với `emergency_type` | Cấp độ nguy cấp áp dụng |
 | `response_action` | `varchar(50)` | `ResponseAction` | NOT NULL | Hành động can thiệp chính |
 | `fallback_action` | `varchar(50)` | `ResponseAction` | NULLABLE | Hành động dự phòng nếu hành động chính bất khả thi |
 | `requires_confirmation`| `boolean` | `boolean` | NOT NULL, Default: `true` | Cần người vận hành phê duyệt |
 | `confirmation_timeout_seconds` | `int` | `Integer` | NOT NULL, Default: `30` | Thời gian đếm ngược (giây) |
 | `auto_execute_on_timeout` | `boolean` | `boolean` | NOT NULL, Default: `true` | Tự động thi hành khi hết hạn đếm ngược |
 | `priority` | `int` | `Integer` | NOT NULL, Default: `50` | Mức ưu tiên áp dụng kịch bản |
-| `thresholds` | `text` | `string` / JSON | NULLABLE | Ngưỡng kích hoạt định lượng (pin %, khoảng cách m) |
-| `conditions` | `text` | `string` / JSON | NULLABLE | Điều kiện tiền quyết bổ sung |
-| `notify_pilot` | `boolean` | `boolean` | NOT NULL, Default: `true` | Bắn cảnh báo cho phi công |
-| `notify_supervisor` | `boolean` | `boolean` | NOT NULL, Default: `true` | Bắn cảnh báo cho giám sát viên |
-| `notify_ops_center` | `boolean` | `boolean` | NOT NULL, Default: `true` | Bắn cảnh báo về trung tâm chỉ huy |
-| `send_sms` | `boolean` | `boolean` | NOT NULL, Default: `false` | Gửi tin nhắn SMS khẩn |
-| `send_email` | `boolean` | `boolean` | NOT NULL, Default: `true` | Gửi email khẩn |
-| `play_audio_alarm` | `boolean` | `boolean` | NOT NULL, Default: `true` | Bật còi báo động âm thanh tại trạm |
 | `is_active` | `boolean` | `boolean` | NOT NULL, Default: `true` | Kịch bản đang có hiệu lực |
 | `is_system_default` | `boolean` | `boolean` | NOT NULL, Default: `false` | Kịch bản mặc định của hệ thống |
 
@@ -79,44 +71,26 @@ Quy định ma trận hành động chuẩn (`response_action`, `fallback_action
 
 ### 12.1.3 Bảng `blackbox_entries` (Hộp đen chuyến bay)
 
-Ghi nhận viễn trắc chi tiết tần số cao (lên đến 10Hz) kể từ thời điểm phát sinh sự cố cho tới khi phương tiện chạm đất an toàn.
+Ghi nhận bản chụp viễn trắc thời gian thực từ `telemetry` service tại thời điểm thực thi hành động khẩn cấp.
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `id` | `varchar(36)` | `string` | **PK**, UUID | Khóa chính bản ghi hộp đen |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NOT NULL | Chuyến bay liên đới |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NOT NULL | Drone ghi nhận dữ liệu |
-| `incident_id` | `varchar(36)` | `string` | NULLABLE | Sự cố khẩn cấp liên quan |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE | Chuyến bay liên đới (null nếu sự cố xảy ra ngoài chuyến bay) |
+| `drone_id` | `varchar(36)` | `string` | NOT NULL | Drone ghi nhận dữ liệu |
+| `incident_id` | `varchar(36)` | `string` | **FK** -> `emergency_incidents.id` (`ON DELETE CASCADE`), NULLABLE | Sự cố khẩn cấp liên quan |
 | `timestamp` | `timestamptz` | `ZonedDateTime` | NOT NULL | Dấu thời gian mẫu đo |
-| `latitude` | `numeric(10, 7)` | `Double` | NOT NULL | Vĩ độ thời gian thực |
-| `longitude` | `numeric(10, 7)` | `Double` | NOT NULL | Kinh độ thời gian thực |
-| `altitude_msl` | `numeric(8, 2)` | `Double` | NOT NULL | Độ cao so với mực nước biển (mét) |
-| `altitude_agl` | `numeric(8, 2)` | `Double` | NULLABLE | Độ cao so với mặt đất (mét) |
-| `roll` | `numeric(6, 2)` | `Double` | NULLABLE | Góc nghiêng ngang (độ) |
-| `pitch` | `numeric(6, 2)` | `Double` | NULLABLE | Góc chúc/ngóc (độ) |
-| `yaw` | `numeric(6, 2)` | `Double` | NULLABLE | Góc hướng mũi (độ) |
-| `ground_speed` | `numeric(6, 2)` | `Double` | NOT NULL | Tốc độ mặt đất (m/s) |
-| `vertical_speed` | `numeric(6, 2)` | `Double` | NULLABLE | Tốc độ nâng/hạ thẳng đứng (m/s) |
-| `heading` | `numeric(6, 2)` | `Double` | NOT NULL | Hướng di chuyển (độ) |
-| `battery_level` | `numeric(5, 2)` | `Double` | NOT NULL | Dung lượng pin (%) |
-| `battery_voltage` | `numeric(6, 2)` | `Double` | NULLABLE | Điện áp pin (V) |
-| `battery_current` | `numeric(6, 2)` | `Double` | NULLABLE | Dòng điện tiêu thụ (A) |
-| `signal_strength` | `numeric(5, 2)` | `Double` | NOT NULL | Cường độ tín hiệu C2 link (%) |
-| `gps_satellites` | `int` | `Integer` | NULLABLE | Số vệ tinh GPS kết nối |
-| `gps_hdop` | `numeric(5, 2)` | `Double` | NULLABLE | Độ suy giảm độ chính xác vị trí GPS |
-| `motor_rpm` | `text` | `string` / JSON | NULLABLE | Tốc độ vòng tua từng động cơ |
-| `motor_temps` | `text` | `string` / JSON | NULLABLE | Nhiệt độ từng động cơ (°C) |
-| `command_received` | `varchar(100)` | `string` | NULLABLE | Lệnh điều khiển vừa tiếp nhận |
+| `latitude` | `double precision` | `Double` | NOT NULL | Vĩ độ thời gian thực |
+| `longitude` | `double precision` | `Double` | NOT NULL | Kinh độ thời gian thực |
+| `altitude_msl` | `double precision` | `Double` | NOT NULL | Độ cao MSL (mét) |
+| `ground_speed` | `double precision` | `Double` | NOT NULL | Tốc độ mặt đất (m/s) |
+| `heading` | `double precision` | `Double` | NOT NULL | Hướng di chuyển (độ) |
+| `battery_level` | `double precision` | `Double` | NOT NULL | Dung lượng pin (%) |
+| `signal_strength` | `double precision` | `Double` | NOT NULL | Cường độ tín hiệu C2 link (%) |
 | `command_executed` | `varchar(100)` | `string` | NULLABLE | Lệnh thực tế vừa thi hành |
 | `emergency_active` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đang trong chế độ khẩn nguy |
-| `emergency_type` | `varchar(50)` | `string` | NULLABLE | Loại sự cố tại thời điểm lấy mẫu |
-| `emergency_severity`| `varchar(50)` | `string` | NULLABLE | Cấp độ nguy cấp tại thời điểm lấy mẫu |
-| `flight_mode` | `varchar(50)` | `string` | NULLABLE | Chế độ bay lái (AUTO, GUIDED, RTL, LAND) |
-| `wind_speed` | `numeric(6, 2)` | `Double` | NULLABLE | Tốc độ gió đo được (m/s) |
-| `wind_direction` | `numeric(6, 2)` | `Double` | NULLABLE | Hướng gió (độ) |
-| `temperature` | `numeric(6, 2)` | `Double` | NULLABLE | Nhiệt độ môi trường (°C) |
-| `humidity` | `numeric(5, 2)` | `Double` | NULLABLE | Độ ẩm môi trường (%) |
-| `is_emergency_recording` | `boolean` | `boolean` | NOT NULL, Default: `false` | Ghi hình/ghi dữ liệu tần số cao khẩn cấp |
+| `emergency_type` | `varchar(50)` | `EmergencyType` | NULLABLE | Loại sự cố tại thời điểm lấy mẫu |
+| `emergency_severity`| `varchar(50)` | `EmergencySeverity` | NULLABLE | Cấp độ nguy cấp tại thời điểm lấy mẫu |
+| `is_emergency_recording` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đánh dấu bản ghi hộp đen khẩn cấp |
 
 ---
 
@@ -167,6 +141,7 @@ export type IncidentStatus =
   | "pending_confirmation"
   | "executing"
   | "resolved"
+  | "rejected"
   | "escalated";
 ```
 
@@ -213,7 +188,11 @@ export type RootCause =
   - `/topic/emergency/pending`: Sự cố chuyển vào hàng đợi đếm ngược chờ người vận hành phê duyệt hành động cứu nạn.
   - `/topic/emergency/confirmed`: Sự kiện phê duyệt hoặc hết hạn thời gian chờ xác nhận (`approved`, `timeout`, `action`).
   - `/topic/emergency/mode`: Thông báo thay đổi chế độ vận hành của hệ thống (`auto` $\leftrightarrow$ `supervised`).
+  - `/topic/emergency/notifications`: Kênh thông báo khẩn cấp hợp nhất cho trung tâm chỉ huy (`EmergencyNotificationVm`).
   - `/topic/emergency/blackbox/{incidentId}`: Luồng dữ liệu hộp đen viễn trắc tần số cao truyền trực tiếp khi sự cố đang diễn ra.
+- **Kafka Event Integration**:
+  - Tiêu thụ `utm.telemetry.live` để phát hiện tự động đa cảm biến (pin `<=5%/<=10%/<=25%` + tốc độ xả bất thường, tín hiệu `<20%/<50%`, GPS `hdop > 5.0/2.0` hoặc `satellites < 4/6`).
+  - Phát sự kiện trạng thái khẩn nguy lên `utm.emergency.events` (để `connectivity` tự động nâng tần số viễn trắc lên `EMERGENCY: 10Hz`) và phát lệnh cứu nạn ưu tiên `P0` trực tiếp lên `utm.drone.commands`.
 
 ---
 
@@ -305,10 +284,27 @@ Người vận hành (ATC / Phi công / Quản trị viên) phê chuẩn (`appro
   ```
 - **Xử lý**:
   1. Hủy bỏ timer đếm ngược trong DecisionEngine.
-  2. Nếu phê chuẩn: Chuyển trạng thái sang `executing`, kích hoạt `ResponseExecutorService.executeAction(...)` phát lệnh can thiệp.
-  3. Cập nhật `confirmed_by`, `confirmed_at`.
-  4. Phát sóng sự kiện qua `/topic/emergency/confirmed` và `/topic/emergency/incidents`.
+  2. Nếu phê chuẩn (`approved: true`): Chuyển trạng thái sang `executing`, kích hoạt `ResponseExecutorService.executeResponse(...)` phát lệnh can thiệp.
+  3. Nếu từ chối (`approved: false`): Chuyển trạng thái sang `rejected` (tách biệt khỏi `resolved`), tự động giải tỏa các Alert liên kết.
+  4. Cập nhật `confirmed_by`, `confirmed_at`.
+  5. Phát sóng sự kiện qua `/topic/emergency/confirmed` và `/topic/emergency/incidents`.
 - **Phản hồi thành công**: `200 OK` - Model: `EmergencyIncidentVm`.
+
+---
+
+### 12.4.6b `POST /api/v1/emergency/incidents/{id}/resolve`
+Đóng thủ công một sự cố khẩn cấp đang mở (`active`, `pending_confirmation`, `executing`, hoặc `escalated`, bao gồm sự cố không gắn `flight_id`).
+
+- **Chỉ định role**: `pilot, atc, admin`
+- **Input (Request Body, optional)** - Model: `ResolveIncidentVm`:
+  ```json
+  {
+    "resolutionNotes": "Drone safely landed and cleared by ATC"
+  }
+  ```
+- **Xử lý**: Hủy timer chờ xác nhận (nếu có), chuyển `status = resolved`, phát sóng WebSocket và tự động đóng các Alert liên kết.
+- **Phản hồi thành công**: `200 OK` - Model: `EmergencyIncidentVm`.
+- **Lỗi nghiệp vụ**: `400 Bad Request` (`EMERGENCY_INCIDENT_ALREADY_RESOLVED`) nếu sự cố đã đóng; `404 Not Found`.
 
 ---
 

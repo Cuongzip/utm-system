@@ -14,13 +14,35 @@ Quản lý toàn diện hồ sơ phương tiện bay không người lái (UAS/U
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `registration_number` | `varchar(100)` | `string` | NOT NULL, **UNIQUE** | Biển số đăng ký quốc gia (vd: `VN-UAV-001`) |
+| `serial_number` | `varchar(100)` | `string` | NULLABLE, Partial **UNIQUE** | Số sê-ri nhà sản xuất |
 | `manufacturer` | `varchar(100)` | `string` | NOT NULL | Hãng chế tạo (DJI, Autel, v.v.) |
 | `model` | `varchar(100)` | `string` | NOT NULL | Dòng máy bay (Matrice 350 RTK, v.v.) |
 | `owner_id` | `varchar(36)` | `string` | **FK** -> `organization.id` | Tổ chức sở hữu máy bay |
 | `home_hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id` | Bãi đáp căn cứ / nơi đỗ gốc |
+| `current_hub_id` | `varchar(36)` | `string` | NULLABLE | Trạm hiện tại đang đỗ (`NULL` khi đang `IN_FLIGHT`) |
 | `battery_capacity_wh` | `double precision` | `number` | NOT NULL | Dung lượng pin định mức (Watt-giờ) |
+| `current_battery_pct` | `double precision` | `number` | NOT NULL, Default: `100.0` | Mức pin hiện tại (0 - 100%) |
 | `max_payload` | `double precision` | `number` | NOT NULL | Tải trọng hàng hóa tối đa (kg) |
-| `status` | `varchar(50)` | `DroneStatus` | NOT NULL, Default: `'available'` | Trạng thái máy bay |
+| `hover_power_w` | `double precision` | `number` | NOT NULL, Default: `350.0` | Công suất bay treo (W) |
+| `cruise_power_w` | `double precision` | `number` | NOT NULL, Default: `280.0` | Công suất bay hành trình (W) |
+| `cruise_speed_ms` | `double precision` | `number` | NOT NULL, Default: `15.0` | Vận tốc bay hành trình tối ưu (m/s) |
+| `battery_health_pct` | `double precision` | `number` | NOT NULL, Default: `100.0` | Độ chai / sức khỏe pin (0 - 100%) |
+| `wind_tolerance_ms` | `double precision` | `number` | NOT NULL, Default: `12.0` | Ngưỡng chịu gió tối đa (m/s) |
+| `max_flight_time_min` | `integer` | `number` | NOT NULL, Default: `40` | Thời gian bay tối đa (phút) |
+| `max_range_m` | `double precision` | `number` | NOT NULL, Default: `25000.0` | Tầm bay tối đa (mét) |
+| `total_flight_hours` | `double precision` | `number` | NOT NULL, Default: `0.0` | Tổng giờ bay tích lũy |
+| `total_flights` | `integer` | `number` | NOT NULL, Default: `0` | Tổng số chuyến bay hoàn thành |
+| `max_altitude` | `double precision` | `number` | NOT NULL, Default: `120.0` | Trần bay kỹ thuật tối đa (mét) |
+| `max_speed` | `double precision` | `number` | NOT NULL, Default: `20.0` | Vận tốc tối đa của khung bay (m/s) |
+| `communication_protocol` | `varchar(50)` | `string` | NOT NULL, Default: `'WEBSOCKET'` | Giao thức điều khiển chính (`WEBSOCKET`, `MQTT`, `MAVLINK`, `REST`) |
+| `remote_id` | `varchar(100)` | `string` | NULLABLE | Mã định danh phát sóng Remote ID theo chuẩn FAA/ASTM |
+| `capabilities` | `jsonb` | `string[]` | NULLABLE | Danh sách năng lực chuyên dụng (`rtk`, `cold_chain`, `thermal_camera`, `lidar_survey`, `cargo_winch`) |
+| `specifications` | `jsonb` | `Record<string, unknown>` | NULLABLE | Thông số kích thước vật lý, chuẩn kháng nước IP |
+| `telemetry_config` | `jsonb` | `Record<string, unknown>` | NULLABLE | Cấu hình chu kỳ gửi viễn trắc trên thiết bị |
+| `last_maintenance` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm bảo dưỡng định kỳ gần nhất |
+| `next_maintenance` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm đến hạn bảo dưỡng tiếp theo |
+| `status` | `varchar(50)` | `DroneStatus` | NOT NULL, Default: `'AVAILABLE'` | Trạng thái máy bay (DB UPPERCASE) |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
 
 ---
 
@@ -29,11 +51,11 @@ Quản lý toàn diện hồ sơ phương tiện bay không người lái (UAS/U
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NOT NULL | Drone nhận lệnh |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NULLABLE | Chuyến bay liên đới |
-| `command_type` | `varchar(50)` | `CommandType` | NOT NULL | Loại lệnh điều khiển |
-| `parameters` | `text` | `string` / `JSON` | NULLABLE | Tham số chi tiết (tọa độ hạ cánh khẩn, cao độ mới...) |
-| `status` | `varchar(50)` | `CommandStatus` | NOT NULL, Default: `'pending'` | Trạng thái thực thi lệnh |
+| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id` (`ON DELETE CASCADE`), NOT NULL | Drone nhận lệnh |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE | Chuyến bay liên đới |
+| `command_type` | `varchar(50)` | `CommandType` | NOT NULL (DB UPPERCASE) | Loại lệnh điều khiển |
+| `parameters` | `jsonb` | `Record<string, unknown>` | NULLABLE | Tham số chi tiết (tọa độ hạ cánh khẩn, cao độ mới...) |
+| `status` | `varchar(50)` | `CommandStatus` | NOT NULL, Default: `'PENDING'` | Trạng thái thực thi lệnh (DB UPPERCASE) |
 | `issued_by` | `varchar(100)` | `string` | NOT NULL | Định danh người phát lệnh (Pilot / ATC / Failsafe Brain) |
 | `issued_at` | `timestamptz` | `string (ISO 8601)` | NOT NULL | Thời điểm phát lệnh |
 | `acknowledged_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm Drone nhận lệnh |
@@ -54,7 +76,8 @@ export type DroneStatus =
   | "in_flight"    // Đang thực hiện chuyến bay trên không
   | "maintenance"  // Đang bảo dưỡng / kiểm tra kỹ thuật
   | "charging"     // Đang sạc pin tại trạm
-  | "offline";     // Mất kết nối / không khả dụng
+  | "offline"      // Mất kết nối / không khả dụng
+  | "retired";     // Ngưng khai thác / thanh lý khỏi đội bay
 
 export type CommandType =
   | "takeoff"          // Lệnh cất cánh (tự động chuyển Drone sang in_flight)
@@ -266,7 +289,7 @@ Phát lệnh điều khiển bay chiến thuật (C2/GCS) xuống Drone.
 Lấy lịch sử các lệnh đã phát cho Drone có phân trang và bộ lọc.
 
 - **Chỉ định role**: Authenticated
-- **Input (Query Params)**: `?status=pending&commandType=takeoff&limit=20&offset=0`
+- **Input (Query Params)**: `?status=pending&commandType=takeoff&flightId=...&limit=20&offset=0`
 - **Phản hồi thành công**: `200 OK` - Model: `DroneCommandListVm`:
   ```json
   {
@@ -310,4 +333,11 @@ Lấy danh sách các lệnh đang hoạt động trên Drone (chưa kết thúc
 
 - **Chỉ định role**: Authenticated
 - **Phản hồi thành công**: `200 OK` - Model: `List<DroneCommandVm>`.
+
+---
+
+### 6.4.11 Các Endpoint Tiện Ích Bổ Sung
+- **`PUT /api/v1/drones/{id}/status`** *(`admin, hub_operator, pilot`)*: Chuyển nhanh trạng thái phương tiện (`available`, `maintenance`, `charging`, `offline`, `retired`; chặn khi đang `in_flight`).
+- **`PUT /api/v1/drones/{id}/hub`** *(`admin, hub_operator`)*: Điều chuyển trạm đỗ hiện tại/trạm gốc của Drone sau khi xác thực Hub qua `hub` service.
+- **`GET /api/v1/commands/flight/{flightId}`** *(Authenticated)*: Lấy toàn bộ lịch sử lệnh điều khiển C2 đã phát trong khuôn khổ một chuyến bay cụ thể (đồng bộ trạng thái xác nhận thời gian thực từ Kafka `utm.drone.command.acks`).
 

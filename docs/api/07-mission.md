@@ -13,14 +13,26 @@ Quản lý kế hoạch nhiệm vụ bay nghiệp vụ (Mission Intent), chuỗi
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `code` | `varchar(50)` | `string` | UNIQUE, NULLABLE (Auto-gen) | Mã định danh nhiệm vụ (`MSN-YYMMDD-XXXX`) |
+| `code` | `varchar(50)` | `string` | NOT NULL, **UNIQUE** (Auto-gen) | Mã định danh nhiệm vụ (`MSN-YYMMDD-XXXX`) |
 | `name` | `varchar(255)` | `string` | NOT NULL | Tên nhiệm vụ |
 | `description` | `text` | `string` | NULLABLE | Mô tả chi tiết mục tiêu nhiệm vụ |
-| `departure_hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id`, NOT NULL | Bãi đáp khởi hành |
-| `arrival_hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id`, NOT NULL | Bãi đáp đích |
-| `schedule_type` | `varchar(50)` | `MissionScheduleType` | NOT NULL, Default: `'IMMEDIATE'` | Kiểu lập lịch bay (`IMMEDIATE`, `SCHEDULED`) |
+| `payload_weight_kg` | `double precision` | `number` | NOT NULL, Default: `0.0` | Khối lượng hàng hóa dự kiến (kg) |
+| `departure_hub_id` | `varchar(36)` | `string` | NOT NULL | Bãi đáp khởi hành |
+| `arrival_hub_id` | `varchar(36)` | `string` | NOT NULL | Bãi đáp đích |
+| `drone_id` | `varchar(36)` | `string` | NULLABLE | Drone được chỉ định mặc định (nếu có) |
+| `pilot_id` | `varchar(100)` | `string` | NULLABLE | Phi công phụ trách (nếu có) |
+| `schedule_type` | `varchar(50)` | `MissionScheduleType` | NOT NULL, Default: `'IMMEDIATE'` | Kiểu lập lịch bay (`immediate`, `scheduled`; DB UPPERCASE) |
 | `scheduled_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm dự kiến thực hiện (phải ở tương lai nếu SCHEDULED) |
-| `status` | `varchar(50)` | `MissionStatus` | NOT NULL, Default: `'DRAFT'` | Trạng thái nhiệm vụ |
+| `recurring_pattern` | `varchar(100)` | `string` | NULLABLE | Biểu thức lặp định kỳ (cron) |
+| `dispatch_grace_minutes` | `integer` | `number` | NOT NULL, Default: `30` | Cửa sổ hết hạn điều phối tự động sau `scheduled_at` (phút) |
+| `trigger_conditions` | `jsonb` | `Record<string, unknown>` | NULLABLE | Điều kiện kích hoạt tự động theo sự kiện |
+| `required_capabilities` | `jsonb` | `string[]` | NULLABLE | Danh sách năng lực Drone bắt buộc (phục vụ chấm điểm `fleet`) |
+| `feasibility_override` | `jsonb` | `Record<string, unknown>` | NULLABLE | Cấu hình ghi đè tham số thẩm định năng lượng |
+| `template_id` | `varchar(36)` | `string` | NULLABLE | Khóa tham chiếu mẫu nhiệm vụ gốc (`mission_template.id`) |
+| `template_version` | `integer` | `number` | NULLABLE | Phiên bản mẫu nhiệm vụ tại thời điểm khởi tạo |
+| `estimated_distance` | `double precision` | `number` | NULLABLE | Tổng cự ly hành trình tính tự động theo Haversine (mét) |
+| `estimated_duration` | `integer` | `number` | NULLABLE | Tổng thời gian bay ước tính (giây) |
+| `status` | `varchar(50)` | `MissionStatus` | NOT NULL, Default: `'DRAFT'` | Trạng thái nhiệm vụ (DB UPPERCASE) |
 
 ---
 
@@ -29,14 +41,24 @@ Quản lý kế hoạch nhiệm vụ bay nghiệp vụ (Mission Intent), chuỗi
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `mission_id` | `varchar(36)` | `string` | **FK** -> `mission.id`, NOT NULL | Thuộc nhiệm vụ nào |
-| `sequence` | `integer` | `number` | NOT NULL | Thứ tự điểm mốc trong hành trình (bắt đầu từ 1) |
+| `mission_id` | `varchar(36)` | `string` | **FK** -> `mission.id` (`ON DELETE CASCADE`), NOT NULL | Thuộc nhiệm vụ nào |
+| `sequence` | `integer` | `number` | NOT NULL, **UNIQUE** với `mission_id` | Thứ tự điểm mốc trong hành trình (bắt đầu từ 1) |
 | `name` | `varchar(100)` | `string` | NULLABLE | Tên gợi nhớ của mốc |
-| `latitude` | `double precision` | `number` | NOT NULL | Vĩ độ GPS (-90 đến 90) |
-| `longitude` | `double precision` | `number` | NOT NULL | Kinh độ GPS (-180 đến 180) |
-| `altitude` | `double precision` | `number` | NOT NULL | Cao độ bay so với mặt đất (AGL) hoặc MSL (mét > 0) |
+| `waypoint_type` | `varchar(20)` | `WaypointType` | NOT NULL, Default: `'COORDINATE'` | Phân loại nút: `coordinate` (tọa độ bay trên không) hoặc `hub` (nút Vertiport chia chặng `Flight`) |
+| `latitude` | `double precision` | `number` | NOT NULL | Vĩ độ GPS (-90 đến 90; khóa cứng theo tọa độ Hub khi `waypoint_type = HUB`) |
+| `longitude` | `double precision` | `number` | NOT NULL | Kinh độ GPS (-180 đến 180; khóa cứng theo tọa độ Hub khi `waypoint_type = HUB`) |
+| `altitude` | `double precision` | `number` | NOT NULL | Cao độ bay **AGL** so với mặt đất/bệ đáp (mét: `> 0` với `COORDINATE`; `>= 0` và mặc định `0.0` mặt bệ đáp với `HUB`) |
+| `speed_to_waypoint` | `double precision` | `number` | NULLABLE | Vận tốc mục tiêu bay tới mốc (m/s) |
+| `heading_at_waypoint` | `double precision` | `number` | NULLABLE | Góc hướng mũi bay tại mốc (0–360 độ) |
+| `turn_radius` | `double precision` | `number` | NULLABLE | Bán kính vòng rẽ fly-by (mét) |
+| `hover_duration_sec` | `integer` | `number` | NOT NULL, Default: `0` | Thời gian bay treo tại mốc (giây) |
+| `wait_for_confirmation` | `boolean` | `boolean` | NOT NULL, Default: `false` | Tự động gửi lệnh `HOVER` chờ người vận hành xác nhận khi chạm mốc |
 | `actions` | `jsonb` | `Map<string, any>` | NULLABLE | Hành động tại mốc: `{ "type": "hover", "durationS": 10 }` |
 | `conditions` | `jsonb` | `Map<string, any>` | NULLABLE | Điều kiện bay: `{ "maxSpeed": 15 }` |
+| `hub_id` | `varchar(36)` | `string` | NULLABLE (NOT NULL nếu `HUB`) | Hub tham chiếu (trạm đầu `Departure`, trạm cuối `Arrival`, hoặc Hub dừng trung gian đang `active`) nếu `waypoint_type = HUB` |
+| `stopover_type` | `varchar(30)` | `StopoverType` | NOT NULL, Default: `'NONE'` | Loại điểm dừng (`none` cho 2 đầu mút `Departure`/`Arrival` hoặc `COORDINATE`; `recharge`, `battery_swap`, `relay_handoff`, `payload_dropoff`, `payload_pickup` cho `HUB` trung gian chia chặng `Flight`) |
+| `ground_time_minutes` | `integer` | `number` | NULLABLE | Thời gian dừng tại điểm trung gian (phút) |
+| `payload_delta_kg` | `double precision` | `number` | NOT NULL, Default: `0.0` | Biến thiên khối lượng hàng hóa sau khi rời mốc (kg) |
 
 ---
 
@@ -45,13 +67,32 @@ Quản lý kế hoạch nhiệm vụ bay nghiệp vụ (Mission Intent), chuỗi
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `mission_id` | `varchar(36)` | `string` | **FK** -> `mission.id`, NOT NULL | Thuộc nhiệm vụ nào |
-| `current_waypoint_index` | `integer` | `number` | NOT NULL, Default: 0 | Chỉ số waypoint drone đang nhắm tới |
-| `total_waypoints` | `integer` | `number` | NOT NULL | Tổng số waypoint của nhiệm vụ khi chạy |
-| `completed_waypoints` | `integer` | `number` | NOT NULL, Default: 0 | Số waypoint đã bay qua thành công |
+| `mission_id` | `varchar(36)` | `string` | **FK** -> `mission.id` (`ON DELETE CASCADE`), NOT NULL | Thuộc nhiệm vụ nào |
+| `current_waypoint_index` | `integer` | `number` | NOT NULL, Default: 0 | Chỉ số waypoint gần nhất drone đã đi qua |
+| `completed_waypoints` | `integer` | `number` | NOT NULL, Default: 0 | Tổng số waypoint đã hoàn tất trong lượt thực thi |
+| `waypoint_logs` | `jsonb` | `Array<Record<string, unknown>>` | NOT NULL, Default: `'[]'` | Nhật ký thời gian thực các lần chạm waypoint (`flightId`, `legIndex`, `waypointIndex`, `reachedAt`, `waitForConfirmation`) |
 | `started_at` | `timestamptz` | `string (ISO 8601)` | NOT NULL | Thời điểm bắt đầu thực thi |
 | `completed_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm kết thúc thực thi |
 | `status` | `varchar(50)` | `ExecutionStatus` | NOT NULL, Default: `'IN_PROGRESS'` | Trạng thái thực thi |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
+
+---
+
+### Bảng `mission_execution_leg`
+> **Kế thừa kiểm toán**: Kế thừa toàn bộ từ `AbstractAuditEntity`. Lưu từng chặng bay liên kết với `flight` service khi nhiệm vụ chạy đa chặng.
+
+| Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- | :--- |
+| `execution_id` | `varchar(36)` | `string` | **FK** -> `mission_execution.id` (`ON DELETE CASCADE`), NOT NULL | Thuộc lần thực thi nào |
+| `leg_index` | `integer` | `number` | NOT NULL, **UNIQUE** với `execution_id` | Thứ tự chặng bay (bắt đầu từ 1) |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE, **UNIQUE** | Chuyến bay tương ứng ở `flight` service |
+| `drone_id` | `varchar(36)` | `string` | NULLABLE | Drone được giao thực hiện chặng |
+| `departure_hub_id` | `varchar(36)` | `string` | NOT NULL | Trạm cất cánh của chặng |
+| `arrival_hub_id` | `varchar(36)` | `string` | NOT NULL | Trạm hạ cánh của chặng |
+| `stopover_type` | `varchar(30)` | `StopoverType` | NOT NULL, Default: `'NONE'` | Hành động dừng tại trạm cuối chặng |
+| `ground_time_minutes` | `integer` | `number` | NOT NULL, Default: `0` | Thời gian chờ/sạc mặt đất (phút) |
+| `estimated_energy_wh` | `double precision` | `number` | NOT NULL, Default: `0.0` | Năng lượng ước tính cho chặng (Wh) |
+| `status` | `varchar(50)` | `LegStatus` | NOT NULL, Default: `'PLANNED'` | Trạng thái chặng (`planned`, `in_flight`, `completed`, `aborted`, `failed`) |
 
 ---
 
@@ -161,9 +202,26 @@ Xóa hoàn toàn nhiệm vụ và cascade xóa toàn bộ waypoints liên quan.
 
 - **Chỉ định role**: `admin, hub_operator, pilot`
 - **Ràng buộc nghiệp vụ**:
-  - Không cho phép xóa nhiệm vụ đang thực thi `EXECUTING` $\rightarrow$ `400 Bad Request` (`CANNOT_DELETE_EXECUTING_MISSION`).
+  - Không cho phép xóa nhiệm vụ đang thực thi `EXECUTING` hoặc đang tạm dừng `PAUSED` $\rightarrow$ `400 Bad Request` (`CANNOT_DELETE_ACTIVE_MISSION`).
   - Không tìm thấy nhiệm vụ $\rightarrow$ `404 Not Found` (`MISSION_NOT_FOUND`).
 - **Phản hồi thành công**: `200 OK` - `{ "message": "Mission deleted successfully" }`.
+
+---
+
+#### `POST /api/v1/missions/{id}/schedule`
+Chuyển nhiệm vụ từ `DRAFT` sang `SCHEDULED` để hệ thống tự động thực thi tại `scheduledAt`.
+
+- **Chỉ định role**: `admin, hub_operator, pilot`
+- **Ràng buộc nghiệp vụ**: Nhiệm vụ ở trạng thái `DRAFT`, có `scheduledAt` ở tương lai và tối thiểu 2 waypoints.
+- **Phản hồi thành công**: `200 OK` - Model: `MissionVm`.
+
+---
+
+#### `POST /api/v1/missions/{id}/unschedule`
+Chuyển nhiệm vụ đang ở trạng thái `SCHEDULED` quay lại `DRAFT` để chỉnh sửa.
+
+- **Chỉ định role**: `admin, hub_operator, pilot`
+- **Phản hồi thành công**: `200 OK` - Model: `MissionVm`.
 
 ---
 
@@ -270,6 +328,25 @@ Xóa điểm mốc và tự động đánh lại số thứ tự (`sequence`) ch
 
 ---
 
+#### `POST /api/v1/missions/{missionId}/waypoints/auto-plan-hubs`
+Tự động phân tích ngân sách năng lượng (kèm dự trữ an toàn 20%) dọc toàn bộ lộ trình của nhiệm vụ lớn và chèn các `Waypoint` loại `HUB` (`waypointType = "hub"`, `altitude = 0.0` AGL) theo 2 cơ chế thống nhất (`MissionRouteSplitter`):
+1. **Dijkstra Multi-Hub Bridging**: Tự động bắc cầu qua chuỗi `1..K` trạm Hub đang `active` đối với các đoạn bay vượt tầm pin đơn.
+2. **Survey / Patrol Return-to-Nearest-Hub Split**: Cộng dồn năng lượng qua chuỗi điểm `COORDINATE`; ngay khi bước tiếp theo vượt ngưỡng an toàn để quay về Hub, tự động chèn điểm hạ cánh `HUB` gần nhất (`RECHARGE` / `BATTERY_SWAP` / `RELAY_HANDOFF`) để đóng `Flight m` và mở `Flight m+1` bay tiếp từ Hub đó tới `WP[i+1]`.
+
+- **Chỉ định role**: `admin, hub_operator, pilot`
+- **Input (Request Body)** - Model: `AutoPlanHubsRequestVm` *(tùy chọn)*:
+  ```json
+  {
+    "droneId": "d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "preferredStopoverType": "recharge",
+    "persist": true
+  }
+  ```
+- **Phản hồi thành công**: `200 OK` - Model: `AutoPlanHubsResultVm` (bao gồm số Hub đã chèn, số chặng `Flight` sinh ra, danh sách `WaypointVm` kèm thông tin `hub` và danh sách giải trình `notes`).
+- **Phản hồi lỗi**: `400 Bad Request` (`MISSION_NOT_IN_DRAFT_STATUS`, `MISSION_WAYPOINTS_LESS_THAN_TWO`, `MISSION_SEGMENT_EXCEEDS_HUB_NETWORK_RANGE`), `404 Not Found`.
+
+---
+
 ### 7.4.3 Nhóm Thực Thi Nhiệm Vụ (Mission Execution)
 
 #### `POST /api/v1/missions/{missionId}/execute`
@@ -324,8 +401,21 @@ Lấy danh sách toàn bộ các lượt chạy thực thi của nhiệm vụ, s
 ---
 
 #### `GET /api/v1/executions/{id}`
-Lấy chi tiết tiến trình thực thi của một lượt chạy cụ thể theo ID.
+Lấy chi tiết tiến trình thực thi của một lượt chạy cụ thể theo ID (bao gồm Multi-Leg Execution Saga: `POST /api/v1/missions/{id}/execution-plan`, `/api/v1/executions/{id}/pause|resume|abort`).
 
 - **Chỉ định role**: Authenticated
 - **Phản hồi thành công**: `200 OK` - Model: `MissionExecutionVm`.
 - **Phản hồi lỗi**: `404 Not Found` (`MISSION_EXECUTION_NOT_FOUND`).
+
+---
+
+### 7.4.4 Nhóm Thư Viện Mẫu Nhiệm Vụ Có Phiên Bản (`MissionTemplate` — `/api/v1/templates`)
+Bảng `mission_template` *(kế thừa `AbstractAuditEntity`)* lưu trữ các mẫu lộ trình chuẩn hóa có quản lý phiên bản bất biến (`code`, `version`, `is_latest`, `previous_version_id`, `category`, `tags`, `variables`, `blueprint`, `is_published`, `usage_count`):
+- **`GET /api/v1/templates`** & **`GET /api/v1/templates/{id}`** *(Authenticated)*: Tìm kiếm mẫu nhiệm vụ (`?category=medical&published=true&latestOnly=true&search=...`) và xem chi tiết blueprint.
+- **`GET /api/v1/templates/{id}/versions`** *(Authenticated)*: Truy xuất chuỗi lịch sử các phiên bản của cùng mã mẫu `code`.
+- **`POST /api/v1/templates`** *(`admin, hub_operator, pilot`)*: Tạo mẫu nhiệm vụ mới ở phiên bản `v1`.
+- **`PUT /api/v1/templates/{id}`** *(`admin, hub_operator, pilot`)*: Tạo phiên bản mới bất biến (`version + 1`, đánh dấu bản cũ `is_latest = false` và nối `previous_version_id`).
+- **`POST /api/v1/templates/{id}/publish`** & **`POST /api/v1/templates/{id}/unpublish`** *(`admin, hub_operator`)*: Xuất bản hoặc gỡ xuất bản mẫu nhiệm vụ.
+- **`POST /api/v1/templates/{id}/clone`** *(`admin, hub_operator, pilot`)*: Nhân bản thành mẫu độc lập mới.
+- **`POST /api/v1/templates/{id}/instantiate`** *(`admin, hub_operator, pilot`)*: Nội suy biến động `{{variable}}` trong `blueprint`, tự động khởi tạo `Mission` (`DRAFT`) kèm danh sách `Waypoint`, tính `estimatedDistance`/`estimatedDuration` và tăng `usageCount`.
+- **`DELETE /api/v1/templates/{id}`** *(`admin, hub_operator`)*: Xóa phiên bản mẫu nhiệm vụ.

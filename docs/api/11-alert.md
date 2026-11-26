@@ -14,26 +14,21 @@ Tiếp nhận, chuẩn hóa, phân loại mức độ rủi ro, quản lý vòng
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `id` | `varchar(36)` | `string` | **PK**, UUID | Khóa chính cảnh báo |
-| `alert_type` | `varchar(50)` | `string` / `AlertType` | NOT NULL | Mã loại cảnh báo (vd: `CONFLICT_PROXIMITY`, `BATTERY_CRITICAL`, `LATERAL_CORRIDOR_BREACH`) |
+| `alert_type` | `varchar(50)` | `AlertType` | NOT NULL | Mã loại cảnh báo chuẩn hóa (`CONFLICT_PROXIMITY`, `AIRSPACE_BREACH`, `BATTERY_CRITICAL`, `EMERGENCY_INCIDENT`, ...) |
 | `severity` | `varchar(20)` | `AlertSeverity` | NOT NULL, Default: `'HIGH'` | Mức độ nghiêm trọng (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) |
-| `status` | `varchar(30)` | `AlertStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái xử lý cảnh báo (`ACTIVE`, `ACKNOWLEDGED`, `RESOLVED`, `DISMISSED`) |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NULLABLE | Drone phát sinh cảnh báo |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NULLABLE | Chuyến bay phát sinh cảnh báo |
-| `hub_id` | `varchar(36)` | `string` | **FK** -> `hub.id`, NULLABLE | Trạm bãi đáp phát sinh cảnh báo |
+| `status` | `varchar(30)` | `AlertStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái duy nhất của cảnh báo (`ACTIVE`, `ACKNOWLEDGED`, `RESOLVED`, `DISMISSED`) |
+| `drone_id` | `varchar(36)` | `string` | NULLABLE | Drone phát sinh cảnh báo |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE | Chuyến bay phát sinh cảnh báo |
+| `hub_id` | `varchar(36)` | `string` | NULLABLE | Trạm bãi đáp phát sinh cảnh báo |
+| `conflict_id` | `varchar(36)` | `string` | NULLABLE, Index | Xung đột nguồn (dùng để tự động giải tỏa cảnh báo khi xung đột được xử lý) |
+| `incident_id` | `varchar(36)` | `string` | NULLABLE, Index | Sự cố khẩn cấp nguồn (dùng để tự động giải tỏa cảnh báo khi sự cố đóng) |
 | `message` | `text` | `string` | NOT NULL | Thông điệp cảnh báo ngắn gọn |
-| `details_json` | `text` | `string` | NULLABLE | Dữ liệu đo đạc chi tiết (JSON: tọa độ, dung lượng pin, thông số vi phạm) |
-| `acknowledged` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đã được xác nhận nhìn thấy |
-| `acknowledged_at` | `timestamptz` | `ZonedDateTime` / `string (ISO 8601)` | NULLABLE | Thời điểm xác nhận |
+| `details_json` | `jsonb` | `Record<string, unknown>` | NULLABLE | Dữ liệu đo đạc chi tiết JSONB (tọa độ, dung lượng pin, thông số vi phạm) |
+| `acknowledged_at` | `timestamptz` | `ZonedDateTime` | NULLABLE | Thời điểm xác nhận |
 | `acknowledged_by` | `varchar(100)` | `string` | NULLABLE | Người xác nhận cảnh báo |
-| `resolved` | `boolean` | `boolean` | NOT NULL, Default: `false` | Đã xử lý xong |
-| `resolved_at` | `timestamptz` | `ZonedDateTime` / `string (ISO 8601)` | NULLABLE | Thời điểm giải quyết |
+| `resolved_at` | `timestamptz` | `ZonedDateTime` | NULLABLE | Thời điểm giải quyết |
 | `resolved_by` | `varchar(100)` | `string` | NULLABLE | Người/Hệ thống xử lý |
 | `resolution_notes` | `text` | `string` | NULLABLE | Ghi chú biện pháp khắc phục |
-| `created_on` | `timestamptz` | `ZonedDateTime` / `string (ISO 8601)` | NOT NULL | Thời điểm phát sinh cảnh báo |
-| `created_by` | `varchar(100)` | `string` | NULLABLE | Định danh tác tử / người tạo cảnh báo |
-| `last_modified_on` | `timestamptz` | `ZonedDateTime` / `string (ISO 8601)` | NULLABLE | Thời điểm cập nhật cuối |
-| `last_modified_by` | `varchar(100)` | `string` | NULLABLE | Người cập nhật cuối |
 
 ---
 
@@ -64,6 +59,14 @@ export type AlertType =
   | "GEOFENCE_BREACH"
   | "WEATHER_HAZARD"
   | "CONFLICT_PROXIMITY"
+  | "CONFLICT"
+  | "EQUIPMENT"
+  | "COMMUNICATION"
+  | "AIRSPACE"
+  | "WEATHER"
+  | "FLEET"
+  | "HUB"
+  | "SECURITY"
   | "SYSTEM_FAULT"
   | "MANUAL_ALERT"
   | "OTHER";
@@ -183,7 +186,7 @@ Lấy thông tin chi tiết một cảnh báo theo UUID.
 ### 11.4.5 `POST /api/v1/alerts/{id}/acknowledge` (Hỗ trợ cả `PATCH`)
 Kiểm soát viên hoặc toán trưởng vận hành xác nhận đã tiếp nhận và đang giám sát cảnh báo.
 
-- **Chỉ định role**: `admin, hub_operator`
+- **Chỉ định role**: `admin, atc, hub_operator`
 - **Input (Request Body, optional)** - Model: `AlertAcknowledgePostVm`:
   ```json
   {
@@ -206,7 +209,7 @@ Kiểm soát viên hoặc toán trưởng vận hành xác nhận đã tiếp nh
 ### 11.4.6 `POST /api/v1/alerts/{id}/resolve` (Hỗ trợ cả `PATCH`)
 Đánh dấu cảnh báo đã được giải tỏa an toàn (ví dụ: máy bay đã hạ độ cao, tái lập khoảng cách an toàn, hoặc pin đã sạc).
 
-- **Chỉ định role**: `admin, hub_operator`
+- **Chỉ định role**: `admin, atc, hub_operator`
 - **Input (Request Body, optional)** - Model: `AlertResolvePostVm`:
   ```json
   {
@@ -216,9 +219,17 @@ Kiểm soát viên hoặc toán trưởng vận hành xác nhận đã tiếp nh
   ```
 - **Xử lý**:
   1. Kiểm tra tồn tại bản ghi cảnh báo (ném `NotFoundException` nếu không tìm thấy).
-  2. Cập nhật `resolved = true`, `resolvedAt = now()`, `status = AlertStatus.RESOLVED`.
+  2. Cập nhật `resolvedAt = now()`, `status = AlertStatus.RESOLVED`.
   3. Gán `resolvedBy` từ body (nếu có) hoặc SecurityContext hiện tại (fallback `"SYSTEM"`).
   4. Nếu có `resolutionNotes`, nối thêm vào ghi chú giải pháp.
   5. Lưu DB và phát sóng cập nhật qua WebSocket.
 - **Phản hồi thành công**: `200 OK` - Model: `AlertVm`.
 - **Lỗi nghiệp vụ**: `404 Not Found` nếu ID không tồn tại.
+
+---
+
+### 11.4.7 `POST /api/v1/alerts/resolve-by-conflict/{conflictId}` & `POST /api/v1/alerts/resolve-by-incident/{incidentId}`
+Tự động đóng toàn bộ cảnh báo đang mở (`status <> RESOLVED`) gắn với một xung đột hoặc sự cố khẩn cấp nguồn.
+
+- **Chỉ định role**: `admin, atc, hub_operator, pilot`
+- **Phản hồi thành công**: `200 OK` - `{ "conflictId" | "incidentId": "...", "resolvedCount": 1 }`.

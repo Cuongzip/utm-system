@@ -22,16 +22,37 @@ Trọng tâm vận hành của hệ thống UTM: Chuyển đổi từ Kế hoạ
 | `scheduled_arrival` | `timestamptz` | `string (ISO 8601)` | NOT NULL | Thời điểm dự kiến hạ cánh |
 | `actual_departure` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm cất cánh thực tế |
 | `actual_arrival` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm hạ cánh thực tế |
-| `cruising_altitude_m` | `double precision` | `number` | NULLABLE | Độ cao bay hành trình (mét) |
-| `execution_id` | `varchar(36)` | `string` | **FK** -> `mission_execution.id`, NULLABLE | Liên kết với lần thực thi nhiệm vụ |
-| `planned_route` | `text` | `GeoJSON.LineString` | NOT NULL | Tuyến đường bay kế hoạch 4D |
-| `actual_route` | `text` | `GeoJSON.LineString` | NOT NULL, Default: `'{"type":"LineString","coordinates":[]}'` | Quỹ đạo bay thực tế từ telemetry |
+| `cruising_altitude_m` | `double precision` | `number` | NULLABLE | Độ cao bay hành trình chuẩn **AGL** (mét so với mặt đất/bệ đáp) |
+| `execution_id` | `varchar(36)` | `string` | NULLABLE | Liên kết với lần thực thi nhiệm vụ |
+| `mission_id` | `varchar(36)` | `string` | NULLABLE | Liên kết với nhiệm vụ gốc |
+| `leg_index` | `integer` | `number` | NULLABLE | Thứ tự chặng bay trong nhiệm vụ đa chặng |
+| `total_legs` | `integer` | `number` | NULLABLE | Tổng số chặng của nhiệm vụ |
+| `depends_on_flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id` (`ON DELETE SET NULL`), NULLABLE | Chuyến bay tiên quyết phải hoàn thành trước |
+| `payload_weight_kg` | `double precision` | `number` | NOT NULL, Default: `0.0` | Khối lượng hàng hóa của chuyến bay (kg) |
+| `expected_initial_battery_pct` | `double precision` | `number` | NULLABLE | Mức pin SoC kỳ vọng lúc bắt đầu chặng (phục vụ thẩm định đa chặng: `100%` sau sạc/đổi pin hoặc SoC còn dư sau trả hàng) |
+| `minimum_turnaround_minutes` | `integer` | `number` | NOT NULL, Default: `0` | Thời gian chờ mặt đất tối thiểu sau khi chặng tiên quyết hạ cánh (phút) |
+| `arrival_stopover_type` | `varchar(30)` | `string` | NULLABLE, Default: `'none'` | Loại điểm dừng tại Hub đích (`none`, `recharge`, `battery_swap`, `relay_handoff`, `payload_dropoff`, `payload_pickup`) |
+| `planned_route` | `jsonb` | `GeoJSON.LineString` | NOT NULL | Tuyến đường bay kế hoạch 4D (AGL với cặp điểm leo/hạ thẳng đứng tại tâm Hub) |
+| `actual_route` | `jsonb` | `GeoJSON.LineString` | NOT NULL, Default: `'{"type":"LineString","coordinates":[]}'::jsonb` | Quỹ đạo bay thực tế từ telemetry |
+| `waypoints` | `jsonb` | `FlightWaypoint[]` | NULLABLE | Danh sách mốc 3D chi tiết của chuyến bay |
 | `authorization_status` | `varchar(50)` | `FlightAuthorizationStatus` | NOT NULL, Default: `'PENDING'` | Trạng thái phê duyệt của ATC |
-| `conformance_status` | `varchar(50)` | `ConformanceStatus` | NOT NULL, Default: `'CONFORMING'` | Mức độ tuân thủ hành lang bay |
+| `conformance_status` | `varchar(50)` | `ConformanceStatus` | NOT NULL, Default: `'CONFORMANT'` | Mức độ tuân thủ hành lang bay (`CONFORMANT`, `NON_CONFORMING`, `CONTINGENT`, `UNKNOWN`) |
 | `status` | `varchar(50)` | `FlightStatus` | NOT NULL, Default: `'SCHEDULED'` | Trạng thái vận hành chuyến bay |
 | `feasibility_verdict` | `varchar(20)` | `Verdict` | NOT NULL, Default: `'UNKNOWN'` | Phán quyết khả thi pin & thời tiết |
 | `feasibility_override` | `text` | `string` | NULLABLE | Ghi chú lý do cấp quyền ngoại lệ bay |
+| `flight_type` | `varchar(50)` | `FlightType` | NOT NULL, Default: `'DELIVERY'` | Phân loại chuyến bay (`DELIVERY`, `INSPECTION`, `SURVEY`, `EMERGENCY`, `REPOSITIONING`, `TRAINING`, `TEST`) |
+| `operation_mode` | `varchar(50)` | `OperationMode` | NOT NULL, Default: `'AUTONOMOUS'` | Chế độ vận hành (`AUTONOMOUS`, `REMOTE_PILOT`, `SUPERVISED`, `BVLOS`, `VLOS`) |
+| `min_altitude_m` | `double precision` | `number` | NULLABLE | Độ cao tối thiểu đăng ký (mét) |
+| `max_altitude_m` | `double precision` | `number` | NULLABLE | Độ cao trần tối đa đăng ký (mét) |
+| `authorization_number` | `varchar(100)` | `string` | NULLABLE, **UNIQUE** | Số hiệu giấy phép phê duyệt không lưu (`AUTH-YYYYMMDD-XXXX`) |
+| `authorized_by` | `varchar(100)` | `string` | NULLABLE | Định danh ATC phê duyệt |
+| `authorized_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm cấp phép |
+| `risk_assessment` | `varchar(30)` | `string` | NULLABLE | Mức đánh giá rủi ro SORA/JARUS (`LOW`, `MEDIUM`, `HIGH`) |
+| `mission_type` | `varchar(50)` | `string` | NULLABLE | Loại nhiệm vụ chuyên ngành |
+| `mission_data` | `jsonb` | `Record<string, unknown>` | NULLABLE | Dữ liệu nghiệp vụ đặc thù kèm chuyến bay |
+| `weather_conditions` | `jsonb` | `Record<string, unknown>` | NULLABLE | Ảnh chụp điều kiện thời tiết từ `weather-ais` tại thời điểm duyệt bay |
 | `notes` | `text` | `string` | NULLABLE | Ghi chú vận hành / lý do từ chối, hủy chuyến |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
 
 ---
 
@@ -40,7 +61,7 @@ Trọng tâm vận hành của hệ thống UTM: Chuyển đổi từ Kế hoạ
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NOT NULL, **UNIQUE** | Chuyến bay được theo dõi (1-1) |
+| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id` (`ON DELETE CASCADE`), NOT NULL, **UNIQUE** | Chuyến bay được theo dõi (1-1) |
 | `status` | `varchar(30)` | `ConformanceStatus` | NOT NULL, Default: `'UNKNOWN'` | Trạng thái tuân thủ tức thời |
 | `cross_track_error_m` | `double precision` | `number` | NULLABLE | Độ lệch ngang so với tâm hành lang (mét) |
 | `vertical_error_m` | `double precision` | `number` | NULLABLE | Độ lệch cao độ so với kế hoạch (mét) |
@@ -53,7 +74,7 @@ Trọng tâm vận hành của hệ thống UTM: Chuyển đổi từ Kế hoạ
 | `current_heading` | `double precision` | `number` | NULLABLE | Hướng mũi bay hiện tại (độ 0 - 360) |
 | `last_telemetry_time` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm gói telemetry gần nhất |
 | `last_evaluated_at` | `timestamptz` | `string (ISO 8601)` | NULLABLE | Thời điểm đánh giá conformance gần nhất |
-| `violations_json` | `text` | `string / JSON` | NULLABLE | Chi tiết vi phạm hành lang dạng JSON |
+| `violations_json` | `jsonb` | `ConformanceViolation[]` | NULLABLE | Chi tiết vi phạm hành lang dạng JSONB |
 
 ---
 
@@ -62,8 +83,8 @@ Trọng tâm vận hành của hệ thống UTM: Chuyển đổi từ Kế hoạ
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NOT NULL | Chuyến bay được thẩm định |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NOT NULL | Drone dự kiến thực hiện bay |
+| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id` (`ON DELETE CASCADE`), NOT NULL | Chuyến bay được thẩm định |
+| `drone_id` | `varchar(36)` | `string` | NOT NULL | Drone dự kiến thực hiện bay |
 | `verdict` | `varchar(20)` | `Verdict` | NOT NULL | Phán quyết khả thi (`GO`, `MARGINAL`, `NO_GO`, `UNKNOWN`) |
 | `margin_pct` | `double precision` | `number` | NOT NULL | Tỷ lệ pin dự trữ an toàn dôi dư (%) |
 | `usable_wh` | `double precision` | `number` | NOT NULL | Năng lượng pin khả dụng (Wh) |
@@ -75,7 +96,7 @@ Trọng tâm vận hành của hệ thống UTM: Chuyển đổi từ Kế hoạ
 | `wind_factor` | `double precision` | `number` | NOT NULL | Hệ số cản gió |
 | `wind_speed_ms` | `double precision` | `number` | NULLABLE | Vận tốc gió sử dụng tính toán (m/s) |
 | `confidence` | `varchar(20)` | `string` | NOT NULL | Mức độ tin cậy của thuật toán |
-| `solutions_json` | `text` | `string / JSON` | NULLABLE | Các giải pháp gợi ý khi kết quả là NO_GO |
+| `solutions_json` | `jsonb` | `FeasibilitySolution[]` | NULLABLE | Các giải pháp gợi ý khi kết quả là NO_GO |
 | `explanation` | `text` | `string` | NULLABLE | Giải trình chi tiết của mô hình vật lý |
 | `explanation_source` | `varchar(20)` | `string` | NOT NULL, Default: `'deterministic'` | Nguồn giải trình (`deterministic` / `llm`) |
 
@@ -100,8 +121,7 @@ export type FlightAuthorizationStatus =
   | "REJECTED"; // Bị ATC từ chối
 
 export type ConformanceStatus =
-  | "CONFORMANT"     // Bay đúng tâm hành lang và trần bay
-  | "CONFORMING"     // Tuân thủ bình thường trong hành lang
+  | "CONFORMANT"     // Bay đúng tâm hành lang và trần bay (JSON: "conformant"; tương thích ngược nhận "conforming")
   | "NON_CONFORMING" // Lệch vượt ngưỡng đệm hành lang (> 15m ngang / > 10m dọc) hoặc mất tín hiệu > 30s
   | "CONTINGENT"     // Mất kiểm soát nghiêm trọng / mất tín hiệu > 90s, kích hoạt cứu hộ khẩn cấp
   | "UNKNOWN";       // Chưa có dữ liệu viễn trắc
@@ -139,6 +159,11 @@ Lấy danh sách các chuyến bay có phân trang và bộ lọc linh hoạt.
   - `authorizationStatus`: Lọc theo trạng thái duyệt (`pending`, `approved`, `rejected`).
   - `pilotId`: Lọc theo phi công phụ trách.
   - `droneId`: Lọc theo Drone thực hiện.
+  - `executionId`: Lọc theo phiên thực thi nhiệm vụ (`MissionExecution`).
+  - `hubId`: Lọc theo Hub cất cánh hoặc hạ cánh.
+  - `flightType`: Lọc theo loại chuyến bay (`delivery`, `inspection`, `surveillance`, `training`, `test`, `repositioning`).
+  - `from`: Lọc các chuyến bay có `scheduledDeparture >= from` (ISO-8601 date-time).
+  - `to`: Lọc các chuyến bay có `scheduledDeparture <= to` (ISO-8601 date-time).
   - `limit`: Kích thước trang (mặc định: `20`, $\le 0$ để lấy toàn bộ không phân trang).
   - `offset`: Vị trí bản ghi bắt đầu (mặc định: `0`).
 - **Phản hồi thành công**: `200 OK` - Model: `FlightListVm`.
@@ -370,3 +395,11 @@ Lấy danh sách lịch sử toàn bộ các lần thẩm định khả thi năn
   - `limit`: Kích thước trang (mặc định: `20`, $\le 0$ để lấy toàn bộ).
   - `offset`: Vị trí bản ghi bắt đầu (mặc định: `0`).
 - **Phản hồi thành công**: `200 OK` - Model: `FeasibilityEvaluationListVm`.
+
+---
+
+#### `POST /api/v1/feasibility/check` (Standalone Pre-Flight Check)
+Thẩm định khả thi năng lượng độc lập trước khi khởi tạo bản ghi `Flight` (truyền `droneId`, `missionId` hoặc chuỗi `waypoints`/`distanceM`, tự động tra cứu vận tốc gió thực tế từ `weather-ais` và sinh giải trình vật lý / LLM qua `LlmReasoningClient`; lưu lịch sử với `flight_id = NULL`).
+
+- **Chỉ định role**: Authenticated
+- **Phản hồi thành công**: `200 OK` - Model: `FeasibilityResultVm`.

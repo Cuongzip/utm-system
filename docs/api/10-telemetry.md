@@ -15,17 +15,32 @@ Tiếp nhận dữ liệu viễn trắc GPS thời gian thực (tần số 1Hz) 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `varchar(36)` | `string` | **PK**, NOT NULL | UUID định danh bản ghi viễn trắc |
-| `drone_id` | `varchar(36)` | `string` | **FK** -> `drone.id`, NOT NULL | Định danh phương tiện drone phát viễn trắc |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NULLABLE | Chuyến bay đang thực hiện (nếu đang trong nhiệm vụ) |
-| `latitude` | `decimal(10, 7)` | `number` | NOT NULL | Vĩ độ GPS hiện tại (WGS84, -90 đến 90) |
-| `longitude` | `decimal(10, 7)` | `number` | NOT NULL | Kinh độ GPS hiện tại (WGS84, -180 đến 180) |
-| `altitude` | `decimal(8, 2)` | `number` | NOT NULL | Cao độ hiện tại so với mực nước biển MSL (mét) |
-| `speed` | `decimal(6, 2)` | `number` | NULLABLE | Tốc độ mặt đất (m/s) |
-| `heading` | `decimal(6, 2)` | `number` | NULLABLE | Góc hướng mũi máy bay la bàn (0 - 360 độ) |
-| `pitch` | `decimal(6, 2)` | `number` | NULLABLE | Góc ngẩng/chúi đầu máy bay (độ) |
-| `roll` | `decimal(6, 2)` | `number` | NULLABLE | Góc nghiêng cánh máy bay (độ) |
-| `yaw` | `decimal(6, 2)` | `number` | NULLABLE | Góc xoay thân máy bay (độ) |
-| `battery_percentage` | `decimal(5, 2)` | `number` | NULLABLE | Dung lượng pin còn lại (0 - 100%) |
+| `drone_id` | `varchar(36)` | `string` | NOT NULL | Định danh phương tiện drone phát viễn trắc |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE | Chuyến bay đang thực hiện (nếu đang trong nhiệm vụ) |
+| `latitude` | `double precision` | `number` | NOT NULL | Vĩ độ GPS hiện tại (WGS84, -90 đến 90) |
+| `longitude` | `double precision` | `number` | NOT NULL | Kinh độ GPS hiện tại (WGS84, -180 đến 180) |
+| `altitude` | `double precision` | `number` | NOT NULL | Cao độ hiện tại so với mực nước biển MSL (mét) |
+| `speed` | `double precision` | `number` | NULLABLE | Tốc độ mặt đất (m/s) |
+| `heading` | `double precision` | `number` | NULLABLE | Góc hướng mũi máy bay la bàn (0 - 360 độ) |
+| `pitch` | `double precision` | `number` | NULLABLE | Góc ngẩng/chúi đầu máy bay (độ) |
+| `roll` | `double precision` | `number` | NULLABLE | Góc nghiêng cánh máy bay (độ) |
+| `yaw` | `double precision` | `number` | NULLABLE | Góc xoay thân máy bay (độ) |
+| `battery_percentage` | `double precision` | `number` | NULLABLE | Dung lượng pin còn lại (0 - 100%) |
+| `altitude_agl` | `double precision` | `number` | NULLABLE | Độ cao thực tế so với mặt đất AGL (mét) |
+| `vertical_speed` | `double precision` | `number` | NULLABLE | Vận tốc leo/hạ thẳng đứng (m/s) |
+| `battery_voltage` | `double precision` | `number` | NULLABLE | Điện áp bộ pin (Volt) |
+| `battery_temperature` | `double precision` | `number` | NULLABLE | Nhiệt độ cell pin (°C) |
+| `battery_discharge_rate` | `double precision` | `number` | NULLABLE | Tốc độ xả dòng tức thời |
+| `signal_strength` | `double precision` | `number` | NULLABLE | Cường độ tín hiệu C2 link (0 - 100%) |
+| `gps_hdop` | `double precision` | `number` | NULLABLE | Độ suy giảm độ chính xác ngang vệ tinh HDOP |
+| `gps_satellites` | `integer` | `number` | NULLABLE | Số vệ tinh định vị đang khóa |
+| `flight_mode` | `varchar(50)` | `string` | NULLABLE | Chế độ autopilot (`AUTO_MISSION`, `LOITER`, `RTL`, `LAND`) |
+| `system_status` | `varchar(50)` | `string` | NULLABLE | Trạng thái sức khỏe hệ thống trên khoang |
+| `source` | `varchar(50)` | `string` | NULLABLE | Nguồn thu nhận (`WEBSOCKET`, `MQTT`, `MAVLINK`, `SIMULATOR`, `OEM_INTEGRATION`) |
+| `motor_rpm` | `jsonb` | `number[]` | NULLABLE | Mảng tốc độ vòng quay từng động cơ |
+| `warnings` | `jsonb` | `string[]` | NULLABLE | Danh sách mã cảnh báo từ Flight Controller |
+| `errors` | `jsonb` | `string[]` | NULLABLE | Danh sách mã lỗi phần cứng từ Flight Controller |
+| `recorded_at` | `timestamptz` | `string (ISO 8601)` | NOT NULL | Thời điểm cảm biến ghi nhận mẫu đo (fallback `created_on` nếu không truyền) |
 
 ---
 
@@ -122,3 +137,9 @@ Lấy vị trí GPS tức thời mới nhất của một phương tiện drone 
 - **Chỉ định role**: `admin, atc, hub_operator, pilot`
 - **Phản hồi thành công**: `200 OK` - Model: `TelemetryRecordVm`.
 - **Lỗi thường gặp**: `404 Not Found` nếu chưa có dữ liệu viễn trắc cho drone này.
+
+---
+
+### 10.3.6 `GET /api/v1/telemetry/active` & `POST /api/v1/telemetry/batch`
+- **`GET /api/v1/telemetry/active`** *(Authenticated)*: Lấy danh sách bản ghi viễn trắc tức thời của toàn bộ Drone có tín hiệu trong cửa sổ hoạt động (`?windowSec=60`, mặc định 60 giây).
+- **`POST /api/v1/telemetry/batch`** *(`admin, hub_operator, pilot`)*: Tiếp nhận lô nhiều gói tin viễn trắc trong một request duy nhất, ghi DB theo lô, cập nhật cache và phát sóng STOMP + Kafka `utm.telemetry.live`.

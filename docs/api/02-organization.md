@@ -18,22 +18,31 @@ Quản lý doanh nghiệp hoặc cơ quan khai thác hệ thống trong mô hìn
 | `type` | `varchar(50)` | `OrganizationType` | NOT NULL, Index | Phân loại tổ chức |
 | `registration_number` | `varchar(100)` | `string` | NOT NULL, **UNIQUE** | Mã số đăng ký kinh doanh / Số hiệu giấy phép bay |
 | `contact_info` | `text` | `string` | NULLABLE | Email, số điện thoại, địa chỉ liên hệ |
-| `status` | `varchar(50)` | `OrganizationStatus` | NOT NULL, Index, Default: `'active'` | Trạng thái hoạt động của tổ chức |
+| `address` | `jsonb` | `Record<string, unknown>` | NULLABLE | Địa chỉ trụ sở có cấu trúc (`street`, `district`, `city`, `country`) |
+| `authorized_airspace` | `jsonb` | `Record<string, unknown>` | NULLABLE | Cấu hình không phận / hành lang được cấp phép khai thác |
+| `certifications` | `jsonb` | `Record<string, unknown>` | NULLABLE | Thông tin chứng chỉ AOC/UAS do cục hàng không cấp |
+| `insurance_info` | `jsonb` | `Record<string, unknown>` | NULLABLE | Thông tin hợp đồng bảo hiểm trách nhiệm hàng không |
+| `status` | `varchar(50)` | `OrganizationStatus` | NOT NULL, Index, Default: `'ACTIVE'` | Trạng thái hoạt động của tổ chức (DB lưu chữ HOA, REST JSON trả chữ thường) |
 
 ---
 
 ## 2.2 Các Enum Định Nghĩa
 
 ```typescript
-export type OrganizationType = "operator" | "authority" | "enterprise";
-// 'operator': Doanh nghiệp vận hành bay / giao vận drone thương mại
-// 'authority': Cơ quan quản lý nhà nước / Cục hàng không / Đơn vị kiểm soát không lưu
-// 'enterprise': Khách hàng doanh nghiệp lớn thuê dịch vụ giao nhận không người lái
+export type OrganizationType =
+  | "operator"
+  | "partner"
+  | "regulatory"
+  | "service_provider"
+  | "authority"
+  | "enterprise";
 
-export type OrganizationStatus = "active" | "suspended" | "inactive";
-// 'active': Hoạt động bình thường
-// 'suspended': Bị tạm đình chỉ bay (do vi phạm an toàn không phận hoặc chờ thanh toán)
-// 'inactive': Đã ngừng hoạt động / giải thể (Soft-deleted)
+export type OrganizationStatus =
+  | "active"
+  | "suspended"
+  | "inactive"
+  | "pending"
+  | "pending_verification";
 ```
 
 ---

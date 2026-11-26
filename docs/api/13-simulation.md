@@ -15,9 +15,14 @@ Giả lập động lực học bay 3D/4D (Kinematics & Physics), tính toán t�
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `varchar(36)` | `string` | **PK**, UUID, NOT NULL | Mã định danh duy nhất phiên giả lập |
-| `flight_id` | `varchar(36)` | `string` | **FK** -> `flight.id`, NOT NULL | Chuyến bay được giả lập |
-| `drone_id` | `varchar(50)` | `string` | **FK** -> `drone.id`, NOT NULL | Drone phần cứng ảo được điều khiển |
-| `status` | `varchar(30)` | `SimulationStatus` | NOT NULL | Trạng thái phiên (`running`, `paused`, `stopped`, `completed`) |
+| `flight_id` | `varchar(36)` | `string` | NULLABLE, Partial **UNIQUE** (khi `RUNNING`/`PAUSED`) | Chuyến bay được giả lập (có thể để NULL nếu khởi chạy trực tiếp từ `missionId` hoặc `waypoints` tùy chỉnh) |
+| `mission_id` | `varchar(36)` | `string` | NULLABLE, Index | Nhiệm vụ bay nguồn (nếu chạy thử nghiệm lộ trình nhiệm vụ) |
+| `drone_id` | `varchar(36)` | `string` | NOT NULL, Partial **UNIQUE** (khi `RUNNING`/`PAUSED`) | Drone phần cứng ảo được điều khiển |
+| `status` | `varchar(30)` | `SimulationStatus` | NOT NULL (DB UPPERCASE) | Trạng thái phiên (`running`, `paused`, `stopped`, `completed`) |
+| `flight_phase` | `varchar(30)` | `string` | NULLABLE, Default: `'PREFLIGHT'` | Pha bay động lực học hiện tại (`PREFLIGHT`, `TAKEOFF`, `CLIMB`, `CRUISE`, `APPROACH`, `LANDING`, `LANDED`) |
+| `tick_rate` | `double precision` | `number` | NULLABLE, Default: `1.0` | Chu kỳ phát mẫu viễn trắc (Hz) |
+| `scenario_config` | `jsonb` | `Record<string, unknown>` | NULLABLE | Cấu hình chi tiết của kịch bản sự cố đang tiêm |
+| `waypoints` | `jsonb` | `WaypointVm[]` | NULLABLE | Danh sách mốc 3D lưu trực tiếp cho phiên giả lập độc lập |
 | `speed` | `double precision` | `number` | NULLABLE | Vận tốc bay giả lập (m/s, mặc định 15.0) |
 | `time_scale` | `double precision` | `number` | NULLABLE | Hệ số tua nhanh thời gian (0.1x - 20.0x, mặc định 1.0) |
 | `current_lat` | `double precision` | `number` | NULLABLE | Vĩ độ hiện tại (WGS84, làm tròn 6 chữ số thập phân) |
@@ -29,21 +34,24 @@ Giả lập động lực học bay 3D/4D (Kinematics & Physics), tính toán t�
 | `total_distance` | `double precision` | `number` | NULLABLE | Tổng quãng đường toàn lộ trình (mét) |
 | `traveled_distance` | `double precision` | `number` | NULLABLE | Quãng đường thực tế đã bay được (mét) |
 | `current_segment` | `integer` | `number` | NULLABLE | Chỉ số phân đoạn waypoint hiện tại (0-based) |
-| `active_scenario` | `varchar(50)` | `string` | NULLABLE | Kịch bản sự cố khẩn cấp đang kích hoạt |
+| `active_scenario` | `varchar(50)` | `EmergencyScenarioType` | NULLABLE (DB UPPERCASE) | Kịch bản sự cố khẩn cấp đang kích hoạt |
+| `version` | `bigint` | — | NOT NULL, Default: `0` | Optimistic Locking (`@Version`) |
 
 ### 13.1.2 Bảng `simulation_event` (Nhật ký sự kiện diễn tập)
 
 | Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB | Kiểu DTO | Khóa / Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | `varchar(36)` | `string` | **PK**, UUID, NOT NULL | Mã định danh sự kiện |
-| `session_id` | `varchar(36)` | `string` | **FK** -> `simulation_session.id`, NOT NULL | Phiên giả lập phát sinh sự kiện |
+| `session_id` | `varchar(36)` | `string` | **FK** -> `simulation_session.id` (`ON DELETE CASCADE`), NOT NULL | Phiên giả lập phát sinh sự kiện |
 | `event_type` | `varchar(50)` | `string` | NOT NULL | Loại sự kiện (`SESSION_PAUSED`, `SESSION_RESUMED`, `TIME_SCALE_CHANGED`, `SCENARIO_INJECTED`, `SESSION_STOPPED`, `SESSION_COMPLETED`, `BATTERY_EXHAUSTED`, `MOTOR_CRASH`) |
-| `scenario` | `varchar(50)` | `string` | NULLABLE | Mã kịch bản sự cố liên quan |
+| `scenario` | `varchar(50)` | `EmergencyScenarioType` | NULLABLE (DB UPPERCASE) | Mã kịch bản sự cố liên quan |
 | `message` | `text` | `string` | NULLABLE | Thông điệp mô tả chi tiết sự kiện |
 | `severity` | `varchar(20)` | `string` | NULLABLE | Mức độ nghiêm trọng (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) |
-| `config_json` | `text` | `string` | NULLABLE | Cấu hình tham số kịch bản dưới dạng JSON |
+| `config_json` | `jsonb` | `Record<string, unknown>` | NULLABLE | Cấu hình tham số kịch bản dưới dạng JSONB |
 | `created_on` | `timestamptz` | `string` | `@CreationTimestamp` | Thời điểm ghi nhận sự kiện |
 | `created_by` | `varchar(255)` | `string` | NULLABLE | Người/tác nhân kích hoạt sự kiện |
+| `last_modified_on` | `timestamptz` | `string` | `@UpdateTimestamp` | Thời điểm cập nhật cuối |
+| `last_modified_by` | `varchar(255)` | `string` | NULLABLE | Tác nhân cập nhật cuối |
 
 ---
 

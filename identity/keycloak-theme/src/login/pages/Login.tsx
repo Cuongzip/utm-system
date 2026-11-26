@@ -117,7 +117,7 @@ export default function Login(
   const [scale, setScale] = useState(0.72);
 
   useEffect(() => {
-    document.title = "Đăng nhập - UTM System";
+    document.title = "Sign In — UTM System";
   }, []);
 
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function Login(
               className="relative w-full bg-white px-7 py-9 sm:px-10 sm:py-10 flex flex-col gap-7 sm:gap-8"
               style={{ clipPath: innerClipPath }}
             >
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center justify-start gap-3">
                 <img
                   src={`${url.resourcesPath}/dist/svg/utm-logo.svg`}
                   alt="UTM System"
@@ -198,13 +198,10 @@ export default function Login(
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 pt-1">
-                <h1 className="text-[28px] font-bold tracking-[-0.7px] text-[#111827] leading-tight">
+              <div className="flex flex-col pt-0.5">
+                <h1 className="text-[26px] font-bold tracking-[-0.65px] text-[#111827] leading-tight">
                   Welcome Back
                 </h1>
-                <p className="text-[14px] font-normal text-[#6b7280] leading-normal">
-                  Sign in to your UTM account to continue
-                </p>
               </div>
 
               {displayMessage && (
@@ -290,8 +287,7 @@ export default function Login(
                     {realm.resetPasswordAllowed && (
                       <a
                         href={url.loginResetCredentialsUrl}
-                        tabIndex={5}
-                        className="text-[12px] font-medium text-[var(--utm-primary)] hover:opacity-80 transition-opacity leading-none"
+                        className="text-[12px] font-medium text-[var(--utm-primary)] hover:opacity-80 transition-opacity leading-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                       >
                         Forgot password?
                       </a>
@@ -313,7 +309,7 @@ export default function Login(
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-[#9ca3af] hover:text-[var(--utm-primary)] transition-colors focus:outline-none"
+                      className="absolute right-2 w-8 h-8 rounded flex items-center justify-center text-[#9ca3af] hover:text-[var(--utm-primary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                       aria-label={
                         showPassword ? "Hide password" : "Show password"
                       }

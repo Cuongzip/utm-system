@@ -21,6 +21,9 @@ services:
       - connectivity
       - mission
       - emergency
+      - weather-ais
+      - fleet
+      - intelligence
       - backoffice-bff
       - identity
     networks:
@@ -86,6 +89,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
+      - DRONE_SERVICE_URL=http://drone:8085
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
@@ -117,8 +121,11 @@ services:
       - HUB_SERVICE_URL=http://hub:8084
       - ORGANIZATION_SERVICE_URL=http://organization:8083
       - CONNECTIVITY_SERVICE_URL=http://connectivity:8094
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       hub:
         condition: service_started
@@ -144,6 +151,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
+      - FLIGHT_SERVICE_URL=http://flight:8086
+      - DRONE_SERVICE_URL=http://drone:8085
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
@@ -179,9 +188,15 @@ services:
       - ALERT_SERVICE_URL=http://alert:8093
       - CONFLICT_SERVICE_URL=http://conflict:8092
       - EMERGENCY_SERVICE_URL=http://emergency:8096
-      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-Admin123@}
+      - MISSION_SERVICE_URL=http://mission:8095
+      - WEATHER_AIS_SERVICE_URL=http://weather-ais:8097
+      - UTM_AI_API_KEY=${UTM_AI_API_KEY:-}
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       drone:
         condition: service_started
@@ -216,10 +231,13 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
       - HUB_SERVICE_URL=http://hub:8084
+      - WEATHER_AIS_SERVICE_URL=http://weather-ais:8097
     depends_on:
       postgres:
         condition: service_healthy
       hub:
+        condition: service_started
+      weather-ais:
         condition: service_started
     networks:
       - utm-network
@@ -243,6 +261,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
+      - WS_REQUIRE_AUTH=${WS_REQUIRE_AUTH:-false}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
@@ -274,8 +293,13 @@ services:
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
       - FLIGHT_SERVICE_URL=http://flight:8086
       - CONNECTIVITY_SERVICE_URL=http://connectivity:8094
+      - MISSION_SERVICE_URL=http://mission:8095
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       telemetry:
         condition: service_started
@@ -310,7 +334,10 @@ services:
       - TELEMETRY_SERVICE_URL=http://telemetry:8089
       - DRONE_SERVICE_URL=http://drone:8085
       - HUB_SERVICE_URL=http://hub:8084
-      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-Admin123@}
+      - AIRSPACE_SERVICE_URL=http://airspace:8087
+      - ALERT_SERVICE_URL=http://alert:8093
+      - EMERGENCY_SERVICE_URL=http://emergency:8096
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
@@ -343,6 +370,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
+      - WS_REQUIRE_AUTH=${WS_REQUIRE_AUTH:-false}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
@@ -372,8 +400,14 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - KEYCLOAK_URL=http://identity
       - DRONE_SERVICE_URL=http://drone:8085
+      - HUB_SERVICE_URL=http://hub:8084
+      - TELEMETRY_SERVICE_URL=http://telemetry:8089
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       drone:
         condition: service_started
@@ -404,8 +438,12 @@ services:
       - DRONE_SERVICE_URL=http://drone:8085
       - FLIGHT_SERVICE_URL=http://flight:8086
       - CONNECTIVITY_SERVICE_URL=http://connectivity:8094
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       hub:
         condition: service_started
@@ -439,8 +477,15 @@ services:
       - DRONE_SERVICE_URL=http://drone:8085
       - HUB_SERVICE_URL=http://hub:8084
       - ALERT_SERVICE_URL=http://alert:8093
+      - TELEMETRY_SERVICE_URL=http://telemetry:8089
+      - WEATHER_AIS_SERVICE_URL=http://weather-ais:8097
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - WS_REQUIRE_AUTH=${WS_REQUIRE_AUTH:-false}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       flight:
         condition: service_started
@@ -453,6 +498,108 @@ services:
     networks:
       - utm-network
 
+  weather-ais:
+    build:
+      context: .
+      dockerfile: ./weather-ais/Dockerfile
+    image: weather-ais:latest
+    ports:
+      - "8097:8097"
+    mem_limit: 320m
+    environment:
+      - SERVER_PORT=8097
+      - JAVA_TOOL_OPTIONS=-XX:+UseSerialGC -Xms32m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -Xss512k -XX:ReservedCodeCacheSize=48m
+      - KEYCLOAK_URL=http://identity
+      - HUB_SERVICE_URL=http://hub:8084
+      - OPENAIP_API_KEY=${OPENAIP_API_KEY:-}
+      - AUTOROUTER_CLIENT_ID=${AUTOROUTER_CLIENT_ID:-}
+      - AUTOROUTER_CLIENT_SECRET=${AUTOROUTER_CLIENT_SECRET:-}
+      - UTM_WMS_URL=${UTM_WMS_URL:-}
+    depends_on:
+      hub:
+        condition: service_started
+    networks:
+      - utm-network
+
+  fleet:
+    build:
+      context: .
+      dockerfile: ./fleet/Dockerfile
+    image: fleet:latest
+    ports:
+      - "8098:8098"
+    mem_limit: 320m
+    environment:
+      - SERVER_PORT=8098
+      - JAVA_TOOL_OPTIONS=-XX:+UseSerialGC -Xms32m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -Xss512k -XX:ReservedCodeCacheSize=48m
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3
+      - SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=1
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=utm_fleet
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KEYCLOAK_URL=http://identity
+      - HUB_SERVICE_URL=http://hub:8084
+      - DRONE_SERVICE_URL=http://drone:8085
+      - MISSION_SERVICE_URL=http://mission:8095
+      - FLIGHT_SERVICE_URL=http://flight:8086
+      - TELEMETRY_SERVICE_URL=http://telemetry:8089
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      hub:
+        condition: service_started
+      drone:
+        condition: service_started
+      mission:
+        condition: service_started
+      flight:
+        condition: service_started
+    networks:
+      - utm-network
+
+  intelligence:
+    build:
+      context: .
+      dockerfile: ./intelligence/Dockerfile
+    image: intelligence:latest
+    ports:
+      - "8100:8100"
+    mem_limit: 320m
+    environment:
+      - SERVER_PORT=8100
+      - JAVA_TOOL_OPTIONS=-XX:+UseSerialGC -Xms32m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -Xss512k -XX:ReservedCodeCacheSize=48m
+      - KEYCLOAK_URL=http://identity
+      - HUB_SERVICE_URL=http://hub:8084
+      - DRONE_SERVICE_URL=http://drone:8085
+      - FLIGHT_SERVICE_URL=http://flight:8086
+      - AIRSPACE_SERVICE_URL=http://airspace:8087
+      - TELEMETRY_SERVICE_URL=http://telemetry:8089
+      - CONFLICT_SERVICE_URL=http://conflict:8092
+      - EMERGENCY_SERVICE_URL=http://emergency:8096
+      - WEATHER_AIS_SERVICE_URL=http://weather-ais:8097
+      - FLEET_SERVICE_URL=http://fleet:8098
+      - UTM_SYSTEM_AUTH_PASSWORD=${UTM_SYSTEM_AUTH_PASSWORD:-}
+      - UTM_AI_API_KEY=${UTM_AI_API_KEY:-}
+    depends_on:
+      hub:
+        condition: service_started
+      drone:
+        condition: service_started
+      flight:
+        condition: service_started
+      weather-ais:
+        condition: service_started
+      fleet:
+        condition: service_started
+    networks:
+      - utm-network
+
   swagger-ui:
     profiles: ["tools"]
     image: swaggerapi/swagger-ui:v5.17.14
@@ -461,7 +608,7 @@ services:
       - "8088:8080"
     environment:
       - BASE_URL=/swagger-ui
-      - "URLS=[{ url: '/organization/v3/api-docs', name: 'Organization Service' }, { url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/connectivity/v3/api-docs', name: 'Connectivity Service' }, { url: '/mission/v3/api-docs', name: 'Mission Service' }, { url: '/emergency/v3/api-docs', name: 'Emergency Service' }]"
+      - "URLS=[{ url: '/organization/v3/api-docs', name: 'Organization Service' }, { url: '/drone/v3/api-docs', name: 'Drone Service' }, { url: '/hub/v3/api-docs', name: 'Hub Service' }, { url: '/flight/v3/api-docs', name: 'Flight Service' }, { url: '/airspace/v3/api-docs', name: 'Airspace Service' }, { url: '/telemetry/v3/api-docs', name: 'Telemetry Service' }, { url: '/simulation/v3/api-docs', name: 'Simulation Service' }, { url: '/conflict/v3/api-docs', name: 'Conflict Detection Service' }, { url: '/alert/v3/api-docs', name: 'Alert Service' }, { url: '/connectivity/v3/api-docs', name: 'Connectivity Service' }, { url: '/mission/v3/api-docs', name: 'Mission Service' }, { url: '/emergency/v3/api-docs', name: 'Emergency Service' }, { url: '/weather-ais/v3/api-docs', name: 'Weather & AIS Service' }, { url: '/fleet/v3/api-docs', name: 'Fleet Orchestration Service' }, { url: '/intelligence/v3/api-docs', name: 'Intelligence & AI Copilot Service' }]"
       - OAUTH_CLIENT_ID=swagger-ui
       - OAUTH_USE_PKCE=true
     networks:
@@ -531,7 +678,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.7.1
     hostname: kafka
-    mem_limit: 512m
+    mem_limit: 640m
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -549,8 +696,9 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
-      - KAFKA_HEAP_OPTS=-Xms128m -Xmx256m
+      - KAFKA_HEAP_OPTS=-Xms128m -Xmx320m
       - KAFKA_OPTS=-Xss512k -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m
+      - KAFKA_LOG_CLEANER_DEDUPE_BUFFER_SIZE=16777216
       - KAFKA_NUM_PARTITIONS=1
       - KAFKA_LOG_RETENTION_HOURS=24
       - KAFKA_LOG_RETENTION_BYTES=1073741824

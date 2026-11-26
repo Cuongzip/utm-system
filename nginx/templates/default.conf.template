@@ -36,6 +36,10 @@ server {
     proxy_pass http://drone:8085/drone/api/v1/drones;
   }
 
+  location /api/v1/commands {
+    proxy_pass http://drone:8085/drone/api/v1/commands;
+  }
+
   location /hub/ {
     proxy_pass http://hub:8084/hub/;
   }
@@ -50,6 +54,10 @@ server {
 
   location /api/v1/flights {
     proxy_pass http://flight:8086/flight/api/v1/flights;
+  }
+
+  location /api/v1/feasibility {
+    proxy_pass http://flight:8086/flight/api/v1/feasibility;
   }
 
   location /airspace/ {
@@ -110,6 +118,10 @@ server {
     proxy_pass http://connectivity:8094/connectivity/api/v1/connectivity;
   }
 
+  location /api/v1/integration {
+    proxy_pass http://connectivity:8094/connectivity/api/v1/integration;
+  }
+
   location /mission/ {
     proxy_pass http://mission:8095/mission/;
   }
@@ -120,6 +132,10 @@ server {
 
   location /api/v1/executions {
     proxy_pass http://mission:8095/mission/api/v1/executions;
+  }
+
+  location /api/v1/templates {
+    proxy_pass http://mission:8095/mission/api/v1/templates;
   }
 
   location /emergency/ {
@@ -133,6 +149,54 @@ server {
 
   location /api/v1/emergency {
     proxy_pass http://emergency:8096/emergency/api/v1/emergency;
+  }
+
+  location /weather-ais/ {
+    proxy_pass http://weather-ais:8097/weather-ais/;
+  }
+
+  location /api/v1/weather {
+    proxy_pass http://weather-ais:8097/weather-ais/api/v1/weather;
+  }
+
+  location /api/v1/adsb {
+    proxy_pass http://weather-ais:8097/weather-ais/api/v1/adsb;
+  }
+
+  location /api/v1/notam {
+    proxy_pass http://weather-ais:8097/weather-ais/api/v1/notam;
+  }
+
+  location /api/v1/openaip {
+    proxy_pass http://weather-ais:8097/weather-ais/api/v1/openaip;
+  }
+
+  location /api/v1/dagr {
+    proxy_pass http://weather-ais:8097/weather-ais/api/v1/dagr;
+  }
+
+  location /fleet/ {
+    proxy_pass http://fleet:8098/fleet/;
+  }
+
+  location /api/v1/fleet {
+    proxy_pass http://fleet:8098/fleet/api/v1/fleet;
+  }
+
+  location /intelligence/ {
+    proxy_pass http://intelligence:8100/intelligence/;
+  }
+
+  location /api/v1/briefing {
+    proxy_pass http://intelligence:8100/intelligence/api/v1/briefing;
+  }
+
+  location /api/v1/foresight {
+    proxy_pass http://intelligence:8100/intelligence/api/v1/foresight;
+  }
+
+  location /api/v1/copilot {
+    proxy_pass http://intelligence:8100/intelligence/api/v1/copilot;
   }
 
   location /swagger-ui/ {

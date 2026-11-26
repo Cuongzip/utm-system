@@ -38,8 +38,12 @@ public class AuthenticationController {
         }
 
         List<String> roles = extractRoles(principal);
+        String orgId = principal.getAttribute("orgId");
+        if (orgId == null || orgId.isBlank()) {
+            orgId = principal.getAttribute("organizationId");
+        }
 
-        return ResponseEntity.ok(new AuthenticatedUser(username, email, fullName, roles));
+        return ResponseEntity.ok(new AuthenticatedUser(username, email, fullName, roles, orgId));
     }
 
     private List<String> extractRoles(OAuth2User principal) {

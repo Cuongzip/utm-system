@@ -12,15 +12,22 @@ Quản lý các trạm cất/hạ cánh, Vertiports, sân đỗ trên mái nhà 
 
 ### Các Cột Nghiệp Vụ Riêng Biệt (Domain Columns)
 
-| Tên Cột DB (PostgreSQL) | Kiểu Dữ Liệu DB    | Kiểu DTO    | Khóa / Ràng Buộc              | Ý Nghĩa Nghiệp Vụ                                                      |
-| :---------------------- | :----------------- | :---------- | :---------------------------- | :--------------------------------------------------------------------- |
-| `code`                  | `varchar(50)`      | `string`    | NOT NULL, **UNIQUE**          | Mã định danh trạm (vd: `HUB-SGN-01`, tự sinh nếu để trống)             |
-| `name`                  | `varchar(255)`     | `string`    | NOT NULL                      | Tên hiển thị của Hub / Vertiport                                       |
-| `latitude`              | `double precision` | `number`    | NOT NULL                      | Vĩ độ GPS WGS84 (-90 đến 90)                                           |
-| `longitude`             | `double precision` | `number`    | NOT NULL                      | Kinh độ GPS WGS84 (-180 đến 180)                                       |
-| `altitude_msl`          | `double precision` | `number`    | NOT NULL                      | Độ cao trắc địa so với mực nước biển trung bình (mét)                  |
-| `airspace_radius`       | `double precision` | `number`    | NOT NULL                      | Bán kính vùng đệm bảo vệ an toàn của trạm (mét)                        |
-| `status`                | `varchar(50)`      | `HubStatus` | NOT NULL, Default: `'active'` | Trạng thái tiếp nhận bay của Hub (`active`, `inactive`, `maintenance`) |
+| Tên Cột DB (PostgreSQL)   | Kiểu Dữ Liệu DB    | Kiểu DTO    | Khóa / Ràng Buộc              | Ý Nghĩa Nghiệp Vụ                                                      |
+| :------------------------ | :----------------- | :---------- | :---------------------------- | :--------------------------------------------------------------------- |
+| `code`                    | `varchar(50)`      | `string`    | NOT NULL, **UNIQUE**          | Mã định danh trạm (vd: `HUB-SGN-01`, tự sinh nếu để trống)             |
+| `name`                    | `varchar(255)`     | `string`    | NOT NULL                      | Tên hiển thị của Hub / Vertiport                                       |
+| `latitude`                | `double precision` | `number`    | NOT NULL                      | Vĩ độ GPS WGS84 (-90 đến 90)                                           |
+| `longitude`               | `double precision` | `number`    | NOT NULL                      | Kinh độ GPS WGS84 (-180 đến 180)                                       |
+| `altitude_msl`            | `double precision` | `number`    | NOT NULL                      | Độ cao trắc địa so với mực nước biển trung bình (mét, cho phép giá trị âm dưới mực nước biển) |
+| `airspace_radius`         | `double precision` | `number`    | NOT NULL                      | Bán kính vùng đệm bảo vệ an toàn của trạm (mét)                        |
+| `max_simultaneous_drones` | `integer`          | `number`    | NOT NULL, Default: `10`       | Số lượng drone hoạt động đồng thời tối đa tại trạm                     |
+| `airspace_floor`          | `double precision` | `number`    | NOT NULL, Default: `0.0`      | Cao độ đáy vùng bảo vệ không phận trạm (mét, `>= 0`)                   |
+| `airspace_ceiling`        | `double precision` | `number`    | NOT NULL, Default: `120.0`    | Cao độ trần vùng bảo vệ không phận trạm (mét, bắt buộc `> floor`)      |
+| `organization_id`         | `varchar(36)`      | `string`    | NULLABLE                      | Đơn vị chủ quản / vận hành Vertiport                                   |
+| `timezone`                | `varchar(50)`      | `string`    | NOT NULL, Default: `'Asia/Ho_Chi_Minh'` | Múi giờ vận hành của trạm                                    |
+| `capabilities`            | `jsonb`            | `Record<string, unknown>` | NULLABLE       | Năng lực hạ tầng trạm (bệ sạc nhanh, kho lạnh, trạm thời tiết, bay đêm)|
+| `contact_info`            | `jsonb`            | `Record<string, unknown>` | NULLABLE       | Thông tin trưởng trạm, số điện thoại trực ban, tần số liên lạc VHF     |
+| `status`                  | `varchar(50)`      | `HubStatus` | NOT NULL, Default: `'ACTIVE'` | Trạng thái tiếp nhận bay của Hub (`active`, `inactive`, `maintenance`, `offline`; DB UPPERCASE) |
 
 ---
 
@@ -30,7 +37,8 @@ Quản lý các trạm cất/hạ cánh, Vertiports, sân đỗ trên mái nhà 
 export type HubStatus =
     | "active" // Trạm mở cửa đón/trả chuyến bay bình thường
     | "maintenance" // Tạm dừng khai thác để bảo trì hạ tầng/sạc điện
-    | "inactive"; // Đóng cửa / tạm ngưng khai thác sử dụng
+    | "inactive" // Đóng cửa / tạm ngưng khai thác sử dụng
+    | "offline"; // Mất kết nối hệ thống điều hành trạm
 ```
 
 ---
@@ -52,6 +60,7 @@ export type HubStatus =
 
 - **Chỉ định role**: `admin`
 - **Input (Request Body)** - Model: `HubPostVm`:
+
     ```json
     {
         "code": "HUB-SGN-01",
@@ -61,15 +70,22 @@ export type HubStatus =
             "longitude": 106.7009
         },
         "altitudeMsl": 12.5,
-        "airspaceRadius": 1500.0
+        "airspaceRadius": 1500.0,
+        "maxSimultaneousDrones": 10,
+        "airspaceFloor": 0.0,
+        "airspaceCeiling": 120.0
     }
     ```
 
     - `code`: `string` (optional, độ dài 3-50 ký tự gồm chữ cái, số, gạch ngang, gạch dưới `^[A-Za-z0-9_-]+$`; nếu để trống hoặc null thì hệ thống tự động sinh mã chuẩn theo định dạng `HUB-XXXX`, vd: `HUB-B3A6`).
     - `name`: `string` (bắt buộc, không được để trống).
     - `location`: object `{ latitude, longitude }` (bắt buộc, tọa độ GPS hợp lệ).
-    - `altitudeMsl`: `number` (bắt buộc, >= 0).
+    - `altitudeMsl`: `number` (bắt buộc, cho phép giá trị âm cho khu vực thấp hơn mực nước biển).
     - `airspaceRadius`: `number` (bắt buộc, > 0).
+    - `maxSimultaneousDrones`: `number` (optional, > 0, mặc định `10`).
+    - `airspaceFloor`: `number` (optional, >= 0, mặc định `0.0`).
+    - `airspaceCeiling`: `number` (optional, > 0, mặc định `120.0`; bắt buộc `airspaceCeiling > airspaceFloor`, nếu vi phạm trả `400 Bad Request` với `INVALID_AIRSPACE_BOUNDS`).
+
 - **Logic xử lý cốt lõi**:
     1. **Validation & Sinh mã**: Kiểm tra `name`, tọa độ hợp lệ, bán kính > 0. Nếu `code` được nhập tay: trim, chuyển thành chữ hoa và kiểm tra duy nhất (`409 Conflict`). Nếu `code` để trống: tự động sinh mã ngẫu nhiên duy nhất qua `BusinessCodeGenerator` (chuẩn Base32 loại bỏ ký tự dễ nhầm lẫn).
     2. **Khởi tạo**: Gán `status = 'active'`, tự động sinh UUID `id`.
@@ -139,6 +155,7 @@ Cập nhật thông tin, tọa độ GPS và trạng thái trạm.
 
 - **Chỉ định role**: `admin, hub_operator`
 - **Input (Request Body)** - Model: `HubPutVm`:
+
     ```json
     {
         "name": "Central Vertiport Hub D1 (Expansion)",
@@ -157,6 +174,7 @@ Cập nhật thông tin, tọa độ GPS và trạng thái trạm.
     - `altitudeMsl`: `number` (optional, độ cao MSL cập nhật, >= 0).
     - `airspaceRadius`: `number` (optional, bán kính vùng đệm bảo vệ cập nhật, > 0).
     - `status`: `HubStatus` (optional, `active`, `maintenance`, `inactive`).
+
 - **Ràng buộc an toàn bay**: Nếu trạm chuyển sang `maintenance` hoặc `inactive`, hệ thống kiểm tra và cảnh báo nếu có chuyến bay đang cất cánh hoặc dự kiến hạ cánh tại trạm.
 - **Phản hồi thành công**: `200 OK` - Model: `HubVm`.
 - **Phản hồi lỗi**: `400 Bad Request`, `404 Not Found`.
@@ -171,3 +189,26 @@ Vô hiệu hóa trạm (chuyển sang `inactive`).
 - **Chốt chặn an toàn bay**: Gọi `FlightClientService` xác minh không có chuyến bay nào đang `ACTIVE` tới trạm này.
 - **Xử lý**: Cập nhật `status = 'inactive'`.
 - **Phản hồi thành công**: `204 No Content` / `200 OK`.
+
+---
+
+### 3.4.6 `GET /api/v1/hubs/{id}/status`
+
+Tổng hợp trạng thái vận hành thời gian thực của Hub: sức chứa tối đa, số Drone đang đỗ/khả dụng/sạc/bảo trì (từ `drone` service) và số chuyến bay đang hoạt động liên đới (từ `flight` service).
+
+- **Chỉ định role**: Authenticated
+- **Phản hồi thành công**: `200 OK` - Model: `HubOperationalStatusVm`:
+    ```json
+    {
+        "hubId": "76a06ff8-4ca7-418f-8077-c6c656fba3f5",
+        "code": "HUB-SGN-D1",
+        "status": "active",
+        "maxSimultaneousDrones": 12,
+        "totalDronesAtHub": 2,
+        "availableDrones": 1,
+        "chargingDrones": 0,
+        "maintenanceDrones": 0,
+        "activeFlights": 2,
+        "availablePads": 10
+    }
+    ```
