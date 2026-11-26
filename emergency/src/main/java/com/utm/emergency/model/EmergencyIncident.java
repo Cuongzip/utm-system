@@ -14,13 +14,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "emergency_incidents")
@@ -36,7 +41,7 @@ public class EmergencyIncident extends AbstractAuditEntity {
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
 
-    @Column(name = "incident_number", length = 50, unique = true)
+    @Column(name = "incident_number", length = 50, nullable = false, unique = true)
     private String incidentNumber;
 
     @Column(name = "drone_id", length = 36, nullable = false)
@@ -44,6 +49,9 @@ public class EmergencyIncident extends AbstractAuditEntity {
 
     @Column(name = "flight_id", length = 36)
     private String flightId;
+
+    @Column(name = "protocol_id", length = 36)
+    private String protocolId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "emergency_type", length = 50, nullable = false)
@@ -56,13 +64,14 @@ public class EmergencyIncident extends AbstractAuditEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
     @Builder.Default
-    private IncidentStatus status = IncidentStatus.active;
+    private IncidentStatus status = IncidentStatus.ACTIVE;
 
     @Column(name = "message", columnDefinition = "TEXT", nullable = false)
     private String message;
 
-    @Column(name = "detection_data", columnDefinition = "TEXT")
-    private String detectionData;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "detection_data", columnDefinition = "jsonb")
+    private Map<String, Object> detectionData;
 
     @Column(name = "latitude")
     private Double latitude;
@@ -125,9 +134,15 @@ public class EmergencyIncident extends AbstractAuditEntity {
     @Column(name = "lessons_learned", columnDefinition = "TEXT")
     private String lessonsLearned;
 
-    @Column(name = "timeline", columnDefinition = "TEXT")
-    private String timeline;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "timeline", columnDefinition = "jsonb")
+    private List<IncidentTimelineEntry> timeline;
 
     @Column(name = "detected_at", nullable = false)
     private ZonedDateTime detectedAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 }

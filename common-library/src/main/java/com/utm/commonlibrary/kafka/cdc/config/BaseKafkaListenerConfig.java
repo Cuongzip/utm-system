@@ -40,7 +40,7 @@ public abstract class BaseKafkaListenerConfig<K, V> {
     }
 
     private static <T> JacksonJsonDeserializer<T> getJsonDeserializer(Class<T> clazz) {
-        var jsonDeserializer = new JacksonJsonDeserializer<>(clazz);
+        var jsonDeserializer = new JacksonJsonDeserializer<>(clazz, false);
         jsonDeserializer.addTrustedPackages("*");
         return jsonDeserializer;
     }

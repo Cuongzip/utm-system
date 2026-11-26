@@ -1,0 +1,92 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-align-telemetry-drops-utm-fields
+      author: utm-architecture
+      changes:
+        - addColumn:
+            tableName: telemetry_record
+            columns:
+              - column:
+                  name: altitude_agl
+                  type: DOUBLE PRECISION
+              - column:
+                  name: vertical_speed
+                  type: DOUBLE PRECISION
+              - column:
+                  name: battery_voltage
+                  type: DOUBLE PRECISION
+              - column:
+                  name: battery_temperature
+                  type: DOUBLE PRECISION
+              - column:
+                  name: battery_discharge_rate
+                  type: DOUBLE PRECISION
+              - column:
+                  name: signal_strength
+                  type: DOUBLE PRECISION
+              - column:
+                  name: gps_hdop
+                  type: DOUBLE PRECISION
+              - column:
+                  name: gps_satellites
+                  type: INTEGER
+              - column:
+                  name: flight_mode
+                  type: VARCHAR(50)
+              - column:
+                  name: system_status
+                  type: VARCHAR(50)
+              - column:
+                  name: source
+                  type: VARCHAR(50)
+              - column:
+                  name: motor_rpm
+                  type: JSONB
+              - column:
+                  name: warnings
+                  type: JSONB
+              - column:
+                  name: errors
+                  type: JSONB
+        - createIndex:
+            indexName: idx_telemetry_recorded_at
+            tableName: telemetry_record
+            columns:
+              - column:
+                  name: recorded_at
+                  descending: true
+      rollback:
+        - dropIndex:
+            indexName: idx_telemetry_recorded_at
+            tableName: telemetry_record
+        - dropColumn:
+            tableName: telemetry_record
+            columns:
+              - column:
+                  name: altitude_agl
+              - column:
+                  name: vertical_speed
+              - column:
+                  name: battery_voltage
+              - column:
+                  name: battery_temperature
+              - column:
+                  name: battery_discharge_rate
+              - column:
+                  name: signal_strength
+              - column:
+                  name: gps_hdop
+              - column:
+                  name: gps_satellites
+              - column:
+                  name: flight_mode
+              - column:
+                  name: system_status
+              - column:
+                  name: source
+              - column:
+                  name: motor_rpm
+              - column:
+                  name: warnings
+              - column:
+                  name: errors

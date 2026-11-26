@@ -9,6 +9,7 @@ import com.utm.emergency.service.EmergencyIncidentService;
 import com.utm.emergency.viewmodel.incident.ConfirmIncidentVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentPageVm;
+import com.utm.emergency.viewmodel.incident.ResolveIncidentVm;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -51,10 +52,10 @@ class EmergencyIncidentControllerTest {
     @Test
     void testConfirmIncident() {
         EmergencyIncidentVm vm = new EmergencyIncidentVm(
-                "inc-1", "INC-20261107-001", "drone-1", "fl-1", EmergencyType.battery_low, EmergencySeverity.warning,
-                IncidentStatus.resolved, "Battery warning", null, 0.0, 0.0, 0.0,
+                "inc-1", "INC-20261107-001", "drone-1", "fl-1", null, EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING,
+                IncidentStatus.EXECUTING, "Battery warning", null, 0.0, 0.0, 0.0,
                 ResponseAction.RTH, false, true, "pilot", ZonedDateTime.now(), null,
-                null, null, true, null, ZonedDateTime.now(), "pilot", "RTH confirmed",
+                null, null, true, null, null, null, null,
                 null, null, null, List.of(), ZonedDateTime.now(), null, null);
 
         when(decisionEngine.confirmAction(eq("inc-1"), eq(true), any())).thenReturn(vm);
@@ -62,6 +63,22 @@ class EmergencyIncidentControllerTest {
         var res = incidentController.confirmIncident("inc-1", new ConfirmIncidentVm(true), null);
         assertEquals(200, res.getStatusCode().value());
         assertEquals("inc-1", res.getBody().id());
-        assertEquals(IncidentStatus.resolved, res.getBody().status());
+        assertEquals(IncidentStatus.EXECUTING, res.getBody().status());
+    }
+
+    @Test
+    void testResolveIncident() {
+        EmergencyIncidentVm vm = new EmergencyIncidentVm(
+                "inc-1", "INC-20261107-001", "drone-1", "fl-1", null, EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING,
+                IncidentStatus.RESOLVED, "Battery warning", null, 0.0, 0.0, 0.0,
+                ResponseAction.RTH, false, true, "pilot", ZonedDateTime.now(), null,
+                null, null, true, null, ZonedDateTime.now(), "operator", "Landed safely",
+                null, null, null, List.of(), ZonedDateTime.now(), null, null);
+
+        when(incidentService.resolveIncident("inc-1", "operator", "Landed safely")).thenReturn(vm);
+
+        var res = incidentController.resolveIncident("inc-1", new ResolveIncidentVm("Landed safely"), null);
+        assertEquals(200, res.getStatusCode().value());
+        assertEquals(IncidentStatus.RESOLVED, res.getBody().status());
     }
 }

@@ -18,6 +18,7 @@ public interface AlertService {
             String droneId,
             String flightId,
             String severity,
+            String status,
             Boolean acknowledged,
             Boolean resolved,
             String alertType,
@@ -32,5 +33,9 @@ public interface AlertService {
     AlertVm acknowledgeAlert(String id, AlertAcknowledgePostVm acknowledgeVm);
 
     AlertVm resolveAlert(String id, AlertResolvePostVm resolveVm);
+
+    int resolveByConflictId(String conflictId, String resolutionNotes);
+
+    int resolveByIncidentId(String incidentId, String resolutionNotes);
 }
 

@@ -71,7 +71,7 @@ class EmergencyConfigServiceImplTest {
 
             JsonNode parsedNode = mock(JsonNode.class);
 
-            when(decisionEngineService.getMode()).thenReturn(OperationMode.supervised);
+            when(decisionEngineService.getMode()).thenReturn(OperationMode.SUPERVISED);
             when(configRepo.findAll()).thenReturn(List.of(config1, config2));
             when(objectMapper.readTree("30")).thenReturn(parsedNode);
             when(objectMapper.readTree("raw-string-val")).thenThrow(new JsonProcessingException("Invalid JSON") {
@@ -80,7 +80,7 @@ class EmergencyConfigServiceImplTest {
             EmergencySystemConfigVm result = configService.getSystemConfig();
 
             assertThat(result).isNotNull();
-            assertThat(result.mode()).isEqualTo(OperationMode.supervised);
+            assertThat(result.mode()).isEqualTo(OperationMode.SUPERVISED);
             assertThat(result.configs()).containsKeys("auto_timeout_seconds", "invalid_json_key");
             assertThat(result.configs().get("auto_timeout_seconds")).isEqualTo(parsedNode);
             assertThat(result.configs().get("invalid_json_key")).isEqualTo("raw-string-val");
@@ -94,11 +94,11 @@ class EmergencyConfigServiceImplTest {
         @Test
         @DisplayName("setMode delegates to decisionEngineService and returns OperationModeVm")
         void setMode_delegatesToDecisionEngineAndReturnsVm() {
-            OperationModeVm result = configService.setMode(OperationMode.auto);
+            OperationModeVm result = configService.setMode(OperationMode.AUTO);
 
             assertThat(result).isNotNull();
-            assertThat(result.mode()).isEqualTo(OperationMode.auto);
-            verify(decisionEngineService).setMode(OperationMode.auto);
+            assertThat(result.mode()).isEqualTo(OperationMode.AUTO);
+            verify(decisionEngineService).setMode(OperationMode.AUTO);
         }
     }
 

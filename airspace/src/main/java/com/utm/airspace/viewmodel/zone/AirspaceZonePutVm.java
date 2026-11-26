@@ -7,30 +7,53 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+import java.time.ZonedDateTime;
+import java.util.Map;
+
 @Schema(description = "Request payload for updating an existing Airspace Zone / Geofence")
 public record AirspaceZonePutVm(
-        @Schema(description = "Updated name of the airspace zone", example = "Khu vực Cấm bay Dinh Độc Lập (Mở rộng)")
         @Size(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
         String name,
-
-        @Schema(description = "Updated associated Hub ID", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
         String hubId,
-
-        @Schema(description = "Updated classification type: no_fly_zone | restricted | hub_corridor | warning", example = "restricted")
         AirspaceZoneType zoneType,
-
-        @Schema(description = "Updated altitude ceiling limit in meters (m)", example = "150.0")
         @PositiveOrZero(message = "Altitude ceiling must be >= 0")
         Double altitudeCeiling,
-
-        @Schema(description = "Updated GeoJSON polygon geometry defining spatial boundary")
+        @PositiveOrZero(message = "Altitude floor must be >= 0")
+        Double altitudeFloor,
+        ZonedDateTime effectiveStart,
+        ZonedDateTime effectiveEnd,
+        Integer priority,
+        Map<String, Object> rules,
+        Map<String, Object> schedule,
         @Valid
         GeoJsonPolygonVm geometry,
-
-        @Schema(description = "Updated operational status: active | inactive", example = "active")
         AirspaceZoneStatus status,
-
-        @Schema(description = "Updated detailed description or operational constraints", example = "Mở rộng bán kính bảo vệ an ninh")
         String description
 ) {
+    public AirspaceZonePutVm(
+            String name,
+            String hubId,
+            AirspaceZoneType zoneType,
+            Double altitudeCeiling,
+            GeoJsonPolygonVm geometry,
+            AirspaceZoneStatus status,
+            String description
+    ) {
+        this(name, hubId, zoneType, altitudeCeiling, null, null, null, null, null, null, geometry, status, description);
+    }
+
+    public AirspaceZonePutVm(
+            String name,
+            String hubId,
+            AirspaceZoneType zoneType,
+            Double altitudeCeiling,
+            Double altitudeFloor,
+            ZonedDateTime effectiveStart,
+            ZonedDateTime effectiveEnd,
+            GeoJsonPolygonVm geometry,
+            AirspaceZoneStatus status,
+            String description
+    ) {
+        this(name, hubId, zoneType, altitudeCeiling, altitudeFloor, effectiveStart, effectiveEnd, null, null, null, geometry, status, description);
+    }
 }

@@ -1,10 +1,10 @@
 package com.utm.emergency.service.client;
 
 import com.utm.emergency.config.ServiceUrlConfig;
+import com.utm.emergency.viewmodel.client.HubListClientVm;
 import com.utm.emergency.viewmodel.client.HubLocationVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -22,10 +22,11 @@ public class HubClientServiceImpl implements HubClientService {
 
     @Override
     public Optional<HubLocationVm> getHubById(String hubId) {
-        if (hubId == null || hubId.isBlank())
+        if (hubId == null || hubId.isBlank()) {
             return Optional.empty();
+        }
         try {
-            var url = serviceUrlConfig.getHubUrl() + "/api/v1/hubs/" + hubId;
+            var url = serviceUrlConfig.getHubUrl() + "/api/v1/hubs/" + hubId.trim();
             HubLocationVm vm = restClient.get()
                     .uri(url)
                     .retrieve()
@@ -40,13 +41,12 @@ public class HubClientServiceImpl implements HubClientService {
     @Override
     public List<HubLocationVm> getActiveHubs() {
         try {
-            var url = serviceUrlConfig.getHubUrl() + "/api/v1/hubs?status=active";
-            List<HubLocationVm> list = restClient.get()
+            var url = serviceUrlConfig.getHubUrl() + "/api/v1/hubs?status=ACTIVE&limit=0";
+            HubListClientVm response = restClient.get()
                     .uri(url)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {
-                    });
-            return list != null ? list : Collections.emptyList();
+                    .body(HubListClientVm.class);
+            return response != null && response.items() != null ? response.items() : Collections.emptyList();
         } catch (Exception e) {
             log.warn("Failed to fetch active hubs from Hub Service: {}", e.getMessage());
             return Collections.emptyList();

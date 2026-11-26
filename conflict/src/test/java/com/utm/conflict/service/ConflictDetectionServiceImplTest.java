@@ -1,5 +1,6 @@
 package com.utm.conflict.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.conflict.config.ServiceUrlConfig;
 import com.utm.conflict.mapper.ConflictDetectionMapper;
 import com.utm.conflict.model.Conflict;
@@ -12,6 +13,9 @@ import com.utm.conflict.viewmodel.client.FlightBriefVm;
 import com.utm.conflict.viewmodel.client.FlightListBriefVm;
 import com.utm.conflict.viewmodel.client.TelemetryBriefVm;
 import com.utm.conflict.viewmodel.conflict.ConflictScanResultVm;
+import com.utm.conflict.viewmodel.conflict.StrategicTrajectoryCheckPostVm;
+import com.utm.conflict.viewmodel.conflict.StrategicTrajectoryCheckResultVm;
+import com.utm.conflict.viewmodel.conflict.StrategicTrajectoryPointVm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -311,6 +315,7 @@ class ConflictDetectionServiceImplTest {
                                         .id("existing-single-uuid")
                                         .primaryFlightId(FLIGHT_1_ID)
                                         .secondaryFlightId(null)
+                                        .conflictType(ConflictType.AIRSPACE_BREACH)
                                         .build();
                         when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(FLIGHT_1_ID), anyList()))
                                         .thenReturn(List.of(existingSingle));
@@ -419,6 +424,72 @@ class ConflictDetectionServiceImplTest {
                         assertThat(result.resolvedConflictsCount()).isEqualTo(1);
                         verify(conflictDetectionMapper).resolveConflictAuto(testConflict, "SYSTEM_AUTO");
                         verify(conflictRepository).save(testConflict);
+                }
+        }
+
+        @Nested
+        @DisplayName("checkTrajectory4D")
+        class CheckTrajectory4D {
+
+                private final ObjectMapper mapper = new ObjectMapper();
+
+                @Test
+                @DisplayName("whenIntersectingInSpaceAndTime_reportsStrategicConflict")
+                void whenIntersectingInSpaceAndTime_reportsStrategicConflict() throws Exception {
+                        ZonedDateTime departure = ZonedDateTime.parse("2026-11-24T09:00:00Z");
+                        ZonedDateTime arrival = departure.plusMinutes(5);
+                        var otherRoute = mapper.readTree(
+                                        "{\"type\":\"LineString\",\"coordinates\":[[106.7000,10.7700,60.0],[106.7100,10.7700,60.0]]}");
+                        FlightBriefVm scheduledFlight = new FlightBriefVm(
+                                        FLIGHT_2_ID, "FL-SCHED-02", DRONE_2_ID, HUB_ID, "scheduled", 60.0,
+                                        departure, arrival, otherRoute);
+                        when(responseSpec.body(FlightListBriefVm.class))
+                                        .thenReturn(new FlightListBriefVm(List.of(scheduledFlight), 1));
+
+                        StrategicTrajectoryCheckPostVm request = new StrategicTrajectoryCheckPostVm(
+                                        List.of(
+                                                        new StrategicTrajectoryPointVm(10.7650, 106.7050, 60.0),
+                                                        new StrategicTrajectoryPointVm(10.7750, 106.7050, 60.0)),
+                                        departure,
+                                        arrival,
+                                        15.0,
+                                        null);
+
+                        StrategicTrajectoryCheckResultVm result = conflictDetectionService.checkTrajectory4D(request);
+
+                        assertThat(result.clear()).isFalse();
+                        assertThat(result.evaluatedFlightsCount()).isEqualTo(1);
+                        assertThat(result.conflicts()).hasSize(1);
+                        assertThat(result.conflicts().getFirst().conflictingFlightId()).isEqualTo(FLIGHT_2_ID);
+                        assertThat(result.conflicts().getFirst().horizontalDistanceM()).isLessThan(150.0);
+                }
+
+                @Test
+                @DisplayName("whenSeparatedVerticallyOrInTime_returnsClearTrue")
+                void whenSeparatedVerticallyOrInTime_returnsClearTrue() throws Exception {
+                        ZonedDateTime departure = ZonedDateTime.parse("2026-11-24T09:00:00Z");
+                        ZonedDateTime arrival = departure.plusMinutes(5);
+                        var otherRoute = mapper.readTree(
+                                        "{\"type\":\"LineString\",\"coordinates\":[[106.7000,10.7700,110.0],[106.7100,10.7700,110.0]]}");
+                        FlightBriefVm scheduledFlight = new FlightBriefVm(
+                                        FLIGHT_2_ID, "FL-SCHED-03", DRONE_2_ID, HUB_ID, "authorized", 110.0,
+                                        departure, arrival, otherRoute);
+                        when(responseSpec.body(FlightListBriefVm.class))
+                                        .thenReturn(new FlightListBriefVm(List.of(scheduledFlight), 1));
+
+                        StrategicTrajectoryCheckPostVm request = new StrategicTrajectoryCheckPostVm(
+                                        List.of(
+                                                        new StrategicTrajectoryPointVm(10.7650, 106.7050, 60.0),
+                                                        new StrategicTrajectoryPointVm(10.7750, 106.7050, 60.0)),
+                                        departure,
+                                        arrival,
+                                        15.0,
+                                        null);
+
+                        StrategicTrajectoryCheckResultVm result = conflictDetectionService.checkTrajectory4D(request);
+
+                        assertThat(result.clear()).isTrue();
+                        assertThat(result.conflicts()).isEmpty();
                 }
         }
 }

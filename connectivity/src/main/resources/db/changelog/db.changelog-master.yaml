@@ -1,3 +1,7 @@
 databaseChangeLog:
   - include:
       file: db/changelog/changes/01-create-device-registration-table.yaml
+  - include:
+      file: db/changelog/changes/02-standardize-connectivity-schema.yaml
+  - include:
+      file: db/changelog/changes/03-add-pki-adaptive-rate-and-oem-integration.yaml

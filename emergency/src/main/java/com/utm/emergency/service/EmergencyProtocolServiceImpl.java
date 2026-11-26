@@ -2,9 +2,12 @@ package com.utm.emergency.service;
 
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
+import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.emergency.mapper.EmergencyProtocolMapper;
 import com.utm.emergency.model.EmergencyProtocol;
+import com.utm.emergency.model.enumeration.EmergencySeverity;
+import com.utm.emergency.model.enumeration.EmergencyType;
 import com.utm.emergency.repository.EmergencyProtocolRepository;
 import com.utm.emergency.viewmodel.protocol.EmergencyProtocolPostVm;
 import com.utm.emergency.viewmodel.protocol.EmergencyProtocolPutVm;
@@ -46,6 +49,11 @@ public class EmergencyProtocolServiceImpl implements EmergencyProtocolService {
         if (protocolRepo.findByName(postVm.name().trim()).isPresent()) {
             throw new BadRequestException(MessageCode.NAME_ALREADY_EXISTED, "name", postVm.name().trim());
         }
+        if (protocolRepo.findByEmergencyTypeAndSeverity(postVm.emergencyType(), postVm.severity()).isPresent()) {
+            throw new DuplicatedException(
+                    MessageCode.NAME_ALREADY_EXISTED,
+                    "name", postVm.emergencyType().getValue() + "/" + postVm.severity().getValue());
+        }
         EmergencyProtocol protocol = protocolMapper.toEntity(postVm);
         protocol.setSystemDefault(false);
         EmergencyProtocol saved = protocolRepo.save(protocol);
@@ -68,6 +76,20 @@ public class EmergencyProtocolServiceImpl implements EmergencyProtocolService {
             });
         }
 
+        EmergencyType targetType = (!protocol.isSystemDefault() && putVm.emergencyType() != null)
+                ? putVm.emergencyType()
+                : protocol.getEmergencyType();
+        EmergencySeverity targetSeverity = putVm.severity() != null ? putVm.severity() : protocol.getSeverity();
+        if (targetType != protocol.getEmergencyType() || targetSeverity != protocol.getSeverity()) {
+            protocolRepo.findByEmergencyTypeAndSeverity(targetType, targetSeverity).ifPresent(existing -> {
+                if (!existing.getId().equals(id)) {
+                    throw new DuplicatedException(
+                            MessageCode.NAME_ALREADY_EXISTED,
+                            "name", targetType.getValue() + "/" + targetSeverity.getValue());
+                }
+            });
+        }
+
         if (protocol.isSystemDefault()) {
             EmergencyProtocolPutVm safeVm = new EmergencyProtocolPutVm(
                     putVm.name(),
@@ -80,14 +102,6 @@ public class EmergencyProtocolServiceImpl implements EmergencyProtocolService {
                     putVm.confirmationTimeoutSeconds(),
                     putVm.autoExecuteOnTimeout(),
                     putVm.priority(),
-                    putVm.thresholds(),
-                    putVm.conditions(),
-                    putVm.notifyPilot(),
-                    putVm.notifySupervisor(),
-                    putVm.notifyOpsCenter(),
-                    putVm.sendSms(),
-                    putVm.sendEmail(),
-                    putVm.playAudioAlarm(),
                     putVm.isActive());
             protocolMapper.updateEntityFromPutVm(protocol, safeVm);
         } else {

@@ -13,13 +13,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.ZonedDateTime;
+import java.util.Map;
 
 @Entity
 @Table(name = "conflict")
@@ -59,6 +63,9 @@ public class Conflict extends AbstractAuditEntity {
     @Column(name = "hub_id", length = 36)
     private String hubId;
 
+    @Column(name = "airspace_zone_id", length = 36)
+    private String airspaceZoneId;
+
     @Column(name = "detected_at", nullable = false)
     private ZonedDateTime detectedAt;
 
@@ -93,16 +100,26 @@ public class Conflict extends AbstractAuditEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "data", columnDefinition = "jsonb")
+    private Map<String, Object> data;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "resolution_strategy", length = 50)
     private ResolutionStrategy resolutionStrategy;
 
-    @Column(name = "resolution_actions", columnDefinition = "TEXT")
-    private String resolutionActions;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "resolution_actions", columnDefinition = "jsonb")
+    private Map<String, Object> resolutionActions;
 
     @Column(name = "resolved_at")
     private ZonedDateTime resolvedAt;
 
     @Column(name = "resolved_by", length = 100)
     private String resolvedBy;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 }

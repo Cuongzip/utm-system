@@ -33,6 +33,10 @@ public interface HubMapper {
     @Mapping(target = "status", constant = "ACTIVE")
     @Mapping(target = "name", qualifiedByName = "trimString")
     @Mapping(target = "code", qualifiedByName = "trimString")
+    @Mapping(target = "maxSimultaneousDrones", defaultValue = "10")
+    @Mapping(target = "airspaceFloor", defaultValue = "0.0")
+    @Mapping(target = "airspaceCeiling", defaultValue = "120.0")
+    @Mapping(target = "timezone", defaultValue = "Asia/Ho_Chi_Minh")
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -55,6 +59,10 @@ public interface HubMapper {
 
     @Named("trimString")
     default String trimString(String value) {
-        return value != null ? value.trim() : null;
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

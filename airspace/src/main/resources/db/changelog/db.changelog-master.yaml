@@ -3,3 +3,9 @@ databaseChangeLog:
       file: db/changelog/changes/01-create-airspace-zone-table.yaml
   - include:
       file: db/changelog/changes/02-add-code-to-airspace-zone.yaml
+  - include:
+      file: db/changelog/changes/03-add-altitude-floor-and-effective-window.yaml
+  - include:
+      file: db/changelog/changes/04-standardize-airspace-schema.yaml
+  - include:
+      file: db/changelog/changes/05-align-drops-airspace-fields.yaml

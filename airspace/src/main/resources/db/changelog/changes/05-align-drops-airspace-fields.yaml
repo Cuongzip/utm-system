@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 05-align-drops-airspace-fields
+      author: utm-system
+      changes:
+        - addColumn:
+            tableName: airspace_zone
+            columns:
+              - column:
+                  name: priority
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rules
+                  type: jsonb
+              - column:
+                  name: schedule
+                  type: jsonb
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE airspace_zone DROP CONSTRAINT IF EXISTS chk_airspace_zone_type;
+              ALTER TABLE airspace_zone ADD CONSTRAINT chk_airspace_zone_type
+                CHECK (zone_type IN ('NO_FLY_ZONE', 'PROHIBITED', 'RESTRICTED', 'CONTROLLED', 'HUB_CORRIDOR', 'HUB_ZONE', 'WARNING', 'TEMPORARY_RESTRICTION', 'EMERGENCY_EXCLUSION'));
+      rollback:
+        - dropColumn:
+            tableName: airspace_zone
+            columnName: schedule
+        - dropColumn:
+            tableName: airspace_zone
+            columnName: rules
+        - dropColumn:
+            tableName: airspace_zone
+            columnName: priority

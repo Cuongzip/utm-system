@@ -14,7 +14,12 @@ public enum ConflictType {
     TERRAIN_PROXIMITY("terrain_proximity"),
     SEPARATION_MINIMUM("separation_minimum"),
     HEAD_ON("head_on"),
-    CONVERGENCE("convergence");
+    CONVERGENCE("convergence"),
+    COLLISION_RISK("collision_risk"),
+    WEATHER("weather"),
+    EQUIPMENT_FAILURE("equipment_failure"),
+    TIME_OVERLAP("time_overlap"),
+    RESTRICTED_ZONE("restricted_zone");
 
     private final String value;
 
@@ -25,7 +30,9 @@ public enum ConflictType {
 
     @JsonCreator
     public static ConflictType fromValue(String value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         for (ConflictType type : values()) {
             if (type.value.equalsIgnoreCase(value) || type.name().equalsIgnoreCase(value)) {
                 return type;

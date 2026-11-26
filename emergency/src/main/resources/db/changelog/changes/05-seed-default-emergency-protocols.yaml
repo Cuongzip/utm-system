@@ -1,0 +1,272 @@
+databaseChangeLog:
+  - changeSet:
+      id: 05-seed-default-emergency-protocols
+      author: utm-system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM emergency_protocols WHERE is_system_default = true
+      changes:
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-collision-aircraft" }
+              - column: { name: name, value: "System Default - Aircraft Collision Avoidance" }
+              - column: { name: description, value: "Immediate hover and vertical separation upon imminent aircraft collision" }
+              - column: { name: emergency_type, value: "collision_aircraft" }
+              - column: { name: severity, value: "emergency" }
+              - column: { name: response_action, value: "HOVER" }
+              - column: { name: fallback_action, value: "DESCEND" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 10 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 1 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-collision-obstacle" }
+              - column: { name: name, value: "System Default - Obstacle Collision Avoidance" }
+              - column: { name: description, value: "Immediate hover and climb clearance upon obstacle proximity" }
+              - column: { name: emergency_type, value: "collision_obstacle" }
+              - column: { name: severity, value: "emergency" }
+              - column: { name: response_action, value: "HOVER" }
+              - column: { name: fallback_action, value: "CLIMB" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 10 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 2 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-motor-failure" }
+              - column: { name: name, value: "System Default - Motor Failure Failsafe" }
+              - column: { name: description, value: "Immediate controlled landing or emergency stop on propulsion loss" }
+              - column: { name: emergency_type, value: "motor_failure" }
+              - column: { name: severity, value: "critical" }
+              - column: { name: response_action, value: "LAND" }
+              - column: { name: fallback_action, value: "ESTOP" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 10 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 10 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-motor-anomaly" }
+              - column: { name: name, value: "System Default - Motor Anomaly Advisory" }
+              - column: { name: description, value: "Divert to nearest active hub upon motor vibration or thermal anomaly" }
+              - column: { name: emergency_type, value: "motor_anomaly" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "DIVERT" }
+              - column: { name: fallback_action, value: "RTH" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 20 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 15 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-gps-lost" }
+              - column: { name: name, value: "System Default - GNSS Signal Lost" }
+              - column: { name: description, value: "Hover in optical-flow stabilization mode and land if GNSS does not recover" }
+              - column: { name: emergency_type, value: "gps_lost" }
+              - column: { name: severity, value: "critical" }
+              - column: { name: response_action, value: "HOVER" }
+              - column: { name: fallback_action, value: "LAND" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 15 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 20 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-gps-degraded" }
+              - column: { name: name, value: "System Default - GNSS Degraded" }
+              - column: { name: description, value: "Return to home hub when GNSS HDOP/satellite count drops below minimum" }
+              - column: { name: emergency_type, value: "gps_degraded" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "RTH" }
+              - column: { name: fallback_action, value: "HOVER" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 30 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 25 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-geofence-breach" }
+              - column: { name: name, value: "System Default - Geofence Breach" }
+              - column: { name: description, value: "Immediate return to home or land upon confirmed geofence breach" }
+              - column: { name: emergency_type, value: "geofence_breach" }
+              - column: { name: severity, value: "critical" }
+              - column: { name: response_action, value: "RTH" }
+              - column: { name: fallback_action, value: "LAND" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 15 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 30 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-geofence-warning" }
+              - column: { name: name, value: "System Default - Geofence Boundary Warning" }
+              - column: { name: description, value: "Hold position near geofence buffer awaiting operator guidance" }
+              - column: { name: emergency_type, value: "geofence_warning" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "HOVER" }
+              - column: { name: fallback_action, value: "RTH" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 20 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 35 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-battery-critical" }
+              - column: { name: name, value: "System Default - Critical Battery Depletion" }
+              - column: { name: description, value: "Immediate controlled landing when battery falls below 10%" }
+              - column: { name: emergency_type, value: "battery_critical" }
+              - column: { name: severity, value: "critical" }
+              - column: { name: response_action, value: "LAND" }
+              - column: { name: fallback_action, value: "ESTOP" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 10 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 40 }
+              - column: { name: thresholds, value: "{\"batteryPercent\": 10.0}" }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-battery-low" }
+              - column: { name: name, value: "System Default - Low Battery Warning" }
+              - column: { name: description, value: "Return to home hub or divert when battery reaches 20%" }
+              - column: { name: emergency_type, value: "battery_low" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "RTH" }
+              - column: { name: fallback_action, value: "DIVERT" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 30 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 45 }
+              - column: { name: thresholds, value: "{\"batteryPercent\": 20.0}" }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-battery-rapid-discharge" }
+              - column: { name: name, value: "System Default - Rapid Battery Discharge" }
+              - column: { name: description, value: "Divert to nearest active hub when discharge exceeds 5%/min" }
+              - column: { name: emergency_type, value: "battery_rapid_discharge" }
+              - column: { name: severity, value: "critical" }
+              - column: { name: response_action, value: "DIVERT" }
+              - column: { name: fallback_action, value: "LAND" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 15 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 50 }
+              - column: { name: thresholds, value: "{\"dischargeRatePercentPerMin\": 5.0}" }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-signal-lost" }
+              - column: { name: name, value: "System Default - C2 Signal Lost" }
+              - column: { name: description, value: "Autonomous RTH or land when C2 telemetry link is severed" }
+              - column: { name: emergency_type, value: "signal_lost" }
+              - column: { name: severity, value: "critical" }
+              - column: { name: response_action, value: "RTH" }
+              - column: { name: fallback_action, value: "LAND" }
+              - column: { name: requires_confirmation, valueBoolean: false }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 15 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 55 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-signal-weak" }
+              - column: { name: name, value: "System Default - Weak C2 Signal" }
+              - column: { name: description, value: "Return to home hub when C2 link quality degrades" }
+              - column: { name: emergency_type, value: "signal_weak" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "RTH" }
+              - column: { name: fallback_action, value: "HOVER" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 30 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 60 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-weather-wind" }
+              - column: { name: name, value: "System Default - High Wind Advisory" }
+              - column: { name: description, value: "Divert to nearest sheltered hub under severe wind gusts" }
+              - column: { name: emergency_type, value: "weather_wind" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "DIVERT" }
+              - column: { name: fallback_action, value: "LAND" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 30 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 70 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: emergency_protocols
+            columns:
+              - column: { name: id, value: "proto-sys-weather-visibility" }
+              - column: { name: name, value: "System Default - Low Visibility Advisory" }
+              - column: { name: description, value: "Return to home hub when weather visibility drops below VFR minimum" }
+              - column: { name: emergency_type, value: "weather_visibility" }
+              - column: { name: severity, value: "warning" }
+              - column: { name: response_action, value: "RTH" }
+              - column: { name: fallback_action, value: "LAND" }
+              - column: { name: requires_confirmation, valueBoolean: true }
+              - column: { name: confirmation_timeout_seconds, valueNumeric: 30 }
+              - column: { name: auto_execute_on_timeout, valueBoolean: true }
+              - column: { name: priority, valueNumeric: 75 }
+              - column: { name: is_active, valueBoolean: true }
+              - column: { name: is_system_default, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+      rollback:
+        - delete:
+            tableName: emergency_protocols
+            where: is_system_default = true AND id LIKE 'proto-sys-%'

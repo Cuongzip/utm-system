@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,14 +33,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/telemetry")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Telemetry", description = "Endpoints for ingesting and querying real-time drone telemetry data (Module 10)")
 public class TelemetryController {
 
     private final TelemetryService telemetryService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator')")
-    @Operation(summary = "Ingest drone telemetry data", description = "Push instantaneous telemetry packet (lat, lon, alt, speed, heading, battery) into system.")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator', 'operator')")
+    @Operation(summary = "Ingest drone telemetry data", description = "Push instantaneous telemetry packet (lat, lon, alt, speed, heading, battery, health) into system.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
@@ -58,8 +60,48 @@ public class TelemetryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(record);
     }
 
+    @PostMapping("/batch")
+    @PreAuthorize("hasAnyRole('pilot', 'admin', 'hub_operator', 'operator')")
+    @Operation(summary = "Batch ingest drone telemetry data", description = "Ingest multiple telemetry packets in a single batch write and broadcast updates.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Telemetry batch ingested successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = TelemetryRecordVm.class))
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content)
+    })
+    public ResponseEntity<List<TelemetryRecordVm>> ingestTelemetryBatch(
+            @RequestBody List<@Valid TelemetryIngestVm> batch
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(telemetryService.ingestTelemetryBatch(batch));
+    }
+
+    @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
+    @Operation(summary = "Get active drone telemetry snapshots", description = "Returns latest telemetry snapshots across active drones from cache, falling back to DB records within the last 5 minutes.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Active telemetry snapshots retrieved successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = TelemetryRecordVm.class))
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+    })
+    public ResponseEntity<List<TelemetryRecordVm>> getActiveTelemetry() {
+        return ResponseEntity.ok(telemetryService.getActiveTelemetry());
+    }
+
     @GetMapping("/flight/{flightId}")
-    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get telemetry history for a flight", description = "Retrieve historical trajectory breadcrumbs for a specific flight with optional time range.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -83,7 +125,7 @@ public class TelemetryController {
     }
 
     @GetMapping("/flight/{flightId}/latest")
-    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get latest telemetry for a flight", description = "Retrieve the most recent instantaneous telemetry position and health metrics for a flight.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -102,7 +144,7 @@ public class TelemetryController {
     }
 
     @GetMapping("/drone/{droneId}")
-    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get telemetry history for a drone", description = "Retrieve historical trajectory breadcrumbs for a specific drone hardware unit.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -126,7 +168,7 @@ public class TelemetryController {
     }
 
     @GetMapping("/drone/{droneId}/latest")
-    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot', 'operator')")
     @Operation(summary = "Get latest telemetry for a drone", description = "Retrieve the most recent instantaneous telemetry position and health metrics for a drone hardware unit.")
     @ApiResponses(value = {
             @ApiResponse(
@@ -144,4 +186,3 @@ public class TelemetryController {
         return ResponseEntity.ok(telemetryService.getLatestByDroneId(droneId));
     }
 }
-

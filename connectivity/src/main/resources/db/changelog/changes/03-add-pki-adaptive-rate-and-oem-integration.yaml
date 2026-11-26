@@ -1,0 +1,227 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-add-pki-adaptive-rate-and-oem-integration
+      author: utm-system
+      changes:
+        - dropNotNullConstraint:
+            tableName: device_registrations
+            columnName: drone_id
+            columnDataType: varchar(36)
+        - addColumn:
+            tableName: device_registrations
+            columns:
+              - column:
+                  name: device_type
+                  type: varchar(30)
+                  defaultValue: "DRONE"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hub_id
+                  type: varchar(36)
+              - column:
+                  name: supported_protocols
+                  type: jsonb
+              - column:
+                  name: metadata
+                  type: jsonb
+              - column:
+                  name: telemetry_mode
+                  type: varchar(30)
+                  defaultValue: "NORMAL"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telemetry_mode_reason
+                  type: varchar(255)
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_device_reg_active_drone;
+              CREATE UNIQUE INDEX uq_device_reg_active_drone
+                ON device_registrations (drone_id)
+                WHERE drone_id IS NOT NULL AND registration_status <> 'REVOKED';
+              CREATE INDEX IF NOT EXISTS idx_device_reg_hub_id
+                ON device_registrations (hub_id);
+              ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS chk_device_reg_device_type;
+              ALTER TABLE device_registrations ADD CONSTRAINT chk_device_reg_device_type
+                CHECK (device_type IN ('DRONE', 'GATEWAY', 'GCS'));
+              ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS chk_device_reg_telemetry_mode;
+              ALTER TABLE device_registrations ADD CONSTRAINT chk_device_reg_telemetry_mode
+                CHECK (telemetry_mode IN ('IDLE', 'NORMAL', 'ENHANCED', 'EMERGENCY'));
+        - createTable:
+            tableName: device_certificates
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: device_registration_id
+                  type: varchar(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: certificate_pem
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fingerprint
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: common_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: serial_number
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: issued_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked_at
+                  type: timestamp with time zone
+              - column:
+                  name: revocation_reason
+                  type: varchar(255)
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - addForeignKeyConstraint:
+            baseTableName: device_certificates
+            baseColumnNames: device_registration_id
+            referencedTableName: device_registrations
+            referencedColumnNames: id
+            constraintName: fk_device_cert_registration
+            onDelete: CASCADE
+        - createIndex:
+            tableName: device_certificates
+            indexName: idx_device_cert_registration_id
+            columns:
+              - column:
+                  name: device_registration_id
+        - createTable:
+            tableName: manufacturer_api_keys
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: manufacturer_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key_prefix
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key_hash
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: scopes
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+              - column:
+                  name: last_used_at
+                  type: timestamp with time zone
+              - column:
+                  name: revoked_at
+                  type: timestamp with time zone
+              - column:
+                  name: created_on
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(100)
+              - column:
+                  name: last_modified_on
+                  type: timestamp with time zone
+              - column:
+                  name: last_modified_by
+                  type: varchar(100)
+        - createIndex:
+            tableName: manufacturer_api_keys
+            indexName: idx_manufacturer_api_keys_mfg
+            columns:
+              - column:
+                  name: manufacturer_name
+      rollback:
+        - dropTable:
+            tableName: manufacturer_api_keys
+        - dropTable:
+            tableName: device_certificates
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS chk_device_reg_telemetry_mode;
+              ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS chk_device_reg_device_type;
+              DROP INDEX IF EXISTS idx_device_reg_hub_id;
+        - dropColumn:
+            tableName: device_registrations
+            columns:
+              - column:
+                  name: telemetry_mode_reason
+              - column:
+                  name: telemetry_mode
+              - column:
+                  name: metadata
+              - column:
+                  name: supported_protocols
+              - column:
+                  name: hub_id
+              - column:
+                  name: device_type

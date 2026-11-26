@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-align-drops-hub-fields
+      author: utm-system
+      changes:
+        - addColumn:
+            tableName: hub
+            columns:
+              - column:
+                  name: organization_id
+                  type: varchar(36)
+              - column:
+                  name: timezone
+                  type: varchar(50)
+                  defaultValue: "Asia/Ho_Chi_Minh"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: capabilities
+                  type: jsonb
+              - column:
+                  name: contact_info
+                  type: jsonb
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE hub DROP CONSTRAINT IF EXISTS chk_hub_status;
+              ALTER TABLE hub ADD CONSTRAINT chk_hub_status
+                CHECK (status IN ('ACTIVE', 'INACTIVE', 'MAINTENANCE', 'OFFLINE'));
+      rollback:
+        - dropColumn:
+            tableName: hub
+            columnName: contact_info
+        - dropColumn:
+            tableName: hub
+            columnName: capabilities
+        - dropColumn:
+            tableName: hub
+            columnName: timezone
+        - dropColumn:
+            tableName: hub
+            columnName: organization_id

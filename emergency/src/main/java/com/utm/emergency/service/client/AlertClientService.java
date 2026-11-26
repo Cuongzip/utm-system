@@ -4,4 +4,6 @@ import com.utm.emergency.viewmodel.client.AlertPostVm;
 
 public interface AlertClientService {
     void publishAlert(AlertPostVm alertPostVm);
+
+    void resolveAlertsByIncident(String incidentId, String resolutionNotes);
 }

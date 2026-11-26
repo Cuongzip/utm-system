@@ -1,30 +1,58 @@
 package com.utm.hub.viewmodel.hub;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.utm.hub.model.enumeration.HubStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.util.Map;
+
 @Schema(description = "Request payload for updating an existing Hub / Vertiport")
 public record HubPutVm(
-        @Schema(description = "Updated name of the Hub", example = "Central Vertiport Hub D1 - Expansion")
         String name,
+        String organizationId,
+        @Valid LocationVm location,
+        @PositiveOrZero(message = "Altitude MSL must be >= 0") Double altitudeMsl,
+        @Positive(message = "Airspace radius must be positive") Double airspaceRadius,
+        HubStatus status,
+        @Positive(message = "Max simultaneous drones must be positive") Integer maxSimultaneousDrones,
+        @PositiveOrZero(message = "Airspace floor must be >= 0") Double airspaceFloor,
+        @Positive(message = "Airspace ceiling must be positive") Double airspaceCeiling,
+        String timezone,
+        Map<String, Object> capabilities,
+        Map<String, Object> contactInfo) {
 
-        @Schema(description = "Updated GPS Location object containing latitude and longitude")
-        @Valid
-        LocationVm location,
+    public HubPutVm(
+            String name,
+            LocationVm location,
+            Double altitudeMsl,
+            Double airspaceRadius,
+            HubStatus status) {
+        this(name, null, location, altitudeMsl, airspaceRadius, status, null, null, null, null, null, null);
+    }
 
-        @Schema(description = "Updated altitude in meters above mean sea level", example = "15.0")
-        @PositiveOrZero(message = "Altitude MSL must be >= 0")
-        Double altitudeMsl,
+    public HubPutVm(
+            String name,
+            LocationVm location,
+            Double altitudeMsl,
+            Double airspaceRadius,
+            HubStatus status,
+            Integer maxSimultaneousDrones,
+            Double airspaceFloor,
+            Double airspaceCeiling) {
+        this(name, null, location, altitudeMsl, airspaceRadius, status, maxSimultaneousDrones, airspaceFloor, airspaceCeiling, null, null, null);
+    }
 
-        @Schema(description = "Updated airspace protection radius in meters", example = "1500.0")
-        @Positive(message = "Airspace radius must be positive")
-        Double airspaceRadius,
-
-        @Schema(description = "Updated operational status (active, inactive, maintenance)", example = "maintenance")
-        HubStatus status
-) {
+    @JsonIgnore
+    @Schema(hidden = true)
+    @AssertTrue(message = "Airspace ceiling must be greater than airspace floor")
+    public boolean isAirspaceBoundsValid() {
+        if (airspaceFloor != null && airspaceCeiling != null) {
+            return airspaceCeiling > airspaceFloor;
+        }
+        return true;
+    }
 }
-

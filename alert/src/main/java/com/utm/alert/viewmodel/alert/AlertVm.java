@@ -2,8 +2,10 @@ package com.utm.alert.viewmodel.alert;
 
 import com.utm.alert.model.enumeration.AlertSeverity;
 import com.utm.alert.model.enumeration.AlertStatus;
+import com.utm.alert.model.enumeration.AlertType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.ZonedDateTime;
+import java.util.Map;
 
 @Schema(description = "Operational alert event model")
 public record AlertVm(
@@ -11,12 +13,12 @@ public record AlertVm(
         String id,
 
         @Schema(description = "Alert type code")
-        String alertType,
+        AlertType alertType,
 
         @Schema(description = "Severity level: LOW, MEDIUM, HIGH, CRITICAL")
         AlertSeverity severity,
 
-        @Schema(description = "Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED")
+        @Schema(description = "Lifecycle status: ACTIVE, ACKNOWLEDGED, RESOLVED")
         AlertStatus status,
 
         @Schema(description = "Associated drone UUID")
@@ -28,23 +30,23 @@ public record AlertVm(
         @Schema(description = "Associated hub UUID")
         String hubId,
 
+        @Schema(description = "Associated conflict UUID")
+        String conflictId,
+
+        @Schema(description = "Associated emergency incident UUID")
+        String incidentId,
+
         @Schema(description = "Diagnostic human-readable message")
         String message,
 
-        @Schema(description = "Detailed JSON payload")
-        String detailsJson,
-
-        @Schema(description = "Whether the alert has been acknowledged by an operator")
-        Boolean acknowledged,
+        @Schema(description = "Structured JSON details payload")
+        Map<String, Object> detailsJson,
 
         @Schema(description = "Timestamp when the alert was acknowledged")
         ZonedDateTime acknowledgedAt,
 
         @Schema(description = "Operator or username who acknowledged the alert")
         String acknowledgedBy,
-
-        @Schema(description = "Whether the alert has been marked as resolved")
-        Boolean resolved,
 
         @Schema(description = "Timestamp when the alert was resolved")
         ZonedDateTime resolvedAt,

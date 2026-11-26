@@ -5,10 +5,13 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum DroneStatus {
     AVAILABLE("available"),
+    STANDBY("standby"),
     IN_FLIGHT("in_flight"),
     MAINTENANCE("maintenance"),
     CHARGING("charging"),
-    OFFLINE("offline");
+    EMERGENCY("emergency"),
+    OFFLINE("offline"),
+    RETIRED("retired");
 
     private final String value;
 

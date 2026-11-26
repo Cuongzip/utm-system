@@ -4,9 +4,12 @@ import com.utm.commonlibrary.utils.AuthenticationUtils;
 import com.utm.conflict.service.ConflictDetectionService;
 import com.utm.conflict.service.ConflictService;
 import com.utm.conflict.viewmodel.conflict.ConflictPostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictResolutionAdviceVm;
 import com.utm.conflict.viewmodel.conflict.ConflictResolvePostVm;
 import com.utm.conflict.viewmodel.conflict.ConflictScanResultVm;
 import com.utm.conflict.viewmodel.conflict.ConflictVm;
+import com.utm.conflict.viewmodel.conflict.StrategicTrajectoryCheckPostVm;
+import com.utm.conflict.viewmodel.conflict.StrategicTrajectoryCheckResultVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -193,6 +196,49 @@ public class ConflictController {
     })
     public ResponseEntity<ConflictScanResultVm> evaluateConflicts() {
         return ResponseEntity.ok(conflictDetectionService.runConflictScan());
+    }
+
+    @PostMapping("/check-trajectory")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Strategic 4D trajectory deconfliction", description = "Check a proposed 4D trajectory against scheduled, authorized, and active flights for separation conflicts")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "4D trajectory check completed",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = StrategicTrajectoryCheckResultVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid trajectory payload", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content)
+    })
+    public ResponseEntity<StrategicTrajectoryCheckResultVm> checkTrajectory4D(
+            @Valid @RequestBody StrategicTrajectoryCheckPostVm request
+    ) {
+        return ResponseEntity.ok(conflictDetectionService.checkTrajectory4D(request));
+    }
+
+    @GetMapping("/{id}/advice")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Get tactical conflict resolution advice", description = "Generate ranked resolution options (altitude change, hold, lateral reroute) for an active conflict")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Resolution advice generated successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ConflictResolutionAdviceVm.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - JWT authentication required", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Conflict not found", content = @Content)
+    })
+    public ResponseEntity<ConflictResolutionAdviceVm> getResolutionAdvice(
+            @Parameter(description = "Unique UUID identifier of the conflict", required = true)
+            @PathVariable String id
+    ) {
+        return ResponseEntity.ok(conflictService.getResolutionAdvice(id));
     }
 
     private String extractCurrentUserId() {

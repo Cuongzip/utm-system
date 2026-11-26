@@ -4,6 +4,7 @@ import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
+import com.utm.drone.kafka.DroneCommandEventPublisher;
 import com.utm.drone.mapper.DroneCommandMapper;
 import com.utm.drone.model.Drone;
 import com.utm.drone.model.DroneCommand;
@@ -17,8 +18,9 @@ import com.utm.drone.viewmodel.command.DroneCommandPostVm;
 import com.utm.drone.viewmodel.command.DroneCommandVm;
 import jakarta.annotation.PreDestroy;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,24 +30,49 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class DroneCommandServiceImpl implements DroneCommandService {
 
     private final DroneRepository droneRepository;
     private final DroneCommandRepository droneCommandRepository;
     private final DroneCommandMapper droneCommandMapper;
+    private final DroneCommandEventPublisher commandEventPublisher;
+    private final TransactionTemplate transactionTemplate;
     private final ScheduledExecutorService commandScheduler = Executors.newScheduledThreadPool(2,
             Thread.ofVirtual().name("drone-cmd-sim-", 0).factory());
+
+    public DroneCommandServiceImpl(
+            DroneRepository droneRepository,
+            DroneCommandRepository droneCommandRepository,
+            DroneCommandMapper droneCommandMapper,
+            DroneCommandEventPublisher commandEventPublisher) {
+        this(droneRepository, droneCommandRepository, droneCommandMapper, commandEventPublisher, null);
+    }
+
+    @Autowired
+    public DroneCommandServiceImpl(
+            DroneRepository droneRepository,
+            DroneCommandRepository droneCommandRepository,
+            DroneCommandMapper droneCommandMapper,
+            @Autowired(required = false) DroneCommandEventPublisher commandEventPublisher,
+            @Autowired(required = false) TransactionTemplate transactionTemplate) {
+        this.droneRepository = droneRepository;
+        this.droneCommandRepository = droneCommandRepository;
+        this.droneCommandMapper = droneCommandMapper;
+        this.commandEventPublisher = commandEventPublisher;
+        this.transactionTemplate = transactionTemplate;
+    }
 
     @Override
     @Transactional
@@ -54,7 +81,9 @@ public class DroneCommandServiceImpl implements DroneCommandService {
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId));
 
         if (postVm.commandType() == CommandType.TAKEOFF
-                && (drone.getStatus() == DroneStatus.MAINTENANCE || drone.getStatus() == DroneStatus.OFFLINE)) {
+                && (drone.getStatus() == DroneStatus.MAINTENANCE
+                        || drone.getStatus() == DroneStatus.OFFLINE
+                        || drone.getStatus() == DroneStatus.RETIRED)) {
             throw new BadRequestException(MessageCode.DRONE_NOT_AVAILABLE, "registrationNumber",
                     drone.getRegistrationNumber() != null ? drone.getRegistrationNumber() : droneId);
         }
@@ -81,13 +110,42 @@ public class DroneCommandServiceImpl implements DroneCommandService {
         DroneCommand saved = droneCommandRepository.save(entity);
         log.info("Issued command {} (type={}) to drone {}", saved.getId(), saved.getCommandType(), droneId);
 
+        if (priority <= 1) {
+            List<DroneCommand> pendingCommands = droneCommandRepository.findByDroneIdAndStatusInOrderByIssuedAtDesc(
+                    droneId, List.of(CommandStatus.PENDING, CommandStatus.SENT));
+            if (pendingCommands != null && !pendingCommands.isEmpty()) {
+                List<DroneCommand> preempted = new ArrayList<>();
+                ZonedDateTime now = ZonedDateTime.now();
+                for (DroneCommand existing : pendingCommands) {
+                    if (existing != null
+                            && !Objects.equals(existing.getId(), saved.getId())
+                            && existing.getPriority() != null
+                            && existing.getPriority() > priority) {
+                        existing.setStatus(CommandStatus.CANCELLED);
+                        existing.setCompletedAt(now);
+                        preempted.add(existing);
+                    }
+                }
+                if (!preempted.isEmpty()) {
+                    droneCommandRepository.saveAll(preempted);
+                    log.info("Preempted {} lower-priority command(s) for drone {} due to priority-{} command {}",
+                            preempted.size(), droneId, priority, saved.getCommandType());
+                }
+            }
+        }
+
         if (postVm.commandType() == CommandType.EMERGENCY_STOP) {
             drone.setStatus(DroneStatus.MAINTENANCE);
             droneRepository.save(drone);
             log.warn("Emergency stop command issued for drone {}, setting status to MAINTENANCE", droneId);
         } else if (postVm.commandType() == CommandType.TAKEOFF) {
             drone.setStatus(DroneStatus.IN_FLIGHT);
+            drone.setCurrentHubId(null);
             droneRepository.save(drone);
+        }
+
+        if (commandEventPublisher != null) {
+            commandEventPublisher.publishAfterCommit(saved);
         }
 
         scheduleSimulationAfterCommit(saved.getId(), saved.getCommandType());
@@ -143,36 +201,49 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     }
 
     private boolean advanceCommandStatus(String commandId, CommandStatus targetStatus) {
-        return droneCommandRepository.findById(commandId).map(cmd -> {
-            if (targetStatus == CommandStatus.ACKNOWLEDGED
-                    && (cmd.getStatus() == CommandStatus.PENDING || cmd.getStatus() == CommandStatus.SENT)) {
-                cmd.setStatus(CommandStatus.ACKNOWLEDGED);
-                cmd.setAcknowledgedAt(Instant.now());
-                droneCommandRepository.save(cmd);
-                return true;
-            }
-            if (targetStatus == CommandStatus.EXECUTING && cmd.getStatus() == CommandStatus.ACKNOWLEDGED) {
-                cmd.setStatus(CommandStatus.EXECUTING);
-                droneCommandRepository.save(cmd);
-                return true;
-            }
-            if (targetStatus == CommandStatus.COMPLETED && cmd.getStatus() == CommandStatus.EXECUTING) {
-                cmd.setStatus(CommandStatus.COMPLETED);
-                cmd.setCompletedAt(Instant.now());
-                droneCommandRepository.save(cmd);
-                if (cmd.getCommandType() == CommandType.LAND || cmd.getCommandType() == CommandType.RTL) {
-                    droneRepository.findById(cmd.getDroneId()).ifPresent(drone -> {
-                        if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
-                            drone.setStatus(DroneStatus.AVAILABLE);
-                            droneRepository.save(drone);
+        try {
+            return droneCommandRepository.findById(commandId).map(cmd -> {
+                if (targetStatus == CommandStatus.ACKNOWLEDGED) {
+                    if (cmd.getStatus() == CommandStatus.ACKNOWLEDGED) {
+                        return true;
+                    }
+                    if (cmd.getStatus() == CommandStatus.PENDING || cmd.getStatus() == CommandStatus.SENT) {
+                        cmd.setStatus(CommandStatus.ACKNOWLEDGED);
+                        if (cmd.getAcknowledgedAt() == null) {
+                            cmd.setAcknowledgedAt(ZonedDateTime.now());
                         }
-                    });
+                        droneCommandRepository.save(cmd);
+                        return true;
+                    }
+                    return false;
                 }
-                log.info("Command {} ({}) completed successfully", cmd.getId(), cmd.getCommandType());
-                return true;
-            }
+                if (targetStatus == CommandStatus.EXECUTING && cmd.getStatus() == CommandStatus.ACKNOWLEDGED) {
+                    cmd.setStatus(CommandStatus.EXECUTING);
+                    droneCommandRepository.save(cmd);
+                    return true;
+                }
+                if (targetStatus == CommandStatus.COMPLETED && cmd.getStatus() == CommandStatus.EXECUTING) {
+                    cmd.setStatus(CommandStatus.COMPLETED);
+                    cmd.setCompletedAt(ZonedDateTime.now());
+                    droneCommandRepository.save(cmd);
+                    if (cmd.getCommandType() == CommandType.LAND || cmd.getCommandType() == CommandType.RTL) {
+                        droneRepository.findById(cmd.getDroneId()).ifPresent(drone -> {
+                            if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
+                                drone.setStatus(DroneStatus.AVAILABLE);
+                                droneRepository.save(drone);
+                            }
+                        });
+                    }
+                    log.info("Command {} ({}) completed successfully", cmd.getId(), cmd.getCommandType());
+                    return true;
+                }
+                return false;
+            }).orElse(false);
+        } catch (OptimisticLockingFailureException ex) {
+            log.debug("Command {} was updated concurrently while advancing to {}: {}",
+                    commandId, targetStatus, ex.getMessage());
             return false;
-        }).orElse(false);
+        }
     }
 
     @PreDestroy
@@ -184,6 +255,13 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     @Transactional(readOnly = true)
     public DroneCommandListVm getCommands(String droneId, CommandStatus status, CommandType commandType, int limit,
             int offset) {
+        return getCommands(droneId, status, commandType, null, limit, offset);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DroneCommandListVm getCommands(String droneId, CommandStatus status, CommandType commandType,
+            String flightId, int limit, int offset) {
         if (!droneRepository.existsById(droneId)) {
             throw new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", droneId);
         }
@@ -201,12 +279,24 @@ public class DroneCommandServiceImpl implements DroneCommandService {
             if (commandType != null) {
                 predicates.add(cb.equal(root.get("commandType"), commandType));
             }
+            if (flightId != null && !flightId.isBlank()) {
+                predicates.add(cb.equal(root.get("flightId"), flightId.trim()));
+            }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<DroneCommand> pageResult = droneCommandRepository.findAll(spec, pageable);
         List<DroneCommandVm> items = droneCommandMapper.toVmList(pageResult.getContent());
         return DroneCommandListVm.of(items, pageResult.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DroneCommandVm> getCommandsByFlightId(String flightId) {
+        if (flightId == null || flightId.isBlank()) {
+            return List.of();
+        }
+        return droneCommandMapper.toVmList(droneCommandRepository.findByFlightIdOrderByIssuedAtDesc(flightId.trim()));
     }
 
     @Override
@@ -218,8 +308,25 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     }
 
     @Override
-    @Transactional
     public DroneCommandVm cancelCommand(String droneId, String commandId) {
+        OptimisticLockingFailureException lastConflict = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                if (transactionTemplate != null) {
+                    return transactionTemplate.execute(status -> cancelCommandOnce(droneId, commandId));
+                }
+                return cancelCommandOnce(droneId, commandId);
+            } catch (OptimisticLockingFailureException ex) {
+                lastConflict = ex;
+                log.warn("Optimistic lock conflict cancelling command {} (attempt {}/3): {}",
+                        commandId, attempt, ex.getMessage());
+            }
+        }
+        throw new BadRequestException(MessageCode.CANNOT_CANCEL_EXECUTING_COMMAND,
+                "Command state changed concurrently and can no longer be cancelled", lastConflict != null ? lastConflict.getMessage() : "");
+    }
+
+    private DroneCommandVm cancelCommandOnce(String droneId, String commandId) {
         DroneCommand cmd = droneCommandRepository.findByIdAndDroneId(commandId, droneId)
                 .orElseThrow(() -> new NotFoundException(MessageCode.COMMAND_NOT_FOUND, "id", commandId));
 
@@ -229,7 +336,7 @@ public class DroneCommandServiceImpl implements DroneCommandService {
         }
 
         cmd.setStatus(CommandStatus.CANCELLED);
-        cmd.setCompletedAt(Instant.now());
+        cmd.setCompletedAt(ZonedDateTime.now());
         DroneCommand saved = droneCommandRepository.save(cmd);
         log.info("Command {} for drone {} has been cancelled by operator", commandId, droneId);
         return droneCommandMapper.toVm(saved);

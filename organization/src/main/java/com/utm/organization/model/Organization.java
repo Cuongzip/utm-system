@@ -16,6 +16,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.Map;
 
 @Entity
 @Table(name = "organization")
@@ -43,6 +47,22 @@ public class Organization extends AbstractAuditEntity {
 
     @Column(name = "contact_info", columnDefinition = "TEXT")
     private String contactInfo;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "address", columnDefinition = "jsonb")
+    private Map<String, Object> address;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "authorized_airspace", columnDefinition = "jsonb")
+    private Map<String, Object> authorizedAirspace;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "certifications", columnDefinition = "jsonb")
+    private Map<String, Object> certifications;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "insurance_info", columnDefinition = "jsonb")
+    private Map<String, Object> insuranceInfo;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)

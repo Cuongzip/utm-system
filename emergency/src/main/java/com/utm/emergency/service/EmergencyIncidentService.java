@@ -22,6 +22,8 @@ public interface EmergencyIncidentService {
 
     EmergencyIncidentVm getIncidentById(String id);
 
+    EmergencyIncidentVm resolveIncident(String id, String resolvedBy, String resolutionNotes);
+
     EmergencyIncidentVm updateRootCause(String id, RootCauseVm rootCauseVm);
 
     EmergencyStatsVm getStats(ZonedDateTime from, ZonedDateTime to);

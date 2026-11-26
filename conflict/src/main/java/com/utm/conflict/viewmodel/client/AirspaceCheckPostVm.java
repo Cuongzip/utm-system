@@ -1,9 +1,9 @@
 package com.utm.conflict.viewmodel.client;
 
 public record AirspaceCheckPostVm(
-        Double latitude,
-        Double longitude,
-        Double altitude
+        Double lat,
+        Double lon,
+        Double alt
 ) {
 }
 

@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-standardize-connectivity-schema
+      author: utm-system
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE device_registrations
+              SET connection_status = UPPER(connection_status)
+              WHERE connection_status IS NOT NULL AND connection_status <> UPPER(connection_status);
+              UPDATE device_registrations SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE device_registrations ADD COLUMN IF NOT EXISTS registration_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE';
+              ALTER TABLE device_registrations ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE device_registrations ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE device_registrations ALTER COLUMN created_on SET NOT NULL;
+
+              DO $$
+              DECLARE
+                con_name TEXT;
+              BEGIN
+                FOR con_name IN
+                  SELECT c.conname
+                  FROM pg_constraint c
+                  JOIN pg_class t ON c.conrelid = t.oid
+                  WHERE t.relname = 'device_registrations'
+                    AND c.contype = 'u'
+                LOOP
+                  EXECUTE format('ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS %I', con_name);
+                END LOOP;
+              END $$;
+
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_device_reg_active_drone
+                ON device_registrations (drone_id)
+                WHERE registration_status <> 'REVOKED';
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_device_reg_active_identifier
+                ON device_registrations (device_identifier)
+                WHERE registration_status <> 'REVOKED';
+              CREATE INDEX IF NOT EXISTS idx_device_reg_online_seen
+                ON device_registrations (connection_status, last_seen_at);
+              ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS chk_device_reg_conn_status;
+              ALTER TABLE device_registrations ADD CONSTRAINT chk_device_reg_conn_status
+                CHECK (connection_status IN ('ONLINE', 'OFFLINE', 'CONNECTING'));
+              ALTER TABLE device_registrations DROP CONSTRAINT IF EXISTS chk_device_reg_status;
+              ALTER TABLE device_registrations ADD CONSTRAINT chk_device_reg_status
+                CHECK (registration_status IN ('PENDING', 'ACTIVE', 'REVOKED'));

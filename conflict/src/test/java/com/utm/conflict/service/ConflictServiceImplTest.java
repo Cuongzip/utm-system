@@ -1,7 +1,7 @@
 package com.utm.conflict.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.conflict.mapper.ConflictMapper;
 import com.utm.conflict.model.Conflict;
@@ -256,7 +256,7 @@ class ConflictServiceImplTest {
                     "Updated separation breach");
 
             testConflict.setHubId(null);
-            when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(PRIMARY_FLIGHT_ID), anyList()))
+            when(conflictRepository.findActiveBetweenFlights(eq(PRIMARY_FLIGHT_ID), eq(SECONDARY_FLIGHT_ID), anyList()))
                     .thenReturn(List.of(testConflict));
             when(conflictRepository.save(testConflict)).thenReturn(testConflict);
             when(conflictMapper.toVm(testConflict)).thenReturn(testConflictVm);
@@ -286,7 +286,7 @@ class ConflictServiceImplTest {
                     20,
                     "New separation breach");
 
-            when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(PRIMARY_FLIGHT_ID), anyList()))
+            when(conflictRepository.findActiveBetweenFlights(eq(PRIMARY_FLIGHT_ID), eq(SECONDARY_FLIGHT_ID), anyList()))
                     .thenReturn(Collections.emptyList());
             when(conflictMapper.toEntity(postVm, "atc_user")).thenReturn(testConflict);
             when(conflictRepository.save(testConflict)).thenReturn(testConflict);
@@ -399,13 +399,11 @@ class ConflictServiceImplTest {
 
         @Test
         @DisplayName("whenFound_transitionsToResolvedSavesActionsAndReturns")
-        void whenFound_transitionsToResolvedSavesActionsAndReturns() throws Exception {
+        void whenFound_transitionsToResolvedSavesActionsAndReturns() {
             Map<String, Object> actions = Map.of("targetAltitudeM", 150.0, "command", "CLIMB");
             ConflictResolvePostVm resolveVm = new ConflictResolvePostVm("altitude_change", actions);
 
             when(conflictRepository.findById(CONFLICT_ID)).thenReturn(Optional.of(testConflict));
-            when(objectMapper.writeValueAsString(actions))
-                    .thenReturn("{\"targetAltitudeM\":150.0,\"command\":\"CLIMB\"}");
             when(conflictRepository.save(testConflict)).thenReturn(testConflict);
             when(conflictMapper.toVm(testConflict)).thenReturn(testConflictVm);
 
@@ -414,34 +412,24 @@ class ConflictServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(testConflict.getStatus()).isEqualTo(ConflictStatus.RESOLVED);
             assertThat(testConflict.getResolutionStrategy()).isEqualTo(ResolutionStrategy.ALTITUDE_CHANGE);
-            assertThat(testConflict.getResolutionActions())
-                    .isEqualTo("{\"targetAltitudeM\":150.0,\"command\":\"CLIMB\"}");
+            assertThat(testConflict.getResolutionActions()).containsEntry("targetAltitudeM", 150.0)
+                    .containsEntry("command", "CLIMB");
             assertThat(testConflict.getResolvedAt()).isNotNull();
             assertThat(testConflict.getResolvedBy()).isEqualTo("atc_supervisor");
             verify(conflictRepository).save(testConflict);
         }
 
         @Test
-        @DisplayName("whenJsonSerializationFails_fallsBackToStringRepresentation")
-        void whenJsonSerializationFails_fallsBackToStringRepresentation() throws Exception {
-            Map<String, Object> actions = Map.of("key", "value");
-            ConflictResolvePostVm resolveVm = new ConflictResolvePostVm("reroute", actions);
+        @DisplayName("whenAlreadyResolved_throwsBadRequestException")
+        void whenAlreadyResolved_throwsBadRequestException() {
+            testConflict.setStatus(ConflictStatus.RESOLVED);
+            ConflictResolvePostVm resolveVm = new ConflictResolvePostVm("reroute", Map.of("key", "value"));
 
             when(conflictRepository.findById(CONFLICT_ID)).thenReturn(Optional.of(testConflict));
-            when(objectMapper.writeValueAsString(actions))
-                    .thenThrow(new JsonProcessingException("Serialization error") {
-                    });
-            when(conflictRepository.save(testConflict)).thenReturn(testConflict);
-            when(conflictMapper.toVm(testConflict)).thenReturn(testConflictVm);
 
-            ConflictVm result = conflictService.resolveConflict(CONFLICT_ID, resolveVm, null);
-
-            assertThat(result).isNotNull();
-            assertThat(testConflict.getStatus()).isEqualTo(ConflictStatus.RESOLVED);
-            assertThat(testConflict.getResolutionStrategy()).isEqualTo(ResolutionStrategy.REROUTE);
-            assertThat(testConflict.getResolutionActions()).isEqualTo(actions.toString());
-            assertThat(testConflict.getResolvedBy()).isEqualTo("operator");
-            verify(conflictRepository).save(testConflict);
+            assertThatThrownBy(() -> conflictService.resolveConflict(CONFLICT_ID, resolveVm, null))
+                    .isInstanceOf(BadRequestException.class);
+            verify(conflictRepository, never()).save(any(Conflict.class));
         }
 
         @Test
@@ -457,6 +445,43 @@ class ConflictServiceImplTest {
                     .isEqualTo("unknown-id");
 
             verify(conflictRepository, never()).save(any(Conflict.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("getResolutionAdvice")
+    class GetResolutionAdvice {
+
+        @Test
+        @DisplayName("whenAircraftSeparationConflict_returnsRankedAltitudeHoldRerouteOptions")
+        void whenAircraftSeparationConflict_returnsThreeRankedOptions() {
+            testConflict.setConflictType(ConflictType.HEAD_ON);
+            testConflict.setAltitude(60.0);
+            when(conflictRepository.findById(CONFLICT_ID)).thenReturn(Optional.of(testConflict));
+
+            var advice = conflictService.getResolutionAdvice(CONFLICT_ID);
+
+            assertThat(advice).isNotNull();
+            assertThat(advice.conflictId()).isEqualTo(CONFLICT_ID);
+            assertThat(advice.options()).hasSize(3);
+            assertThat(advice.options().get(0).rank()).isEqualTo(1);
+            assertThat(advice.options().get(0).strategy()).isEqualTo("altitude_change");
+            assertThat(advice.options().get(0).commandType()).isEqualTo("SET_ALTITUDE");
+            assertThat(advice.options().get(1).strategy()).isEqualTo("hold");
+            assertThat(advice.options().get(2).strategy()).isEqualTo("reroute");
+        }
+
+        @Test
+        @DisplayName("whenAirspaceBreachConflict_ranksRerouteFirst")
+        void whenAirspaceBreachConflict_ranksRerouteFirst() {
+            testConflict.setConflictType(ConflictType.AIRSPACE_BREACH);
+            when(conflictRepository.findById(CONFLICT_ID)).thenReturn(Optional.of(testConflict));
+
+            var advice = conflictService.getResolutionAdvice(CONFLICT_ID);
+
+            assertThat(advice.options()).hasSize(3);
+            assertThat(advice.options().getFirst().strategy()).isEqualTo("reroute");
+            assertThat(advice.options().getFirst().commandType()).isEqualTo("GOTO");
         }
     }
 }

@@ -1,11 +1,13 @@
 package com.utm.alert.mapper;
 
 import com.utm.alert.model.Alert;
+import com.utm.alert.model.enumeration.AlertType;
 import com.utm.alert.viewmodel.alert.AlertPostVm;
 import com.utm.alert.viewmodel.alert.AlertVm;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 import java.util.List;
 
@@ -20,12 +22,16 @@ public interface AlertMapper {
     List<AlertVm> toVmList(List<Alert> entities);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "alertType", source = "alertType", qualifiedByName = "mapAlertType")
+    @Mapping(target = "droneId", source = "droneId", qualifiedByName = "trimBlankToNull")
+    @Mapping(target = "flightId", source = "flightId", qualifiedByName = "trimBlankToNull")
+    @Mapping(target = "hubId", source = "hubId", qualifiedByName = "trimBlankToNull")
+    @Mapping(target = "conflictId", source = "conflictId", qualifiedByName = "trimBlankToNull")
+    @Mapping(target = "incidentId", source = "incidentId", qualifiedByName = "trimBlankToNull")
     @Mapping(target = "severity", ignore = true)
     @Mapping(target = "status", ignore = true)
-    @Mapping(target = "acknowledged", ignore = true)
     @Mapping(target = "acknowledgedAt", ignore = true)
     @Mapping(target = "acknowledgedBy", ignore = true)
-    @Mapping(target = "resolved", ignore = true)
     @Mapping(target = "resolvedAt", ignore = true)
     @Mapping(target = "resolvedBy", ignore = true)
     @Mapping(target = "resolutionNotes", ignore = true)
@@ -34,5 +40,15 @@ public interface AlertMapper {
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     Alert toEntity(AlertPostVm postVm);
+
+    @Named("mapAlertType")
+    default AlertType mapAlertType(String value) {
+        return AlertType.fromValue(value);
+    }
+
+    @Named("trimBlankToNull")
+    default String trimBlankToNull(String value) {
+        return (value != null && !value.isBlank()) ? value.trim() : null;
+    }
 }
 

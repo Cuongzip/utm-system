@@ -169,6 +169,37 @@ class HubServiceImplTest {
             verify(hubRepository).saveAndFlush(hubCaptor.capture());
             assertThat(hubCaptor.getValue().getCode()).startsWith("HUB-").hasSize(8);
         }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when airspaceFloor is greater than or equal to airspaceCeiling")
+        void createHub_invalidAirspaceBounds_throwsBadRequestException() {
+            HubPostVm invalidBoundsVm = new HubPostVm(
+                    "HUB-SGN-02",
+                    "Invalid Bounds Hub",
+                    testLocationVm,
+                    12.5,
+                    1500.0,
+                    10,
+                    150.0,
+                    120.0);
+            Hub invalidHub = Hub.builder()
+                    .code("HUB-SGN-02")
+                    .name("Invalid Bounds Hub")
+                    .location(Location.builder().latitude(10.7769).longitude(106.7009).build())
+                    .altitudeMsl(12.5)
+                    .airspaceRadius(1500.0)
+                    .airspaceFloor(150.0)
+                    .airspaceCeiling(120.0)
+                    .build();
+
+            when(hubRepository.existsByCode("HUB-SGN-02")).thenReturn(false);
+            when(hubMapper.toEntity(invalidBoundsVm)).thenReturn(invalidHub);
+
+            assertThatThrownBy(() -> hubService.createHub(invalidBoundsVm))
+                    .isInstanceOf(com.utm.commonlibrary.exception.BadRequestException.class);
+
+            verify(hubRepository, never()).saveAndFlush(any());
+        }
     }
 
     @Nested
@@ -339,6 +370,51 @@ class HubServiceImplTest {
 
             assertThatThrownBy(() -> hubService.updateHub("h1b2c3d4-e5f6-7890-abcd-ef1234567890", deactivatePutVm))
                     .isInstanceOf(com.utm.commonlibrary.exception.BadRequestException.class);
+
+            verify(hubRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when updating active hub to MAINTENANCE while active flights exist")
+        void updateHub_settingMaintenanceWithActiveFlights_throwsBadRequestException() {
+            HubPutVm maintenancePutVm = new HubPutVm(
+                    "Central Vertiport Hub D1",
+                    testLocationVm,
+                    15.0,
+                    2000.0,
+                    HubStatus.MAINTENANCE);
+            when(hubRepository.findById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(Optional.of(testHub));
+            when(flightClientService.hasActiveFlightsAtHub("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> hubService.updateHub("h1b2c3d4-e5f6-7890-abcd-ef1234567890", maintenancePutVm))
+                    .isInstanceOf(com.utm.commonlibrary.exception.BadRequestException.class)
+                    .hasMessage(MessagesUtils.getCleanMessage(MessageCode.HUB_HAS_ACTIVE_FLIGHTS));
+
+            verify(hubRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when partial update makes floor >= existing ceiling")
+        void updateHub_floorExceedsExistingCeiling_throwsBadRequestException() {
+            testHub.setAirspaceFloor(0.0);
+            testHub.setAirspaceCeiling(120.0);
+            HubPutVm invalidPartialPutVm = new HubPutVm(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    150.0,
+                    null);
+            when(hubRepository.findById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(Optional.of(testHub));
+
+            assertThatThrownBy(() -> hubService.updateHub("h1b2c3d4-e5f6-7890-abcd-ef1234567890", invalidPartialPutVm))
+                    .isInstanceOf(com.utm.commonlibrary.exception.BadRequestException.class)
+                    .hasMessage(MessagesUtils.getCleanMessage(MessageCode.INVALID_AIRSPACE_BOUNDS));
 
             verify(hubRepository, never()).saveAndFlush(any());
         }

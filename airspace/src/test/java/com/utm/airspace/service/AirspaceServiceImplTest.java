@@ -2,10 +2,13 @@ package com.utm.airspace.service;
 
 import com.utm.airspace.mapper.AirspaceZoneMapper;
 import com.utm.airspace.model.AirspaceZone;
+import com.utm.airspace.model.GeoJsonPolygon;
 import com.utm.airspace.model.enumeration.AirspaceZoneStatus;
 import com.utm.airspace.model.enumeration.AirspaceZoneType;
 import com.utm.airspace.repository.AirspaceZoneRepository;
 import com.utm.airspace.service.client.HubClientService;
+import com.utm.airspace.service.client.WeatherAisClientService;
+import com.utm.airspace.viewmodel.client.OpenaipFeedClientVm.OpenaipAirspaceItemVm;
 import com.utm.airspace.viewmodel.check.AirspaceCheckPathResultVm;
 import com.utm.airspace.viewmodel.check.AirspaceCheckPathVm;
 import com.utm.airspace.viewmodel.check.AirspaceCheckPointVm;
@@ -16,6 +19,7 @@ import com.utm.airspace.viewmodel.zone.AirspaceZonePostVm;
 import com.utm.airspace.viewmodel.zone.AirspaceZonePutVm;
 import com.utm.airspace.viewmodel.zone.AirspaceZoneVm;
 import com.utm.airspace.viewmodel.zone.GeoJsonPolygonVm;
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +63,9 @@ class AirspaceServiceImplTest {
     @Mock
     private HubClientService hubClientService;
 
+    @Mock
+    private WeatherAisClientService weatherAisClientService;
+
     @InjectMocks
     private AirspaceServiceImpl airspaceService;
 
@@ -86,8 +93,7 @@ class AirspaceServiceImplTest {
                 .name("Independence Palace No-Fly Zone")
                 .zoneType(AirspaceZoneType.NO_FLY_ZONE)
                 .altitudeCeiling(120.0)
-                .geometry(
-                        "{\"type\":\"Polygon\",\"coordinates\":[[[106.69,10.77],[106.70,10.77],[106.70,10.78],[106.69,10.78],[106.69,10.77]]]}")
+                .geometry(new GeoJsonPolygon("Polygon", testPolygon.coordinates()))
                 .status(AirspaceZoneStatus.ACTIVE)
                 .description("Critical national security protection zone")
                 .build();
@@ -202,6 +208,33 @@ class AirspaceServiceImplTest {
             assertThat(result.safe()).isFalse();
             assertThat(result.violations()).hasSize(1);
             assertThat(result.violations().getFirst().reason()).contains("exceeds ceiling limit");
+        }
+
+        @Test
+        @DisplayName("Should merge openAIP violations when point intersects external openAIP zone")
+        void checkPoint_insideOpenAipRestrictedZone_returnsSafeFalseWithOpenAipSource() {
+            AirspaceCheckVm checkVm = new AirspaceCheckVm(10.8200, 106.6500, 80.0);
+            OpenaipAirspaceItemVm extZone = new OpenaipAirspaceItemVm(
+                    "oaip-vvts-ctr",
+                    "VVTS Control Zone",
+                    "CTR",
+                    "warning",
+                    0.0,
+                    500.0,
+                    testPolygon);
+
+            when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of());
+            when(airspaceZoneMapper.toVmList(List.of())).thenReturn(List.of());
+            when(weatherAisClientService.getOpenaipAirspaces()).thenReturn(List.of(extZone));
+            when(spatialCalculationService.isPointInPolygon(10.8200, 106.6500, testPolygon)).thenReturn(true);
+
+            AirspaceCheckResultVm result = airspaceService.checkPoint(checkVm);
+
+            assertThat(result.safe()).isFalse();
+            assertThat(result.violations()).hasSize(1);
+            assertThat(result.violations().getFirst().source()).isEqualTo("openaip");
+            assertThat(result.violations().getFirst().severity()).isEqualTo("warning");
+            assertThat(result.violations().getFirst().name()).isEqualTo("VVTS Control Zone");
         }
     }
 
@@ -517,6 +550,55 @@ class AirspaceServiceImplTest {
             verify(hubClientService).existsById("h1b2c3d4-e5f6-7890-abcd-ef1234567890");
             verify(airspaceZoneRepository, never()).saveAndFlush(any());
         }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when altitudeFloor is greater than or equal to altitudeCeiling")
+        void createZone_invalidAltitudeBounds_throwsBadRequestException() {
+            AirspaceZonePostVm invalidBounds = new AirspaceZonePostVm(
+                    "Invalid Altitude Zone",
+                    "ASZ-ERR1",
+                    null,
+                    AirspaceZoneType.NO_FLY_ZONE,
+                    testPolygon,
+                    100.0,
+                    120.0,
+                    null,
+                    null,
+                    AirspaceZoneStatus.ACTIVE,
+                    null);
+            when(airspaceZoneRepository.existsByName("Invalid Altitude Zone")).thenReturn(false);
+            when(airspaceZoneRepository.existsByCode("ASZ-ERR1")).thenReturn(false);
+
+            assertThatThrownBy(() -> airspaceService.createZone(invalidBounds))
+                    .isInstanceOf(BadRequestException.class);
+
+            verify(airspaceZoneRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when effectiveStart is not before effectiveEnd")
+        void createZone_invalidEffectiveWindow_throwsBadRequestException() {
+            ZonedDateTime now = ZonedDateTime.now();
+            AirspaceZonePostVm invalidWindow = new AirspaceZonePostVm(
+                    "Invalid Window Zone",
+                    "ASZ-ERR2",
+                    null,
+                    AirspaceZoneType.RESTRICTED,
+                    testPolygon,
+                    120.0,
+                    0.0,
+                    now.plusHours(2),
+                    now.plusHours(1),
+                    AirspaceZoneStatus.ACTIVE,
+                    null);
+            when(airspaceZoneRepository.existsByName("Invalid Window Zone")).thenReturn(false);
+            when(airspaceZoneRepository.existsByCode("ASZ-ERR2")).thenReturn(false);
+
+            assertThatThrownBy(() -> airspaceService.createZone(invalidWindow))
+                    .isInstanceOf(BadRequestException.class);
+
+            verify(airspaceZoneRepository, never()).saveAndFlush(any());
+        }
     }
 
     @Nested
@@ -533,8 +615,7 @@ class AirspaceServiceImplTest {
                     .name("Independence Palace No-Fly Zone (Expansion)")
                     .zoneType(AirspaceZoneType.NO_FLY_ZONE)
                     .altitudeCeiling(150.0)
-                    .geometry(
-                            "{\"type\":\"Polygon\",\"coordinates\":[[[106.69,10.77],[106.70,10.77],[106.70,10.78],[106.69,10.78],[106.69,10.77]]]}")
+                    .geometry(new GeoJsonPolygon("Polygon", testPolygon.coordinates()))
                     .status(AirspaceZoneStatus.ACTIVE)
                     .description("Expanded security perimeter for summit")
                     .build();
@@ -669,6 +750,48 @@ class AirspaceServiceImplTest {
 
             verify(airspaceZoneRepository).findById("non-existent-id");
             verify(airspaceZoneRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Schedule & Rules Enforcement Tests")
+    class ScheduleAndRulesTests {
+
+        @Test
+        @DisplayName("isZoneEffective enforces schedule daysOfWeek and startTime/endTime windows")
+        void isZoneEffective_scheduleWindow_evaluatesCorrectly() {
+            testZone.setSchedule(java.util.Map.of(
+                    "daysOfWeek", List.of("MONDAY", "WEDNESDAY"),
+                    "startTime", "08:00",
+                    "endTime", "18:00",
+                    "timezone", "Asia/Ho_Chi_Minh"));
+
+            ZonedDateTime monMidday = ZonedDateTime.parse("2026-11-23T05:00:00Z"); // Monday 12:00 ICT
+            ZonedDateTime monNight = ZonedDateTime.parse("2026-11-23T14:00:00Z");  // Monday 21:00 ICT
+            ZonedDateTime tueMidday = ZonedDateTime.parse("2026-11-24T05:00:00Z"); // Tuesday 12:00 ICT
+
+            assertThat(airspaceService.isZoneEffective(testZone, monMidday)).isTrue();
+            assertThat(airspaceService.isZoneEffective(testZone, monNight)).isFalse();
+            assertThat(airspaceService.isZoneEffective(testZone, tueMidday)).isFalse();
+        }
+
+        @Test
+        @DisplayName("checkPoint enforces stricter rules.maxAltitude on advisory zone")
+        void checkPoint_rulesMaxAltitude_flagsAltitudeViolation() {
+            testZone.setZoneType(AirspaceZoneType.HUB_CORRIDOR);
+            testZone.setAltitudeFloor(0.0);
+            testZone.setAltitudeCeiling(120.0);
+            testZone.setRules(java.util.Map.of("maxAltitude", 60.0));
+
+            when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE)).thenReturn(List.of(testZone));
+            when(airspaceZoneMapper.toVmList(List.of(testZone))).thenReturn(List.of(testZoneVm));
+            when(spatialCalculationService.isPointInPolygon(10.775, 106.700, testPolygon)).thenReturn(true);
+
+            AirspaceCheckResultVm result = airspaceService.checkPoint(new AirspaceCheckVm(10.775, 106.700, 80.0));
+
+            assertThat(result.safe()).isFalse();
+            assertThat(result.violations()).hasSize(1);
+            assertThat(result.violations().getFirst().reason()).contains("60.0m");
         }
     }
 }

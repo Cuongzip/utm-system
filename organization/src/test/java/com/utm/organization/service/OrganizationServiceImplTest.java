@@ -89,7 +89,6 @@ class OrganizationServiceImplTest {
 
         testPutVm = new OrganizationPutVm(
                 "Drone Express Global Logistics Corp",
-                OrganizationType.OPERATOR,
                 "support@droneexpress.com | +84-28-3822-0000",
                 OrganizationStatus.ACTIVE);
     }
@@ -329,6 +328,25 @@ class OrganizationServiceImplTest {
                     });
 
             verify(organizationRepository).findById("non-existent-id");
+            verify(organizationRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException (400) when suspending active organization with in-flight drones")
+        void updateOrganization_suspendingWithActiveInFlightDrones_throwsBadRequestException() {
+            OrganizationPutVm suspendPutVm = new OrganizationPutVm(
+                    "Drone Express Global Logistics Corp",
+                    null,
+                    OrganizationStatus.SUSPENDED);
+            when(organizationRepository.findById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(Optional.of(testOrg));
+            when(droneClientService.hasActiveInFlightDrones("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> organizationService.updateOrganization(
+                    "a1b2c3d4-e5f6-7890-abcd-ef1234567890", suspendPutVm))
+                    .isInstanceOf(BadRequestException.class);
+
             verify(organizationRepository, never()).saveAndFlush(any());
         }
     }

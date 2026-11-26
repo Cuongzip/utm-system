@@ -2,8 +2,10 @@ package com.utm.alert.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -23,6 +25,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private final JwtDecoder jwtDecoder;
     private final JwtAuthenticationConverter jwtAuthenticationConverter;
 
+    @Value("${utm.websocket.require-auth:true}")
+    private boolean requireAuth = true;
+
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
@@ -37,7 +42,11 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                             authentication != null ? authentication.getName() : "unknown");
                 } catch (Exception ex) {
                     log.warn("Invalid JWT token during WebSocket STOMP CONNECT: {}", ex.getMessage());
+                    throw new MessageDeliveryException(message, "Unauthorized WebSocket STOMP CONNECT: invalid JWT token", ex);
                 }
+            } else if (requireAuth) {
+                log.warn("Rejected unauthenticated WebSocket STOMP CONNECT: missing bearer token");
+                throw new MessageDeliveryException(message, "Unauthorized WebSocket STOMP CONNECT: missing JWT token");
             }
         }
         return message;

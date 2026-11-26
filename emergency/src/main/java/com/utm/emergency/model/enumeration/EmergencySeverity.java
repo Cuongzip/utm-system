@@ -1,17 +1,32 @@
 package com.utm.emergency.model.enumeration;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum EmergencySeverity {
-    warning,
-    critical,
-    emergency;
+    WARNING("warning"),
+    CRITICAL("critical"),
+    EMERGENCY("emergency");
+
+    private final String value;
+
+    EmergencySeverity(String value) {
+        this.value = value;
+    }
+
+    @JsonValue
+    public String getValue() {
+        return value;
+    }
 
     @JsonCreator
-    public static EmergencySeverity fromString(String value) {
-        if (value == null) return null;
+    public static EmergencySeverity fromValue(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String normalized = raw.trim();
         for (EmergencySeverity s : values()) {
-            if (s.name().equalsIgnoreCase(value)) {
+            if (s.value.equalsIgnoreCase(normalized) || s.name().equalsIgnoreCase(normalized)) {
                 return s;
             }
         }

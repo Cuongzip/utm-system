@@ -1,0 +1,116 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-enrich-drone-energy-and-fleet-state
+      author: utm-backend
+      changes:
+        - addColumn:
+            tableName: drone
+            columns:
+              - column:
+                  name: current_hub_id
+                  type: VARCHAR(36)
+              - column:
+                  name: current_battery_pct
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 100.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hover_power_w
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 350.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cruise_power_w
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 280.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cruise_speed_ms
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 15.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: battery_health_pct
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 100.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: wind_tolerance_ms
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 12.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_flight_time_min
+                  type: INTEGER
+                  defaultValueNumeric: 40
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_range_m
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 25000.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_flight_hours
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_flights
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: UPDATE drone SET current_hub_id = home_hub_id WHERE current_hub_id IS NULL;
+        - createIndex:
+            tableName: drone
+            indexName: idx_drone_current_hub_id
+            columns:
+              - column:
+                  name: current_hub_id
+      rollback:
+        - dropIndex:
+            tableName: drone
+            indexName: idx_drone_current_hub_id
+        - dropColumn:
+            tableName: drone
+            columnName: total_flights
+        - dropColumn:
+            tableName: drone
+            columnName: total_flight_hours
+        - dropColumn:
+            tableName: drone
+            columnName: max_range_m
+        - dropColumn:
+            tableName: drone
+            columnName: max_flight_time_min
+        - dropColumn:
+            tableName: drone
+            columnName: wind_tolerance_ms
+        - dropColumn:
+            tableName: drone
+            columnName: battery_health_pct
+        - dropColumn:
+            tableName: drone
+            columnName: cruise_speed_ms
+        - dropColumn:
+            tableName: drone
+            columnName: cruise_power_w
+        - dropColumn:
+            tableName: drone
+            columnName: hover_power_w
+        - dropColumn:
+            tableName: drone
+            columnName: current_battery_pct
+        - dropColumn:
+            tableName: drone
+            columnName: current_hub_id

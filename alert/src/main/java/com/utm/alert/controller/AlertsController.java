@@ -50,15 +50,17 @@ public class AlertsController {
             @Parameter(description = "Filter by drone UUID") @RequestParam(required = false) String droneId,
             @Parameter(description = "Filter by flight UUID") @RequestParam(required = false) String flightId,
             @Parameter(description = "Filter by severity (LOW, MEDIUM, HIGH, CRITICAL)") @RequestParam(required = false) String severity,
-            @Parameter(description = "Filter by acknowledgment status") @RequestParam(required = false) Boolean acknowledged,
-            @Parameter(description = "Filter by resolution status") @RequestParam(required = false) Boolean resolved,
+            @Parameter(description = "Filter by lifecycle status (ACTIVE, ACKNOWLEDGED, RESOLVED)") @RequestParam(required = false) String status,
+            @Parameter(description = "Legacy filter by acknowledgment state") @RequestParam(required = false) Boolean acknowledged,
+            @Parameter(description = "Legacy filter by resolution state") @RequestParam(required = false) Boolean resolved,
             @Parameter(description = "Filter by alert type code") @RequestParam(required = false) String alertType,
             @Parameter(description = "Page index (0-based)") @RequestParam(defaultValue = "0") int pageNo,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int pageSize,
             @Parameter(description = "Limit count (overrides pageSize)") @RequestParam(required = false) Integer limit
     ) {
         int effectiveSize = (limit != null && limit > 0) ? limit : pageSize;
-        return ResponseEntity.ok(alertService.getAlerts(droneId, flightId, severity, acknowledged, resolved, alertType, pageNo, effectiveSize));
+        return ResponseEntity.ok(alertService.getAlerts(
+                droneId, flightId, severity, status, acknowledged, resolved, alertType, pageNo, effectiveSize));
     }
 
     @GetMapping("/active")
@@ -86,7 +88,7 @@ public class AlertsController {
     }
 
     @RequestMapping(value = "/{id}/acknowledge", method = {RequestMethod.POST, RequestMethod.PATCH})
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator')")
     @Operation(summary = "Acknowledge alert", description = "Record operator acknowledgment indicating that the alert has been seen and is under supervision.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Alert acknowledged",
@@ -101,7 +103,7 @@ public class AlertsController {
     }
 
     @RequestMapping(value = "/{id}/resolve", method = {RequestMethod.POST, RequestMethod.PATCH})
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator')")
     @Operation(summary = "Resolve alert", description = "Mark safety issue as resolved and safe separation or nominal corridor state restored.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Alert resolved successfully",
@@ -115,8 +117,32 @@ public class AlertsController {
         return ResponseEntity.ok(alertService.resolveAlert(id, resolveVm));
     }
 
+    @PostMapping("/resolve-by-conflict/{conflictId}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Auto-resolve open alerts linked to a conflict")
+    public ResponseEntity<java.util.Map<String, Object>> resolveByConflict(
+            @PathVariable String conflictId,
+            @RequestBody(required = false) AlertResolvePostVm resolveVm
+    ) {
+        String notes = resolveVm != null ? resolveVm.resolutionNotes() : null;
+        int resolvedCount = alertService.resolveByConflictId(conflictId, notes);
+        return ResponseEntity.ok(java.util.Map.of("conflictId", conflictId, "resolvedCount", resolvedCount));
+    }
+
+    @PostMapping("/resolve-by-incident/{incidentId}")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
+    @Operation(summary = "Auto-resolve open alerts linked to an emergency incident")
+    public ResponseEntity<java.util.Map<String, Object>> resolveByIncident(
+            @PathVariable String incidentId,
+            @RequestBody(required = false) AlertResolvePostVm resolveVm
+    ) {
+        String notes = resolveVm != null ? resolveVm.resolutionNotes() : null;
+        int resolvedCount = alertService.resolveByIncidentId(incidentId, notes);
+        return ResponseEntity.ok(java.util.Map.of("incidentId", incidentId, "resolvedCount", resolvedCount));
+    }
+
     @PostMapping
-    @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'pilot')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'hub_operator', 'pilot')")
     @Operation(summary = "Trigger / create operational alert", description = "Publish a new operational alert from automated subsystems (conformance watchdog, conflict detector, battery monitor) or manual operator input.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Alert created successfully",

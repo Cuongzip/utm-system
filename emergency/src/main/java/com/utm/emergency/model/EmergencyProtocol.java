@@ -70,36 +70,6 @@ public class EmergencyProtocol extends AbstractAuditEntity {
     @Builder.Default
     private int priority = 50;
 
-    @Column(name = "thresholds", columnDefinition = "TEXT")
-    private String thresholds;
-
-    @Column(name = "conditions", columnDefinition = "TEXT")
-    private String conditions;
-
-    @Column(name = "notify_pilot", nullable = false)
-    @Builder.Default
-    private boolean notifyPilot = true;
-
-    @Column(name = "notify_supervisor", nullable = false)
-    @Builder.Default
-    private boolean notifySupervisor = true;
-
-    @Column(name = "notify_ops_center", nullable = false)
-    @Builder.Default
-    private boolean notifyOpsCenter = true;
-
-    @Column(name = "send_sms", nullable = false)
-    @Builder.Default
-    private boolean sendSms = false;
-
-    @Column(name = "send_email", nullable = false)
-    @Builder.Default
-    private boolean sendEmail = true;
-
-    @Column(name = "play_audio_alarm", nullable = false)
-    @Builder.Default
-    private boolean playAudioAlarm = true;
-
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private boolean isActive = true;

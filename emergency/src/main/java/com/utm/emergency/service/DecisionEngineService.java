@@ -12,11 +12,20 @@ import java.util.List;
 
 public interface DecisionEngineService {
     OperationMode getMode();
+
     void setMode(OperationMode mode);
+
     List<PendingConfirmationVm> getPendingConfirmations();
+
     EmergencyIncidentVm confirmAction(String incidentId, boolean approved, String userId);
+
+    void cancelPendingConfirmation(String incidentId);
+
     EmergencyProtocol findMatchingProtocol(EmergencyType type, EmergencySeverity severity);
+
     void processEmergency(EmergencyIncident incident);
+
     List<EmergencyIncident> prioritizeEmergencies(List<EmergencyIncident> incidents);
+
     void reloadProtocols();
 }

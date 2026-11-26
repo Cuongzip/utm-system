@@ -19,11 +19,15 @@ public interface DeviceRegistrationMapper {
     @Mapping(target = "droneRegistrationNumber", source = "drone.registrationNumber")
     @Mapping(target = "droneModel", source = "drone.model")
     @Mapping(target = "deviceIdentifier", source = "entity.deviceIdentifier")
+    @Mapping(target = "registrationStatus", source = "entity.registrationStatus")
+    @Mapping(target = "connectionStatus", source = "entity.connectionStatus")
     @Mapping(target = "socketId", source = "entity.socketId")
     @Mapping(target = "certificateFingerprint", source = "entity.certificateFingerprint")
     @Mapping(target = "lastSeenAt", source = "entity.lastSeenAt")
     @Mapping(target = "createdOn", source = "entity.createdOn")
+    @Mapping(target = "createdBy", source = "entity.createdBy")
     @Mapping(target = "lastModifiedOn", source = "entity.lastModifiedOn")
+    @Mapping(target = "lastModifiedBy", source = "entity.lastModifiedBy")
     DeviceRegistrationVm toVm(DeviceRegistration entity, DroneBriefVm drone);
 
     default DeviceRegistrationVm toVm(DeviceRegistration entity) {
@@ -31,12 +35,14 @@ public interface DeviceRegistrationMapper {
     }
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "registrationStatus", constant = "ACTIVE")
     @Mapping(target = "connectionStatus", constant = "OFFLINE")
     @Mapping(target = "socketId", ignore = true)
     @Mapping(target = "lastSeenAt", ignore = true)
     @Mapping(target = "droneId", qualifiedByName = "trimString")
     @Mapping(target = "deviceIdentifier", qualifiedByName = "trimString")
     @Mapping(target = "certificateFingerprint", qualifiedByName = "trimString")
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)

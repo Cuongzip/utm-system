@@ -10,11 +10,13 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.time.ZonedDateTime;
 
 @Mapper(
         componentModel = "spring",
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
         builder = @org.mapstruct.Builder(disableBuilder = true)
 )
 public interface ConflictDetectionMapper {
@@ -26,6 +28,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "severity", source = "severity")
     @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
     @Mapping(target = "hubId", source = "hubId")
+    @Mapping(target = "airspaceZoneId", ignore = true)
     @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
     @Mapping(target = "detectionMethod", constant = "automated_telemetry")
     @Mapping(target = "locationLat", source = "midLat")
@@ -41,6 +44,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "resolutionActions", ignore = true)
     @Mapping(target = "resolvedAt", ignore = true)
     @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -66,6 +70,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "severity", source = "severity")
     @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
     @Mapping(target = "hubId", source = "flight.departureHubId")
+    @Mapping(target = "airspaceZoneId", ignore = true)
     @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
     @Mapping(target = "detectionMethod", constant = "airspace_geofence_check")
     @Mapping(target = "locationLat", source = "lat")
@@ -81,6 +86,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "resolutionActions", ignore = true)
     @Mapping(target = "resolvedAt", ignore = true)
     @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -102,6 +108,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "severity", source = "severity")
     @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
     @Mapping(target = "hubId", source = "hubId")
+    @Mapping(target = "airspaceZoneId", ignore = true)
     @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
     @Mapping(target = "detectionMethod", constant = "automated_telemetry")
     @Mapping(target = "locationLat", source = "midLat")
@@ -117,6 +124,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "resolutionActions", ignore = true)
     @Mapping(target = "resolvedAt", ignore = true)
     @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -142,6 +150,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "severity", source = "severity")
     @Mapping(target = "status", expression = "java(com.utm.conflict.model.enumeration.ConflictStatus.DETECTED)")
     @Mapping(target = "hubId", ignore = true)
+    @Mapping(target = "airspaceZoneId", ignore = true)
     @Mapping(target = "detectedAt", expression = "java(java.time.ZonedDateTime.now())")
     @Mapping(target = "detectionMethod", constant = "airspace_geofence_check")
     @Mapping(target = "locationLat", source = "lat")
@@ -157,6 +166,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "resolutionActions", ignore = true)
     @Mapping(target = "resolvedAt", ignore = true)
     @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -176,6 +186,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "primaryFlightId", ignore = true)
     @Mapping(target = "secondaryFlightId", ignore = true)
     @Mapping(target = "hubId", ignore = true)
+    @Mapping(target = "airspaceZoneId", ignore = true)
     @Mapping(target = "detectedAt", ignore = true)
     @Mapping(target = "detectionMethod", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -185,6 +196,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "resolutionActions", ignore = true)
     @Mapping(target = "resolvedAt", ignore = true)
     @Mapping(target = "resolvedBy", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
@@ -217,6 +229,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "primaryFlightId", ignore = true)
     @Mapping(target = "secondaryFlightId", ignore = true)
     @Mapping(target = "hubId", ignore = true)
+    @Mapping(target = "airspaceZoneId", ignore = true)
     @Mapping(target = "conflictType", ignore = true)
     @Mapping(target = "severity", ignore = true)
     @Mapping(target = "detectedAt", ignore = true)
@@ -231,6 +244,7 @@ public interface ConflictDetectionMapper {
     @Mapping(target = "maxSeverity", ignore = true)
     @Mapping(target = "description", ignore = true)
     @Mapping(target = "resolutionActions", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)

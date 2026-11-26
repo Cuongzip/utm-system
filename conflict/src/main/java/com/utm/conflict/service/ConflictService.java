@@ -1,6 +1,7 @@
 package com.utm.conflict.service;
 
 import com.utm.conflict.viewmodel.conflict.ConflictPostVm;
+import com.utm.conflict.viewmodel.conflict.ConflictResolutionAdviceVm;
 import com.utm.conflict.viewmodel.conflict.ConflictResolvePostVm;
 import com.utm.conflict.viewmodel.conflict.ConflictVm;
 
@@ -19,5 +20,9 @@ public interface ConflictService {
     ConflictVm acknowledgeConflict(String id, String acknowledgedBy);
 
     ConflictVm resolveConflict(String id, ConflictResolvePostVm resolveVm, String resolvedBy);
+
+    default ConflictResolutionAdviceVm getResolutionAdvice(String conflictId) {
+        throw new UnsupportedOperationException("getResolutionAdvice not implemented");
+    }
 }
 

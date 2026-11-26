@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +42,12 @@ public class DroneClientServiceImpl implements DroneClientService {
 
     @Override
     public boolean sendEmergencyCommand(String droneId, String command, String flightId, String incidentId) {
+        return sendEmergencyCommand(droneId, command, flightId, incidentId, Map.of());
+    }
+
+    @Override
+    public boolean sendEmergencyCommand(String droneId, String command, String flightId, String incidentId,
+            Map<String, Object> extraParams) {
         String mappedCommand = mapToDroneCommandType(command);
         if (mappedCommand == null) {
             log.info("Skipping drone command dispatch for no-op action '{}' (drone: {}, incident: {})", command,
@@ -52,8 +59,12 @@ public class DroneClientServiceImpl implements DroneClientService {
                 command, mappedCommand, droneId, flightId, incidentId);
         try {
             var url = serviceUrlConfig.getDroneUrl() + "/api/v1/drones/" + droneId + "/commands";
-            String parametersJson = objectMapper.writeValueAsString(
-                    Map.of("incidentId", incidentId != null ? incidentId : ""));
+            Map<String, Object> paramsMap = new LinkedHashMap<>();
+            paramsMap.put("incidentId", incidentId != null ? incidentId : "");
+            if (extraParams != null && !extraParams.isEmpty()) {
+                paramsMap.putAll(extraParams);
+            }
+            String parametersJson = objectMapper.writeValueAsString(paramsMap);
             restClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON)

@@ -10,15 +10,21 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 public class CustomAuditingEntityListener {
 
+    private static final int MAX_AUDIT_USER_LENGTH = 100;
+
     @PrePersist
     public void touchForCreate(Object target) {
         if (target instanceof AbstractAuditEntity entity) {
             String currentUserId = getCurrentUserId();
-            if (entity.getCreatedBy() == null) {
+            if (entity.getCreatedBy() == null || entity.getCreatedBy().isBlank()) {
                 entity.setCreatedBy(currentUserId);
+            } else {
+                entity.setCreatedBy(truncateActor(entity.getCreatedBy()));
             }
-            if (entity.getLastModifiedBy() == null) {
+            if (entity.getLastModifiedBy() == null || entity.getLastModifiedBy().isBlank()) {
                 entity.setLastModifiedBy(currentUserId);
+            } else {
+                entity.setLastModifiedBy(truncateActor(entity.getLastModifiedBy()));
             }
         }
     }
@@ -31,7 +37,14 @@ public class CustomAuditingEntityListener {
     }
 
     private String getCurrentUserId() {
-        return resolveUserId().orElse("system");
+        return truncateActor(resolveUserId().orElse("system"));
+    }
+
+    private String truncateActor(String actor) {
+        String trimmed = actor.trim();
+        return trimmed.length() > MAX_AUDIT_USER_LENGTH
+                ? trimmed.substring(0, MAX_AUDIT_USER_LENGTH)
+                : trimmed;
     }
 
     private Optional<String> resolveUserId() {

@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-standardize-drone-schema
+      author: utm-system
+      changes:
+        - sql:
+            sql: |
+              UPDATE drone SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status);
+              UPDATE drone SET owner_id = NULL WHERE owner_id IS NOT NULL AND BTRIM(owner_id) = '';
+              UPDATE drone SET home_hub_id = NULL WHERE home_hub_id IS NOT NULL AND BTRIM(home_hub_id) = '';
+              UPDATE drone SET current_hub_id = NULL WHERE current_hub_id IS NOT NULL AND BTRIM(current_hub_id) = '';
+              UPDATE drone SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE drone ALTER COLUMN battery_capacity_wh TYPE DOUBLE PRECISION;
+              ALTER TABLE drone ALTER COLUMN max_payload TYPE DOUBLE PRECISION;
+              ALTER TABLE drone ADD COLUMN IF NOT EXISTS serial_number VARCHAR(100);
+              ALTER TABLE drone ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE drone ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE drone ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE drone DROP CONSTRAINT IF EXISTS chk_drone_battery_pct;
+              ALTER TABLE drone ADD CONSTRAINT chk_drone_battery_pct CHECK (current_battery_pct >= 0.0 AND current_battery_pct <= 100.0);
+              ALTER TABLE drone DROP CONSTRAINT IF EXISTS chk_drone_battery_health;
+              ALTER TABLE drone ADD CONSTRAINT chk_drone_battery_health CHECK (battery_health_pct > 0.0 AND battery_health_pct <= 100.0);
+              ALTER TABLE drone DROP CONSTRAINT IF EXISTS chk_drone_capacity;
+              ALTER TABLE drone ADD CONSTRAINT chk_drone_capacity CHECK (battery_capacity_wh > 0.0 AND max_payload >= 0.0);
+              ALTER TABLE drone DROP CONSTRAINT IF EXISTS chk_drone_status;
+              ALTER TABLE drone ADD CONSTRAINT chk_drone_status CHECK (status IN ('AVAILABLE', 'IN_FLIGHT', 'MAINTENANCE', 'CHARGING', 'OFFLINE', 'RETIRED'));
+
+              DELETE FROM drone_command WHERE drone_id NOT IN (SELECT id FROM drone);
+              UPDATE drone_command SET flight_id = NULL WHERE flight_id IS NOT NULL AND BTRIM(flight_id) = '';
+              UPDATE drone_command SET parameters = NULL WHERE parameters IS NOT NULL AND BTRIM(parameters) = '';
+              UPDATE drone_command SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status);
+              UPDATE drone_command SET command_type = UPPER(command_type) WHERE command_type IS NOT NULL AND command_type <> UPPER(command_type);
+              UPDATE drone_command SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE drone_command ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE drone_command ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE drone_command ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE drone_command ALTER COLUMN parameters TYPE JSONB USING CASE WHEN parameters IS NULL THEN NULL ELSE parameters::jsonb END;
+              ALTER TABLE drone_command DROP CONSTRAINT IF EXISTS fk_drone_command_drone;
+              ALTER TABLE drone_command ADD CONSTRAINT fk_drone_command_drone FOREIGN KEY (drone_id) REFERENCES drone(id) ON DELETE CASCADE;
+              CREATE INDEX IF NOT EXISTS idx_drone_cmd_drone_status_issued ON drone_command (drone_id, status, issued_at);

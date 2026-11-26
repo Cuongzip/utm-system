@@ -1,5 +1,6 @@
 package com.utm.drone.service;
 
+import com.utm.drone.service.client.ConnectivityClientService;
 import com.utm.drone.service.client.HubClientService;
 import com.utm.drone.service.client.OrganizationClientService;
 
@@ -13,6 +14,7 @@ import com.utm.drone.mapper.DroneMapper;
 import com.utm.drone.model.Drone;
 import com.utm.drone.model.enumeration.DroneStatus;
 import com.utm.drone.repository.DroneRepository;
+import com.utm.drone.viewmodel.client.DeviceRegistrationBriefVm;
 import com.utm.drone.viewmodel.drone.DroneListVm;
 import com.utm.drone.viewmodel.drone.DronePostVm;
 import com.utm.drone.viewmodel.drone.DronePutVm;
@@ -20,8 +22,8 @@ import com.utm.drone.viewmodel.drone.DroneVm;
 import com.utm.drone.viewmodel.client.HubBriefVm;
 import com.utm.drone.viewmodel.client.OrganizationBriefVm;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,13 +31,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class DroneServiceImpl implements DroneService {
 
@@ -43,11 +45,29 @@ public class DroneServiceImpl implements DroneService {
     private final DroneMapper droneMapper;
     private final HubClientService hubClientService;
     private final OrganizationClientService organizationClientService;
+    private final ConnectivityClientService connectivityClientService;
+    private final TransactionTemplate transactionTemplate;
+
+    @Autowired
+    public DroneServiceImpl(
+            DroneRepository droneRepository,
+            DroneMapper droneMapper,
+            HubClientService hubClientService,
+            OrganizationClientService organizationClientService,
+            @Autowired(required = false) ConnectivityClientService connectivityClientService,
+            @Autowired(required = false) TransactionTemplate transactionTemplate) {
+        this.droneRepository = droneRepository;
+        this.droneMapper = droneMapper;
+        this.hubClientService = hubClientService;
+        this.organizationClientService = organizationClientService;
+        this.connectivityClientService = connectivityClientService;
+        this.transactionTemplate = transactionTemplate;
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public DroneListVm getDrones(DroneStatus status, String homeHubId, String ownerId, String search, int limit,
-            int offset) {
+    public DroneListVm getDrones(DroneStatus status, String homeHubId, String currentHubId, String ownerId,
+            String search, int limit, int offset) {
         Specification<Drone> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (status != null) {
@@ -55,6 +75,12 @@ public class DroneServiceImpl implements DroneService {
             }
             if (homeHubId != null && !homeHubId.trim().isBlank()) {
                 predicates.add(cb.equal(root.get("homeHubId"), homeHubId.trim()));
+            }
+            if (currentHubId != null && !currentHubId.trim().isBlank()) {
+                String hubId = currentHubId.trim();
+                predicates.add(cb.or(
+                        cb.equal(root.get("currentHubId"), hubId),
+                        cb.and(cb.isNull(root.get("currentHubId")), cb.equal(root.get("homeHubId"), hubId))));
             }
             if (ownerId != null && !ownerId.trim().isBlank()) {
                 predicates.add(cb.equal(root.get("ownerId"), ownerId.trim()));
@@ -90,10 +116,18 @@ public class DroneServiceImpl implements DroneService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public DroneVm getDroneById(String id) {
+        return getDroneById(id, true);
+    }
+
+    @Override
+    public DroneVm getDroneById(String id, boolean enrich) {
         Drone drone = droneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", id));
+
+        if (!enrich) {
+            return droneMapper.toVm(drone, null, null, null);
+        }
 
         Optional<OrganizationBriefVm> owner = Optional.empty();
         if (drone.getOwnerId() != null && !drone.getOwnerId().isBlank()) {
@@ -105,11 +139,14 @@ public class DroneServiceImpl implements DroneService {
             hub = hubClientService.getHubById(drone.getHomeHubId());
         }
 
-        return droneMapper.toVm(drone, owner.orElse(null), hub.orElse(null), null);
+        DeviceRegistrationBriefVm deviceRegistration = connectivityClientService != null
+                ? connectivityClientService.getDeviceByDroneId(drone.getId()).orElse(null)
+                : null;
+
+        return droneMapper.toVm(drone, owner.orElse(null), hub.orElse(null), deviceRegistration);
     }
 
     @Override
-    @Transactional
     public DroneVm createDrone(DronePostVm dronePostVm) {
         String registrationNumber;
         if (dronePostVm.registrationNumber() == null || dronePostVm.registrationNumber().trim().isBlank()) {
@@ -131,6 +168,7 @@ public class DroneServiceImpl implements DroneService {
             String ownerId = dronePostVm.ownerId().trim();
             owner = organizationClientService.getOrganizationById(ownerId)
                     .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", ownerId));
+            validateOrganizationActive(owner);
         }
 
         HubBriefVm hub = null;
@@ -138,11 +176,35 @@ public class DroneServiceImpl implements DroneService {
             String hubId = dronePostVm.homeHubId().trim();
             hub = hubClientService.getHubById(hubId)
                     .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId));
+            validateHubActive(hub);
         }
 
-        Drone drone = droneMapper.toEntity(dronePostVm);
-        drone.setRegistrationNumber(registrationNumber);
-        Drone savedDrone = droneRepository.saveAndFlush(drone);
+        if (dronePostVm.currentHubId() != null && !dronePostVm.currentHubId().trim().isBlank()
+                && !dronePostVm.currentHubId().trim().equals(dronePostVm.homeHubId() != null ? dronePostVm.homeHubId().trim() : null)) {
+            String curHubId = dronePostVm.currentHubId().trim();
+            HubBriefVm curHub = hubClientService.getHubById(curHubId)
+                    .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", curHubId));
+            validateHubActive(curHub);
+        }
+
+        Drone savedDrone;
+        if (transactionTemplate != null) {
+            savedDrone = transactionTemplate.execute(status -> {
+                Drone drone = droneMapper.toEntity(dronePostVm);
+                drone.setRegistrationNumber(registrationNumber);
+                if (drone.getCurrentHubId() == null || drone.getCurrentHubId().isBlank()) {
+                    drone.setCurrentHubId(drone.getHomeHubId());
+                }
+                return droneRepository.saveAndFlush(drone);
+            });
+        } else {
+            Drone drone = droneMapper.toEntity(dronePostVm);
+            drone.setRegistrationNumber(registrationNumber);
+            if (drone.getCurrentHubId() == null || drone.getCurrentHubId().isBlank()) {
+                drone.setCurrentHubId(drone.getHomeHubId());
+            }
+            savedDrone = droneRepository.saveAndFlush(drone);
+        }
         log.info("Created new drone with ID: {} and registration number: {}", savedDrone.getId(),
                 savedDrone.getRegistrationNumber());
 
@@ -150,18 +212,20 @@ public class DroneServiceImpl implements DroneService {
     }
 
     @Override
-    @Transactional
     public DroneVm updateDrone(String id, DronePutVm dronePutVm) {
         Drone drone = droneRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", id));
 
         if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
-            boolean changingHub = dronePutVm.homeHubId() != null
-                    && !dronePutVm.homeHubId().trim().equals(drone.getHomeHubId());
+            boolean changingHub = (dronePutVm.homeHubId() != null
+                    && !dronePutVm.homeHubId().trim().equals(drone.getHomeHubId()))
+                    || (dronePutVm.currentHubId() != null
+                            && !dronePutVm.currentHubId().trim().equals(drone.getCurrentHubId()));
             boolean changingPayload = dronePutVm.maxPayload() != null
                     && !dronePutVm.maxPayload().equals(drone.getMaxPayload());
             boolean changingToUnsafeStatus = dronePutVm.status() == DroneStatus.MAINTENANCE
-                    || dronePutVm.status() == DroneStatus.OFFLINE;
+                    || dronePutVm.status() == DroneStatus.OFFLINE
+                    || dronePutVm.status() == DroneStatus.RETIRED;
 
             if (changingHub || changingPayload || changingToUnsafeStatus) {
                 log.warn("Attempted unsafe update for in-flight drone ID: {}", id);
@@ -170,24 +234,44 @@ public class DroneServiceImpl implements DroneService {
             }
         }
 
+        if (dronePutVm.currentHubId() != null && !dronePutVm.currentHubId().trim().isBlank()) {
+            String curHubId = dronePutVm.currentHubId().trim();
+            HubBriefVm curHub = hubClientService.getHubById(curHubId)
+                    .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", curHubId));
+            validateHubActive(curHub);
+        }
+
         HubBriefVm hub = null;
         if (dronePutVm.homeHubId() != null && !dronePutVm.homeHubId().trim().isBlank()) {
             String hubId = dronePutVm.homeHubId().trim();
             hub = hubClientService.getHubById(hubId)
                     .orElseThrow(() -> new NotFoundException(MessageCode.HUB_NOT_FOUND, "id", hubId));
+            validateHubActive(hub);
         } else if (drone.getHomeHubId() != null && !drone.getHomeHubId().isBlank()) {
             hub = hubClientService.getHubById(drone.getHomeHubId()).orElse(null);
         }
 
-        droneMapper.updateEntityFromPutVm(drone, dronePutVm);
-
-        Drone updatedDrone = droneRepository.saveAndFlush(drone);
+        Drone updatedDrone;
+        if (transactionTemplate != null) {
+            updatedDrone = transactionTemplate.execute(status -> {
+                Drone managed = droneRepository.findById(id)
+                        .orElseThrow(() -> new NotFoundException(MessageCode.DRONE_NOT_FOUND, "id", id));
+                droneMapper.updateEntityFromPutVm(managed, dronePutVm);
+                return droneRepository.saveAndFlush(managed);
+            });
+        } else {
+            droneMapper.updateEntityFromPutVm(drone, dronePutVm);
+            updatedDrone = droneRepository.saveAndFlush(drone);
+        }
         log.info("Updated drone with ID: {}", id);
 
         OrganizationBriefVm owner = (updatedDrone.getOwnerId() != null && !updatedDrone.getOwnerId().isBlank())
                 ? organizationClientService.getOrganizationById(updatedDrone.getOwnerId()).orElse(null)
                 : null;
-        return droneMapper.toVm(updatedDrone, owner, hub, null);
+        DeviceRegistrationBriefVm deviceRegistration = connectivityClientService != null
+                ? connectivityClientService.getDeviceByDroneId(updatedDrone.getId()).orElse(null)
+                : null;
+        return droneMapper.toVm(updatedDrone, owner, hub, deviceRegistration);
     }
 
     @Override
@@ -202,9 +286,21 @@ public class DroneServiceImpl implements DroneService {
                     drone.getRegistrationNumber() != null ? drone.getRegistrationNumber() : id);
         }
 
-        drone.setStatus(DroneStatus.OFFLINE);
+        drone.setStatus(DroneStatus.RETIRED);
         droneRepository.save(drone);
-        log.info("Deactivated/offline drone with ID: {}", id);
+        log.info("Retired drone with ID: {}", id);
+    }
+
+    private void validateOrganizationActive(OrganizationBriefVm owner) {
+        if (owner != null && owner.status() != null && !"active".equalsIgnoreCase(owner.status())) {
+            throw new BadRequestException(MessageCode.ORGANIZATION_NOT_ACTIVE, "id", owner.id());
+        }
+    }
+
+    private void validateHubActive(HubBriefVm hub) {
+        if (hub != null && hub.status() != null && !"active".equalsIgnoreCase(hub.status())) {
+            throw new BadRequestException(MessageCode.HUB_NOT_ACTIVE, "id", hub.id());
+        }
     }
 
     private DroneVm mapToVm(Drone drone) {

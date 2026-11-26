@@ -1,10 +1,10 @@
 package com.utm.emergency.viewmodel.incident;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 
 public record IncidentTimelineEventVm(
         String timestamp,
         String event,
-        JsonNode data
+        Map<String, Object> data
 ) {
 }

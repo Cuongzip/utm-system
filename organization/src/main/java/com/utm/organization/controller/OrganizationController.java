@@ -139,10 +139,10 @@ public class OrganizationController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('admin', 'operator')")
+    @PreAuthorize("hasRole('admin')")
     @Operation(
             summary = "Update Organization",
-            description = "Update information and operational status of an existing organization."
+            description = "Update information and operational status of an existing organization. Requires admin role."
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Organization update details",
@@ -155,7 +155,6 @@ public class OrganizationController {
                             value = """
                                     {
                                       "name": "Drone Express Global JSC",
-                                      "type": "operator",
                                       "contactInfo": "support@droneexpress.vn | +84-28-3822-0000",
                                       "status": "active"
                                     }

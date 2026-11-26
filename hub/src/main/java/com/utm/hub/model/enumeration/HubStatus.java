@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum HubStatus {
     ACTIVE("active"),
     INACTIVE("inactive"),
-    MAINTENANCE("maintenance");
+    MAINTENANCE("maintenance"),
+    OFFLINE("offline");
 
     private final String value;
 

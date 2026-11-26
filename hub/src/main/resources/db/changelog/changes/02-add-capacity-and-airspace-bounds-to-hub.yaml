@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-add-capacity-and-airspace-bounds-to-hub
+      author: utm-backend
+      changes:
+        - addColumn:
+            tableName: hub
+            columns:
+              - column:
+                  name: max_simultaneous_drones
+                  type: INTEGER
+                  defaultValueNumeric: 10
+                  constraints:
+                    nullable: false
+              - column:
+                  name: airspace_floor
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: airspace_ceiling
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 120.0
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: hub
+            columnName: airspace_ceiling
+        - dropColumn:
+            tableName: hub
+            columnName: airspace_floor
+        - dropColumn:
+            tableName: hub
+            columnName: max_simultaneous_drones

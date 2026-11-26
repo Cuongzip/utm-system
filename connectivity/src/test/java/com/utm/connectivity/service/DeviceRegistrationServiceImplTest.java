@@ -6,6 +6,7 @@ import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.connectivity.mapper.DeviceRegistrationMapper;
 import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
+import com.utm.connectivity.model.enumeration.DeviceRegistrationStatus;
 import com.utm.connectivity.repository.DeviceRegistrationRepository;
 import com.utm.connectivity.service.client.DroneClientService;
 import com.utm.connectivity.viewmodel.client.DroneBriefVm;
@@ -107,9 +108,11 @@ class DeviceRegistrationServiceImplTest {
                 void registerDevice_validInput_savesAndReturnsExpectedVm() {
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testDrone));
-                        when(deviceRegistrationRepository.findByDroneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.empty());
-                        when(deviceRegistrationRepository.findByDeviceIdentifier("DRONE-MAC-9876543210AB"))
+                        when(deviceRegistrationRepository.findByDeviceIdentifierAndRegistrationStatusNot(
+                                        "DRONE-MAC-9876543210AB", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.empty());
                         when(mapper.toEntity(testPostVm)).thenReturn(testRegistration);
                         when(deviceRegistrationRepository.save(testRegistration)).thenReturn(testRegistration);
@@ -127,8 +130,10 @@ class DeviceRegistrationServiceImplTest {
                         assertThat(result.certificateFingerprint()).isEqualTo("SHA256:7b91d24c88f910a3");
 
                         verify(droneClientService).getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
-                        verify(deviceRegistrationRepository).findByDroneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
-                        verify(deviceRegistrationRepository).findByDeviceIdentifier("DRONE-MAC-9876543210AB");
+                        verify(deviceRegistrationRepository).findByDroneIdAndRegistrationStatusNot(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", DeviceRegistrationStatus.REVOKED);
+                        verify(deviceRegistrationRepository).findByDeviceIdentifierAndRegistrationStatusNot(
+                                        "DRONE-MAC-9876543210AB", DeviceRegistrationStatus.REVOKED);
                         verify(deviceRegistrationRepository).save(testRegistration);
                 }
 
@@ -149,9 +154,11 @@ class DeviceRegistrationServiceImplTest {
 
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testDrone));
-                        when(deviceRegistrationRepository.findByDroneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.empty());
-                        when(deviceRegistrationRepository.findByDeviceIdentifier(anyString()))
+                        when(deviceRegistrationRepository.findByDeviceIdentifierAndRegistrationStatusNot(
+                                        anyString(), eq(DeviceRegistrationStatus.REVOKED)))
                                         .thenReturn(Optional.empty());
                         when(mapper.toEntity(postVmWithoutId)).thenReturn(entity);
                         when(deviceRegistrationRepository.save(any(DeviceRegistration.class)))
@@ -199,7 +206,8 @@ class DeviceRegistrationServiceImplTest {
                 void registerDevice_droneAlreadyRegistered_throwsDuplicatedException() {
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testDrone));
-                        when(deviceRegistrationRepository.findByDroneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.of(testRegistration));
 
                         assertThatThrownBy(() -> deviceRegistrationService.registerDevice(testPostVm))
@@ -208,7 +216,8 @@ class DeviceRegistrationServiceImplTest {
                                         .extracting(ex -> ((DuplicatedException) ex).getParams().get("registrationNumber"))
                                         .isEqualTo("VN-UAV-001");
 
-                        verify(deviceRegistrationRepository, never()).findByDeviceIdentifier(any());
+                        verify(deviceRegistrationRepository, never())
+                                        .findByDeviceIdentifierAndRegistrationStatusNot(any(), any());
                         verify(deviceRegistrationRepository, never()).save(any());
                 }
 
@@ -217,9 +226,11 @@ class DeviceRegistrationServiceImplTest {
                 void registerDevice_deviceIdentifierAlreadyExists_throwsDuplicatedException() {
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testDrone));
-                        when(deviceRegistrationRepository.findByDroneId("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.empty());
-                        when(deviceRegistrationRepository.findByDeviceIdentifier("DRONE-MAC-9876543210AB"))
+                        when(deviceRegistrationRepository.findByDeviceIdentifierAndRegistrationStatusNot(
+                                        "DRONE-MAC-9876543210AB", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.of(testRegistration));
 
                         assertThatThrownBy(() -> deviceRegistrationService.registerDevice(testPostVm))
@@ -229,6 +240,34 @@ class DeviceRegistrationServiceImplTest {
                                         .isEqualTo("DRONE-MAC-9876543210AB");
 
                         verify(deviceRegistrationRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("Should reactivate previously REVOKED device registration cleanly on re-registration")
+                void registerDevice_previouslyRevokedIdentifier_reactivatesExistingRow() {
+                        testRegistration.setRegistrationStatus(DeviceRegistrationStatus.REVOKED);
+                        testRegistration.setConnectionStatus(DeviceConnectionStatus.OFFLINE);
+
+                        when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                        .thenReturn(Optional.of(testDrone));
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDeviceIdentifierAndRegistrationStatusNot(
+                                        "DRONE-MAC-9876543210AB", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findFirstByDeviceIdentifierIgnoreCaseOrderByCreatedOnDesc(
+                                        "DRONE-MAC-9876543210AB"))
+                                        .thenReturn(Optional.of(testRegistration));
+                        when(deviceRegistrationRepository.save(testRegistration)).thenReturn(testRegistration);
+                        when(mapper.toVm(testRegistration, testDrone)).thenReturn(testRegistrationVm);
+
+                        DeviceRegistrationVm result = deviceRegistrationService.registerDevice(testPostVm);
+
+                        assertThat(result).isNotNull();
+                        assertThat(testRegistration.getRegistrationStatus()).isEqualTo(DeviceRegistrationStatus.ACTIVE);
+                        verify(deviceRegistrationRepository).save(testRegistration);
+                        verify(mapper, never()).toEntity(any());
                 }
         }
 
@@ -337,8 +376,13 @@ class DeviceRegistrationServiceImplTest {
                 @Test
                 @DisplayName("Should return device registration profile using flexible lookup by id, identifier, or droneId")
                 void getDeviceById_existingKey_returnsExpectedVm() {
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId("DRONE-MAC-9876543210AB",
-                                        "DRONE-MAC-9876543210AB", "DRONE-MAC-9876543210AB"))
+                        when(deviceRegistrationRepository.findById("DRONE-MAC-9876543210AB"))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "DRONE-MAC-9876543210AB", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDeviceIdentifierIgnoreCaseAndRegistrationStatusNot(
+                                        "DRONE-MAC-9876543210AB", DeviceRegistrationStatus.REVOKED))
                                         .thenReturn(Optional.of(testRegistration));
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testDrone));
@@ -351,16 +395,20 @@ class DeviceRegistrationServiceImplTest {
                         assertThat(result.deviceIdentifier()).isEqualTo("DRONE-MAC-9876543210AB");
                         assertThat(result.droneRegistrationNumber()).isEqualTo("VN-UAV-001");
                         assertThat(result.droneModel()).isEqualTo("Matrice 350 RTK");
-
-                        verify(deviceRegistrationRepository).findByIdOrDeviceIdentifierOrDroneId(
-                                        "DRONE-MAC-9876543210AB", "DRONE-MAC-9876543210AB", "DRONE-MAC-9876543210AB");
                 }
 
                 @Test
                 @DisplayName("Should throw NotFoundException (404) when lookup key does not exist")
                 void getDeviceById_nonExistentKey_throwsNotFoundException() {
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId("unknown-key",
-                                        "unknown-key", "unknown-key"))
+                        when(deviceRegistrationRepository.findById("unknown-key")).thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "unknown-key", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDeviceIdentifierIgnoreCaseAndRegistrationStatusNot(
+                                        "unknown-key", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findFirstByIdOrDeviceIdentifierOrDroneIdOrderByCreatedOnDesc(
+                                        "unknown-key", "UNKNOWN-KEY", "unknown-key"))
                                         .thenReturn(Optional.empty());
 
                         assertThatThrownBy(() -> deviceRegistrationService.getDeviceById("unknown-key"))
@@ -380,9 +428,7 @@ class DeviceRegistrationServiceImplTest {
                 @Test
                 @DisplayName("Should update status to ONLINE, record lastSeenAt and socketId, and return success result")
                 void processHeartbeat_existingDevice_updatesOnlineStatusAndReturnsSuccess() {
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890", "c1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                        when(deviceRegistrationRepository.findById("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testRegistration));
                         when(deviceRegistrationRepository.save(testRegistration)).thenReturn(testRegistration);
 
@@ -403,10 +449,31 @@ class DeviceRegistrationServiceImplTest {
                 }
 
                 @Test
+                @DisplayName("Should throw BadRequestException (400) when heartbeat arrives for revoked registration")
+                void processHeartbeat_revokedDevice_throwsBadRequestException() {
+                        testRegistration.setRegistrationStatus(DeviceRegistrationStatus.REVOKED);
+                        when(deviceRegistrationRepository.findById("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                        .thenReturn(Optional.of(testRegistration));
+
+                        assertThatThrownBy(() -> deviceRegistrationService
+                                        .processHeartbeat("c1b2c3d4-e5f6-7890-abcd-ef1234567890", null))
+                                        .isInstanceOf(BadRequestException.class);
+
+                        verify(deviceRegistrationRepository, never()).save(any());
+                }
+
+                @Test
                 @DisplayName("Should throw NotFoundException (404) when heartbeat device identifier is not registered")
                 void processHeartbeat_nonExistentDevice_throwsNotFoundException() {
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId("unknown", "unknown",
-                                        "unknown"))
+                        when(deviceRegistrationRepository.findById("unknown")).thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "unknown", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDeviceIdentifierIgnoreCaseAndRegistrationStatusNot(
+                                        "unknown", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findFirstByIdOrDeviceIdentifierOrDroneIdOrderByCreatedOnDesc(
+                                        "unknown", "UNKNOWN", "unknown"))
                                         .thenReturn(Optional.empty());
 
                         assertThatThrownBy(() -> deviceRegistrationService.processHeartbeat("unknown", null))
@@ -424,22 +491,25 @@ class DeviceRegistrationServiceImplTest {
         class RevokeDeviceRegistrationTests {
 
                 @Test
-                @DisplayName("Should revoke device registration successfully when drone is not currently flying")
-                void revokeDeviceRegistration_existingDeviceAndDroneAvailable_deletesAndReturnsSuccess() {
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890", "c1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                @DisplayName("Should soft-revoke device registration when drone is not currently flying")
+                void revokeDeviceRegistration_existingDeviceAndDroneAvailable_softRevokesAndReturnsSuccess() {
+                        when(deviceRegistrationRepository.findById("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testRegistration));
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testDrone));
+                        when(deviceRegistrationRepository.save(testRegistration)).thenReturn(testRegistration);
 
                         RevokeResultVm result = deviceRegistrationService
                                         .revokeDeviceRegistration("c1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
                         assertThat(result).isNotNull();
                         assertThat(result.message()).isEqualTo("Device registration revoked successfully");
+                        assertThat(testRegistration.getRegistrationStatus()).isEqualTo(DeviceRegistrationStatus.REVOKED);
+                        assertThat(testRegistration.getConnectionStatus()).isEqualTo(DeviceConnectionStatus.OFFLINE);
+                        assertThat(testRegistration.getSocketId()).isNull();
 
-                        verify(deviceRegistrationRepository).delete(testRegistration);
+                        verify(deviceRegistrationRepository).save(testRegistration);
+                        verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
                 }
 
                 @Test
@@ -449,9 +519,7 @@ class DeviceRegistrationServiceImplTest {
                                         "d1b2c3d4-e5f6-7890-abcd-ef1234567890", "VN-UAV-001", "DJI", "Matrice 350 RTK",
                                         "in_flight");
 
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890", "c1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                        when(deviceRegistrationRepository.findById("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(testRegistration));
                         when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                         .thenReturn(Optional.of(flyingDrone));
@@ -463,38 +531,21 @@ class DeviceRegistrationServiceImplTest {
                                         .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
                                         .isEqualTo("VN-UAV-001");
 
-                        verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
-                }
-
-                @Test
-                @DisplayName("Should throw BadRequestException (400) when drone is in_mission")
-                void revokeDeviceRegistration_droneInMission_throwsBadRequestException() {
-                        DroneBriefVm missionDrone = new DroneBriefVm(
-                                        "d1b2c3d4-e5f6-7890-abcd-ef1234567890", "VN-UAV-001", "DJI", "Matrice 350 RTK",
-                                        "in_mission");
-
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId(
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890", "c1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                                        "c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                        .thenReturn(Optional.of(testRegistration));
-                        when(droneClientService.getDroneById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                        .thenReturn(Optional.of(missionDrone));
-
-                        assertThatThrownBy(() -> deviceRegistrationService
-                                        .revokeDeviceRegistration("c1b2c3d4-e5f6-7890-abcd-ef1234567890"))
-                                        .isInstanceOf(BadRequestException.class)
-                                        .hasMessage("Cannot revoke hardware registration of a drone currently in flight")
-                                        .extracting(ex -> ((BadRequestException) ex).getParams().get("registrationNumber"))
-                                        .isEqualTo("VN-UAV-001");
-
-                        verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
+                        verify(deviceRegistrationRepository, never()).save(any(DeviceRegistration.class));
                 }
 
                 @Test
                 @DisplayName("Should throw NotFoundException (404) when target device registration does not exist")
                 void revokeDeviceRegistration_nonExistentDevice_throwsNotFoundException() {
-                        when(deviceRegistrationRepository.findByIdOrDeviceIdentifierOrDroneId("non-existent-id",
-                                        "non-existent-id", "non-existent-id"))
+                        when(deviceRegistrationRepository.findById("non-existent-id")).thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDroneIdAndRegistrationStatusNot(
+                                        "non-existent-id", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findByDeviceIdentifierIgnoreCaseAndRegistrationStatusNot(
+                                        "non-existent-id", DeviceRegistrationStatus.REVOKED))
+                                        .thenReturn(Optional.empty());
+                        when(deviceRegistrationRepository.findFirstByIdOrDeviceIdentifierOrDroneIdOrderByCreatedOnDesc(
+                                        "non-existent-id", "NON-EXISTENT-ID", "non-existent-id"))
                                         .thenReturn(Optional.empty());
 
                         assertThatThrownBy(() -> deviceRegistrationService.revokeDeviceRegistration("non-existent-id"))
@@ -503,7 +554,7 @@ class DeviceRegistrationServiceImplTest {
                                         .extracting(ex -> ((NotFoundException) ex).getParams().get("id"))
                                         .isEqualTo("non-existent-id");
 
-                        verify(deviceRegistrationRepository, never()).delete(any(DeviceRegistration.class));
+                        verify(deviceRegistrationRepository, never()).save(any(DeviceRegistration.class));
                 }
         }
 }

@@ -5,35 +5,81 @@ import com.utm.hub.model.enumeration.HubStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.ZonedDateTime;
+import java.util.Map;
 
 @Schema(description = "Detailed profile and specifications of a Takeoff/Landing Hub or Vertiport")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record HubVm(
-        @Schema(description = "Unique UUID identifier of the Hub", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4")
         String id,
-
-        @Schema(description = "Unique identification code / callsign of the Hub", example = "HUB-SGN-01")
         String code,
-
-        @Schema(description = "Display name of the Hub / Vertiport", example = "Trạm Trung Tâm Quận 1")
         String name,
-
-        @Schema(description = "GPS Location coordinates")
+        String organizationId,
         LocationVm location,
-
-        @Schema(description = "Altitude MSL in meters (m)", example = "12.5")
         Double altitudeMsl,
-
-        @Schema(description = "Airspace protection radius in meters", example = "1500.0")
         Double airspaceRadius,
-
-        @Schema(description = "Current operational status of the Hub", example = "active")
+        Integer maxSimultaneousDrones,
+        Double airspaceFloor,
+        Double airspaceCeiling,
+        String timezone,
+        Map<String, Object> capabilities,
+        Map<String, Object> contactInfo,
         HubStatus status,
-
-        @Schema(description = "Record creation timestamp", example = "2026-10-10T08:00:00Z")
         ZonedDateTime createdOn,
-
-        @Schema(description = "Last modification timestamp", example = "2026-10-10T08:30:00Z")
-        ZonedDateTime lastModifiedOn
+        String createdBy,
+        ZonedDateTime lastModifiedOn,
+        String lastModifiedBy
 ) {
+    public HubVm(
+            String id,
+            String code,
+            String name,
+            LocationVm location,
+            Double altitudeMsl,
+            Double airspaceRadius,
+            Integer maxSimultaneousDrones,
+            Double airspaceFloor,
+            Double airspaceCeiling,
+            HubStatus status,
+            ZonedDateTime createdOn,
+            String createdBy,
+            ZonedDateTime lastModifiedOn,
+            String lastModifiedBy
+    ) {
+        this(id, code, name, null, location, altitudeMsl, airspaceRadius, maxSimultaneousDrones,
+                airspaceFloor, airspaceCeiling, "Asia/Ho_Chi_Minh", null, null,
+                status, createdOn, createdBy, lastModifiedOn, lastModifiedBy);
+    }
+
+    public HubVm(
+            String id,
+            String code,
+            String name,
+            LocationVm location,
+            Double altitudeMsl,
+            Double airspaceRadius,
+            Integer maxSimultaneousDrones,
+            Double airspaceFloor,
+            Double airspaceCeiling,
+            HubStatus status,
+            ZonedDateTime createdOn,
+            ZonedDateTime lastModifiedOn
+    ) {
+        this(id, code, name, location, altitudeMsl, airspaceRadius, maxSimultaneousDrones,
+                airspaceFloor, airspaceCeiling, status, createdOn, null, lastModifiedOn, null);
+    }
+
+    public HubVm(
+            String id,
+            String code,
+            String name,
+            LocationVm location,
+            Double altitudeMsl,
+            Double airspaceRadius,
+            HubStatus status,
+            ZonedDateTime createdOn,
+            ZonedDateTime lastModifiedOn
+    ) {
+        this(id, code, name, location, altitudeMsl, airspaceRadius, 10, 0.0, 120.0, status,
+                createdOn, null, lastModifiedOn, null);
+    }
 }

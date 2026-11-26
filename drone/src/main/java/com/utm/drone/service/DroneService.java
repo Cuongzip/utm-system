@@ -8,9 +8,19 @@ import com.utm.drone.viewmodel.drone.DroneVm;
 
 public interface DroneService {
 
-    DroneListVm getDrones(DroneStatus status, String homeHubId, String ownerId, String search, int limit, int offset);
+    DroneListVm getDrones(DroneStatus status, String homeHubId, String currentHubId, String ownerId, String search,
+            int limit, int offset);
+
+    default DroneListVm getDrones(DroneStatus status, String homeHubId, String ownerId, String search, int limit,
+            int offset) {
+        return getDrones(status, homeHubId, null, ownerId, search, limit, offset);
+    }
 
     DroneVm getDroneById(String id);
+
+    default DroneVm getDroneById(String id, boolean enrich) {
+        return getDroneById(id);
+    }
 
     DroneVm createDrone(DronePostVm dronePostVm);
 
@@ -18,4 +28,3 @@ public interface DroneService {
 
     void deleteDrone(String id);
 }
-

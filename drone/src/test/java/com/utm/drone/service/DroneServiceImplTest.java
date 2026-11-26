@@ -526,15 +526,54 @@ class DroneServiceImplTest {
         }
 
         @Test
-        @DisplayName("deleteDrone sets drone status to OFFLINE when drone is available")
-        void deleteDrone_existingAvailableDrone_setsStatusToOffline() {
+        @DisplayName("deleteDrone sets drone status to RETIRED when drone is available")
+        void deleteDrone_existingAvailableDrone_setsStatusToRetired() {
                 when(droneRepository.findById("d1b2c3d4-e5f6-7890-abcd-ef1234567890"))
                                 .thenReturn(Optional.of(sampleDrone));
 
                 droneService.deleteDrone("d1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
-                assertThat(sampleDrone.getStatus()).isEqualTo(DroneStatus.OFFLINE);
+                assertThat(sampleDrone.getStatus()).isEqualTo(DroneStatus.RETIRED);
                 verify(droneRepository).save(sampleDrone);
+        }
+
+        @Test
+        @DisplayName("createDrone throws BadRequestException when owner organization is not active")
+        void createDrone_inactiveOwnerOrganization_throwsBadRequestException() {
+                OrganizationBriefVm suspendedOwner = new OrganizationBriefVm(
+                                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                "Suspended Corp",
+                                "GP-2026-SUSP",
+                                "operator",
+                                "suspended");
+                when(droneRepository.existsByRegistrationNumber("VN-UAV-001")).thenReturn(false);
+                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(suspendedOwner));
+
+                assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
+                                .isInstanceOf(BadRequestException.class);
+
+                verify(droneRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("createDrone throws BadRequestException when home hub is not active")
+        void createDrone_inactiveHomeHub_throwsBadRequestException() {
+                HubBriefVm inactiveHub = new HubBriefVm(
+                                "h1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                "HUB-SGN-01",
+                                "Closed Hub",
+                                "inactive");
+                when(droneRepository.existsByRegistrationNumber("VN-UAV-001")).thenReturn(false);
+                when(organizationClientService.getOrganizationById("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(sampleOwner));
+                when(hubClientService.getHubById("h1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+                                .thenReturn(Optional.of(inactiveHub));
+
+                assertThatThrownBy(() -> droneService.createDrone(samplePostVm))
+                                .isInstanceOf(BadRequestException.class);
+
+                verify(droneRepository, never()).saveAndFlush(any());
         }
 
         @Test

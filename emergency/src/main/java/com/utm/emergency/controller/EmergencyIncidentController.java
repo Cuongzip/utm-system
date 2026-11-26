@@ -9,6 +9,7 @@ import com.utm.emergency.viewmodel.incident.EmergencyIncidentPostVm;
 import com.utm.emergency.viewmodel.incident.EmergencyIncidentVm;
 import com.utm.emergency.viewmodel.incident.IncidentPageVm;
 import com.utm.emergency.viewmodel.incident.PendingConfirmationVm;
+import com.utm.emergency.viewmodel.incident.ResolveIncidentVm;
 import com.utm.emergency.viewmodel.incident.RootCauseVm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,7 +58,7 @@ public class EmergencyIncidentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('admin', 'atc', 'pilot', 'operator')")
+    @PreAuthorize("hasAnyRole('admin', 'atc', 'pilot', 'operator', 'hub_operator')")
     @Operation(summary = "Report and ingest a new emergency incident from flight watchdog or telemetry")
     public ResponseEntity<EmergencyIncidentVm> createIncident(
             @Valid @RequestBody EmergencyIncidentPostVm postVm,
@@ -68,7 +69,7 @@ public class EmergencyIncidentController {
     }
 
     @GetMapping("/active")
-    @Operation(summary = "Get all active, pending, and executing incidents for map radar")
+    @Operation(summary = "Get all active, pending, executing, and escalated incidents for map radar")
     public ResponseEntity<List<EmergencyIncidentVm>> getActiveIncidents() {
         return ResponseEntity.ok(incidentService.getActiveIncidents());
     }
@@ -94,6 +95,18 @@ public class EmergencyIncidentController {
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt != null ? jwt.getSubject() : "operator";
         return ResponseEntity.ok(decisionEngine.confirmAction(id, body.approved(), userId));
+    }
+
+    @PostMapping("/{id}/resolve")
+    @PreAuthorize("hasAnyRole('pilot', 'atc', 'admin')")
+    @Operation(summary = "Manually resolve an active, pending, executing, or escalated emergency incident")
+    public ResponseEntity<EmergencyIncidentVm> resolveIncident(
+            @PathVariable String id,
+            @RequestBody(required = false) ResolveIncidentVm body,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt != null ? jwt.getSubject() : "operator";
+        String notes = body != null ? body.resolutionNotes() : null;
+        return ResponseEntity.ok(incidentService.resolveIncident(id, userId, notes));
     }
 
     @PutMapping("/{id}/root-cause")

@@ -84,12 +84,14 @@ public class DroneCommandController {
             @RequestParam(required = false) CommandStatus status,
             @Parameter(description = "Filter by tactical command type")
             @RequestParam(required = false) CommandType commandType,
+            @Parameter(description = "Filter by associated flight ID")
+            @RequestParam(required = false) String flightId,
             @Parameter(description = "Page size limit (default: 20)")
             @RequestParam(defaultValue = "20") int limit,
             @Parameter(description = "Offset index (default: 0)")
             @RequestParam(defaultValue = "0") int offset
     ) {
-        return ResponseEntity.ok(droneCommandService.getCommands(droneId, status, commandType, limit, offset));
+        return ResponseEntity.ok(droneCommandService.getCommands(droneId, status, commandType, flightId, limit, offset));
     }
 
     @GetMapping("/{commandId}")

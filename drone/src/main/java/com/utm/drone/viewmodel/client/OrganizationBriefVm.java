@@ -16,7 +16,13 @@ public record OrganizationBriefVm(
         String registrationNumber,
 
         @Schema(description = "Organization classification type", example = "operator")
-        String type
+        String type,
+
+        @Schema(description = "Operational status", example = "active")
+        String status
 ) {
+    public OrganizationBriefVm(String id, String name, String registrationNumber, String type) {
+        this(id, name, registrationNumber, type, "active");
+    }
 }
 

@@ -4,7 +4,6 @@ import com.utm.drone.model.enumeration.CommandStatus;
 import com.utm.drone.model.enumeration.CommandType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.Instant;
 import java.time.ZonedDateTime;
 
 @Schema(description = "Detailed Drone Command view model")
@@ -31,13 +30,13 @@ public record DroneCommandVm(
         String issuedBy,
 
         @Schema(description = "Timestamp when the command was issued")
-        Instant issuedAt,
+        ZonedDateTime issuedAt,
 
         @Schema(description = "Timestamp when the drone acknowledged receipt of command")
-        Instant acknowledgedAt,
+        ZonedDateTime acknowledgedAt,
 
         @Schema(description = "Timestamp when the command completed or failed")
-        Instant completedAt,
+        ZonedDateTime completedAt,
 
         @Schema(description = "Error details if the command failed")
         String errorMessage,

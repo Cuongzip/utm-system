@@ -1,3 +1,9 @@
 databaseChangeLog:
   - include:
       file: db/changelog/changes/01-create-drone-table.yaml
+  - include:
+      file: db/changelog/changes/02-enrich-drone-energy-and-fleet-state.yaml
+  - include:
+      file: db/changelog/changes/03-standardize-drone-schema.yaml
+  - include:
+      file: db/changelog/changes/04-align-drops-drone-fields.yaml

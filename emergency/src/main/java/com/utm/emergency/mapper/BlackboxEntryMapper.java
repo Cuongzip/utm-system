@@ -1,13 +1,12 @@
 package com.utm.emergency.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.emergency.model.BlackboxEntry;
 import com.utm.emergency.model.EmergencyIncident;
+import com.utm.emergency.model.enumeration.EmergencyType;
 import com.utm.emergency.model.enumeration.ResponseAction;
 import com.utm.emergency.viewmodel.blackbox.BlackboxEntryPostVm;
 import com.utm.emergency.viewmodel.blackbox.BlackboxEntryVm;
+import com.utm.emergency.viewmodel.client.TelemetryStreamVm;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -15,8 +14,9 @@ import org.mapstruct.MappingConstants;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-import java.util.Collections;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Mapper(
         componentModel = MappingConstants.ComponentModel.SPRING,
@@ -25,80 +25,97 @@ import java.util.List;
 )
 public interface BlackboxEntryMapper {
 
-    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    @Mapping(target = "motorRpm", source = "motorRpm", qualifiedByName = "stringToDoubleList")
-    @Mapping(target = "motorTemps", source = "motorTemps", qualifiedByName = "stringToDoubleList")
+    @Mapping(target = "isEmergencyRecording", source = "emergencyRecording")
     BlackboxEntryVm toVm(BlackboxEntry entity);
 
     List<BlackboxEntryVm> toVmList(List<BlackboxEntry> entities);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "motorRpm", source = "motorRpm", qualifiedByName = "doubleListToString")
-    @Mapping(target = "motorTemps", source = "motorTemps", qualifiedByName = "doubleListToString")
+    @Mapping(target = "flightId", source = "flightId", qualifiedByName = "blackboxBlankToNull")
+    @Mapping(target = "incidentId", source = "incidentId", qualifiedByName = "blackboxBlankToNull")
+    @Mapping(target = "emergencyActive", source = "emergencyActive", defaultValue = "false")
+    @Mapping(target = "emergencyRecording", source = "isEmergencyRecording", defaultValue = "false")
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "lastModifiedOn", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
     BlackboxEntry toEntity(BlackboxEntryPostVm postVm);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "droneId", source = "incident.droneId")
-    @Mapping(target = "flightId", source = "incident.flightId", defaultExpression = "java(\"FLIGHT-EMERGENCY\")")
-    @Mapping(target = "incidentId", source = "incident.id")
-    @Mapping(target = "timestamp", expression = "java(java.time.ZonedDateTime.now())")
-    @Mapping(target = "latitude", source = "incident.latitude", defaultValue = "0.0")
-    @Mapping(target = "longitude", source = "incident.longitude", defaultValue = "0.0")
-    @Mapping(target = "altitudeMsl", source = "incident.altitude", defaultValue = "0.0")
-    @Mapping(target = "altitudeAgl", ignore = true)
-    @Mapping(target = "roll", ignore = true)
-    @Mapping(target = "pitch", ignore = true)
-    @Mapping(target = "yaw", ignore = true)
-    @Mapping(target = "verticalSpeed", ignore = true)
-    @Mapping(target = "groundSpeed", constant = "0.0")
-    @Mapping(target = "heading", constant = "0.0")
-    @Mapping(target = "batteryLevel", constant = "15.0")
-    @Mapping(target = "batteryVoltage", ignore = true)
-    @Mapping(target = "batteryCurrent", ignore = true)
-    @Mapping(target = "signalStrength", constant = "90.0")
-    @Mapping(target = "gpsSatellites", ignore = true)
-    @Mapping(target = "gpsHdop", ignore = true)
-    @Mapping(target = "motorRpm", ignore = true)
-    @Mapping(target = "motorTemps", ignore = true)
-    @Mapping(target = "commandReceived", expression = "java(action != null ? action.name() : null)")
-    @Mapping(target = "commandExecuted", expression = "java(action != null ? action.name() : null)")
-    @Mapping(target = "emergencyActive", constant = "true")
-    @Mapping(target = "emergencyType", source = "incident.emergencyType")
-    @Mapping(target = "emergencySeverity", source = "incident.severity")
-    @Mapping(target = "flightMode", ignore = true)
-    @Mapping(target = "windSpeed", ignore = true)
-    @Mapping(target = "windDirection", ignore = true)
-    @Mapping(target = "temperature", ignore = true)
-    @Mapping(target = "humidity", ignore = true)
-    @Mapping(target = "emergencyRecording", constant = "true")
-    @Mapping(target = "createdOn", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "lastModifiedOn", ignore = true)
-    @Mapping(target = "lastModifiedBy", ignore = true)
-    BlackboxEntry toEmergencyEntity(EmergencyIncident incident, ResponseAction action);
-
-    @Named("stringToDoubleList")
-    default List<Double> stringToDoubleList(String json) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
-        try {
-            return OBJECT_MAPPER.readValue(json, new TypeReference<List<Double>>() {});
-        } catch (JsonProcessingException e) {
-            return Collections.emptyList();
-        }
+    default BlackboxEntry toEmergencyEntity(EmergencyIncident incident, ResponseAction action) {
+        return toEmergencyEntity(incident, action, null);
     }
 
-    @Named("doubleListToString")
-    default String doubleListToString(List<Double> list) {
-        if (list == null || list.isEmpty()) return null;
-        try {
-            return OBJECT_MAPPER.writeValueAsString(list);
-        } catch (JsonProcessingException e) {
-            return null;
+    default BlackboxEntry toEmergencyEntity(
+            EmergencyIncident incident,
+            ResponseAction action,
+            TelemetryStreamVm telemetry
+    ) {
+        String resolvedFlightId = blankToNull(incident.getFlightId());
+        if (resolvedFlightId == null && telemetry != null) {
+            resolvedFlightId = blankToNull(telemetry.flightId());
         }
+
+        double lat = telemetry != null && telemetry.latitude() != null
+                ? telemetry.latitude()
+                : (incident.getLatitude() != null ? incident.getLatitude() : 0.0);
+        double lon = telemetry != null && telemetry.longitude() != null
+                ? telemetry.longitude()
+                : (incident.getLongitude() != null ? incident.getLongitude() : 0.0);
+        double alt = telemetry != null && telemetry.altitude() != null
+                ? telemetry.altitude()
+                : (incident.getAltitude() != null ? incident.getAltitude() : 0.0);
+        double speed = telemetry != null && telemetry.speed() != null ? telemetry.speed() : 0.0;
+        double heading = telemetry != null && telemetry.heading() != null ? telemetry.heading() : 0.0;
+        double battery = telemetry != null && telemetry.batteryPercentage() != null
+                ? telemetry.batteryPercentage()
+                : extractBattery(incident.getDetectionData());
+        double signal = incident.getEmergencyType() == EmergencyType.SIGNAL_LOST
+                ? 0.0
+                : (incident.getEmergencyType() == EmergencyType.SIGNAL_WEAK ? 35.0 : 100.0);
+
+        return BlackboxEntry.builder()
+                .droneId(incident.getDroneId())
+                .flightId(resolvedFlightId)
+                .incidentId(incident.getId())
+                .timestamp(telemetry != null && telemetry.timestamp() != null
+                        ? telemetry.timestamp()
+                        : ZonedDateTime.now())
+                .latitude(lat)
+                .longitude(lon)
+                .altitudeMsl(alt)
+                .groundSpeed(speed)
+                .heading(heading)
+                .batteryLevel(battery)
+                .signalStrength(signal)
+                .commandExecuted(action != null ? action.name() : null)
+                .emergencyActive(true)
+                .emergencyType(incident.getEmergencyType())
+                .emergencySeverity(incident.getSeverity())
+                .isEmergencyRecording(true)
+                .build();
+    }
+
+    @Named("blackboxBlankToNull")
+    default String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
+    }
+
+    private static double extractBattery(Map<String, Object> detectionData) {
+        if (detectionData == null) {
+            return 0.0;
+        }
+        for (String key : List.of("batteryPercentage", "batteryPercent", "batteryLevel", "batteryPct")) {
+            Object val = detectionData.get(key);
+            if (val instanceof Number n) {
+                return n.doubleValue();
+            }
+            if (val instanceof String s) {
+                try {
+                    return Double.parseDouble(s.trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return 0.0;
     }
 }

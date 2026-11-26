@@ -11,13 +11,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.util.Map;
 
 @Entity
 @Table(name = "drone_command")
@@ -43,8 +47,9 @@ public class DroneCommand extends AbstractAuditEntity {
     @Column(name = "command_type", length = 50, nullable = false)
     private CommandType commandType;
 
-    @Column(name = "parameters", columnDefinition = "TEXT")
-    private String parameters;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "parameters", columnDefinition = "jsonb")
+    private Map<String, Object> parameters;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
@@ -56,13 +61,13 @@ public class DroneCommand extends AbstractAuditEntity {
 
     @Column(name = "issued_at", nullable = false)
     @Builder.Default
-    private Instant issuedAt = Instant.now();
+    private ZonedDateTime issuedAt = ZonedDateTime.now();
 
     @Column(name = "acknowledged_at")
-    private Instant acknowledgedAt;
+    private ZonedDateTime acknowledgedAt;
 
     @Column(name = "completed_at")
-    private Instant completedAt;
+    private ZonedDateTime completedAt;
 
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
@@ -82,4 +87,9 @@ public class DroneCommand extends AbstractAuditEntity {
     @Column(name = "max_retries", nullable = false)
     @Builder.Default
     private Integer maxRetries = 2;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 }

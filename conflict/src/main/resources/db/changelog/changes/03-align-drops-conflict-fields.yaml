@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-align-drops-conflict-fields
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE conflict ADD COLUMN IF NOT EXISTS data JSONB;

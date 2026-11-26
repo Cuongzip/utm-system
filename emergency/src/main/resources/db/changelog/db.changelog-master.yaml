@@ -9,3 +9,7 @@ databaseChangeLog:
       file: db/changelog/changes/04-create-emergency-config-table.yaml
   - include:
       file: db/changelog/changes/06-add-incident-number-to-emergency-incident.yaml
+  - include:
+      file: db/changelog/changes/05-seed-default-emergency-protocols.yaml
+  - include:
+      file: db/changelog/changes/07-standardize-emergency-schema.yaml

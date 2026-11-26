@@ -26,8 +26,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,10 +77,10 @@ class DroneCommandServiceImplTest {
                                 .droneId(sampleDrone.getId())
                                 .flightId("f1b2c3d4-e5f6-7890-abcd-ef1234567890")
                                 .commandType(CommandType.RTL)
-                                .parameters("{\"reason\": \"BATTERY_LOW\"}")
+                                .parameters(Map.of("reason", "BATTERY_LOW"))
                                 .status(CommandStatus.PENDING)
                                 .issuedBy("operator")
-                                .issuedAt(Instant.parse("2026-10-10T08:00:00Z"))
+                                .issuedAt(ZonedDateTime.parse("2026-10-10T08:00:00Z"))
                                 .priority(1)
                                 .timeoutMs(1000)
                                 .retryCount(0)
@@ -112,7 +113,7 @@ class DroneCommandServiceImplTest {
                                 "{}",
                                 status,
                                 "operator",
-                                Instant.parse("2026-10-10T08:00:00Z"),
+                                ZonedDateTime.parse("2026-10-10T08:00:00Z"),
                                 null,
                                 null,
                                 null,
@@ -554,5 +555,49 @@ class DroneCommandServiceImplTest {
                                 .isEqualTo("unknown-id");
 
                 verify(droneCommandRepository, never()).findByDroneIdAndStatusInOrderByIssuedAtDesc(any(), any());
+        }
+
+        @Test
+        @DisplayName("DroneCommandAckConsumer enforces forward-only status progression and ignores regressive SENT after ACKNOWLEDGED")
+        void ackConsumer_ignoresOutOfOrderRegressiveStatus() {
+                var ackConsumer = new com.utm.drone.kafka.DroneCommandAckConsumer(droneCommandRepository);
+                sampleCommand.setStatus(CommandStatus.ACKNOWLEDGED);
+                when(droneCommandRepository.findById(sampleCommand.getId())).thenReturn(Optional.of(sampleCommand));
+
+                ackConsumer.onCommandAckReceived(sampleCommand.getDroneId(),
+                                new com.utm.commonlibrary.kafka.event.DroneCommandAckEvent(
+                                                sampleCommand.getId(), sampleCommand.getDroneId(),
+                                                sampleCommand.getFlightId(), "RTL", "SENT", 0,
+                                                "Late SENT ack", ZonedDateTime.now()));
+
+                assertThat(sampleCommand.getStatus()).isEqualTo(CommandStatus.ACKNOWLEDGED);
+                verify(droneCommandRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("cancelCommand retries on OptimisticLockingFailureException and succeeds when refreshed row is still SENT")
+        void cancelCommand_optimisticLockConflict_retriesAndCancels() {
+                sampleCommand.setStatus(CommandStatus.PENDING);
+                DroneCommand refreshedSent = DroneCommand.builder()
+                                .id(sampleCommand.getId())
+                                .droneId(sampleCommand.getDroneId())
+                                .flightId(sampleCommand.getFlightId())
+                                .commandType(CommandType.CONFIGURE)
+                                .status(CommandStatus.SENT)
+                                .issuedBy("admin")
+                                .issuedAt(ZonedDateTime.now())
+                                .build();
+                when(droneCommandRepository.findByIdAndDroneId(sampleCommand.getId(), sampleCommand.getDroneId()))
+                                .thenReturn(Optional.of(sampleCommand))
+                                .thenReturn(Optional.of(refreshedSent));
+                when(droneCommandRepository.save(any(DroneCommand.class)))
+                                .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("stale version"))
+                                .thenReturn(refreshedSent);
+                when(droneCommandMapper.toVm(refreshedSent)).thenReturn(sampleCommandVm);
+
+                DroneCommandVm result = droneCommandService.cancelCommand(sampleCommand.getDroneId(), sampleCommand.getId());
+
+                assertThat(result).isNotNull();
+                assertThat(refreshedSent.getStatus()).isEqualTo(CommandStatus.CANCELLED);
         }
 }

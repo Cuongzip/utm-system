@@ -13,7 +13,13 @@ public record HubBriefVm(
         String code,
 
         @Schema(description = "Hub display name", example = "Central Vertiport Hub D1")
-        String name
+        String name,
+
+        @Schema(description = "Hub operational status", example = "active")
+        String status
 ) {
+    public HubBriefVm(String id, String code, String name) {
+        this(id, code, name, "active");
+    }
 }
 

@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-add-altitude-floor-and-effective-window
+      author: utm-system
+      changes:
+        - addColumn:
+            tableName: airspace_zone
+            columns:
+              - column:
+                  name: altitude_floor
+                  type: double precision
+                  defaultValueNumeric: 0.0
+              - column:
+                  name: effective_start
+                  type: timestamp with time zone
+              - column:
+                  name: effective_end
+                  type: timestamp with time zone
+      rollback:
+        - dropColumn:
+            tableName: airspace_zone
+            columnName: effective_end
+        - dropColumn:
+            tableName: airspace_zone
+            columnName: effective_start
+        - dropColumn:
+            tableName: airspace_zone
+            columnName: altitude_floor

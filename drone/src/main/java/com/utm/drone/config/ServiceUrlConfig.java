@@ -19,6 +19,6 @@ public record ServiceUrlConfig(
     }
 
     public String getConnectivityUrl() {
-        return ClientUrlUtils.normalizeBaseUrl(connectivity, "http://connectivity:8088", "connectivity");
+        return ClientUrlUtils.normalizeBaseUrl(connectivity, "http://connectivity:8094", "connectivity");
     }
 }

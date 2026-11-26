@@ -2,6 +2,8 @@ package com.utm.emergency.service;
 
 import com.utm.emergency.mapper.BlackboxEntryMapper;
 import com.utm.emergency.model.BlackboxEntry;
+import com.utm.emergency.model.enumeration.EmergencySeverity;
+import com.utm.emergency.model.enumeration.EmergencyType;
 import com.utm.emergency.repository.BlackboxEntryRepository;
 import com.utm.emergency.viewmodel.blackbox.BlackboxEntryPostVm;
 import com.utm.emergency.viewmodel.blackbox.BlackboxEntryVm;
@@ -58,7 +60,6 @@ class BlackboxServiceImplTest {
         entry.setLatitude(10.762622);
         entry.setLongitude(106.660172);
         entry.setAltitudeMsl(120.5);
-        entry.setAltitudeAgl(115.0);
         entry.setGroundSpeed(14.2);
         entry.setHeading(88.0);
         entry.setBatteryLevel(18.5);
@@ -77,29 +78,12 @@ class BlackboxServiceImplTest {
                 10.762622,
                 106.660172,
                 120.5,
-                115.0,
-                null,
-                null,
-                null,
                 14.2,
-                null,
                 88.0,
                 18.5,
-                null,
-                null,
                 95.0,
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
                 incidentId != null,
-                null,
-                null,
-                "AUTO",
-                null,
-                null,
                 null,
                 null,
                 true,
@@ -121,31 +105,14 @@ class BlackboxServiceImplTest {
                     10.762622,
                     106.660172,
                     120.5,
-                    115.0,
-                    0.0,
-                    0.0,
-                    0.0,
                     14.2,
-                    0.0,
                     88.0,
                     18.5,
-                    22.2,
-                    12.5,
                     95.0,
-                    12,
-                    1.1,
-                    List.of(6000.0, 6000.0, 6000.0, 6000.0),
-                    List.of(45.0, 46.0, 45.0, 47.0),
-                    "LAND",
                     "LAND",
                     true,
-                    "battery_critical",
-                    "critical",
-                    "LAND",
-                    5.2,
-                    180.0,
-                    28.5,
-                    65.0,
+                    EmergencyType.BATTERY_CRITICAL,
+                    EmergencySeverity.CRITICAL,
                     true);
 
             BlackboxEntry entity = createSampleEntry(null, "flight-100", "drone-100", "inc-500");
@@ -170,23 +137,26 @@ class BlackboxServiceImplTest {
         @DisplayName("recordEntry saves blackbox entry and skips broadcast when incidentId is null")
         void recordEntry_withoutIncidentId_savesAndOmitsBroadcast() {
             BlackboxEntryPostVm postVm = new BlackboxEntryPostVm(
-                    "flight-100",
+                    null,
                     "drone-100",
                     null,
                     ZonedDateTime.now(ZoneOffset.UTC),
                     10.762622,
                     106.660172,
                     120.5,
-                    115.0,
-                    null, null, null,
-                    14.2, null, 88.0, 85.0,
-                    null, null, 95.0, null, null,
-                    null, null, null, null, false,
-                    null, null, "AUTO", null, null, null, null, false);
+                    14.2,
+                    88.0,
+                    85.0,
+                    95.0,
+                    null,
+                    false,
+                    null,
+                    null,
+                    false);
 
-            BlackboxEntry entity = createSampleEntry(null, "flight-100", "drone-100", null);
-            BlackboxEntry saved = createSampleEntry("bb-002", "flight-100", "drone-100", null);
-            BlackboxEntryVm expectedVm = createSampleEntryVm("bb-002", "flight-100", "drone-100", null);
+            BlackboxEntry entity = createSampleEntry(null, null, "drone-100", null);
+            BlackboxEntry saved = createSampleEntry("bb-002", null, "drone-100", null);
+            BlackboxEntryVm expectedVm = createSampleEntryVm("bb-002", null, "drone-100", null);
 
             when(blackboxMapper.toEntity(postVm)).thenReturn(entity);
             when(blackboxRepo.save(entity)).thenReturn(saved);

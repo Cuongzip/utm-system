@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 03-align-drops-organization-fields
+      author: utm-system
+      changes:
+        - addColumn:
+            tableName: organization
+            columns:
+              - column:
+                  name: address
+                  type: jsonb
+              - column:
+                  name: authorized_airspace
+                  type: jsonb
+              - column:
+                  name: certifications
+                  type: jsonb
+              - column:
+                  name: insurance_info
+                  type: jsonb
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE organization DROP CONSTRAINT IF EXISTS chk_organization_status;
+              ALTER TABLE organization ADD CONSTRAINT chk_organization_status
+                CHECK (status IN ('ACTIVE', 'SUSPENDED', 'INACTIVE', 'PENDING', 'PENDING_VERIFICATION'));
+              ALTER TABLE organization DROP CONSTRAINT IF EXISTS chk_organization_type;
+              ALTER TABLE organization ADD CONSTRAINT chk_organization_type
+                CHECK (type IN ('OPERATOR', 'PARTNER', 'REGULATORY', 'SERVICE_PROVIDER', 'AUTHORITY', 'ENTERPRISE'));
+      rollback:
+        - dropColumn:
+            tableName: organization
+            columnName: insurance_info
+        - dropColumn:
+            tableName: organization
+            columnName: certifications
+        - dropColumn:
+            tableName: organization
+            columnName: authorized_airspace
+        - dropColumn:
+            tableName: organization
+            columnName: address

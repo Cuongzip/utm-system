@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-standardize-organization-schema
+      author: utm-system
+      changes:
+        - sql:
+            sql: |
+              UPDATE organization SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status);
+              UPDATE organization SET type = UPPER(type) WHERE type IS NOT NULL AND type <> UPPER(type);
+              UPDATE organization SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE organization ALTER COLUMN status SET DEFAULT 'ACTIVE';
+              ALTER TABLE organization ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE organization ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE organization DROP CONSTRAINT IF EXISTS chk_organization_status;
+              ALTER TABLE organization ADD CONSTRAINT chk_organization_status CHECK (status IN ('ACTIVE', 'SUSPENDED', 'INACTIVE'));
+              ALTER TABLE organization DROP CONSTRAINT IF EXISTS chk_organization_type;
+              ALTER TABLE organization ADD CONSTRAINT chk_organization_type CHECK (type IN ('OPERATOR', 'AUTHORITY', 'ENTERPRISE'));

@@ -10,8 +10,8 @@ import lombok.RequiredArgsConstructor;
 public enum ConflictSeverity {
     EMERGENCY("emergency"),
     CRITICAL("critical"),
-    WARNING("warning"),
     HIGH("high"),
+    WARNING("warning"),
     MEDIUM("medium"),
     LOW("low");
 

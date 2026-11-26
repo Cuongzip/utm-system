@@ -1,6 +1,5 @@
 package com.utm.emergency.viewmodel.protocol;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.utm.emergency.model.enumeration.EmergencySeverity;
 import com.utm.emergency.model.enumeration.EmergencyType;
 import com.utm.emergency.model.enumeration.ResponseAction;
@@ -19,14 +18,6 @@ public record EmergencyProtocolVm(
         int confirmationTimeoutSeconds,
         boolean autoExecuteOnTimeout,
         int priority,
-        JsonNode thresholds,
-        JsonNode conditions,
-        boolean notifyPilot,
-        boolean notifySupervisor,
-        boolean notifyOpsCenter,
-        boolean sendSms,
-        boolean sendEmail,
-        boolean playAudioAlarm,
         boolean isActive,
         boolean isSystemDefault,
         ZonedDateTime createdOn,

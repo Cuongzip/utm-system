@@ -17,8 +17,8 @@ import com.utm.organization.viewmodel.organization.OrganizationPostVm;
 import com.utm.organization.viewmodel.organization.OrganizationPutVm;
 import com.utm.organization.viewmodel.organization.OrganizationVm;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,18 +26,31 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationMapper organizationMapper;
     private final DroneClientService droneClientService;
+    private final TransactionTemplate transactionTemplate;
+
+    @Autowired
+    public OrganizationServiceImpl(
+            OrganizationRepository organizationRepository,
+            OrganizationMapper organizationMapper,
+            DroneClientService droneClientService,
+            @Autowired(required = false) TransactionTemplate transactionTemplate) {
+        this.organizationRepository = organizationRepository;
+        this.organizationMapper = organizationMapper;
+        this.droneClientService = droneClientService;
+        this.transactionTemplate = transactionTemplate;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -110,20 +123,34 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
-    @Transactional
     public OrganizationVm updateOrganization(String id, OrganizationPutVm organizationPutVm) {
         Organization organization = organizationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
 
-        organizationMapper.updateEntityFromPutVm(organization, organizationPutVm);
+        boolean deactivating = organizationPutVm.status() != null
+                && organizationPutVm.status() != OrganizationStatus.ACTIVE
+                && organization.getStatus() == OrganizationStatus.ACTIVE;
+        if (deactivating && droneClientService.hasActiveInFlightDrones(id)) {
+            throw new BadRequestException(MessageCode.ORGANIZATION_HAS_ACTIVE_DRONES);
+        }
 
-        Organization updatedOrganization = organizationRepository.saveAndFlush(organization);
+        Organization updatedOrganization;
+        if (transactionTemplate != null) {
+            updatedOrganization = transactionTemplate.execute(status -> {
+                Organization managed = organizationRepository.findById(id)
+                        .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
+                organizationMapper.updateEntityFromPutVm(managed, organizationPutVm);
+                return organizationRepository.saveAndFlush(managed);
+            });
+        } else {
+            organizationMapper.updateEntityFromPutVm(organization, organizationPutVm);
+            updatedOrganization = organizationRepository.saveAndFlush(organization);
+        }
         log.info("Updated organization with ID: {}", id);
         return organizationMapper.toVm(updatedOrganization);
     }
 
     @Override
-    @Transactional
     public void deleteOrganization(String id) {
         Organization organization = organizationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ORGANIZATION_NOT_FOUND, "id", id));
@@ -132,8 +159,17 @@ public class OrganizationServiceImpl implements OrganizationService {
             throw new BadRequestException(MessageCode.ORGANIZATION_HAS_ACTIVE_DRONES);
         }
 
-        organization.setStatus(OrganizationStatus.INACTIVE);
-        organizationRepository.saveAndFlush(organization);
+        Runnable persistDeactivation = () -> {
+            Organization target = organizationRepository.findById(id).orElse(organization);
+            target.setStatus(OrganizationStatus.INACTIVE);
+            organizationRepository.saveAndFlush(target);
+        };
+        if (transactionTemplate != null) {
+            transactionTemplate.executeWithoutResult(status -> persistDeactivation.run());
+        } else {
+            organization.setStatus(OrganizationStatus.INACTIVE);
+            organizationRepository.saveAndFlush(organization);
+        }
         log.info("Soft-deleted organization with ID: {} (status set to inactive)", id);
     }
 }

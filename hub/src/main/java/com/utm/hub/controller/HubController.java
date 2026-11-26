@@ -3,6 +3,7 @@ package com.utm.hub.controller;
 import com.utm.hub.model.enumeration.HubStatus;
 import com.utm.hub.service.HubService;
 import com.utm.hub.viewmodel.hub.HubListVm;
+import com.utm.hub.viewmodel.hub.HubOperationalStatusVm;
 import com.utm.hub.viewmodel.hub.HubPostVm;
 import com.utm.hub.viewmodel.hub.HubPutVm;
 import com.utm.hub.viewmodel.hub.HubVm;
@@ -62,6 +63,12 @@ public class HubController {
     public ResponseEntity<HubVm> getHubById(
             @Parameter(description = "Unique UUID of the Hub", example = "96683f5a-769f-44aa-b4d3-16c72f2fe0a4") @PathVariable String id) {
         return ResponseEntity.ok(hubService.getHubById(id));
+    }
+
+    @GetMapping("/{id}/status")
+    @Operation(summary = "Get real-time Hub operational status and capacity utilization")
+    public ResponseEntity<HubOperationalStatusVm> getHubOperationalStatus(@PathVariable String id) {
+        return ResponseEntity.ok(hubService.getHubOperationalStatus(id));
     }
 
     @PostMapping

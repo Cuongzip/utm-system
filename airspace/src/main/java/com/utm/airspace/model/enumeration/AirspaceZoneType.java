@@ -5,9 +5,14 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum AirspaceZoneType {
     NO_FLY_ZONE("no_fly_zone"),
+    PROHIBITED("prohibited"),
     RESTRICTED("restricted"),
+    CONTROLLED("controlled"),
     HUB_CORRIDOR("hub_corridor"),
-    WARNING("warning");
+    HUB_ZONE("hub_zone"),
+    WARNING("warning"),
+    TEMPORARY_RESTRICTION("temporary_restriction"),
+    EMERGENCY_EXCLUSION("emergency_exclusion");
 
     private final String value;
 
@@ -29,9 +34,6 @@ public enum AirspaceZoneType {
             if (type.value.equalsIgnoreCase(value) || type.name().equalsIgnoreCase(value)) {
                 return type;
             }
-        }
-        if ("prohibited".equalsIgnoreCase(value)) {
-            return NO_FLY_ZONE;
         }
         if ("corridor".equalsIgnoreCase(value)) {
             return HUB_CORRIDOR;

@@ -19,7 +19,12 @@ public record DroneBriefVm(
         String manufacturer,
 
         @Schema(description = "Operational status", example = "available")
-        String status
-) {
-}
+        String status,
 
+        @Schema(description = "Hardware serial number", example = "SN-M350-001")
+        String serialNumber
+) {
+    public DroneBriefVm(String id, String registrationNumber, String model, String manufacturer, String status) {
+        this(id, registrationNumber, model, manufacturer, status, null);
+    }
+}

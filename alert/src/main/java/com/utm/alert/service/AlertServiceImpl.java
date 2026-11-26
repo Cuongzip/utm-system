@@ -4,6 +4,7 @@ import com.utm.alert.mapper.AlertMapper;
 import com.utm.alert.model.Alert;
 import com.utm.alert.model.enumeration.AlertSeverity;
 import com.utm.alert.model.enumeration.AlertStatus;
+import com.utm.alert.model.enumeration.AlertType;
 import com.utm.alert.repository.AlertRepository;
 import com.utm.alert.viewmodel.alert.AlertAcknowledgePostVm;
 import com.utm.alert.viewmodel.alert.AlertListVm;
@@ -24,15 +25,20 @@ import com.utm.commonlibrary.utils.AuthenticationUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AlertServiceImpl implements AlertService {
+
+    private static final List<AlertStatus> OPEN_STATUSES = List.of(AlertStatus.ACTIVE, AlertStatus.ACKNOWLEDGED);
 
     private final AlertRepository alertRepository;
     private final AlertMapper alertMapper;
@@ -44,12 +50,34 @@ public class AlertServiceImpl implements AlertService {
         AlertSeverity severity = postVm.severity() != null && !postVm.severity().isBlank()
                 ? AlertSeverity.fromValue(postVm.severity())
                 : AlertSeverity.HIGH;
+        AlertType alertType = AlertType.fromValue(postVm.alertType());
+        String cleanFlightId = trimBlankToNull(postVm.flightId());
+        String cleanDroneId = trimBlankToNull(postVm.droneId());
+        String cleanConflictId = trimBlankToNull(postVm.conflictId());
+        String cleanIncidentId = trimBlankToNull(postVm.incidentId());
+
+        Optional<Alert> existingOpen = findExistingOpenAlert(alertType, cleanFlightId, cleanDroneId, cleanConflictId,
+                cleanIncidentId);
+        if (existingOpen.isPresent()) {
+            Alert existing = existingOpen.get();
+            existing.setMessage(postVm.message());
+            if (severity != null && (existing.getSeverity() == null
+                    || severity.ordinal() > existing.getSeverity().ordinal())) {
+                existing.setSeverity(severity);
+            }
+            if (postVm.detailsJson() != null) {
+                existing.setDetailsJson(postVm.detailsJson());
+            }
+            Alert updated = alertRepository.save(existing);
+            AlertVm vm = alertMapper.toVm(updated);
+            broadcastAlert(vm);
+            return vm;
+        }
 
         Alert alert = alertMapper.toEntity(postVm);
+        alert.setAlertType(alertType);
         alert.setSeverity(severity);
         alert.setStatus(AlertStatus.ACTIVE);
-        alert.setAcknowledged(false);
-        alert.setResolved(false);
 
         String creator = getCurrentUserSafely(null);
         if (alert.getCreatedBy() == null || alert.getCreatedBy().isBlank()) {
@@ -66,6 +94,31 @@ public class AlertServiceImpl implements AlertService {
         return vm;
     }
 
+    private Optional<Alert> findExistingOpenAlert(
+            AlertType alertType,
+            String flightId,
+            String droneId,
+            String conflictId,
+            String incidentId) {
+        if (conflictId != null) {
+            List<Alert> byConflict = alertRepository.findByConflictIdAndStatusIn(conflictId, OPEN_STATUSES);
+            if (!byConflict.isEmpty()) {
+                return Optional.of(byConflict.getFirst());
+            }
+        }
+        if (incidentId != null) {
+            List<Alert> byIncident = alertRepository.findByIncidentIdAndStatusIn(incidentId, OPEN_STATUSES);
+            if (!byIncident.isEmpty()) {
+                return Optional.of(byIncident.getFirst());
+            }
+        }
+        if (flightId != null || droneId != null) {
+            return alertRepository.findFirstByAlertTypeAndFlightIdAndDroneIdAndStatusInOrderByCreatedOnDesc(
+                    alertType, flightId, droneId, OPEN_STATUSES);
+        }
+        return Optional.empty();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public AlertVm getAlertById(String id) {
@@ -80,6 +133,7 @@ public class AlertServiceImpl implements AlertService {
             String droneId,
             String flightId,
             String severity,
+            String status,
             Boolean acknowledged,
             Boolean resolved,
             String alertType,
@@ -102,14 +156,25 @@ public class AlertServiceImpl implements AlertService {
                 AlertSeverity sevEnum = AlertSeverity.fromValue(severity);
                 predicates.add(cb.equal(root.get("severity"), sevEnum));
             }
-            if (acknowledged != null) {
-                predicates.add(cb.equal(root.get("acknowledged"), acknowledged));
-            }
-            if (resolved != null) {
-                predicates.add(cb.equal(root.get("resolved"), resolved));
+            if (status != null && !status.isBlank()) {
+                AlertStatus statusEnum = AlertStatus.fromValue(status);
+                if (statusEnum != null) {
+                    predicates.add(cb.equal(root.get("status"), statusEnum));
+                }
+            } else {
+                if (resolved != null) {
+                    predicates.add(resolved
+                            ? cb.equal(root.get("status"), AlertStatus.RESOLVED)
+                            : cb.notEqual(root.get("status"), AlertStatus.RESOLVED));
+                }
+                if (acknowledged != null) {
+                    predicates.add(acknowledged
+                            ? root.get("status").in(AlertStatus.ACKNOWLEDGED, AlertStatus.RESOLVED)
+                            : cb.equal(root.get("status"), AlertStatus.ACTIVE));
+                }
             }
             if (alertType != null && !alertType.isBlank()) {
-                predicates.add(cb.equal(root.get("alertType"), alertType.trim()));
+                predicates.add(cb.equal(root.get("alertType"), AlertType.fromValue(alertType)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -130,7 +195,7 @@ public class AlertServiceImpl implements AlertService {
     @Override
     @Transactional(readOnly = true)
     public List<AlertVm> getActiveAlerts() {
-        return alertMapper.toVmList(alertRepository.findByResolvedFalseOrderByCreatedOnDesc());
+        return alertMapper.toVmList(alertRepository.findByStatusNotOrderByCreatedOnDesc(AlertStatus.RESOLVED));
     }
 
     @Override
@@ -145,11 +210,10 @@ public class AlertServiceImpl implements AlertService {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
 
-        if (alert.getStatus() == AlertStatus.RESOLVED || Boolean.TRUE.equals(alert.getResolved())) {
+        if (alert.getStatus() == AlertStatus.RESOLVED) {
             throw new BadRequestException(MessageCode.ALERT_ALREADY_RESOLVED, "id", id);
         }
 
-        alert.setAcknowledged(true);
         alert.setAcknowledgedAt(ZonedDateTime.now());
 
         String operator = (acknowledgeVm != null && acknowledgeVm.acknowledgedBy() != null
@@ -180,18 +244,22 @@ public class AlertServiceImpl implements AlertService {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.ALERT_NOT_FOUND, "id", id));
 
-        if (alert.getStatus() == AlertStatus.RESOLVED || Boolean.TRUE.equals(alert.getResolved())) {
+        if (alert.getStatus() == AlertStatus.RESOLVED) {
             throw new BadRequestException(MessageCode.ALERT_ALREADY_RESOLVED, "id", id);
         }
 
-        alert.setResolved(true);
-        alert.setResolvedAt(ZonedDateTime.now());
+        ZonedDateTime now = ZonedDateTime.now();
+        alert.setResolvedAt(now);
         alert.setStatus(AlertStatus.RESOLVED);
 
         String operator = (resolveVm != null && resolveVm.resolvedBy() != null && !resolveVm.resolvedBy().isBlank())
                 ? resolveVm.resolvedBy().trim()
                 : getCurrentUserSafely(null);
         alert.setResolvedBy(operator);
+        if (alert.getAcknowledgedAt() == null) {
+            alert.setAcknowledgedAt(now);
+            alert.setAcknowledgedBy(operator);
+        }
 
         if (resolveVm != null && resolveVm.resolutionNotes() != null && !resolveVm.resolutionNotes().isBlank()) {
             String existingNotes = alert.getResolutionNotes() != null ? alert.getResolutionNotes() + "\n" : "";
@@ -206,20 +274,78 @@ public class AlertServiceImpl implements AlertService {
         return vm;
     }
 
+    @Override
+    @Transactional
+    public int resolveByConflictId(String conflictId, String resolutionNotes) {
+        if (conflictId == null || conflictId.isBlank()) {
+            return 0;
+        }
+        List<Alert> openAlerts = alertRepository.findByConflictIdAndStatusIn(conflictId.trim(), OPEN_STATUSES);
+        return bulkAutoResolve(openAlerts, resolutionNotes != null ? resolutionNotes : "Linked conflict resolved");
+    }
+
+    @Override
+    @Transactional
+    public int resolveByIncidentId(String incidentId, String resolutionNotes) {
+        if (incidentId == null || incidentId.isBlank()) {
+            return 0;
+        }
+        List<Alert> openAlerts = alertRepository.findByIncidentIdAndStatusIn(incidentId.trim(), OPEN_STATUSES);
+        return bulkAutoResolve(openAlerts, resolutionNotes != null ? resolutionNotes : "Linked emergency incident resolved");
+    }
+
+    private int bulkAutoResolve(List<Alert> openAlerts, String notes) {
+        if (openAlerts == null || openAlerts.isEmpty()) {
+            return 0;
+        }
+        String actor = getCurrentUserSafely("SYSTEM_AUTO");
+        ZonedDateTime now = ZonedDateTime.now();
+        for (Alert alert : openAlerts) {
+            alert.setStatus(AlertStatus.RESOLVED);
+            alert.setResolvedAt(now);
+            alert.setResolvedBy(actor);
+            if (alert.getAcknowledgedAt() == null) {
+                alert.setAcknowledgedAt(now);
+                alert.setAcknowledgedBy(actor);
+            }
+            String existingNotes = alert.getResolutionNotes() != null ? alert.getResolutionNotes() + "\n" : "";
+            alert.setResolutionNotes(existingNotes + "[Auto-Resolved]: " + notes);
+            Alert saved = alertRepository.save(alert);
+            broadcastAlert(alertMapper.toVm(saved));
+        }
+        return openAlerts.size();
+    }
+
+    private String trimBlankToNull(String value) {
+        return (value != null && !value.isBlank()) ? value.trim() : null;
+    }
+
     private void broadcastAlert(AlertVm vm) {
-        try {
-            messagingTemplate.convertAndSend("/topic/alerts/live", vm);
-            if (vm.severity() == AlertSeverity.CRITICAL) {
-                messagingTemplate.convertAndSend("/topic/alerts/critical", vm);
+        Runnable sendTask = () -> {
+            try {
+                messagingTemplate.convertAndSend("/topic/alerts/live", vm);
+                if (vm.severity() == AlertSeverity.CRITICAL) {
+                    messagingTemplate.convertAndSend("/topic/alerts/critical", vm);
+                }
+                if (vm.droneId() != null && !vm.droneId().isBlank()) {
+                    messagingTemplate.convertAndSend("/topic/alerts/drone/" + vm.droneId(), vm);
+                }
+                if (vm.flightId() != null && !vm.flightId().isBlank()) {
+                    messagingTemplate.convertAndSend("/topic/alerts/flight/" + vm.flightId(), vm);
+                }
+            } catch (Exception ex) {
+                log.error("Failed to broadcast alert via WebSocket: {}", ex.getMessage());
             }
-            if (vm.droneId() != null && !vm.droneId().isBlank()) {
-                messagingTemplate.convertAndSend("/topic/alerts/drone/" + vm.droneId(), vm);
-            }
-            if (vm.flightId() != null && !vm.flightId().isBlank()) {
-                messagingTemplate.convertAndSend("/topic/alerts/flight/" + vm.flightId(), vm);
-            }
-        } catch (Exception ex) {
-            log.error("Failed to broadcast alert via WebSocket: {}", ex.getMessage());
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendTask.run();
+                }
+            });
+        } else {
+            sendTask.run();
         }
     }
 

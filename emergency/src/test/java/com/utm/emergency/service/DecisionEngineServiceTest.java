@@ -42,6 +42,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -83,9 +84,6 @@ class DecisionEngineServiceTest {
     private DecisionEngineServiceImpl decisionEngineService;
 
     @Captor
-    private ArgumentCaptor<EmergencyIncident> incidentCaptor;
-
-    @Captor
     private ArgumentCaptor<AlertPostVm> alertPostCaptor;
 
     private EmergencyProtocol aircraftCollisionProtocol;
@@ -104,14 +102,6 @@ class DecisionEngineServiceTest {
                 p.getConfirmationTimeoutSeconds(),
                 p.isAutoExecuteOnTimeout(),
                 p.getPriority(),
-                null,
-                null,
-                p.isNotifyPilot(),
-                p.isNotifySupervisor(),
-                p.isNotifyOpsCenter(),
-                p.isSendSms(),
-                p.isSendEmail(),
-                p.isPlayAudioAlarm(),
                 p.isActive(),
                 p.isSystemDefault(),
                 null,
@@ -125,6 +115,7 @@ class DecisionEngineServiceTest {
                 "INC-20261107-TEST",
                 droneId,
                 flightId,
+                null,
                 type,
                 severity,
                 status,
@@ -158,10 +149,10 @@ class DecisionEngineServiceTest {
     @BeforeEach
     void setUp() {
         aircraftCollisionProtocol = EmergencyProtocol.builder()
-                .id("proto-aircraft")
+                .id("10000000-0000-4000-8000-000000000001")
                 .name("Aircraft Proximity")
-                .emergencyType(EmergencyType.collision_aircraft)
-                .severity(EmergencySeverity.emergency)
+                .emergencyType(EmergencyType.COLLISION_AIRCRAFT)
+                .severity(EmergencySeverity.EMERGENCY)
                 .responseAction(ResponseAction.DESCEND)
                 .fallbackAction(ResponseAction.LAND)
                 .requiresConfirmation(false)
@@ -171,10 +162,10 @@ class DecisionEngineServiceTest {
                 .build();
 
         batteryLowProtocol = EmergencyProtocol.builder()
-                .id("proto-battery")
+                .id("10000000-0000-4000-8000-000000000010")
                 .name("Battery Low")
-                .emergencyType(EmergencyType.battery_low)
-                .severity(EmergencySeverity.warning)
+                .emergencyType(EmergencyType.BATTERY_LOW)
+                .severity(EmergencySeverity.WARNING)
                 .responseAction(ResponseAction.RTH)
                 .fallbackAction(ResponseAction.LAND)
                 .requiresConfirmation(true)
@@ -200,18 +191,18 @@ class DecisionEngineServiceTest {
         @Test
         @DisplayName("prioritizeEmergencies sorts incidents according to aviation safety severity hierarchy")
         void prioritizeEmergencies_sortsByHierarchy() {
-            EmergencyIncident i1 = EmergencyIncident.builder().id("1").emergencyType(EmergencyType.battery_low).build();
-            EmergencyIncident i2 = EmergencyIncident.builder().id("2").emergencyType(EmergencyType.collision_aircraft)
+            EmergencyIncident i1 = EmergencyIncident.builder().id("1").emergencyType(EmergencyType.BATTERY_LOW).build();
+            EmergencyIncident i2 = EmergencyIncident.builder().id("2").emergencyType(EmergencyType.COLLISION_AIRCRAFT)
                     .build();
-            EmergencyIncident i3 = EmergencyIncident.builder().id("3").emergencyType(EmergencyType.motor_failure)
+            EmergencyIncident i3 = EmergencyIncident.builder().id("3").emergencyType(EmergencyType.MOTOR_FAILURE)
                     .build();
 
             List<EmergencyIncident> sorted = decisionEngineService.prioritizeEmergencies(List.of(i1, i2, i3));
 
             assertThat(sorted).hasSize(3);
-            assertThat(sorted.get(0).getEmergencyType()).isEqualTo(EmergencyType.collision_aircraft);
-            assertThat(sorted.get(1).getEmergencyType()).isEqualTo(EmergencyType.motor_failure);
-            assertThat(sorted.get(2).getEmergencyType()).isEqualTo(EmergencyType.battery_low);
+            assertThat(sorted.get(0).getEmergencyType()).isEqualTo(EmergencyType.COLLISION_AIRCRAFT);
+            assertThat(sorted.get(1).getEmergencyType()).isEqualTo(EmergencyType.MOTOR_FAILURE);
+            assertThat(sorted.get(2).getEmergencyType()).isEqualTo(EmergencyType.BATTERY_LOW);
         }
 
         @Test
@@ -228,29 +219,29 @@ class DecisionEngineServiceTest {
         @Test
         @DisplayName("findMatchingProtocol matches exact emergency type and severity")
         void findMatchingProtocol_exactMatch() {
-            EmergencyProtocol result = decisionEngineService.findMatchingProtocol(EmergencyType.collision_aircraft,
-                    EmergencySeverity.emergency);
+            EmergencyProtocol result = decisionEngineService.findMatchingProtocol(EmergencyType.COLLISION_AIRCRAFT,
+                    EmergencySeverity.EMERGENCY);
 
             assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo("proto-aircraft");
+            assertThat(result.getId()).isEqualTo("10000000-0000-4000-8000-000000000001");
             assertThat(result.getResponseAction()).isEqualTo(ResponseAction.DESCEND);
         }
 
         @Test
         @DisplayName("findMatchingProtocol falls back to type match when severity does not match")
         void findMatchingProtocol_fallbackToType() {
-            EmergencyProtocol result = decisionEngineService.findMatchingProtocol(EmergencyType.battery_low,
-                    EmergencySeverity.critical);
+            EmergencyProtocol result = decisionEngineService.findMatchingProtocol(EmergencyType.BATTERY_LOW,
+                    EmergencySeverity.CRITICAL);
 
             assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo("proto-battery");
+            assertThat(result.getId()).isEqualTo("10000000-0000-4000-8000-000000000010");
         }
 
         @Test
         @DisplayName("findMatchingProtocol returns null when no matching protocol exists")
         void findMatchingProtocol_whenNotFound_returnsNull() {
-            EmergencyProtocol result = decisionEngineService.findMatchingProtocol(EmergencyType.gps_degraded,
-                    EmergencySeverity.warning);
+            EmergencyProtocol result = decisionEngineService.findMatchingProtocol(EmergencyType.GPS_DEGRADED,
+                    EmergencySeverity.WARNING);
 
             assertThat(result).isNull();
         }
@@ -267,8 +258,8 @@ class DecisionEngineServiceTest {
                     .id("inc-auto-1")
                     .droneId("drone-100")
                     .flightId("flight-100")
-                    .emergencyType(EmergencyType.collision_aircraft)
-                    .severity(EmergencySeverity.emergency)
+                    .emergencyType(EmergencyType.COLLISION_AIRCRAFT)
+                    .severity(EmergencySeverity.EMERGENCY)
                     .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
                     .message("Direct collision course with intruder aircraft")
                     .build();
@@ -276,8 +267,11 @@ class DecisionEngineServiceTest {
             decisionEngineService.processEmergency(incident);
 
             assertThat(incident.isWasAutoExecuted()).isTrue();
+            assertThat(incident.getProtocolId()).isEqualTo("10000000-0000-4000-8000-000000000001");
             verify(alertClient).publishAlert(alertPostCaptor.capture());
             assertThat(alertPostCaptor.getValue().message()).contains("AUTO FAILSAFE: DESCEND");
+            assertThat(alertPostCaptor.getValue().incidentId()).isEqualTo("inc-auto-1");
+            assertThat(alertPostCaptor.getValue().alertType()).isEqualTo("COLLISION_WARNING");
             verify(responseExecutorService).executeResponse(incident, ResponseAction.DESCEND, ResponseAction.LAND);
         }
 
@@ -288,21 +282,22 @@ class DecisionEngineServiceTest {
                     .id("inc-supervised-1")
                     .droneId("drone-200")
                     .flightId("flight-200")
-                    .emergencyType(EmergencyType.battery_low)
-                    .severity(EmergencySeverity.warning)
+                    .emergencyType(EmergencyType.BATTERY_LOW)
+                    .severity(EmergencySeverity.WARNING)
                     .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
                     .message("Battery dropped below 20%")
                     .build();
 
             EmergencyIncidentVm incVm = createSampleIncidentVm("inc-supervised-1", "drone-200", "flight-200",
-                    EmergencyType.battery_low, EmergencySeverity.warning, IncidentStatus.pending_confirmation);
+                    EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING, IncidentStatus.PENDING_CONFIRMATION);
 
             when(incidentMapper.toVm(incident)).thenReturn(incVm);
             when(protocolMapper.toVm(batteryLowProtocol)).thenReturn(createSampleProtocolVm(batteryLowProtocol));
 
             decisionEngineService.processEmergency(incident);
 
-            assertThat(incident.getStatus()).isEqualTo(IncidentStatus.pending_confirmation);
+            assertThat(incident.getStatus()).isEqualTo(IncidentStatus.PENDING_CONFIRMATION);
+            assertThat(incident.getProtocolId()).isEqualTo("10000000-0000-4000-8000-000000000010");
             assertThat(incident.isConfirmationRequired()).isTrue();
             assertThat(incident.getConfirmationTimeoutAt()).isNotNull();
             assertThat(incident.getResponseAction()).isEqualTo(ResponseAction.RTH);
@@ -311,6 +306,7 @@ class DecisionEngineServiceTest {
             verify(messagingTemplate).convertAndSend(eq("/topic/emergency/pending"), any(PendingConfirmationVm.class));
             verify(alertClient).publishAlert(alertPostCaptor.capture());
             assertThat(alertPostCaptor.getValue().message()).contains("Action RTH awaits confirmation");
+            assertThat(alertPostCaptor.getValue().incidentId()).isEqualTo("inc-supervised-1");
 
             List<PendingConfirmationVm> pending = decisionEngineService.getPendingConfirmations();
             assertThat(pending).hasSize(1);
@@ -322,8 +318,8 @@ class DecisionEngineServiceTest {
         void processEmergency_whenNoProtocol_executesImmediateLand() {
             EmergencyIncident incident = EmergencyIncident.builder()
                     .id("inc-unmatched")
-                    .emergencyType(EmergencyType.weather_visibility)
-                    .severity(EmergencySeverity.warning)
+                    .emergencyType(EmergencyType.WEATHER_VISIBILITY)
+                    .severity(EmergencySeverity.WARNING)
                     .build();
 
             decisionEngineService.processEmergency(incident);
@@ -343,14 +339,14 @@ class DecisionEngineServiceTest {
                     .id("inc-confirm-1")
                     .droneId("drone-200")
                     .flightId("flight-200")
-                    .emergencyType(EmergencyType.battery_low)
-                    .severity(EmergencySeverity.warning)
+                    .emergencyType(EmergencyType.BATTERY_LOW)
+                    .severity(EmergencySeverity.WARNING)
                     .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
                     .message("Battery low")
                     .build();
 
             when(incidentMapper.toVm(incident)).thenReturn(createSampleIncidentVm("inc-confirm-1", "drone-200",
-                    "flight-200", EmergencyType.battery_low, EmergencySeverity.warning, IncidentStatus.executing));
+                    "flight-200", EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING, IncidentStatus.EXECUTING));
             when(protocolMapper.toVm(batteryLowProtocol)).thenReturn(createSampleProtocolVm(batteryLowProtocol));
 
             decisionEngineService.processEmergency(incident);
@@ -367,20 +363,20 @@ class DecisionEngineServiceTest {
         }
 
         @Test
-        @DisplayName("confirmAction when rejected marks incident as resolved with notes and cancels execution")
-        void confirmAction_whenRejected_marksResolved() {
+        @DisplayName("confirmAction when rejected marks incident as REJECTED with notes and resolves linked alerts")
+        void confirmAction_whenRejected_marksRejected() {
             EmergencyIncident incident = EmergencyIncident.builder()
                     .id("inc-confirm-2")
                     .droneId("drone-200")
                     .flightId("flight-200")
-                    .emergencyType(EmergencyType.battery_low)
-                    .severity(EmergencySeverity.warning)
+                    .emergencyType(EmergencyType.BATTERY_LOW)
+                    .severity(EmergencySeverity.WARNING)
                     .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
                     .message("Battery low")
                     .build();
 
             when(incidentMapper.toVm(incident)).thenReturn(createSampleIncidentVm("inc-confirm-2", "drone-200",
-                    "flight-200", EmergencyType.battery_low, EmergencySeverity.warning, IncidentStatus.resolved));
+                    "flight-200", EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING, IncidentStatus.REJECTED));
             when(protocolMapper.toVm(batteryLowProtocol)).thenReturn(createSampleProtocolVm(batteryLowProtocol));
 
             decisionEngineService.processEmergency(incident);
@@ -388,11 +384,12 @@ class DecisionEngineServiceTest {
             EmergencyIncidentVm result = decisionEngineService.confirmAction("inc-confirm-2", false, "pilot_mike");
 
             assertThat(result).isNotNull();
-            assertThat(incident.getStatus()).isEqualTo(IncidentStatus.resolved);
+            assertThat(incident.getStatus()).isEqualTo(IncidentStatus.REJECTED);
             assertThat(incident.getResolutionNotes()).isEqualTo("Action rejected by operator");
             assertThat(incident.getResolvedBy()).isEqualTo("pilot_mike");
 
             verify(incidentRepo, times(2)).save(incident);
+            verify(alertClient).resolveAlertsByIncident(eq("inc-confirm-2"), contains("rejected"));
             verify(responseExecutorService, never()).executeResponse(any(), any(), any());
             assertThat(decisionEngineService.getPendingConfirmations()).isEmpty();
         }
@@ -404,16 +401,16 @@ class DecisionEngineServiceTest {
                     .id("inc-restart-1")
                     .droneId("drone-201")
                     .flightId("flight-201")
-                    .emergencyType(EmergencyType.battery_low)
-                    .severity(EmergencySeverity.warning)
-                    .status(IncidentStatus.pending_confirmation)
+                    .emergencyType(EmergencyType.BATTERY_LOW)
+                    .severity(EmergencySeverity.WARNING)
+                    .status(IncidentStatus.PENDING_CONFIRMATION)
                     .responseAction(ResponseAction.RTH)
                     .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
                     .build();
 
             when(incidentRepo.findById("inc-restart-1")).thenReturn(Optional.of(dbIncident));
             when(incidentMapper.toVm(dbIncident)).thenReturn(createSampleIncidentVm("inc-restart-1", "drone-201",
-                    "flight-201", EmergencyType.battery_low, EmergencySeverity.warning, IncidentStatus.executing));
+                    "flight-201", EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING, IncidentStatus.EXECUTING));
 
             EmergencyIncidentVm result = decisionEngineService.confirmAction("inc-restart-1", true, "atc_ops");
 
@@ -444,12 +441,12 @@ class DecisionEngineServiceTest {
             EmergencyConfig config = new EmergencyConfig();
             when(configMapper.toEntity(eq("operation_mode"), eq("\"auto\""), any(String.class))).thenReturn(config);
 
-            decisionEngineService.setMode(OperationMode.auto);
+            decisionEngineService.setMode(OperationMode.AUTO);
 
-            assertThat(decisionEngineService.getMode()).isEqualTo(OperationMode.auto);
+            assertThat(decisionEngineService.getMode()).isEqualTo(OperationMode.AUTO);
             verify(configRepo).save(config);
             verify(messagingTemplate).convertAndSend(eq("/topic/emergency/mode"),
-                    eq(new OperationModeVm(OperationMode.auto)));
+                    eq(new OperationModeVm(OperationMode.AUTO)));
         }
     }
 
@@ -464,15 +461,15 @@ class DecisionEngineServiceTest {
                     .id("inc-timeout-1")
                     .droneId("drone-300")
                     .flightId("flight-300")
-                    .emergencyType(EmergencyType.battery_low)
-                    .severity(EmergencySeverity.warning)
-                    .status(IncidentStatus.pending_confirmation)
+                    .emergencyType(EmergencyType.BATTERY_LOW)
+                    .severity(EmergencySeverity.WARNING)
+                    .status(IncidentStatus.PENDING_CONFIRMATION)
                     .detectedAt(ZonedDateTime.now(ZoneOffset.UTC))
                     .build();
 
             when(incidentMapper.toVm(incident))
                     .thenReturn(createSampleIncidentVm("inc-timeout-1", "drone-300", "flight-300",
-                            EmergencyType.battery_low, EmergencySeverity.warning, IncidentStatus.pending_confirmation));
+                            EmergencyType.BATTERY_LOW, EmergencySeverity.WARNING, IncidentStatus.PENDING_CONFIRMATION));
             when(protocolMapper.toVm(batteryLowProtocol)).thenReturn(createSampleProtocolVm(batteryLowProtocol));
             when(incidentRepo.findById("inc-timeout-1")).thenReturn(Optional.of(incident));
 

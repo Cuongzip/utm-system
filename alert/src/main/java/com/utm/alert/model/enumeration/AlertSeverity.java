@@ -2,6 +2,8 @@ package com.utm.alert.model.enumeration;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.utm.commonlibrary.constants.MessageCode;
+import com.utm.commonlibrary.exception.BadRequestException;
 
 public enum AlertSeverity {
     LOW("LOW"),
@@ -30,6 +32,6 @@ public enum AlertSeverity {
                 return severity;
             }
         }
-        return MEDIUM;
+        throw new BadRequestException(MessageCode.INVALID_ALERT_SEVERITY, "severity", value);
     }
 }

@@ -12,21 +12,20 @@ import java.util.Optional;
 @Repository
 public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord, String> {
 
-    List<TelemetryRecord> findByFlightIdOrderByCreatedOnAsc(String flightId);
+    List<TelemetryRecord> findByFlightIdOrderByRecordedAtAsc(String flightId, Pageable pageable);
 
-    List<TelemetryRecord> findByFlightIdOrderByCreatedOnAsc(String flightId, Pageable pageable);
+    List<TelemetryRecord> findByFlightIdAndRecordedAtBetweenOrderByRecordedAtAsc(
+            String flightId, ZonedDateTime from, ZonedDateTime to, Pageable pageable);
 
-    List<TelemetryRecord> findByFlightIdAndCreatedOnBetweenOrderByCreatedOnAsc(
-            String flightId, ZonedDateTime from, ZonedDateTime to);
+    Optional<TelemetryRecord> findTopByFlightIdOrderByRecordedAtDesc(String flightId);
 
-    Optional<TelemetryRecord> findTopByFlightIdOrderByCreatedOnDesc(String flightId);
+    Optional<TelemetryRecord> findTopByDroneIdOrderByRecordedAtDesc(String droneId);
 
-    Optional<TelemetryRecord> findTopByDroneIdOrderByCreatedOnDesc(String droneId);
+    List<TelemetryRecord> findByDroneIdOrderByRecordedAtAsc(String droneId, Pageable pageable);
 
-    List<TelemetryRecord> findByDroneIdOrderByCreatedOnAsc(String droneId);
+    List<TelemetryRecord> findByDroneIdAndRecordedAtBetweenOrderByRecordedAtAsc(
+            String droneId, ZonedDateTime from, ZonedDateTime to, Pageable pageable);
 
-    List<TelemetryRecord> findByDroneIdOrderByCreatedOnAsc(String droneId, Pageable pageable);
-
-    List<TelemetryRecord> findByDroneIdAndCreatedOnBetweenOrderByCreatedOnAsc(
-            String droneId, ZonedDateTime from, ZonedDateTime to);
+    List<TelemetryRecord> findByRecordedAtGreaterThanEqualOrderByRecordedAtDesc(
+            ZonedDateTime since, Pageable pageable);
 }

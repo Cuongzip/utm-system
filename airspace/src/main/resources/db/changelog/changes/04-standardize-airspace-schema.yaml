@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-standardize-airspace-schema
+      author: utm-system
+      changes:
+        - sql:
+            sql: |
+              UPDATE airspace_zone
+              SET code = 'ASZ-' || UPPER(SUBSTRING(REPLACE(id, '-', ''), 1, 8))
+              WHERE code IS NULL OR BTRIM(code) = '';
+              UPDATE airspace_zone SET altitude_floor = 0.0 WHERE altitude_floor IS NULL;
+              UPDATE airspace_zone SET hub_id = NULL WHERE hub_id IS NOT NULL AND BTRIM(hub_id) = '';
+              UPDATE airspace_zone SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status);
+              UPDATE airspace_zone SET zone_type = UPPER(zone_type) WHERE zone_type IS NOT NULL AND zone_type <> UPPER(zone_type);
+              UPDATE airspace_zone SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              ALTER TABLE airspace_zone ALTER COLUMN code SET NOT NULL;
+              ALTER TABLE airspace_zone ALTER COLUMN altitude_floor SET DEFAULT 0.0;
+              ALTER TABLE airspace_zone ALTER COLUMN altitude_floor SET NOT NULL;
+              ALTER TABLE airspace_zone ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE airspace_zone ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE airspace_zone ALTER COLUMN geometry TYPE JSONB USING geometry::jsonb;
+              ALTER TABLE airspace_zone DROP CONSTRAINT IF EXISTS chk_airspace_altitude_bounds;
+              ALTER TABLE airspace_zone ADD CONSTRAINT chk_airspace_altitude_bounds CHECK (altitude_floor < altitude_ceiling);
+              ALTER TABLE airspace_zone DROP CONSTRAINT IF EXISTS chk_airspace_effective_window;
+              ALTER TABLE airspace_zone ADD CONSTRAINT chk_airspace_effective_window CHECK (effective_start IS NULL OR effective_end IS NULL OR effective_start < effective_end);
+              ALTER TABLE airspace_zone DROP CONSTRAINT IF EXISTS chk_airspace_status;
+              ALTER TABLE airspace_zone ADD CONSTRAINT chk_airspace_status CHECK (status IN ('ACTIVE', 'INACTIVE'));
+              ALTER TABLE airspace_zone DROP CONSTRAINT IF EXISTS chk_airspace_zone_type;
+              ALTER TABLE airspace_zone ADD CONSTRAINT chk_airspace_zone_type CHECK (zone_type IN ('NO_FLY_ZONE', 'RESTRICTED', 'HUB_CORRIDOR', 'WARNING'));
+              CREATE INDEX IF NOT EXISTS idx_airspace_zone_active_window ON airspace_zone (status, effective_start, effective_end);

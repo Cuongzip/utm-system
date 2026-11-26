@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -28,6 +30,27 @@ public class AlertClientServiceImpl implements AlertClientService {
                     .toBodilessEntity();
         } catch (Exception e) {
             log.warn("Failed to notify Alert Service of emergency alert: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void resolveAlertsByIncident(String incidentId, String resolutionNotes) {
+        if (incidentId == null || incidentId.isBlank()) {
+            return;
+        }
+        try {
+            var url = serviceUrlConfig.getAlertUrl() + "/api/v1/alerts/resolve-by-incident/" + incidentId.trim();
+            restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("resolutionNotes",
+                            resolutionNotes != null && !resolutionNotes.isBlank()
+                                    ? resolutionNotes
+                                    : "Linked emergency incident resolved"))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Failed to auto-resolve alerts for emergency incident {}: {}", incidentId, e.getMessage());
         }
     }
 }

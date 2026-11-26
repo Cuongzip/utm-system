@@ -10,8 +10,8 @@ public record ServiceUrlConfig(
         String drone,
         String hub,
         String airspace,
-        String alert
-) {
+        String alert,
+        String emergency) {
 
     public String getFlightUrl() {
         return ClientUrlUtils.normalizeBaseUrl(flight, "http://flight:8086", "flight");
@@ -35,5 +35,9 @@ public record ServiceUrlConfig(
 
     public String getAlertUrl() {
         return ClientUrlUtils.normalizeBaseUrl(alert, "http://alert:8093", "alert");
+    }
+
+    public String getEmergencyUrl() {
+        return ClientUrlUtils.normalizeBaseUrl(emergency, "http://emergency:8096", "emergency");
     }
 }

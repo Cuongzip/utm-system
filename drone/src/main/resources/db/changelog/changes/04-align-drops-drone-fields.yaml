@@ -1,0 +1,72 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-align-drops-drone-fields
+      author: utm-system
+      changes:
+        - addColumn:
+            tableName: drone
+            columns:
+              - column:
+                  name: max_altitude
+                  type: double precision
+                  defaultValueNumeric: 120.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_speed
+                  type: double precision
+                  defaultValueNumeric: 20.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: communication_protocol
+                  type: varchar(50)
+                  defaultValue: "WEBSOCKET"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: remote_id
+                  type: varchar(100)
+              - column:
+                  name: capabilities
+                  type: jsonb
+              - column:
+                  name: specifications
+                  type: jsonb
+              - column:
+                  name: telemetry_config
+                  type: jsonb
+              - column:
+                  name: last_maintenance
+                  type: timestamp with time zone
+              - column:
+                  name: next_maintenance
+                  type: timestamp with time zone
+      rollback:
+        - dropColumn:
+            tableName: drone
+            columnName: next_maintenance
+        - dropColumn:
+            tableName: drone
+            columnName: last_maintenance
+        - dropColumn:
+            tableName: drone
+            columnName: telemetry_config
+        - dropColumn:
+            tableName: drone
+            columnName: specifications
+        - dropColumn:
+            tableName: drone
+            columnName: capabilities
+        - dropColumn:
+            tableName: drone
+            columnName: remote_id
+        - dropColumn:
+            tableName: drone
+            columnName: communication_protocol
+        - dropColumn:
+            tableName: drone
+            columnName: max_speed
+        - dropColumn:
+            tableName: drone
+            columnName: max_altitude

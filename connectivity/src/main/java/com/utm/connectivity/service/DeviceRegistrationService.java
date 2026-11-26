@@ -1,5 +1,6 @@
 package com.utm.connectivity.service;
 
+import com.utm.connectivity.model.DeviceRegistration;
 import com.utm.connectivity.model.enumeration.DeviceConnectionStatus;
 import com.utm.connectivity.viewmodel.device.DeviceHeartbeatPostVm;
 import com.utm.connectivity.viewmodel.device.DeviceRegistrationListVm;
@@ -16,12 +17,26 @@ public interface DeviceRegistrationService {
 
     DeviceRegistrationListVm getDevices(DeviceConnectionStatus connectionStatus, String search, int limit, int offset);
 
+    default DeviceRegistrationListVm getDevices(
+            DeviceConnectionStatus connectionStatus,
+            String hubId,
+            String search,
+            int limit,
+            int offset) {
+        return getDevices(connectionStatus, search, limit, offset);
+    }
+
     List<DeviceRegistrationVm> getOnlineDevices();
 
     DeviceRegistrationVm getDeviceById(String id);
+
+    default DeviceRegistrationVm getDeviceById(String id, boolean enrich) {
+        return getDeviceById(id);
+    }
+
+    DeviceRegistration requireEntityByKey(String idOrIdentifier);
 
     HeartbeatResultVm processHeartbeat(String idOrIdentifier, DeviceHeartbeatPostVm heartbeatVm);
 
     RevokeResultVm revokeDeviceRegistration(String id);
 }
-

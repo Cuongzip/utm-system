@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-standardize-alert-schema
+      author: utm-architecture
+      changes:
+        - sql:
+            sql: |
+              UPDATE alert SET status = 'RESOLVED' WHERE resolved = true AND status <> 'RESOLVED';
+              UPDATE alert SET status = 'ACKNOWLEDGED' WHERE resolved = false AND acknowledged = true AND status = 'ACTIVE';
+              UPDATE alert SET status = UPPER(TRIM(status)) WHERE status <> UPPER(TRIM(status));
+              UPDATE alert SET severity = UPPER(TRIM(severity)) WHERE severity <> UPPER(TRIM(severity));
+              UPDATE alert SET alert_type = 'THREE_D_VOLUME_BREACH' WHERE UPPER(TRIM(alert_type)) = '3D_VOLUME_BREACH';
+              UPDATE alert SET alert_type = UPPER(TRIM(alert_type)) WHERE alert_type <> UPPER(TRIM(alert_type));
+              UPDATE alert SET alert_type = 'OTHER'
+              WHERE alert_type NOT IN (
+                'LATERAL_CORRIDOR_BREACH', 'VERTICAL_ALTITUDE_BREACH', 'THREE_D_VOLUME_BREACH',
+                'C2_LINK_LOST', 'C2_LINK_LOST_CONTINGENT', 'NO_TELEMETRY_STREAM',
+                'RECOVERY_CONFORMANT', 'BATTERY_LOW', 'BATTERY_CRITICAL',
+                'GEOFENCE_BREACH', 'GEOFENCE_VIOLATION', 'AIRSPACE_BREACH',
+                'WEATHER_HAZARD', 'CONFLICT_PROXIMITY', 'COLLISION_WARNING',
+                'MOTOR_FAILURE', 'GPS_FAILURE', 'SIGNAL_LOSS', 'EMERGENCY_INCIDENT',
+                'SYSTEM_FAULT', 'MANUAL_ALERT', 'OTHER'
+              );
+              UPDATE alert SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE alert SET drone_id = NULL WHERE drone_id IS NOT NULL AND TRIM(drone_id) = '';
+              UPDATE alert SET flight_id = NULL WHERE flight_id IS NOT NULL AND TRIM(flight_id) = '';
+              UPDATE alert SET hub_id = NULL WHERE hub_id IS NOT NULL AND TRIM(hub_id) = '';
+              UPDATE alert SET details_json = NULL WHERE details_json IS NOT NULL AND TRIM(details_json) = '';
+
+              DROP INDEX IF EXISTS idx_alert_resolved;
+              ALTER TABLE alert DROP COLUMN IF EXISTS acknowledged;
+              ALTER TABLE alert DROP COLUMN IF EXISTS resolved;
+
+              ALTER TABLE alert ADD COLUMN IF NOT EXISTS conflict_id VARCHAR(36);
+              ALTER TABLE alert ADD COLUMN IF NOT EXISTS incident_id VARCHAR(36);
+
+              ALTER TABLE alert ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE alert ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE alert ALTER COLUMN details_json TYPE JSONB USING CASE
+                WHEN details_json IS NULL THEN NULL
+                WHEN LEFT(TRIM(details_json), 1) IN ('{', '[') THEN details_json::JSONB
+                ELSE jsonb_build_object('raw', details_json)
+              END;
+
+              CREATE INDEX IF NOT EXISTS idx_alert_active_open ON alert (created_on DESC) WHERE status <> 'RESOLVED';
+              CREATE INDEX IF NOT EXISTS idx_alert_conflict_id ON alert (conflict_id);
+              CREATE INDEX IF NOT EXISTS idx_alert_incident_id ON alert (incident_id);
+              CREATE INDEX IF NOT EXISTS idx_alert_hub_id ON alert (hub_id);

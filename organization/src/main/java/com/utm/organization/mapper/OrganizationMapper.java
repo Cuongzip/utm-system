@@ -40,6 +40,7 @@ public interface OrganizationMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "type", ignore = true)
     @Mapping(target = "registrationNumber", ignore = true)
     @Mapping(target = "name", qualifiedByName = "trimString")
     @Mapping(target = "contactInfo", qualifiedByName = "trimString")

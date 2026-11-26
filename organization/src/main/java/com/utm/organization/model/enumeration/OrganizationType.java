@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum OrganizationType {
     OPERATOR("operator"),
+    PARTNER("partner"),
+    REGULATORY("regulatory"),
+    SERVICE_PROVIDER("service_provider"),
     AUTHORITY("authority"),
     ENTERPRISE("enterprise");
 

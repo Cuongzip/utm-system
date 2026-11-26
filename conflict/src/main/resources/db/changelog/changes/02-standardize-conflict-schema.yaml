@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-standardize-conflict-schema
+      author: utm-architecture
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE conflict SET conflict_type = UPPER(TRIM(conflict_type)) WHERE conflict_type <> UPPER(TRIM(conflict_type));
+              UPDATE conflict SET status = UPPER(TRIM(status)) WHERE status <> UPPER(TRIM(status));
+              UPDATE conflict SET severity = UPPER(TRIM(severity)) WHERE severity <> UPPER(TRIM(severity));
+              UPDATE conflict SET max_severity = UPPER(TRIM(max_severity)) WHERE max_severity IS NOT NULL AND max_severity <> UPPER(TRIM(max_severity));
+              UPDATE conflict SET resolution_strategy = UPPER(TRIM(resolution_strategy)) WHERE resolution_strategy IS NOT NULL AND resolution_strategy <> UPPER(TRIM(resolution_strategy));
+              UPDATE conflict SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE conflict_snapshot SET created_on = CURRENT_TIMESTAMP WHERE created_on IS NULL;
+              UPDATE conflict SET secondary_flight_id = NULL WHERE secondary_flight_id IS NOT NULL AND TRIM(secondary_flight_id) = '';
+              UPDATE conflict SET hub_id = NULL WHERE hub_id IS NOT NULL AND TRIM(hub_id) = '';
+              UPDATE conflict SET resolution_actions = NULL WHERE resolution_actions IS NOT NULL AND TRIM(resolution_actions) = '';
+
+              WITH dup_pairs AS (
+                SELECT id,
+                       ROW_NUMBER() OVER (
+                         PARTITION BY LEAST(primary_flight_id, secondary_flight_id), GREATEST(primary_flight_id, secondary_flight_id)
+                         ORDER BY detected_at DESC, id DESC
+                       ) AS rn
+                FROM conflict
+                WHERE secondary_flight_id IS NOT NULL
+                  AND status IN ('DETECTED', 'NOTIFIED', 'ACKNOWLEDGED', 'RESOLVING')
+              )
+              UPDATE conflict
+              SET status = 'RESOLVED',
+                  resolution_strategy = COALESCE(resolution_strategy, 'AUTO_CLEARED'),
+                  resolved_at = COALESCE(resolved_at, CURRENT_TIMESTAMP),
+                  resolved_by = COALESCE(resolved_by, 'MIGRATION_DEDUP')
+              WHERE id IN (SELECT id FROM dup_pairs WHERE rn > 1);
+
+              DELETE FROM conflict WHERE secondary_flight_id IS NOT NULL AND primary_flight_id = secondary_flight_id;
+
+              ALTER TABLE conflict ALTER COLUMN conflict_type SET DEFAULT 'SEPARATION_MINIMUM';
+              ALTER TABLE conflict ALTER COLUMN status SET DEFAULT 'DETECTED';
+              ALTER TABLE conflict ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE conflict ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+              ALTER TABLE conflict ADD COLUMN IF NOT EXISTS airspace_zone_id VARCHAR(36);
+              ALTER TABLE conflict ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE conflict ALTER COLUMN resolution_actions TYPE JSONB USING CASE
+                WHEN resolution_actions IS NULL THEN NULL
+                WHEN LEFT(TRIM(resolution_actions), 1) IN ('{', '[') THEN resolution_actions::JSONB
+                ELSE jsonb_build_object('raw', resolution_actions)
+              END;
+
+              ALTER TABLE conflict_snapshot ALTER COLUMN created_on SET NOT NULL;
+              ALTER TABLE conflict_snapshot ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP;
+
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_conflict_distinct_flights') THEN
+                  ALTER TABLE conflict ADD CONSTRAINT chk_conflict_distinct_flights
+                    CHECK (secondary_flight_id IS NULL OR primary_flight_id <> secondary_flight_id);
+                END IF;
+              END $$;
+
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_conflict_active_pair
+                ON conflict (LEAST(primary_flight_id, secondary_flight_id), GREATEST(primary_flight_id, secondary_flight_id))
+                WHERE secondary_flight_id IS NOT NULL AND status IN ('DETECTED', 'NOTIFIED', 'ACKNOWLEDGED', 'RESOLVING');
+
+              CREATE INDEX IF NOT EXISTS idx_conflict_airspace_zone_id ON conflict (airspace_zone_id);
+              CREATE INDEX IF NOT EXISTS idx_snapshot_conflict_recorded ON conflict_snapshot (conflict_id, recorded_at DESC);

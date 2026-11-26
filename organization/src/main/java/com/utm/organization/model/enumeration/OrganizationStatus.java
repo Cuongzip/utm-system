@@ -6,7 +6,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum OrganizationStatus {
     ACTIVE("active"),
     SUSPENDED("suspended"),
-    INACTIVE("inactive");
+    INACTIVE("inactive"),
+    PENDING("pending"),
+    PENDING_VERIFICATION("pending_verification");
 
     private final String value;
 

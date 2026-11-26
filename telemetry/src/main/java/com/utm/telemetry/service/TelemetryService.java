@@ -10,6 +10,10 @@ public interface TelemetryService {
 
     TelemetryRecordVm ingestTelemetry(TelemetryIngestVm ingestVm);
 
+    List<TelemetryRecordVm> ingestTelemetryBatch(List<TelemetryIngestVm> batch);
+
+    List<TelemetryRecordVm> getActiveTelemetry();
+
     TelemetryRecordVm getLatestByDroneId(String droneId);
 
     TelemetryRecordVm getLatestByFlightId(String flightId);
@@ -18,4 +22,3 @@ public interface TelemetryService {
 
     List<TelemetryRecordVm> getDroneTrackHistory(String droneId, ZonedDateTime from, ZonedDateTime to);
 }
-

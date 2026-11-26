@@ -1,0 +1,252 @@
+databaseChangeLog:
+  - changeSet:
+      id: 07-standardize-emergency-schema
+      author: cuong
+      changes:
+        # 1. emergency_protocols: replace non-UUID proto-sys-* IDs with deterministic valid UUIDs,
+        #    uppercase enums, drop 8 unused columns, deduplicate (emergency_type, severity), add UNIQUE & index.
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000001' WHERE id = 'proto-sys-collision-aircraft';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000002' WHERE id = 'proto-sys-collision-obstacle';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000003' WHERE id = 'proto-sys-motor-failure';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000004' WHERE id = 'proto-sys-motor-anomaly';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000005' WHERE id = 'proto-sys-gps-lost';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000006' WHERE id = 'proto-sys-gps-degraded';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000007' WHERE id = 'proto-sys-geofence-breach';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000008' WHERE id = 'proto-sys-geofence-warning';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000009' WHERE id = 'proto-sys-battery-critical';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000010' WHERE id = 'proto-sys-battery-low';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000011' WHERE id = 'proto-sys-battery-rapid-discharge';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000012' WHERE id = 'proto-sys-signal-lost';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000013' WHERE id = 'proto-sys-signal-weak';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000014' WHERE id = 'proto-sys-weather-wind';
+              UPDATE emergency_protocols SET id = '10000000-0000-4000-8000-000000000015' WHERE id = 'proto-sys-weather-visibility';
+
+              UPDATE emergency_protocols
+              SET emergency_type = UPPER(BTRIM(emergency_type)),
+                  severity = UPPER(BTRIM(severity)),
+                  response_action = UPPER(BTRIM(response_action)),
+                  fallback_action = CASE
+                      WHEN fallback_action IS NULL OR BTRIM(fallback_action) = '' THEN NULL
+                      ELSE UPPER(BTRIM(fallback_action))
+                  END,
+                  created_on = COALESCE(created_on, CURRENT_TIMESTAMP);
+
+              DELETE FROM emergency_protocols p
+              USING (
+                  SELECT id,
+                         ROW_NUMBER() OVER (
+                             PARTITION BY emergency_type, severity
+                             ORDER BY is_system_default DESC, priority ASC, created_on ASC, id ASC
+                         ) AS rn
+                  FROM emergency_protocols
+              ) dup
+              WHERE p.id = dup.id AND dup.rn > 1;
+
+              ALTER TABLE emergency_protocols
+                  DROP COLUMN IF EXISTS thresholds,
+                  DROP COLUMN IF EXISTS conditions,
+                  DROP COLUMN IF EXISTS notify_pilot,
+                  DROP COLUMN IF EXISTS notify_supervisor,
+                  DROP COLUMN IF EXISTS notify_ops_center,
+                  DROP COLUMN IF EXISTS send_sms,
+                  DROP COLUMN IF EXISTS send_email,
+                  DROP COLUMN IF EXISTS play_audio_alarm,
+                  ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP,
+                  ALTER COLUMN created_on SET NOT NULL;
+
+              ALTER TABLE emergency_protocols
+                  ADD CONSTRAINT uq_emergency_protocol_type_severity UNIQUE (emergency_type, severity);
+
+              CREATE INDEX IF NOT EXISTS idx_emergency_protocols_active_priority
+                  ON emergency_protocols (is_active, priority, emergency_type);
+
+        # 2. emergency_incidents: uppercase enums & default, incident_number NOT NULL, DOUBLE PRECISION coords,
+        #    JSONB detection_data & timeline, protocol_id FK, @Version, deduplicate open incidents, add indexes.
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE emergency_incidents
+              SET emergency_type = UPPER(BTRIM(emergency_type)),
+                  severity = UPPER(BTRIM(severity)),
+                  status = UPPER(BTRIM(status)),
+                  response_action = CASE
+                      WHEN response_action IS NULL OR BTRIM(response_action) = '' THEN NULL
+                      ELSE UPPER(BTRIM(response_action))
+                  END,
+                  root_cause = CASE
+                      WHEN root_cause IS NULL OR BTRIM(root_cause) = '' THEN NULL
+                      ELSE UPPER(BTRIM(root_cause))
+                  END,
+                  flight_id = NULLIF(BTRIM(flight_id), ''),
+                  incident_number = COALESCE(NULLIF(BTRIM(incident_number), ''), 'INC-' || UPPER(SUBSTRING(id, 1, 8))),
+                  created_on = COALESCE(created_on, detected_at, CURRENT_TIMESTAMP);
+
+              ALTER TABLE emergency_incidents
+                  ALTER COLUMN status SET DEFAULT 'ACTIVE',
+                  ALTER COLUMN incident_number SET NOT NULL,
+                  ALTER COLUMN latitude TYPE DOUBLE PRECISION USING latitude::double precision,
+                  ALTER COLUMN longitude TYPE DOUBLE PRECISION USING longitude::double precision,
+                  ALTER COLUMN altitude TYPE DOUBLE PRECISION USING altitude::double precision,
+                  ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP,
+                  ALTER COLUMN created_on SET NOT NULL,
+                  ADD COLUMN IF NOT EXISTS protocol_id VARCHAR(36),
+                  ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+
+              DO $$
+              DECLARE
+                  rec RECORD;
+                  parsed_obj JSONB;
+                  parsed_arr JSONB;
+              BEGIN
+                  ALTER TABLE emergency_incidents ADD COLUMN IF NOT EXISTS detection_data_jsonb JSONB;
+                  ALTER TABLE emergency_incidents ADD COLUMN IF NOT EXISTS timeline_jsonb JSONB;
+
+                  FOR rec IN SELECT id, detection_data, timeline FROM emergency_incidents LOOP
+                      IF rec.detection_data IS NULL OR BTRIM(rec.detection_data) = '' THEN
+                          parsed_obj := NULL;
+                      ELSE
+                          BEGIN
+                              parsed_obj := rec.detection_data::jsonb;
+                              IF jsonb_typeof(parsed_obj) <> 'object' THEN
+                                  parsed_obj := jsonb_build_object('value', parsed_obj);
+                              END IF;
+                          EXCEPTION WHEN OTHERS THEN
+                              parsed_obj := jsonb_build_object('raw', rec.detection_data);
+                          END;
+                      END IF;
+
+                      IF rec.timeline IS NULL OR BTRIM(rec.timeline) = '' THEN
+                          parsed_arr := '[]'::jsonb;
+                      ELSE
+                          BEGIN
+                              parsed_arr := rec.timeline::jsonb;
+                              IF jsonb_typeof(parsed_arr) <> 'array' THEN
+                                  parsed_arr := '[]'::jsonb;
+                              END IF;
+                          EXCEPTION WHEN OTHERS THEN
+                              parsed_arr := '[]'::jsonb;
+                          END;
+                      END IF;
+
+                      UPDATE emergency_incidents
+                      SET detection_data_jsonb = parsed_obj,
+                          timeline_jsonb = parsed_arr
+                      WHERE id = rec.id;
+                  END LOOP;
+              END $$;
+
+              ALTER TABLE emergency_incidents DROP COLUMN detection_data;
+              ALTER TABLE emergency_incidents RENAME COLUMN detection_data_jsonb TO detection_data;
+              ALTER TABLE emergency_incidents DROP COLUMN timeline;
+              ALTER TABLE emergency_incidents RENAME COLUMN timeline_jsonb TO timeline;
+
+              ALTER TABLE emergency_incidents
+                  ADD CONSTRAINT fk_incident_protocol
+                  FOREIGN KEY (protocol_id) REFERENCES emergency_protocols(id) ON DELETE SET NULL;
+
+              WITH ranked_open AS (
+                  SELECT id,
+                         ROW_NUMBER() OVER (
+                             PARTITION BY drone_id, emergency_type
+                             ORDER BY detected_at DESC, id DESC
+                         ) AS rn
+                  FROM emergency_incidents
+                  WHERE status IN ('ACTIVE', 'PENDING_CONFIRMATION', 'EXECUTING', 'ESCALATED')
+              )
+              UPDATE emergency_incidents ei
+              SET status = 'RESOLVED',
+                  resolved_at = COALESCE(ei.resolved_at, CURRENT_TIMESTAMP),
+                  resolved_by = COALESCE(ei.resolved_by, 'system'),
+                  resolution_notes = COALESCE(ei.resolution_notes, 'Deduplicated during schema migration')
+              FROM ranked_open r
+              WHERE ei.id = r.id AND r.rn > 1;
+
+              CREATE INDEX IF NOT EXISTS idx_emergency_incidents_detected_at
+                  ON emergency_incidents (detected_at DESC);
+              CREATE INDEX IF NOT EXISTS idx_emergency_incidents_status_detected
+                  ON emergency_incidents (status, detected_at DESC);
+              CREATE INDEX IF NOT EXISTS idx_emergency_incidents_flight_status
+                  ON emergency_incidents (flight_id, status);
+              CREATE INDEX IF NOT EXISTS idx_emergency_incidents_drone_status
+                  ON emergency_incidents (drone_id, status);
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_incident_active_drone_type
+                  ON emergency_incidents (drone_id, emergency_type)
+                  WHERE status IN ('ACTIVE', 'PENDING_CONFIRMATION', 'EXECUTING', 'ESCALATED');
+
+        # 3. blackbox_entries: nullable flight_id, remove FLIGHT-EMERGENCY sentinel, FK incident_id,
+        #    DOUBLE PRECISION telemetry columns, uppercase enums, drop 17 unused columns.
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE blackbox_entries
+                  ALTER COLUMN flight_id DROP NOT NULL;
+
+              UPDATE blackbox_entries
+              SET flight_id = CASE
+                      WHEN flight_id IS NULL OR BTRIM(flight_id) = '' OR BTRIM(flight_id) = 'FLIGHT-EMERGENCY' THEN NULL
+                      ELSE BTRIM(flight_id)
+                  END,
+                  incident_id = NULLIF(BTRIM(incident_id), ''),
+                  emergency_type = CASE
+                      WHEN emergency_type IS NULL OR BTRIM(emergency_type) = '' THEN NULL
+                      ELSE UPPER(BTRIM(emergency_type))
+                  END,
+                  emergency_severity = CASE
+                      WHEN emergency_severity IS NULL OR BTRIM(emergency_severity) = '' THEN NULL
+                      ELSE UPPER(BTRIM(emergency_severity))
+                  END,
+                  created_on = COALESCE(created_on, timestamp, CURRENT_TIMESTAMP);
+
+              UPDATE blackbox_entries b
+              SET incident_id = NULL
+              WHERE b.incident_id IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM emergency_incidents i WHERE i.id = b.incident_id);
+
+              ALTER TABLE blackbox_entries
+                  ALTER COLUMN latitude TYPE DOUBLE PRECISION USING latitude::double precision,
+                  ALTER COLUMN longitude TYPE DOUBLE PRECISION USING longitude::double precision,
+                  ALTER COLUMN altitude_msl TYPE DOUBLE PRECISION USING altitude_msl::double precision,
+                  ALTER COLUMN ground_speed TYPE DOUBLE PRECISION USING ground_speed::double precision,
+                  ALTER COLUMN heading TYPE DOUBLE PRECISION USING heading::double precision,
+                  ALTER COLUMN battery_level TYPE DOUBLE PRECISION USING battery_level::double precision,
+                  ALTER COLUMN signal_strength TYPE DOUBLE PRECISION USING signal_strength::double precision,
+                  ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP,
+                  ALTER COLUMN created_on SET NOT NULL,
+                  DROP COLUMN IF EXISTS altitude_agl,
+                  DROP COLUMN IF EXISTS roll,
+                  DROP COLUMN IF EXISTS pitch,
+                  DROP COLUMN IF EXISTS yaw,
+                  DROP COLUMN IF EXISTS vertical_speed,
+                  DROP COLUMN IF EXISTS battery_voltage,
+                  DROP COLUMN IF EXISTS battery_current,
+                  DROP COLUMN IF EXISTS gps_satellites,
+                  DROP COLUMN IF EXISTS gps_hdop,
+                  DROP COLUMN IF EXISTS motor_rpm,
+                  DROP COLUMN IF EXISTS motor_temps,
+                  DROP COLUMN IF EXISTS command_received,
+                  DROP COLUMN IF EXISTS flight_mode,
+                  DROP COLUMN IF EXISTS wind_speed,
+                  DROP COLUMN IF EXISTS wind_direction,
+                  DROP COLUMN IF EXISTS temperature,
+                  DROP COLUMN IF EXISTS humidity;
+
+              ALTER TABLE blackbox_entries
+                  ADD CONSTRAINT fk_blackbox_incident
+                  FOREIGN KEY (incident_id) REFERENCES emergency_incidents(id) ON DELETE CASCADE;
+
+              CREATE INDEX IF NOT EXISTS idx_blackbox_drone_ts
+                  ON blackbox_entries (drone_id, timestamp DESC);
+
+        # 4. emergency_config: enforce created_on NOT NULL.
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE emergency_config
+              SET created_on = COALESCE(created_on, CURRENT_TIMESTAMP);
+
+              ALTER TABLE emergency_config
+                  ALTER COLUMN created_on SET DEFAULT CURRENT_TIMESTAMP,
+                  ALTER COLUMN created_on SET NOT NULL;
