@@ -22,7 +22,7 @@ import {
 } from "@/components/ui";
 import { InjectScenarioModal } from "./InjectScenarioModal";
 import { useFlightsAll, useDronesAll, usePagination } from "@/hooks";
-import { formatDistance } from "@/utils";
+import { formatDistance, compareCreatedDesc } from "@/utils";
 import {
     SIMULATION_STATUS,
     SIMULATION_SESSION_STATUSES,
@@ -82,22 +82,24 @@ export function SimulationTable({
 
     const filteredSessions = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
-        return sessions.filter((s) => {
-            if (statusFilter !== "all") {
-                const norm = String(s.status || "").toLowerCase();
-                if (norm !== statusFilter.toLowerCase()) return false;
-            }
-            if (!q) return true;
-            const flight = s.flightId ? flightMap.get(s.flightId) : undefined;
-            const flightNum = flight?.flightNumber || s.flightId || "";
-            const effectiveDroneId = s.droneId || flight?.droneId;
-            const droneReg = effectiveDroneId ? droneMap.get(effectiveDroneId) || "" : "";
-            return (
-                s.id.toLowerCase().includes(q) ||
-                flightNum.toLowerCase().includes(q) ||
-                droneReg.toLowerCase().includes(q)
-            );
-        });
+        return [...sessions]
+            .filter((s) => {
+                if (statusFilter !== "all") {
+                    const norm = String(s.status || "").toLowerCase();
+                    if (norm !== statusFilter.toLowerCase()) return false;
+                }
+                if (!q) return true;
+                const flight = s.flightId ? flightMap.get(s.flightId) : undefined;
+                const flightNum = flight?.flightNumber || s.flightId || "";
+                const effectiveDroneId = s.droneId || flight?.droneId;
+                const droneReg = effectiveDroneId ? droneMap.get(effectiveDroneId) || "" : "";
+                return (
+                    s.id.toLowerCase().includes(q) ||
+                    flightNum.toLowerCase().includes(q) ||
+                    droneReg.toLowerCase().includes(q)
+                );
+            })
+            .sort(compareCreatedDesc);
     }, [sessions, statusFilter, searchQuery, flightMap, droneMap]);
 
     const hasActiveFilters = searchQuery.trim() !== "" || statusFilter !== "all";

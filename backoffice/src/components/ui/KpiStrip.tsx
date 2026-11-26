@@ -38,7 +38,11 @@ export function KpiStrip({ items, loading = false, columns, footerBar, className
         columns ?? (items.length === 3 ? 3 : items.length === 5 ? 5 : items.length >= 6 ? 6 : 4);
 
     return (
-        <ChamferCard size="md" className={cn("w-full", className)} innerClassName="overflow-hidden">
+        <ChamferCard
+            size="md"
+            className={cn("w-full shrink-0", className)}
+            innerClassName="overflow-hidden"
+        >
             <div
                 className={cn(
                     "grid gap-px bg-[var(--color-border-default)] w-full",

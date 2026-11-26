@@ -12,3 +12,4 @@ export * from "./formatNullable";
 export * from "./formatHubName";
 export * from "./formatMissionSchedule";
 export * from "./createStatusOptions";
+export * from "./compareCreatedDesc";

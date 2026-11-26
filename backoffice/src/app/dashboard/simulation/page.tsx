@@ -58,6 +58,8 @@ export default function SimulationPage() {
         onSuccess: () => {
             toast.success("Simulation session launched successfully");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
         },
         meta: { defaultErrorMessage: "Failed to launch simulation session" },
     });
@@ -85,9 +87,17 @@ export default function SimulationPage() {
         onSuccess: () => {
             toast.success("Simulation stopped");
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
         },
         meta: { defaultErrorMessage: "Failed to stop simulation" },
     });
+
+    const handleOpenLaunchModal = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
+        openLaunchModal();
+    }, [queryClient, openLaunchModal]);
 
     const powerOnMutation = useMutation({
         mutationFn: (id: string) => simulationService.powerOnDevice(id),
@@ -119,7 +129,7 @@ export default function SimulationPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
             <PageHeader title="SIMULATION">
-                <ChamferButton variant="dark" size="sm" onClick={openLaunchModal}>
+                <ChamferButton variant="dark" size="sm" onClick={handleOpenLaunchModal}>
                     <Plus className="w-4 h-4 text-white" />
                     <span>Launch Simulation</span>
                 </ChamferButton>
@@ -172,6 +182,7 @@ export default function SimulationPage() {
             <AddSimulationModal
                 isOpen={isLaunchOpen}
                 onClose={closeModal}
+                activeSessions={sessions}
                 onSubmit={async (payload) => {
                     await createSessionMutation.mutateAsync(payload);
                 }}

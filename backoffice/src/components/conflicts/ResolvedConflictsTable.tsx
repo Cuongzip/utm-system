@@ -15,7 +15,7 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import { formatDateTime, createStatusOptions } from "@/utils";
+import { formatDateTime, createStatusOptions, compareCreatedDesc } from "@/utils";
 import { CONFLICT_SEVERITIES, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
 export interface ResolvedConflictsTableProps {
@@ -36,15 +36,18 @@ export function ResolvedConflictsTable({
         const query = searchQuery.toLowerCase().trim();
         const severity = severityFilter.toLowerCase();
 
-        return conflicts.filter((item) => {
-            const matchesQuery =
-                !query ||
-                [item.id, item.conflictType, item.description, item.resolutionStrategy].some((s) =>
-                    s?.toLowerCase().includes(query)
-                );
-            const matchesSeverity = severity === "all" || item.severity?.toLowerCase() === severity;
-            return matchesQuery && matchesSeverity;
-        });
+        return [...conflicts]
+            .filter((item) => {
+                const matchesQuery =
+                    !query ||
+                    [item.id, item.conflictType, item.description, item.resolutionStrategy].some(
+                        (s) => s?.toLowerCase().includes(query)
+                    );
+                const matchesSeverity =
+                    severity === "all" || item.severity?.toLowerCase() === severity;
+                return matchesQuery && matchesSeverity;
+            })
+            .sort(compareCreatedDesc);
     }, [conflicts, searchQuery, severityFilter]);
 
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Radio, Power, PowerOff, Loader2 } from "lucide-react";
 import {
     ChamferCard,
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
 import { ONLINE_DEVICE_STATUS, OFFLINE_DEVICE_STATUS, type DeviceRegistration } from "@/types";
-import { formatRelativeTime, formatDateTime } from "@/utils";
+import { formatRelativeTime, formatDateTime, compareCreatedDesc } from "@/utils";
 
 interface DeviceHeartbeatTableProps {
     devices: DeviceRegistration[];
@@ -34,8 +34,9 @@ export function DeviceHeartbeatTable({
     onPowerOffDevice,
 }: DeviceHeartbeatTableProps) {
     const [pendingDevices, setPendingDevices] = useState<Record<string, boolean>>({});
+    const sortedDevices = useMemo(() => [...devices].sort(compareCreatedDesc), [devices]);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
-        usePagination(devices);
+        usePagination(sortedDevices);
 
     const handleTogglePower = async (deviceId: string, isCurrentlyOnline: boolean) => {
         setPendingDevices((prev) => ({ ...prev, [deviceId]: true }));

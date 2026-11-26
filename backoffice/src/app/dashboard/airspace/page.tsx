@@ -13,13 +13,8 @@ import {
 import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, usePermissions, QUERY_KEYS } from "@/hooks";
-import { createStatusOptions } from "@/utils";
-import {
-    AIRSPACE_ZONE_STATUS,
-    AIRSPACE_ZONE_STATUSES,
-    AIRSPACE_ZONE_STATUS_LABELS,
-    type AirspaceZone,
-} from "@/types";
+import { createStatusOptions, compareCreatedDesc } from "@/utils";
+import { AIRSPACE_ZONE_STATUSES, AIRSPACE_ZONE_STATUS_LABELS, type AirspaceZone } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = createStatusOptions(
     AIRSPACE_ZONE_STATUSES,
@@ -87,12 +82,7 @@ export default function AirspacePage() {
 
                 return matchesSearch && matchesStatus;
             })
-            .sort((a, b) => {
-                const aActive = a.status === AIRSPACE_ZONE_STATUS.ACTIVE ? 0 : 1;
-                const bActive = b.status === AIRSPACE_ZONE_STATUS.ACTIVE ? 0 : 1;
-                if (aActive !== bActive) return aActive - bActive;
-                return (a.code || a.name || "").localeCompare(b.code || b.name || "");
-            });
+            .sort(compareCreatedDesc);
     }, [zones, deferredSearch, statusFilter, hubMap]);
 
     const handleSelectZone = (zone: AirspaceZone) => {

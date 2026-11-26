@@ -157,17 +157,15 @@ export function FlightControl({
     return (
         <>
             <ChamferCard size="lg" className="h-[272px]">
-                <div className="p-4 flex flex-col justify-between h-full">
-                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-200">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 font-mono tracking-wider uppercase">
-                            <PlaneTakeoff className="h-4 w-4 text-slate-600" />
-                            <span>FLIGHT CONTROL</span>
-                        </div>
-                        <span className="text-[10px] font-mono font-semibold text-slate-400">
-                            {statusIndicator}
-                        </span>
-                    </div>
-
+                <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-3 shrink-0">
+                    <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono tracking-wider uppercase">
+                        FLIGHT CONTROL
+                    </span>
+                    <span className="text-[10px] font-mono font-semibold text-slate-400">
+                        {statusIndicator}
+                    </span>
+                </div>
+                <div className="p-4 pt-3.5 flex flex-col justify-between flex-1 min-h-0">
                     <div className="grid grid-cols-3 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden">
                         {GRID_COMMANDS.map((action) => {
                             const Icon = action.icon;

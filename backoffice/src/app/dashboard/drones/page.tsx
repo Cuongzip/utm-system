@@ -14,9 +14,8 @@ import { DronesTable, AddDroneModal } from "@/components/drones";
 import { droneService } from "@/services/droneService";
 import { useCrudList, usePermissions, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createStatusOptions } from "@/utils";
+import { createStatusOptions, compareCreatedDesc } from "@/utils";
 import {
-    DRONE_STATUS,
     DRONE_STATUSES,
     type Drone,
     type CreateDronePayload,
@@ -24,14 +23,6 @@ import {
 } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = createStatusOptions(DRONE_STATUSES);
-
-function droneStatusPriority(status?: string): number {
-    const s = (status || "").toLowerCase();
-    if (s === DRONE_STATUS.IN_FLIGHT) return 0;
-    if (s === DRONE_STATUS.AVAILABLE) return 1;
-    if (s === DRONE_STATUS.CHARGING || s === DRONE_STATUS.MAINTENANCE) return 2;
-    return 3;
-}
 
 export default function DronesPage() {
     const queryClient = useQueryClient();
@@ -106,11 +97,7 @@ export default function DronesPage() {
 
                 return matchesSearch && matchesStatus;
             })
-            .sort((a, b) => {
-                const prio = droneStatusPriority(a.status) - droneStatusPriority(b.status);
-                if (prio !== 0) return prio;
-                return (a.registrationNumber || "").localeCompare(b.registrationNumber || "");
-            });
+            .sort(compareCreatedDesc);
     }, [drones, deferredSearch, statusFilter]);
 
     return (

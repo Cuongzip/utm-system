@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib";
+import { ChamferButton } from "./ChamferButton";
 
 export interface PaginationProps {
     currentPage: number;
@@ -65,21 +65,18 @@ export function Pagination({
 
             {totalPages > 1 && (
                 <div className="flex items-center gap-1.5">
-                    <button
-                        type="button"
+                    <ChamferButton
+                        variant="outline"
+                        size="xs"
+                        clip="sm"
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage <= 1}
                         aria-label="Previous Page"
-                        className={cn(
-                            "chamfer-sm",
-                            "h-7 px-2 flex items-center gap-1 text-xs font-medium border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] transition-colors cursor-pointer",
-                            "hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)]",
-                            "disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-surface-subtle)] disabled:hover:text-[var(--color-text-secondary)]"
-                        )}
+                        innerClassName="px-2.5 font-medium"
                     >
                         <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
                         <span className="hidden sm:inline">Prev</span>
-                    </button>
+                    </ChamferButton>
 
                     <span className="sm:hidden px-2 text-xs font-mono font-semibold tabular-nums text-[var(--color-text-primary)]">
                         {currentPage} / {totalPages}
@@ -94,42 +91,48 @@ export function Pagination({
                                 >
                                     …
                                 </span>
-                            ) : (
-                                <button
+                            ) : page === currentPage ? (
+                                <ChamferButton
                                     key={page}
-                                    type="button"
+                                    variant="dark"
+                                    size="xs"
+                                    clip="sm"
                                     onClick={() => onPageChange(page)}
                                     aria-label={`Page ${page}`}
-                                    aria-current={page === currentPage ? "page" : undefined}
-                                    className={cn(
-                                        "chamfer-sm",
-                                        "w-7 h-7 flex items-center justify-center text-xs font-mono tabular-nums transition-colors cursor-pointer",
-                                        page === currentPage
-                                            ? "bg-[var(--color-border-dark)] text-white font-bold border border-[var(--color-border-dark)] shadow-xs"
-                                            : "bg-[var(--color-surface-subtle)] hover:bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border-default)]"
-                                    )}
+                                    aria-current="page"
+                                    className="w-7 px-0 font-mono tabular-nums"
                                 >
                                     {page}
-                                </button>
+                                </ChamferButton>
+                            ) : (
+                                <ChamferButton
+                                    key={page}
+                                    variant="outline"
+                                    size="xs"
+                                    clip="sm"
+                                    onClick={() => onPageChange(page)}
+                                    aria-label={`Page ${page}`}
+                                    className="w-7"
+                                    innerClassName="px-0 font-mono font-medium tabular-nums"
+                                >
+                                    {page}
+                                </ChamferButton>
                             )
                         )}
                     </div>
 
-                    <button
-                        type="button"
+                    <ChamferButton
+                        variant="outline"
+                        size="xs"
+                        clip="sm"
                         onClick={() => onPageChange(currentPage + 1)}
                         disabled={currentPage >= totalPages}
                         aria-label="Next Page"
-                        className={cn(
-                            "chamfer-sm",
-                            "h-7 px-2 flex items-center gap-1 text-xs font-medium border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] transition-colors cursor-pointer",
-                            "hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)]",
-                            "disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-surface-subtle)] disabled:hover:text-[var(--color-text-secondary)]"
-                        )}
+                        innerClassName="px-2.5 font-medium"
                     >
                         <span className="hidden sm:inline">Next</span>
                         <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                    </button>
+                    </ChamferButton>
                 </div>
             )}
         </div>

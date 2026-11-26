@@ -34,7 +34,12 @@ import {
     type TelemetryMode,
     type TelemetryModeConfig,
 } from "@/types";
-import { formatDateTime, formatRelativeTime, createStatusOptions } from "@/utils";
+import {
+    formatDateTime,
+    formatRelativeTime,
+    createStatusOptions,
+    compareCreatedDesc,
+} from "@/utils";
 
 const DEVICE_STATUS_OPTIONS: SelectOption[] = createStatusOptions(DEVICE_CONNECTION_STATUSES);
 
@@ -94,12 +99,7 @@ export function RegisteredDevicesTable({
     }, [modeConfigs]);
 
     const sortedDevices = useMemo(() => {
-        return [...devices].sort((a, b) => {
-            const aOnline = a.connectionStatus !== OFFLINE_DEVICE_STATUS ? 0 : 1;
-            const bOnline = b.connectionStatus !== OFFLINE_DEVICE_STATUS ? 0 : 1;
-            if (aOnline !== bOnline) return aOnline - bOnline;
-            return (a.deviceIdentifier || "").localeCompare(b.deviceIdentifier || "");
-        });
+        return [...devices].sort(compareCreatedDesc);
     }, [devices]);
 
     const hasFilters = Boolean(search.trim()) || statusFilter !== "all";

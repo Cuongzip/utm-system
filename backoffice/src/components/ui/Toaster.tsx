@@ -8,6 +8,9 @@ export function Toaster() {
         <SonnerToaster
             position="top-right"
             duration={4000}
+            expand
+            gap={10}
+            visibleToasts={4}
             closeButton
             richColors={false}
             offset={20}
@@ -20,11 +23,10 @@ export function Toaster() {
             }}
             toastOptions={{
                 classNames: {
-                    toast: "chamfer-sm bg-white border border-slate-300 p-3 pr-10 text-xs shadow-lg flex items-center gap-2.5 w-[356px] max-w-[calc(100vw-2rem)] text-slate-900",
+                    toast: "utm-chamfer-toast p-3 pr-10 text-xs flex items-center gap-2.5 w-[356px] max-w-[calc(100vw-2rem)] text-slate-900",
                     title: "text-xs font-semibold text-slate-900 leading-tight",
                     description: "text-[11px] text-slate-500 mt-0.5",
-                    closeButton:
-                        "!left-auto !right-2.5 !top-2.5 !transform-none border border-slate-200 bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors",
+                    closeButton: "utm-toast-close",
                 },
             }}
         />

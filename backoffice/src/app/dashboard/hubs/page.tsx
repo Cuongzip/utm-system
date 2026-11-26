@@ -15,7 +15,7 @@ import {
 import { HubsKpiStrip, HubsTable, HubEditorPanel, HubsMap } from "@/components/hubs";
 import { hubService } from "@/services/hubService";
 import { QUERY_KEYS, useCurrentUser, useDronesAll, useFlightsAll } from "@/hooks";
-import { createStatusOptions, hasAnyRole } from "@/utils";
+import { createStatusOptions, hasAnyRole, compareCreatedDesc } from "@/utils";
 import {
     ACTIVE_FLIGHT_STATUSES,
     HUB_AIRSPACE_DEFAULTS,
@@ -34,13 +34,6 @@ const STATUS_OPTIONS: SelectOption[] = createStatusOptions(HUB_STATUSES);
 const FALLBACK_CENTER = { latitude: 10.7769, longitude: 106.7009 };
 
 type HubsViewMode = "split" | "table";
-
-function hubStatusOrder(status?: string): number {
-    const s = (status || HUB_STATUS.ACTIVE).toLowerCase();
-    if (s === HUB_STATUS.ACTIVE) return 0;
-    if (s === HUB_STATUS.MAINTENANCE) return 1;
-    return 2;
-}
 
 function HubsWorkspace() {
     const queryClient = useQueryClient();
@@ -246,11 +239,7 @@ function HubsWorkspace() {
 
                 return matchesSearch && matchesStatus;
             })
-            .sort((a, b) => {
-                const ord = hubStatusOrder(a.status) - hubStatusOrder(b.status);
-                if (ord !== 0) return ord;
-                return (a.code || "").localeCompare(b.code || "");
-            });
+            .sort(compareCreatedDesc);
     }, [hubs, deferredSearchQuery, statusFilter]);
 
     const hasActiveFilters = Boolean(searchQuery.trim()) || statusFilter !== "all";

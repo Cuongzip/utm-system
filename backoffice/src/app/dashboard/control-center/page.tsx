@@ -27,6 +27,7 @@ import {
     useAdsbAircraft,
 } from "@/hooks";
 import { cn } from "@/lib";
+import { compareCreatedDesc } from "@/utils";
 import { type Flight, type Hub, ACTIVE_FLIGHT_STATUSES, AIRSPACE_ZONE_STATUS } from "@/types";
 
 function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flight[] }) {
@@ -94,7 +95,9 @@ export default function ControlCenterPage() {
     );
 
     const flights = useMemo(() => {
-        return allFlights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status));
+        return allFlights
+            .filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status))
+            .sort(compareCreatedDesc);
     }, [allFlights]);
 
     const relevantHubs = useMemo(() => {

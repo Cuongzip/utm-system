@@ -226,17 +226,18 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
 }
 
 .form-row-2 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
 }
 
 @media (max-width: 639px) {
     .form-row-2 {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -345,9 +346,53 @@ body {
     border-bottom: 2px solid #334155;
 }
 
+[data-sonner-toaster] {
+    filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.1));
+}
+
+[data-sonner-toaster] [data-sonner-toast].utm-chamfer-toast {
+    isolation: isolate;
+    border: none !important;
+    border-radius: 0 !important;
+    background: var(--color-border-strong) !important;
+    clip-path: var(--chamfer-clip-sm);
+    box-shadow: none !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast].utm-chamfer-toast::before {
+    content: "";
+    position: absolute;
+    inset: 1.5px !important;
+    height: auto !important;
+    transform: none !important;
+    background: var(--color-surface-panel);
+    clip-path: var(--chamfer-clip-sm);
+    z-index: -1;
+    pointer-events: none;
+}
+
 [data-sonner-toast] [data-close-button] {
     left: auto !important;
     right: 10px !important;
-    top: 10px !important;
-    transform: none !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--color-border-default) !important;
+    background: var(--color-surface-panel) !important;
+    color: var(--color-text-muted) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+    background: var(--color-surface-card) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-strong) !important;
 }

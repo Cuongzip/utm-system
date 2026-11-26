@@ -7,12 +7,13 @@ import { Modal, CustomSelect, FormInput, type SelectOption } from "@/components/
 import { useFlightsAll, useDronesAll } from "@/hooks";
 import { parseApiError } from "@/utils";
 import { createSessionBody } from "@/generated";
-import type { CreateSimulationSessionPayload } from "@/types";
+import type { CreateSimulationSessionPayload, SimulationSession } from "@/types";
 
 export interface AddSimulationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (payload: CreateSimulationSessionPayload) => Promise<void>;
+    activeSessions?: SimulationSession[];
 }
 
 const DEFAULT_FORM_VALUES: CreateSimulationSessionPayload = {
@@ -22,38 +23,84 @@ const DEFAULT_FORM_VALUES: CreateSimulationSessionPayload = {
     startBattery: 100.0,
 };
 
-export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationModalProps) {
+const SIMULATABLE_FLIGHT_STATUSES = new Set(["authorized", "active"]);
+
+export function AddSimulationModal({
+    isOpen,
+    onClose,
+    onSubmit,
+    activeSessions = [],
+}: AddSimulationModalProps) {
     const { data: flights = [], isLoading: flightsLoading } = useFlightsAll();
     const { data: drones = [] } = useDronesAll();
     const [loading, setLoading] = useState(false);
 
     const droneMap = useMemo(
-        () =>
-            new Map(
-                drones
-                    .filter((d) => d.id)
-                    .map((d) => [d.id, d.registrationNumber || d.model || d.id])
-            ),
+        () => new Map(drones.filter((d) => d.id).map((d) => [d.id, d])),
         [drones]
+    );
+
+    const busyFlightIds = useMemo(
+        () =>
+            new Set(
+                activeSessions
+                    .filter((s) => s.status === "running" || s.status === "paused")
+                    .map((s) => s.flightId)
+                    .filter((id): id is string => Boolean(id))
+            ),
+        [activeSessions]
+    );
+
+    const busyDroneIds = useMemo(
+        () =>
+            new Set(
+                activeSessions
+                    .filter((s) => s.status === "running" || s.status === "paused")
+                    .map((s) => s.droneId)
+                    .filter((id): id is string => Boolean(id))
+            ),
+        [activeSessions]
     );
 
     const flightOptions: SelectOption[] = useMemo(
         () =>
-            flights.map((flight) => {
-                const flightLabel =
-                    flight.flightNumber || `FLT-${flight.id.slice(0, 8).toUpperCase()}`;
-                const statusLabel = flight.status ? `(${flight.status})` : "";
-                const droneReg = flight.droneId
-                    ? droneMap.get(flight.droneId) ||
-                      `DRN-${flight.droneId.slice(0, 8).toUpperCase()}`
-                    : null;
-                const droneLabel = droneReg ? `· ${droneReg}` : "";
-                return {
-                    label: `${flightLabel} ${statusLabel} ${droneLabel}`.trim(),
-                    value: flight.id,
-                };
-            }),
-        [flights, droneMap]
+            flights
+                .filter((flight) => {
+                    const normalizedStatus = (flight.status || "").toLowerCase();
+                    if (!SIMULATABLE_FLIGHT_STATUSES.has(normalizedStatus)) {
+                        return false;
+                    }
+                    if (busyFlightIds.has(flight.id)) {
+                        return false;
+                    }
+                    if (flight.droneId && busyDroneIds.has(flight.droneId)) {
+                        return false;
+                    }
+                    return true;
+                })
+                .map((flight) => {
+                    const flightLabel =
+                        flight.flightNumber || `FLT-${flight.id.slice(0, 8).toUpperCase()}`;
+                    const statusLabel = flight.status ? `(${flight.status})` : "";
+                    const drone = flight.droneId ? droneMap.get(flight.droneId) : undefined;
+                    const droneReg = flight.droneId
+                        ? drone?.registrationNumber ||
+                          drone?.model ||
+                          `DRN-${flight.droneId.slice(0, 8).toUpperCase()}`
+                        : null;
+                    const droneStateHint =
+                        flight.status?.toLowerCase() === "authorized" &&
+                        drone?.status &&
+                        !["available", "idle"].includes(drone.status.toLowerCase())
+                            ? ` [${drone.status}]`
+                            : "";
+                    const droneLabel = droneReg ? `· ${droneReg}${droneStateHint}` : "";
+                    return {
+                        label: `${flightLabel} ${statusLabel} ${droneLabel}`.trim(),
+                        value: flight.id,
+                    };
+                }),
+        [flights, droneMap, busyFlightIds, busyDroneIds]
     );
 
     const {
@@ -125,13 +172,21 @@ export function AddSimulationModal({ isOpen, onClose, onSubmit }: AddSimulationM
                             placeholder={
                                 flightsLoading
                                     ? "Loading flight plans..."
-                                    : "Select a flight plan to simulate..."
+                                    : flightOptions.length === 0
+                                      ? "No authorized or active flights available..."
+                                      : "Select an authorized or active flight plan..."
                             }
-                            disabled={loading || flightsLoading}
+                            disabled={loading || flightsLoading || flightOptions.length === 0}
                             error={Boolean(errors.flightId)}
                         />
                     )}
                 />
+                {!flightsLoading && flightOptions.length === 0 && (
+                    <span className="text-xs text-slate-500 mt-1 block">
+                        Only ATC-authorized or active flights without a running simulation appear
+                        here. Authorize a flight plan in Flights first.
+                    </span>
+                )}
                 {errors.flightId?.message && (
                     <span className="form-error-msg">{errors.flightId.message}</span>
                 )}

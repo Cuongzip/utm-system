@@ -15,23 +15,10 @@ import { MissionsTable, ExecuteMissionModal } from "@/components/missions";
 import { missionService } from "@/services/missionService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createStatusOptions } from "@/utils";
-import { MISSION_STATUS, MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
+import { createStatusOptions, compareCreatedDesc } from "@/utils";
+import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = createStatusOptions(MISSION_STATUSES, MISSION_STATUS_LABELS);
-
-function missionStatusPriority(status?: string): number {
-    const s = (status || "").toLowerCase();
-    if (s === MISSION_STATUS.EXECUTING || s === MISSION_STATUS.PAUSED) return 0;
-    if (
-        s === MISSION_STATUS.SCHEDULED ||
-        s === MISSION_STATUS.READY ||
-        s === MISSION_STATUS.DRAFT
-    ) {
-        return 1;
-    }
-    return 2;
-}
 
 export default function MissionsPage() {
     const router = useRouter();
@@ -83,13 +70,7 @@ export default function MissionsPage() {
 
                 return matchesSearch && matchesStatus;
             })
-            .sort((a, b) => {
-                const prio = missionStatusPriority(a.status) - missionStatusPriority(b.status);
-                if (prio !== 0) return prio;
-                const tA = new Date(a.createdOn || 0).getTime();
-                const tB = new Date(b.createdOn || 0).getTime();
-                return tB - tA;
-            });
+            .sort(compareCreatedDesc);
     }, [missions, deferredSearch, statusFilter]);
 
     const scheduleMissionMutation = useMutation({

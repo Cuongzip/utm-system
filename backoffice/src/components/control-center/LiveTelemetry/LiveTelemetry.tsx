@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Radio, Compass } from "lucide-react";
+import { Compass } from "lucide-react";
 import { ChamferCard, StatusBadge, Tooltip } from "@/components/ui";
 import { useFlightConformance } from "@/hooks";
 import { formatCoordinates } from "@/utils";
@@ -112,12 +112,9 @@ export function LiveTelemetry({
             <div className="p-4 flex flex-col justify-between h-full">
                 <div className="flex flex-col gap-3.5">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                        <div className="flex items-center gap-2">
-                            <Radio className="h-4 w-4 text-slate-500" />
-                            <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
-                                LIVE TELEMETRY
-                            </span>
-                        </div>
+                        <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
+                            LIVE TELEMETRY
+                        </span>
                         <StatusBadge
                             status={hasTelemetry ? "live" : "offline"}
                             label={connectionState}

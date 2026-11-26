@@ -39,7 +39,7 @@ import {
     type RebalancingRecommendation,
     type RebalancingTask,
 } from "@/types";
-import { formatDateTime } from "@/utils";
+import { formatDateTime, compareCreatedDesc } from "@/utils";
 
 interface FleetRebalancingTabProps {
     pendingTasks: RebalancingTask[];
@@ -222,11 +222,17 @@ export function FleetRebalancingTab({
 
     const queueTasks = useMemo(
         () => [
-            ...pendingTasks.map((t) => ({ task: t, kind: "pending" as const })),
-            ...activeTasks.map((t) => ({ task: t, kind: "active" as const })),
+            ...[...pendingTasks]
+                .sort(compareCreatedDesc)
+                .map((t) => ({ task: t, kind: "pending" as const })),
+            ...[...activeTasks]
+                .sort(compareCreatedDesc)
+                .map((t) => ({ task: t, kind: "active" as const })),
         ],
         [pendingTasks, activeTasks]
     );
+
+    const sortedHistory = useMemo(() => [...historyTasks].sort(compareCreatedDesc), [historyTasks]);
 
     const {
         currentPage,
@@ -234,7 +240,7 @@ export function FleetRebalancingTab({
         totalItems,
         paginatedItems: pagedHistory,
         setCurrentPage,
-    } = usePagination(historyTasks);
+    } = usePagination(sortedHistory);
 
     return (
         <div className="flex flex-col gap-4">

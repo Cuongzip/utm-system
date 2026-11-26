@@ -97,10 +97,20 @@ function InjectScenarioModalBody({
                 label="Duration in Seconds (Optional)"
                 type="number"
                 min="1"
-                placeholder="e.g. 30 (leave blank for persistent effect)"
+                placeholder={
+                    scenario === SIMULATION_SCENARIO.C2_LOST
+                        ? "e.g. 30 (10s warning alert, 25s emergency failsafe)"
+                        : "e.g. 30 (leave blank for persistent effect)"
+                }
                 value={durationSeconds}
                 onChange={(e) => setDurationSeconds(e.target.value)}
             />
+            {scenario === SIMULATION_SCENARIO.C2_LOST && (
+                <p className="mt-1.5 text-xs text-slate-400">
+                    C2 Link Lost triggers a warning alert &amp; conflict after 10s, and escalates to
+                    a critical emergency with autonomous failsafe after 25s.
+                </p>
+            )}
         </Modal>
     );
 }

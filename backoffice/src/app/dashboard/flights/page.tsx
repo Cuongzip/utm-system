@@ -15,24 +15,10 @@ import { FlightsTable, PreFlightBriefingModal } from "@/components/flights";
 import { flightService } from "@/services/flightService";
 import { useCrudList, useHubsAll, useDronesAll, usePermissions, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createStatusOptions } from "@/utils";
-import { ACTIVE_FLIGHT_STATUSES, FLIGHT_STATUS, FLIGHT_STATUSES, type Flight } from "@/types";
+import { createStatusOptions, compareCreatedDesc } from "@/utils";
+import { FLIGHT_STATUSES, type Flight } from "@/types";
 
 const STATUS_OPTIONS: SelectOption[] = createStatusOptions(FLIGHT_STATUSES);
-
-function flightStatusPriority(status?: string): number {
-    const s = (status || "").toLowerCase();
-    if (s === FLIGHT_STATUS.ACTIVE) return 0;
-    if (ACTIVE_FLIGHT_STATUSES.includes(s as (typeof ACTIVE_FLIGHT_STATUSES)[number])) return 1;
-    if (
-        s === FLIGHT_STATUS.PLANNED ||
-        s === FLIGHT_STATUS.SCHEDULED ||
-        s === FLIGHT_STATUS.AUTHORIZED
-    ) {
-        return 2;
-    }
-    return 3;
-}
 
 export default function FlightsPage() {
     const router = useRouter();
@@ -142,13 +128,7 @@ export default function FlightsPage() {
 
                 return matchesSearch && matchesStatus;
             })
-            .sort((a, b) => {
-                const prio = flightStatusPriority(a.status) - flightStatusPriority(b.status);
-                if (prio !== 0) return prio;
-                const tA = new Date(a.scheduledDeparture || a.actualDeparture || 0).getTime();
-                const tB = new Date(b.scheduledDeparture || b.actualDeparture || 0).getTime();
-                return tB - tA;
-            });
+            .sort(compareCreatedDesc);
     }, [flights, deferredSearch, statusFilter, hubMap, droneMap]);
 
     const handleSelectFlight = (flight: Flight | null) => {

@@ -14,9 +14,8 @@ import {
 import { OrganizationsTable, OrganizationModal } from "@/components/organizations";
 import { organizationService } from "@/services/organizationService";
 import { useCrudList, usePermissions, QUERY_KEYS } from "@/hooks";
-import { createStatusOptions } from "@/utils";
+import { createStatusOptions, compareCreatedDesc } from "@/utils";
 import {
-    ORGANIZATION_STATUS,
     ORGANIZATION_STATUSES,
     type Organization,
     type CreateOrganizationPayload,
@@ -104,12 +103,7 @@ export default function OrganizationsPage() {
                     status === "all" || (org.status || "").toLowerCase() === status;
                 return matchesSearch && matchesStatus;
             })
-            .sort((a, b) => {
-                const aInactive = a.status === ORGANIZATION_STATUS.INACTIVE ? 1 : 0;
-                const bInactive = b.status === ORGANIZATION_STATUS.INACTIVE ? 1 : 0;
-                if (aInactive !== bInactive) return aInactive - bInactive;
-                return (a.name || "").localeCompare(b.name || "");
-            });
+            .sort(compareCreatedDesc);
     }, [organizations, deferredSearch, statusFilter]);
 
     return (

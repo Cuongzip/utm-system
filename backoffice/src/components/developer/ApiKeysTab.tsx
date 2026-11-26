@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Plus, Copy, Check, ShieldOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -30,7 +30,7 @@ import {
     type CreateApiKeyPayload,
     type OemApiKeyScope,
 } from "@/types";
-import { formatDateTime, validateSchema, clearFieldError } from "@/utils";
+import { formatDateTime, validateSchema, clearFieldError, compareCreatedDesc } from "@/utils";
 
 const SCOPE_DESCRIPTIONS: Record<OemApiKeyScope, string> = {
     "telemetry:write": "Ingest live drone GPS/attitude telemetry",
@@ -40,7 +40,8 @@ const SCOPE_DESCRIPTIONS: Record<OemApiKeyScope, string> = {
 
 export function ApiKeysTab() {
     const queryClient = useQueryClient();
-    const { data: keys = [], isLoading } = useIntegrationApiKeys();
+    const { data: rawKeys = [], isLoading } = useIntegrationApiKeys();
+    const keys = useMemo(() => [...rawKeys].sort(compareCreatedDesc), [rawKeys]);
 
     const [createOpen, setCreateOpen] = useState(false);
     const [name, setName] = useState("");

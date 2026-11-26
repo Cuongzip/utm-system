@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
-import { AlertOctagon } from "lucide-react";
-import { PageHeader, StatusBadge, TacticalCallout } from "@/components/ui";
+import { ArrowRight } from "lucide-react";
+import { ChamferButton, PageHeader, StatusBadge, TacticalCallout } from "@/components/ui";
 import {
     DashboardKpiStrip,
     DashboardTacticalMap,
@@ -57,7 +56,7 @@ export default function DashboardPage() {
         ).length;
     }, [activeAlerts]);
 
-    const apiBadge = useMemo(() => {
+    const headerBadge = useMemo(() => {
         if (isLoadingFlights || isLoadingHubs || isLoadingDrones) {
             return { status: "pending" as const, label: "SYNCING" };
         }
@@ -67,7 +66,13 @@ export default function DashboardPage() {
         if (isErrorFlights || isErrorHubs || isErrorDrones || isErrorAlerts || isErrorZones) {
             return { status: "warning" as const, label: "DEGRADED" };
         }
-        return { status: "online" as const, label: "API ONLINE" };
+        if (activeTelemetryCount > 0) {
+            return { status: "live" as const, label: `${activeTelemetryCount} LIVE WS` };
+        }
+        if (isSocketConnected) {
+            return { status: "online" as const, label: "ONLINE" };
+        }
+        return { status: "standby" as const, label: "STANDBY" };
     }, [
         isLoadingFlights,
         isLoadingHubs,
@@ -77,31 +82,17 @@ export default function DashboardPage() {
         isErrorDrones,
         isErrorAlerts,
         isErrorZones,
+        activeTelemetryCount,
+        isSocketConnected,
     ]);
 
     const showAlertColumn = activeConflicts.length > 0 || actionableAlertsCount > 0;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-5 flex flex-col w-full min-h-[calc(100vh-80px)]">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-5 w-full shrink-0">
             <PageHeader
                 title="OPERATIONS CENTER"
-                badges={
-                    <>
-                        <StatusBadge status={apiBadge.status} label={apiBadge.label} />
-                        <StatusBadge
-                            status={
-                                activeTelemetryCount > 0 || isSocketConnected ? "live" : "standby"
-                            }
-                            label={
-                                activeTelemetryCount > 0
-                                    ? `${activeTelemetryCount} LIVE WS`
-                                    : isSocketConnected
-                                      ? "WS READY"
-                                      : "STANDBY"
-                            }
-                        />
-                    </>
-                }
+                badges={<StatusBadge status={headerBadge.status} label={headerBadge.label} />}
             />
 
             <DashboardKpiStrip
@@ -117,17 +108,27 @@ export default function DashboardPage() {
             {activeConflicts.length > 0 && (
                 <TacticalCallout
                     tone="critical"
-                    icon={AlertOctagon}
-                    title={`${activeConflicts.length} active separation conflict${
-                        activeConflicts.length > 1 ? "s" : ""
-                    } detected in monitored airspace`}
+                    title={
+                        <span className="inline-flex flex-wrap items-center gap-2.5">
+                            <StatusBadge status="critical" label="CONFLICT" />
+                            <span>
+                                {activeConflicts.length} active separation conflict
+                                {activeConflicts.length > 1 ? "s" : ""} detected in monitored
+                                airspace
+                            </span>
+                        </span>
+                    }
                     rightSlot={
-                        <Link
+                        <ChamferButton
+                            variant="outline"
+                            size="xs"
+                            clip="xs"
                             href="/dashboard/conflicts"
-                            className="text-xs font-mono font-bold uppercase tracking-wider text-red-700 hover:text-red-900 underline underline-offset-2"
+                            innerClassName="font-mono uppercase tracking-wider text-[11px]"
                         >
-                            Resolve Conflicts →
-                        </Link>
+                            <span>Resolve</span>
+                            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+                        </ChamferButton>
                     }
                 />
             )}
@@ -143,7 +144,9 @@ export default function DashboardPage() {
 
             <div
                 className={
-                    showAlertColumn ? "grid grid-cols-1 lg:grid-cols-2 gap-5 w-full" : "w-full"
+                    showAlertColumn
+                        ? "grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start"
+                        : "w-full"
                 }
             >
                 <DashboardFlightLog flights={allFlights} hubs={hubs} isLoading={isLoadingFlights} />

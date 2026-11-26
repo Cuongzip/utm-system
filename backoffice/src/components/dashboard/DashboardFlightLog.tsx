@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState, Skeleton } from "@/components/ui";
-import { formatDateTime } from "@/utils/format";
+import { compareCreatedDesc, formatDateTime } from "@/utils";
 import {
     DEFAULT_FLIGHT_STATUS,
     FLIGHT_STATUS,
@@ -18,17 +18,6 @@ export interface DashboardFlightLogProps {
     hubs?: Hub[];
     isLoading: boolean;
 }
-
-const STATUS_PRIORITY: Record<FlightStatus, number> = {
-    [FLIGHT_STATUS.EMERGENCY_LANDING]: 0,
-    [FLIGHT_STATUS.DIVERTED]: 1,
-    [FLIGHT_STATUS.ACTIVE]: 2,
-    [FLIGHT_STATUS.AUTHORIZED]: 3,
-    [FLIGHT_STATUS.SCHEDULED]: 4,
-    [FLIGHT_STATUS.PLANNED]: 5,
-    [FLIGHT_STATUS.COMPLETED]: 6,
-    [FLIGHT_STATUS.CANCELLED]: 7,
-};
 
 export function DashboardFlightLog({
     flights = [],
@@ -45,19 +34,8 @@ export function DashboardFlightLog({
         return map;
     }, [hubs]);
 
-    const prioritizedFlights = useMemo(() => {
-        const getFlightTime = (f: Flight) =>
-            new Date(f.actualDeparture || f.scheduledDeparture || 0).getTime();
-
-        return [...flights]
-            .sort((a, b) => {
-                const statusA = a.status ?? DEFAULT_FLIGHT_STATUS;
-                const statusB = b.status ?? DEFAULT_FLIGHT_STATUS;
-                const prioDiff = (STATUS_PRIORITY[statusA] ?? 9) - (STATUS_PRIORITY[statusB] ?? 9);
-                if (prioDiff !== 0) return prioDiff;
-                return getFlightTime(b) - getFlightTime(a);
-            })
-            .slice(0, 6);
+    const recentFlights = useMemo(() => {
+        return [...flights].sort(compareCreatedDesc).slice(0, 6);
     }, [flights]);
 
     return (
@@ -65,11 +43,11 @@ export function DashboardFlightLog({
             <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono uppercase tracking-wider">
-                        Live & Recent Flights
+                        Recent Flights
                     </span>
                     {!isLoading && flights.length > 0 && (
                         <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                            · {prioritizedFlights.length} of {flights.length}
+                            · {recentFlights.length} of {flights.length}
                         </span>
                     )}
                 </div>
@@ -94,11 +72,11 @@ export function DashboardFlightLog({
                         </div>
                     ))}
                 </div>
-            ) : prioritizedFlights.length === 0 ? (
+            ) : recentFlights.length === 0 ? (
                 <EmptyState compact title="No recent flight entries" />
             ) : (
                 <div className="divide-y divide-[var(--color-border-subtle)]">
-                    {prioritizedFlights.map((flight, idx) => {
+                    {recentFlights.map((flight, idx) => {
                         const flightCode = flight.flightNumber || "Unnumbered Flight";
                         const depLabel = flight.departureHubId
                             ? hubCodeMap.get(flight.departureHubId)
@@ -110,7 +88,9 @@ export function DashboardFlightLog({
                             depLabel && arrLabel ? `${depLabel} → ${arrLabel}` : null;
                         const timeStr =
                             formatDateTime(
-                                flight.actualDeparture || flight.scheduledDeparture,
+                                flight.createdOn ||
+                                    flight.actualDeparture ||
+                                    flight.scheduledDeparture,
                                 "MMM d · HH:mm"
                             ) || "Unscheduled";
                         const status: FlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;

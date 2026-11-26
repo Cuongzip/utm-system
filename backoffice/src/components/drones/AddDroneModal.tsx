@@ -307,11 +307,11 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                 />
             </div>
 
-            <div className="rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] overflow-hidden">
+            <div className="rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)]">
                 <button
                     type="button"
                     onClick={() => setShowAdvanced((prev) => !prev)}
-                    className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-[var(--color-surface-card)]/70 transition-colors cursor-pointer"
+                    className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left rounded-md hover:bg-[var(--color-surface-card)]/70 transition-colors cursor-pointer"
                 >
                     <span className="text-[13px] font-semibold text-[var(--color-text-primary)]">
                         Advanced Energy &amp; Performance

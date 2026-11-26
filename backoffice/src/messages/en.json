@@ -83,7 +83,7 @@
         "INVALID_EFFECTIVE_WINDOW": "Effective end time must be after effective start time.",
         "EMERGENCY_INCIDENT_ALREADY_RESOLVED": "Emergency incident is already resolved.",
         "EMERGENCY_INCIDENT_ALREADY_ACTIVE": "An active emergency incident of this type already exists for this drone.",
-        "FLIGHT_NOT_SIMULATABLE": "Flight is not in a valid state to start simulation.",
+        "FLIGHT_NOT_SIMULATABLE": "Flight must be AUTHORIZED or ACTIVE to start simulation.",
         "CONFLICT_ALREADY_RESOLVED": "Conflict has already been resolved.",
         "INVALID_ARGUMENT": "Invalid request argument.",
         "MALFORMED_REQUEST": "Malformed request payload or invalid field value.",

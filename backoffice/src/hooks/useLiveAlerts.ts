@@ -168,8 +168,6 @@ export function useLiveAlerts() {
     const alerts = useMemo(() => {
         const merged = new Map<string, LiveAlertItem>();
         const activeIncidentIds = new Set<string>();
-        const activeIncidentFlights = new Set<string>();
-        const activeIncidentDrones = new Set<string>();
 
         for (const inc of initialIncidents) {
             if (!inc.id || dismissedIds.has(inc.id) || removedIds.has(inc.id)) continue;
@@ -178,9 +176,14 @@ export function useLiveAlerts() {
             if (!isFreshAlert(inc.detectedAt || inc.createdOn, isPending)) continue;
 
             activeIncidentIds.add(inc.id);
-            if (inc.flightId) activeIncidentFlights.add(inc.flightId);
-            if (inc.droneId) activeIncidentDrones.add(inc.droneId);
             merged.set(inc.id, normalizeIncidentItem(inc));
+        }
+
+        for (const [id, item] of realtimeMap.entries()) {
+            if (dismissedIds.has(id) || removedIds.has(id)) continue;
+            if (item.source === "emergency") {
+                activeIncidentIds.add(id);
+            }
         }
 
         for (const a of initialAlerts) {
@@ -198,14 +201,18 @@ export function useLiveAlerts() {
             const linkedIncidentId =
                 typeof rawRecord.incidentId === "string" ? rawRecord.incidentId : undefined;
             if (linkedIncidentId && activeIncidentIds.has(linkedIncidentId)) continue;
-            if (a.flightId && activeIncidentFlights.has(a.flightId)) continue;
-            if (a.droneId && activeIncidentDrones.has(a.droneId)) continue;
 
             merged.set(a.id, normalizeAlertItem(a));
         }
 
         for (const [id, item] of realtimeMap.entries()) {
             if (dismissedIds.has(id) || removedIds.has(id)) continue;
+            if (item.source === "alert" && item.raw && typeof item.raw === "object") {
+                const rawAlert = item.raw as Record<string, unknown>;
+                const linkedIncidentId =
+                    typeof rawAlert.incidentId === "string" ? rawAlert.incidentId : undefined;
+                if (linkedIncidentId && activeIncidentIds.has(linkedIncidentId)) continue;
+            }
             merged.set(id, item);
         }
 
