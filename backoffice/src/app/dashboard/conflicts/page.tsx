@@ -128,11 +128,13 @@ export default function ConflictsPage() {
 
             <div className="w-full h-[420px] sm:h-[460px]">
                 <TacticalMapContainer
-                    initialLayerType="satellite"
+                    initialLayerType="satellite-hybrid"
                     className="w-full"
                     onEntityClick={(entityId) => {
                         if (entityId.startsWith("conflict-marker-")) {
                             setSelectedConflictId(entityId.replace("conflict-marker-", ""));
+                        } else if (entityId.startsWith("conflict-drop-")) {
+                            setSelectedConflictId(entityId.replace("conflict-drop-", ""));
                         }
                     }}
                     header={

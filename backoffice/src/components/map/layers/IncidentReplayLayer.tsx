@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Entity } from "cesium";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { fitCameraToBounds } from "../cesiumUtils";
 import { createTacticalLabel } from "../mapLabels";
+import { addRouteCurtainWall } from "../cesiumOutlineUtils";
 import type { BlackboxEntryVm } from "@/types";
 
 export interface IncidentReplayLayerProps {
@@ -25,23 +27,35 @@ export function IncidentReplayLayer({
     playbackIndex,
 }: IncidentReplayLayerProps) {
     const { viewer, isLoaded } = useCesium();
-    const entityIdsRef = useRef<string[]>([]);
+    const staticIdsRef = useRef<string[]>([]);
+    const cursorEntityRef = useRef<Entity | null>(null);
     const hasFittedRef = useRef(false);
+    const [sceneRevision, setSceneRevision] = useState(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
 
         let cancelled = false;
 
-        async function renderReplay() {
+        async function renderStaticTrack() {
             const Cesium = await getCesium();
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
-            for (const id of entityIdsRef.current) {
+            for (const id of staticIdsRef.current) {
                 const entity = viewer.entities.getById(id);
                 if (entity) viewer.entities.remove(entity);
             }
-            entityIdsRef.current = [];
+            staticIdsRef.current = [];
 
             const nextIds: string[] = [];
             const boundsPoints: { lat: number; lng: number }[] = [];
@@ -55,13 +69,12 @@ export function IncidentReplayLayer({
             );
 
             if (validFrames.length >= 2) {
+                const routePts: Array<{ lng: number; lat: number; alt: number }> = [];
                 const positions = validFrames.map((f) => {
+                    const alt = Math.max(f.altitudeMsl ?? 30, 5);
                     boundsPoints.push({ lat: f.latitude!, lng: f.longitude! });
-                    return Cesium.Cartesian3.fromDegrees(
-                        f.longitude!,
-                        f.latitude!,
-                        Math.max(f.altitudeMsl ?? 30, 5)
-                    );
+                    routePts.push({ lng: f.longitude!, lat: f.latitude!, alt });
+                    return Cesium.Cartesian3.fromDegrees(f.longitude!, f.latitude!, alt);
                 });
 
                 const pathId = "incident-replay-track";
@@ -70,11 +83,22 @@ export function IncidentReplayLayer({
                     name: "Blackbox Flight Path",
                     polyline: {
                         positions,
-                        width: 3,
-                        material: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.85),
+                        width: 3.2,
+                        material: new Cesium.PolylineGlowMaterialProperty({
+                            glowPower: 0.16,
+                            color: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.9),
+                        }),
                     },
                 });
                 nextIds.push(pathId);
+
+                const curtainId = addRouteCurtainWall(Cesium, viewer, {
+                    id: "incident-replay-curtain",
+                    points: routePts,
+                    colorCss: "#38bdf8",
+                    alpha: 0.12,
+                });
+                if (curtainId) nextIds.push(curtainId);
             }
 
             if (
@@ -111,52 +135,7 @@ export function IncidentReplayLayer({
                 nextIds.push(originId);
             }
 
-            const currentFrame = blackboxEntries[playbackIndex];
-            if (
-                currentFrame &&
-                typeof currentFrame.latitude === "number" &&
-                typeof currentFrame.longitude === "number" &&
-                !Number.isNaN(currentFrame.latitude) &&
-                !Number.isNaN(currentFrame.longitude)
-            ) {
-                boundsPoints.push({ lat: currentFrame.latitude, lng: currentFrame.longitude });
-                const frameId = "incident-replay-cursor";
-                const altLabel =
-                    currentFrame.altitudeMsl !== undefined
-                        ? `${Math.round(currentFrame.altitudeMsl)}m`
-                        : "—";
-                const batLabel =
-                    currentFrame.batteryLevel !== undefined
-                        ? `${Math.round(currentFrame.batteryLevel)}%`
-                        : "—";
-
-                viewer.entities.add({
-                    id: frameId,
-                    name: "Replay Position",
-                    position: Cesium.Cartesian3.fromDegrees(
-                        currentFrame.longitude,
-                        currentFrame.latitude,
-                        Math.max(currentFrame.altitudeMsl ?? 20, 5)
-                    ),
-                    point: {
-                        pixelSize: 14,
-                        color: Cesium.Color.fromCssColorString("#f59e0b"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    },
-                    label: createTacticalLabel(Cesium, {
-                        text: `FRAME ${playbackIndex + 1} • ${altLabel} • ${batLabel}`,
-                        isSelected: true,
-                        accentColor: "#f59e0b",
-                        pixelOffset: new Cesium.Cartesian2(0, -22),
-                        eyeOffset: new Cesium.Cartesian3(0, 0, -30),
-                    }),
-                });
-                nextIds.push(frameId);
-            }
-
-            entityIdsRef.current = nextIds;
+            staticIdsRef.current = nextIds;
 
             if (!hasFittedRef.current && boundsPoints.length > 0) {
                 hasFittedRef.current = true;
@@ -171,17 +150,18 @@ export function IncidentReplayLayer({
             viewer.scene.requestRender();
         }
 
-        renderReplay();
+        renderStaticTrack();
 
         return () => {
             cancelled = true;
             if (viewer && !viewer.isDestroyed()) {
-                for (const id of entityIdsRef.current) {
+                for (const id of staticIdsRef.current) {
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 }
+                viewer.scene.requestRender();
             }
-            entityIdsRef.current = [];
+            staticIdsRef.current = [];
         };
     }, [
         viewer,
@@ -191,8 +171,95 @@ export function IncidentReplayLayer({
         incidentAlt,
         incidentLabel,
         blackboxEntries,
-        playbackIndex,
+        sceneRevision,
     ]);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+
+        let cancelled = false;
+
+        async function updateCursor() {
+            const Cesium = await getCesium();
+            if (!viewer || viewer.isDestroyed() || cancelled) return;
+
+            const currentFrame = blackboxEntries[playbackIndex];
+            if (
+                !currentFrame ||
+                typeof currentFrame.latitude !== "number" ||
+                typeof currentFrame.longitude !== "number" ||
+                Number.isNaN(currentFrame.latitude) ||
+                Number.isNaN(currentFrame.longitude)
+            ) {
+                if (cursorEntityRef.current) {
+                    viewer.entities.remove(cursorEntityRef.current);
+                    cursorEntityRef.current = null;
+                    viewer.scene.requestRender();
+                }
+                return;
+            }
+
+            const altLabel =
+                currentFrame.altitudeMsl !== undefined
+                    ? `${Math.round(currentFrame.altitudeMsl)}m`
+                    : "—";
+            const batLabel =
+                currentFrame.batteryLevel !== undefined
+                    ? `${Math.round(currentFrame.batteryLevel)}%`
+                    : "—";
+            const labelText = `FRAME ${playbackIndex + 1} • ${altLabel} • ${batLabel}`;
+            const nextPos = Cesium.Cartesian3.fromDegrees(
+                currentFrame.longitude,
+                currentFrame.latitude,
+                Math.max(currentFrame.altitudeMsl ?? 20, 5)
+            );
+
+            if (cursorEntityRef.current) {
+                cursorEntityRef.current.position = new Cesium.ConstantPositionProperty(nextPos);
+                if (cursorEntityRef.current.label) {
+                    cursorEntityRef.current.label.text = new Cesium.ConstantProperty(labelText);
+                }
+            } else {
+                cursorEntityRef.current = viewer.entities.add({
+                    id: "incident-replay-cursor",
+                    name: "Replay Position",
+                    position: nextPos,
+                    point: {
+                        pixelSize: 14,
+                        color: Cesium.Color.fromCssColorString("#f59e0b"),
+                        outlineColor: Cesium.Color.WHITE,
+                        outlineWidth: 2,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    },
+                    label: createTacticalLabel(Cesium, {
+                        text: labelText,
+                        isSelected: true,
+                        accentColor: "#f59e0b",
+                        pixelOffset: new Cesium.Cartesian2(0, -22),
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -30),
+                    }),
+                });
+            }
+
+            viewer.scene.requestRender();
+        }
+
+        updateCursor();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [viewer, isLoaded, blackboxEntries, playbackIndex]);
+
+    useEffect(() => {
+        return () => {
+            if (viewer && !viewer.isDestroyed() && cursorEntityRef.current) {
+                viewer.entities.remove(cursorEntityRef.current);
+                viewer.scene.requestRender();
+            }
+            cursorEntityRef.current = null;
+        };
+    }, [viewer]);
 
     return null;
 }

@@ -5,6 +5,7 @@ export * from "./formatTime";
 export * from "./formatRelativeTime";
 export * from "./formatSpeed";
 export * from "./formatDistance";
+export * from "./formatArea";
 export * from "./formatCoordinate";
 export * from "./formatCoordinates";
 export * from "./formatAltitude";

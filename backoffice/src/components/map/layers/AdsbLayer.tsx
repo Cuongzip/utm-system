@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { getAircraftIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
+import { addAltitudeDropLine } from "../cesiumOutlineUtils";
 import type { AdsbAircraft } from "@/types";
 
 export interface AdsbLayerProps {
@@ -14,6 +15,17 @@ export interface AdsbLayerProps {
 export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const [sceneRevision, setSceneRevision] = useState(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -45,10 +57,11 @@ export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
                 }
 
                 const id = `adsb-${target.hex || target.callsign || nextIds.length}`;
-                const altM =
-                    typeof target.altitudeM === "number" && target.altitudeM > 0
-                        ? Math.min(target.altitudeM, 15000)
-                        : 300;
+                const altM = target.onGround
+                    ? 5
+                    : typeof target.altitudeM === "number" && target.altitudeM >= 0
+                      ? Math.min(Math.max(target.altitudeM, 15), 15000)
+                      : 300;
                 const heading = target.headingDeg ?? 0;
                 const callsign = target.callsign || target.hex || "AIRCRAFT";
                 const altLabel =
@@ -82,6 +95,18 @@ export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
                     }),
                 });
                 nextIds.push(id);
+
+                if (!target.onGround) {
+                    const dropId = addAltitudeDropLine(Cesium, viewer, {
+                        id: `${id}-drop`,
+                        lng: target.longitude,
+                        lat: target.latitude,
+                        altitudeM: altM,
+                        colorCss: "#f59e0b",
+                        alpha: 0.35,
+                    });
+                    if (dropId) nextIds.push(dropId);
+                }
             }
 
             entityIdsRef.current = nextIds;
@@ -97,10 +122,11 @@ export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 }
+                viewer.scene.requestRender();
             }
             entityIdsRef.current = [];
         };
-    }, [viewer, isLoaded, aircraft]);
+    }, [viewer, isLoaded, aircraft, sceneRevision]);
 
     return null;
 }

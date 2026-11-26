@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { CONFLICT_SEVERITY, type Conflict, type Flight } from "@/types";
 import { getConflictMarkerUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
+import {
+    addAltitudeDropLine,
+    buildClosedRingCartesian,
+    generateGeodesicCircleRing,
+} from "../cesiumOutlineUtils";
 
 export interface ConflictsLayerProps {
     conflicts: Conflict[];
@@ -49,6 +54,17 @@ export function ConflictsLayer({
     const entityIdsRef = useRef<string[]>([]);
     const hasInitialFitRef = useRef(false);
     const lastFocusedIdRef = useRef<string | null>(null);
+    const [sceneRevision, setSceneRevision] = useState(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -109,17 +125,21 @@ export function ConflictsLayer({
                     conflict.severity === CONFLICT_SEVERITY.HIGH;
                 const ringColor = isSevere ? "#ef4444" : "#f59e0b";
                 const radiusM = Math.max(conflict.minSeparationDistance ?? 150, 140);
+                const resolvedAlt = Math.max(alt, 20);
 
                 const sepText =
                     conflict.separationDistance != null
                         ? `CPA ${Math.round(conflict.separationDistance)}m`
                         : "CONFLICT";
 
+                const ringDegrees = generateGeodesicCircleRing(lat, lng, radiusM, 48);
+                const ringPositions = buildClosedRingCartesian(Cesium, ringDegrees, 2);
+
                 const entityId = `conflict-marker-${conflict.id}`;
                 viewer.entities.add({
                     id: entityId,
                     name: `Conflict ${sepText}`,
-                    position: Cesium.Cartesian3.fromDegrees(lng, lat, Math.max(alt, 20)),
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat, resolvedAlt),
                     billboard: {
                         image: getConflictMarkerUri(),
                         width: isSelected ? 34 : 28,
@@ -143,15 +163,30 @@ export function ConflictsLayer({
                             Cesium.Color.fromCssColorString(ringColor),
                             isSelected ? 0.22 : 0.14
                         ),
-                        outline: true,
-                        outlineColor: Cesium.Color.fromAlpha(
-                            Cesium.Color.fromCssColorString(ringColor),
-                            0.9
-                        ),
-                        outlineWidth: isSelected ? 2.5 : 1.8,
+                        outline: false,
                     },
+                    polyline:
+                        ringPositions.length >= 2
+                            ? {
+                                  positions: ringPositions,
+                                  width: isSelected ? 2.6 : 1.8,
+                                  material:
+                                      Cesium.Color.fromCssColorString(ringColor).withAlpha(0.92),
+                                  clampToGround: false,
+                              }
+                            : undefined,
                 });
                 newEntityIds.push(entityId);
+
+                const dropId = addAltitudeDropLine(Cesium, viewer, {
+                    id: `conflict-drop-${conflict.id}`,
+                    lng,
+                    lat,
+                    altitudeM: resolvedAlt,
+                    colorCss: ringColor,
+                    alpha: 0.65,
+                });
+                if (dropId) newEntityIds.push(dropId);
             }
 
             entityIdsRef.current = newEntityIds;
@@ -160,19 +195,18 @@ export function ConflictsLayer({
                 const target = conflictCoords.find((c) => c.id === selectedConflictId);
                 if (target) {
                     lastFocusedIdRef.current = selectedConflictId;
-                    viewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(target.lng, target.lat, 5500),
+                    fitCameraToBounds(viewer, [{ lat: target.lat, lng: target.lng }], {
+                        animate: true,
                         duration: 0.9,
+                        minHeight: 5500,
                     });
                 }
             } else if (autoFitBounds && !hasInitialFitRef.current && conflictCoords.length > 0) {
                 hasInitialFitRef.current = true;
-                const focusPoints: Array<{ lat: number; lng: number }> = conflictCoords.map(
-                    (c) => ({
-                        lat: c.lat,
-                        lng: c.lng,
-                    })
-                );
+                const focusPoints = conflictCoords.map((c) => ({
+                    lat: c.lat,
+                    lng: c.lng,
+                }));
 
                 fitCameraToBounds(viewer, focusPoints, {
                     animate: false,
@@ -194,10 +228,11 @@ export function ConflictsLayer({
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 });
+                viewer.scene.requestRender();
             }
             entityIdsRef.current = [];
         };
-    }, [viewer, isLoaded, conflicts, flights, selectedConflictId, autoFitBounds]);
+    }, [viewer, isLoaded, conflicts, flights, selectedConflictId, autoFitBounds, sceneRevision]);
 
     return null;
 }

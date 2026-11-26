@@ -59,6 +59,8 @@ services:
     build:
       context: ./backoffice
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CESIUM_ION_TOKEN: ${NEXT_PUBLIC_CESIUM_ION_TOKEN:-}
     image: backoffice:latest
     mem_limit: 384m
     ports:

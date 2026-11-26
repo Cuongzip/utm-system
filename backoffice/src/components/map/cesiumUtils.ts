@@ -15,6 +15,8 @@ export interface FitCameraOptions {
     paddingMultiplier?: number;
 }
 
+export const TACTICAL_3D_PITCH_DEG = -48;
+
 function computeMedian(values: number[]): number {
     if (values.length === 0) return 0;
     const sorted = [...values].sort((a, b) => a - b);
@@ -105,20 +107,39 @@ export function fitCameraToBounds(
             : Math.min(Math.max(effectiveSpanMeters * paddingMult, minHeight), maxHeight);
 
     const duration = options.duration ?? 0.8;
-    const destination = Cesium.Cartesian3.fromDegrees(centerLng, centerLat, targetHeight);
+    const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
 
-    if (options.animate !== false) {
-        viewer.camera.flyTo({
-            destination,
-            duration,
+    if (is3D) {
+        const centerTarget = Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 0);
+        const sphere = new Cesium.BoundingSphere(centerTarget, Math.max(maxSpanMeters * 0.5, 120));
+        const range = Math.min(Math.max(targetHeight * 1.15, minHeight), maxHeight * 1.25);
+
+        viewer.camera.flyToBoundingSphere(sphere, {
+            offset: new Cesium.HeadingPitchRange(
+                0,
+                Cesium.Math.toRadians(TACTICAL_3D_PITCH_DEG),
+                range
+            ),
+            duration: options.animate !== false ? duration : 0,
             complete: () => {
                 if (!viewer.isDestroyed()) viewer.scene.requestRender();
             },
         });
     } else {
-        viewer.camera.setView({
-            destination,
-        });
+        const destination = Cesium.Cartesian3.fromDegrees(centerLng, centerLat, targetHeight);
+        if (options.animate !== false) {
+            viewer.camera.flyTo({
+                destination,
+                duration,
+                complete: () => {
+                    if (!viewer.isDestroyed()) viewer.scene.requestRender();
+                },
+            });
+        } else {
+            viewer.camera.setView({
+                destination,
+            });
+        }
     }
 
     viewer.scene.requestRender();

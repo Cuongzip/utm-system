@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { WAYPOINT_TYPE, type Waypoint, type Hub } from "@/types";
 import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
+import { addAltitudeDropLine, addRouteCurtainWall } from "../cesiumOutlineUtils";
 import { buildMissionRoutePoints } from "@/components/missions";
-import { formatAltitude } from "@/utils";
+import { calculateDistance, formatAltitude } from "@/utils";
 
 export interface MissionLayerProps {
     waypoints?: Waypoint[];
@@ -25,6 +26,17 @@ export function MissionLayer({
     const routeColor = "#00a3bf";
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const [sceneRevision, setSceneRevision] = useState(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -117,9 +129,11 @@ export function MissionLayer({
             }));
 
             if (routeCoords.length >= 2) {
+                const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+                const routeArcType = is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC;
                 const polylineId = "mission-polyline";
                 const positions = routeCoords.map((pt) =>
-                    Cesium.Cartesian3.fromDegrees(pt.lng, pt.lat, pt.alt)
+                    Cesium.Cartesian3.fromDegrees(pt.lng, pt.lat, is3D ? pt.alt : 5)
                 );
 
                 const entity = viewer.entities.add({
@@ -127,12 +141,54 @@ export function MissionLayer({
                     name: "Mission Flight Path",
                     polyline: {
                         positions,
-                        width: 3,
-                        material: Cesium.Color.fromCssColorString(routeColor),
+                        arcType: routeArcType,
+                        width: 3.4,
+                        material: new Cesium.PolylineGlowMaterialProperty({
+                            glowPower: 0.16,
+                            color: Cesium.Color.fromCssColorString(routeColor),
+                        }),
                         clampToGround: false,
                     },
                 });
                 newEntityIds.push(entity.id);
+
+                for (let i = 0; i < routeCoords.length - 1; i++) {
+                    const pStart = routeCoords[i];
+                    const pEnd = routeCoords[i + 1];
+                    if (calculateDistance(pStart.lat, pStart.lng, pEnd.lat, pEnd.lng) > 140) {
+                        const arrowEntity = viewer.entities.add({
+                            id: `mission-dir-${i}`,
+                            polyline: {
+                                positions: [
+                                    Cesium.Cartesian3.fromDegrees(
+                                        pStart.lng + (pEnd.lng - pStart.lng) * 0.42,
+                                        pStart.lat + (pEnd.lat - pStart.lat) * 0.42,
+                                        is3D ? pStart.alt + (pEnd.alt - pStart.alt) * 0.42 + 0.5 : 6
+                                    ),
+                                    Cesium.Cartesian3.fromDegrees(
+                                        pStart.lng + (pEnd.lng - pStart.lng) * 0.62,
+                                        pStart.lat + (pEnd.lat - pStart.lat) * 0.62,
+                                        is3D ? pStart.alt + (pEnd.alt - pStart.alt) * 0.62 + 0.5 : 6
+                                    ),
+                                ],
+                                arcType: routeArcType,
+                                width: 10,
+                                material: new Cesium.PolylineArrowMaterialProperty(
+                                    Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.92)
+                                ),
+                            },
+                        });
+                        newEntityIds.push(arrowEntity.id);
+                    }
+                }
+
+                const curtainId = addRouteCurtainWall(Cesium, viewer, {
+                    id: "mission-route-curtain",
+                    points: routeCoords,
+                    colorCss: routeColor,
+                    alpha: 0.12,
+                });
+                if (curtainId) newEntityIds.push(curtainId);
             }
 
             sortedWaypoints.forEach((wp, idx) => {
@@ -153,6 +209,7 @@ export function MissionLayer({
                     (selectedWaypointId && wp.tempId === selectedWaypointId)
                 );
                 const seqNum = wp.sequence ?? idx + 1;
+                const altVal = isHubNode ? Math.max(10, wp.altitude ?? 0) : (wp.altitude ?? 50);
                 const altText =
                     wp.altitude !== undefined && wp.altitude !== null
                         ? formatAltitude(wp.altitude)
@@ -162,14 +219,13 @@ export function MissionLayer({
                     ? `STOP #${seqNum}: ${compactHubLabel}`
                     : `WP${seqNum} ${altText}`.trim();
 
+                const wpLng = wp.longitude ?? 0;
+                const wpLat = wp.latitude ?? 0;
+
                 const entity = viewer.entities.add({
                     id: wpId,
                     name: wp.name || `Waypoint ${seqNum}`,
-                    position: Cesium.Cartesian3.fromDegrees(
-                        wp.longitude ?? 0,
-                        wp.latitude ?? 0,
-                        isHubNode ? Math.max(10, wp.altitude ?? 0) : (wp.altitude ?? 50)
-                    ),
+                    position: Cesium.Cartesian3.fromDegrees(wpLng, wpLat, altVal),
                     billboard: {
                         image: isHubNode
                             ? getHubIconUri("#f59e0b", isSelected)
@@ -187,10 +243,19 @@ export function MissionLayer({
                     }),
                 });
                 newEntityIds.push(entity.id);
+
+                const dropId = addAltitudeDropLine(Cesium, viewer, {
+                    id: `drop-${wpId}`,
+                    lng: wpLng,
+                    lat: wpLat,
+                    altitudeM: altVal,
+                    colorCss: isSelected ? "#00e5ff" : "#38bdf8",
+                    alpha: isSelected ? 0.65 : 0.42,
+                });
+                if (dropId) newEntityIds.push(dropId);
             });
 
             entityIdsRef.current = newEntityIds;
-
             viewer.scene.requestRender();
         }
 
@@ -203,10 +268,20 @@ export function MissionLayer({
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 });
+                viewer.scene.requestRender();
             }
             entityIdsRef.current = [];
         };
-    }, [viewer, isLoaded, waypoints, selectedWaypointId, departureHub, arrivalHub, routeColor]);
+    }, [
+        viewer,
+        isLoaded,
+        waypoints,
+        selectedWaypointId,
+        departureHub,
+        arrivalHub,
+        routeColor,
+        sceneRevision,
+    ]);
 
     return null;
 }

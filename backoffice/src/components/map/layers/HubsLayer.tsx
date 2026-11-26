@@ -7,6 +7,7 @@ import { HUB_STATUS, type Hub, type HubDraftPreview, type HubStatus } from "@/ty
 import { getHubIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
+import { buildClosedRingCartesian, generateGeodesicCircleRing } from "../cesiumOutlineUtils";
 
 export interface HubsLayerProps {
     hubs: Hub[];
@@ -26,7 +27,7 @@ function getHubStatusPalette(status: HubStatus | undefined, isSelected: boolean)
                 fill: "#f59e0b",
                 fillAlpha: isSelected ? 0.28 : 0.14,
                 outline: isSelected ? "#fcd34d" : "#f59e0b",
-                outlineAlpha: isSelected ? 0.95 : 0.7,
+                outlineAlpha: isSelected ? 0.95 : 0.72,
             };
         case HUB_STATUS.INACTIVE:
             return {
@@ -34,7 +35,7 @@ function getHubStatusPalette(status: HubStatus | undefined, isSelected: boolean)
                 fill: "#64748b",
                 fillAlpha: isSelected ? 0.2 : 0.08,
                 outline: isSelected ? "#cbd5e1" : "#94a3b8",
-                outlineAlpha: isSelected ? 0.85 : 0.5,
+                outlineAlpha: isSelected ? 0.85 : 0.55,
             };
         case HUB_STATUS.ACTIVE:
         default:
@@ -43,7 +44,7 @@ function getHubStatusPalette(status: HubStatus | undefined, isSelected: boolean)
                 fill: "#06b6d4",
                 fillAlpha: isSelected ? 0.24 : 0.12,
                 outline: isSelected ? "#00e5ff" : "#06b6d4",
-                outlineAlpha: isSelected ? 0.95 : 0.65,
+                outlineAlpha: isSelected ? 0.95 : 0.7,
             };
     }
 }
@@ -86,6 +87,20 @@ export function HubsLayer({
             entityIdsRef.current = [];
 
             const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+            const coordTotals: Record<string, number> = {};
+            const coordHasSelected = new Set<string>();
+            for (const h of hubs) {
+                if (editingHubId && h.id === editingHubId && draftPreview) continue;
+                const hLat = h.location?.latitude;
+                const hLng = h.location?.longitude;
+                if (hLat === undefined || hLng === undefined) continue;
+                const key = `${hLat.toFixed(4)}_${hLng.toFixed(4)}`;
+                coordTotals[key] = (coordTotals[key] ?? 0) + 1;
+                if (selectedHubId === h.id) {
+                    coordHasSelected.add(key);
+                }
+            }
+
             const coordCounter: Record<string, number> = {};
             const newEntityIds: string[] = [];
 
@@ -106,7 +121,19 @@ export function HubsLayer({
                 const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
                 const stackIndex = coordCounter[coordKey] ?? 0;
                 coordCounter[coordKey] = stackIndex + 1;
-                const yOffset = -22 - stackIndex * 24;
+                const groupCount = coordTotals[coordKey] ?? 1;
+                const showHubLabel =
+                    isSelected || (!coordHasSelected.has(coordKey) && stackIndex === 0);
+                const baseHubCode = hub.code || hub.name || "HUB";
+                const hubLabelText =
+                    groupCount > 1 ? `${baseHubCode} (+${groupCount - 1})` : baseHubCode;
+
+                const ringDegrees = generateGeodesicCircleRing(lat, lng, radius, 64);
+                const ringPositions = buildClosedRingCartesian(
+                    Cesium,
+                    ringDegrees,
+                    is3D ? ceiling : 2
+                );
 
                 const entity = viewer.entities.add({
                     id: hub.id,
@@ -123,11 +150,13 @@ export function HubsLayer({
                         eyeOffset: new Cesium.Cartesian3(0, 0, -10),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
-                    label: createTacticalLabel(Cesium, {
-                        text: hub.code || hub.name || "HUB",
-                        isSelected,
-                        pixelOffset: new Cesium.Cartesian2(0, yOffset),
-                    }),
+                    label: showHubLabel
+                        ? createTacticalLabel(Cesium, {
+                              text: hubLabelText,
+                              isSelected,
+                              pixelOffset: new Cesium.Cartesian2(0, -22),
+                          })
+                        : undefined,
                     ellipse: {
                         semiMinorAxis: radius,
                         semiMajorAxis: radius,
@@ -137,13 +166,24 @@ export function HubsLayer({
                             Cesium.Color.fromCssColorString(palette.fill),
                             palette.fillAlpha
                         ),
-                        outline: true,
+                        outline: is3D,
                         outlineColor: Cesium.Color.fromAlpha(
                             Cesium.Color.fromCssColorString(palette.outline),
-                            palette.outlineAlpha
+                            0.45
                         ),
-                        outlineWidth: isSelected ? 2.5 : 1.5,
+                        outlineWidth: 1,
                     },
+                    polyline:
+                        ringPositions.length >= 2
+                            ? {
+                                  positions: ringPositions,
+                                  width: isSelected ? 2.8 : 1.8,
+                                  material: Cesium.Color.fromCssColorString(
+                                      palette.outline
+                                  ).withAlpha(palette.outlineAlpha),
+                                  clampToGround: false,
+                              }
+                            : undefined,
                 });
 
                 newEntityIds.push(entity.id);
@@ -158,9 +198,20 @@ export function HubsLayer({
                 draftPreview.longitude >= -180 &&
                 draftPreview.longitude <= 180
             ) {
-                const draftRadius = Math.max(draftPreview.airspaceRadius || 1500, 50);
+                const draftRadius = Math.max(draftPreview.airspaceRadius ?? 1500, 50);
                 const draftFloor = Math.max(draftPreview.airspaceFloor ?? 0, 0);
                 const draftCeiling = Math.max(draftPreview.airspaceCeiling ?? 120, draftFloor + 10);
+                const draftRingDegrees = generateGeodesicCircleRing(
+                    draftPreview.latitude,
+                    draftPreview.longitude,
+                    draftRadius,
+                    64
+                );
+                const draftRingPositions = buildClosedRingCartesian(
+                    Cesium,
+                    draftRingDegrees,
+                    is3D ? draftCeiling : 2
+                );
 
                 const draftEntity = viewer.entities.add({
                     id: DRAFT_ENTITY_ID,
@@ -192,10 +243,19 @@ export function HubsLayer({
                             Cesium.Color.fromCssColorString("#ffffff"),
                             0.2
                         ),
-                        outline: true,
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 3,
+                        outline: is3D,
+                        outlineColor: Cesium.Color.WHITE.withAlpha(0.6),
+                        outlineWidth: 1,
                     },
+                    polyline:
+                        draftRingPositions.length >= 2
+                            ? {
+                                  positions: draftRingPositions,
+                                  width: 3,
+                                  material: Cesium.Color.WHITE,
+                                  clampToGround: false,
+                              }
+                            : undefined,
                 });
                 newEntityIds.push(draftEntity.id);
             }
@@ -211,9 +271,10 @@ export function HubsLayer({
                         Math.max((target?.airspaceRadius ?? 1000) * 3.6, 2600),
                         15000
                     );
-                    viewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(lng, lat, zoomHeight),
+                    fitCameraToBounds(viewer, [{ lat, lng }], {
+                        animate: true,
                         duration: 0.6,
+                        minHeight: zoomHeight,
                     });
                 }
             } else if (autoFitBounds && !hasAutoFittedRef.current && hubs.length > 0) {

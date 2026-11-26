@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
-import type { ImageryProvider, ScreenSpaceEventHandler, Viewer } from "cesium";
+import type { Cesium3DTileset, ScreenSpaceEventHandler, Viewer } from "cesium";
 import { CesiumContext } from "./CesiumContext";
 import { getCesium } from "./cesiumLoader";
+import { applyConfiguredImageryLayers, createImageryLayersForType } from "./basemapProviders";
+import { TACTICAL_3D_PITCH_DEG } from "./cesiumUtils";
 import type { MapMode, ImageryType } from "./types";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -16,6 +18,9 @@ declare global {
 export interface BaseCesiumMapProps {
     mode?: MapMode;
     layerType?: ImageryType;
+    enable3DTerrain?: boolean;
+    enable3DBuildings?: boolean;
+    onViewerReady?: (viewer: Viewer | null, hasIonToken: boolean) => void;
     onEntityClick?: (entityId: string) => void;
     onMapClick?: (coords: { latitude: number; longitude: number }) => void;
     pickMode?: boolean;
@@ -31,9 +36,15 @@ const DEFAULT_COORDINATES = {
     height: 35000.0,
 };
 
+const ION_TOKEN = (process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN ?? "").trim();
+const HAS_ION_TOKEN = ION_TOKEN.length > 0;
+
 export function BaseCesiumMap({
     mode = "2d",
-    layerType = "satellite",
+    layerType = "satellite-hybrid",
+    enable3DTerrain = true,
+    enable3DBuildings = true,
+    onViewerReady,
     onEntityClick,
     onMapClick,
     pickMode = false,
@@ -41,9 +52,15 @@ export function BaseCesiumMap({
 }: BaseCesiumMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<Viewer | null>(null);
+    const osmBuildingsRef = useRef<Cesium3DTileset | null>(null);
+    const appliedTerrainRef = useRef<"world" | "ellipsoid">("ellipsoid");
+    const layerRequestIdRef = useRef(0);
+
     const [viewer, setViewer] = useState<Viewer | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [mapError, setMapError] = useState<string | null>(null);
+
+    const onViewerReadyRef = useRef(onViewerReady);
     const onEntityClickRef = useRef(onEntityClick);
     const onMapClickRef = useRef(onMapClick);
     const pickModeRef = useRef(pickMode);
@@ -53,6 +70,7 @@ export function BaseCesiumMap({
     const appliedLayerTypeRef = useRef<ImageryType | null>(null);
 
     useLayoutEffect(() => {
+        onViewerReadyRef.current = onViewerReady;
         onEntityClickRef.current = onEntityClick;
         onMapClickRef.current = onMapClick;
         pickModeRef.current = pickMode;
@@ -64,6 +82,7 @@ export function BaseCesiumMap({
         let activeViewer: Viewer | null = null;
         let resizeObserver: ResizeObserver | null = null;
         let handler: { destroy: () => void; isDestroyed: () => boolean } | null = null;
+        let cancelled = false;
 
         async function initViewer() {
             if (!containerRef.current) return;
@@ -71,38 +90,25 @@ export function BaseCesiumMap({
             try {
                 window.CESIUM_BASE_URL = "/cesium";
                 const Cesium = await getCesium();
+                if (cancelled || !containerRef.current) return;
 
-                Cesium.Ion.defaultAccessToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
+                Cesium.Ion.defaultAccessToken = ION_TOKEN;
 
                 const initialLayer = layerTypeRef.current;
                 const initialMode = modeRef.current;
 
-                let baseImageryProvider: ImageryProvider;
-                if (initialLayer === "satellite") {
-                    baseImageryProvider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
-                        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
-                        { enablePickFeatures: false }
-                    );
-                } else if (initialLayer === "carto") {
-                    baseImageryProvider = new Cesium.UrlTemplateImageryProvider({
-                        url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-                        subdomains: ["a", "b", "c", "d"],
-                    });
-                } else {
-                    baseImageryProvider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
-                        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
-                        { enablePickFeatures: false }
-                    );
-                }
+                const configuredLayers = await createImageryLayersForType(Cesium, initialLayer);
+                if (cancelled || !containerRef.current) return;
 
                 activeViewer = new Cesium.Viewer(containerRef.current, {
                     sceneMode:
                         initialMode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D,
-                    baseLayer: new Cesium.ImageryLayer(baseImageryProvider),
+                    baseLayer: false,
                     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
                     creditContainer: document.createElement("div"),
                     requestRenderMode: true,
                     maximumRenderTimeChange: Infinity,
+                    msaaSamples: 4,
                     animation: false,
                     timeline: false,
                     fullscreenButton: !HIDE_TOOLBAR,
@@ -115,6 +121,8 @@ export function BaseCesiumMap({
                     selectionIndicator: false,
                 });
 
+                applyConfiguredImageryLayers(activeViewer, configuredLayers);
+
                 activeViewer.screenSpaceEventHandler.removeInputAction(
                     Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
                 );
@@ -126,22 +134,43 @@ export function BaseCesiumMap({
 
                 activeViewer.useBrowserRecommendedResolution = false;
                 activeViewer.resolutionScale = 1.0;
+                activeViewer.scene.postProcessStages.fxaa.enabled = true;
+                activeViewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#050912");
+                activeViewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#070d19");
+                activeViewer.scene.globe.maximumScreenSpaceError = 1.33;
+                activeViewer.scene.globe.tileCacheSize = 500;
+                activeViewer.scene.globe.preloadAncestors = true;
                 activeViewer.scene.globe.depthTestAgainstTerrain = false;
+                activeViewer.camera.percentageChanged = 0.01;
 
                 if (initialMode === "2d") {
                     activeViewer.scene.fog.enabled = false;
                     activeViewer.scene.globe.showGroundAtmosphere = false;
                     if (activeViewer.scene.sun) activeViewer.scene.sun.show = false;
                     if (activeViewer.scene.moon) activeViewer.scene.moon.show = false;
-                }
-
-                activeViewer.camera.setView({
-                    destination: Cesium.Cartesian3.fromDegrees(
+                    activeViewer.camera.setView({
+                        destination: Cesium.Cartesian3.fromDegrees(
+                            DEFAULT_COORDINATES.lng,
+                            DEFAULT_COORDINATES.lat,
+                            DEFAULT_COORDINATES.height
+                        ),
+                    });
+                } else {
+                    const centerTarget = Cesium.Cartesian3.fromDegrees(
                         DEFAULT_COORDINATES.lng,
                         DEFAULT_COORDINATES.lat,
-                        DEFAULT_COORDINATES.height
-                    ),
-                });
+                        0
+                    );
+                    activeViewer.camera.lookAt(
+                        centerTarget,
+                        new Cesium.HeadingPitchRange(
+                            0,
+                            Cesium.Math.toRadians(TACTICAL_3D_PITCH_DEG),
+                            DEFAULT_COORDINATES.height
+                        )
+                    );
+                    activeViewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+                }
 
                 let dragStartPos: { x: number; y: number } | null = null;
                 let hasMovedDuringClick = false;
@@ -172,10 +201,16 @@ export function BaseCesiumMap({
                         return;
                     }
                     if (pickModeRef.current && onMapClickRef.current) {
-                        const cartesian = activeViewer.camera.pickEllipsoid(
-                            click.position,
-                            activeViewer.scene.globe.ellipsoid
-                        );
+                        const ray = activeViewer.camera.getPickRay(click.position);
+                        const globeCartesian = ray
+                            ? activeViewer.scene.globe.pick(ray, activeViewer.scene)
+                            : undefined;
+                        const cartesian =
+                            globeCartesian ??
+                            activeViewer.camera.pickEllipsoid(
+                                click.position,
+                                activeViewer.scene.globe.ellipsoid
+                            );
                         if (cartesian) {
                             const carto = Cesium.Cartographic.fromCartesian(cartesian);
                             onMapClickRef.current({
@@ -210,6 +245,7 @@ export function BaseCesiumMap({
                 viewerRef.current = activeViewer;
                 setViewer(activeViewer);
                 setIsLoaded(true);
+                onViewerReadyRef.current?.(activeViewer, HAS_ION_TOKEN);
             } catch (err: unknown) {
                 console.error("Failed to initialize Cesium Viewer:", err);
                 const msg = err instanceof Error ? err.message : "Map initialization error";
@@ -220,18 +256,22 @@ export function BaseCesiumMap({
         initViewer();
 
         return () => {
+            cancelled = true;
             if (resizeObserver) {
                 resizeObserver.disconnect();
             }
             if (handler && !handler.isDestroyed()) {
                 handler.destroy();
             }
+            osmBuildingsRef.current = null;
+            appliedTerrainRef.current = "ellipsoid";
             if (activeViewer && !activeViewer.isDestroyed()) {
                 activeViewer.destroy();
             }
             viewerRef.current = null;
             setViewer(null);
             setIsLoaded(false);
+            onViewerReadyRef.current?.(null, HAS_ION_TOKEN);
         };
     }, []);
 
@@ -251,42 +291,72 @@ export function BaseCesiumMap({
         if (!v || !isLoaded || v.isDestroyed()) return;
         if (appliedModeRef.current === mode) return;
 
+        let cancelled = false;
         let removeMorphListener: (() => void) | undefined;
 
         async function updateSceneMode() {
             const Cesium = await getCesium();
             const currentViewer = viewerRef.current;
-            if (!currentViewer || currentViewer.isDestroyed()) return;
+            if (cancelled || !currentViewer || currentViewer.isDestroyed()) return;
 
             const targetMode = mode === "3d" ? Cesium.SceneMode.SCENE3D : Cesium.SceneMode.SCENE2D;
             appliedModeRef.current = mode;
 
             if (currentViewer.scene.mode !== targetMode) {
-                const carto = currentViewer.camera.positionCartographic;
+                const canvas = currentViewer.scene.canvas;
+                const centerScreen = new Cesium.Cartesian2(
+                    canvas.clientWidth / 2,
+                    canvas.clientHeight / 2
+                );
+                const centerRay = currentViewer.camera.getPickRay(centerScreen);
+                const pickedGround = centerRay
+                    ? currentViewer.scene.globe.pick(centerRay, currentViewer.scene)
+                    : undefined;
+                const fallbackCarto = currentViewer.camera.positionCartographic;
+                const groundCarto = pickedGround
+                    ? Cesium.Cartographic.fromCartesian(pickedGround)
+                    : fallbackCarto;
+
                 const hasValidCarto =
-                    carto &&
-                    Number.isFinite(carto.latitude) &&
-                    Number.isFinite(carto.longitude) &&
-                    (Math.abs(carto.latitude) > 0.0001 || Math.abs(carto.longitude) > 0.0001);
+                    groundCarto &&
+                    Number.isFinite(groundCarto.latitude) &&
+                    Number.isFinite(groundCarto.longitude) &&
+                    (Math.abs(groundCarto.latitude) > 0.0001 ||
+                        Math.abs(groundCarto.longitude) > 0.0001);
+
                 const targetLng = hasValidCarto
-                    ? Cesium.Math.toDegrees(carto.longitude)
+                    ? Cesium.Math.toDegrees(groundCarto.longitude)
                     : DEFAULT_COORDINATES.lng;
                 const targetLat = hasValidCarto
-                    ? Cesium.Math.toDegrees(carto.latitude)
+                    ? Cesium.Math.toDegrees(groundCarto.latitude)
                     : DEFAULT_COORDINATES.lat;
-                const targetHeight = hasValidCarto
-                    ? Math.min(Math.max(carto.height, 1200), 120000)
+                const camHeight = fallbackCarto?.height ?? DEFAULT_COORDINATES.height;
+                const targetHeight = Number.isFinite(camHeight)
+                    ? Math.min(Math.max(camHeight, 1200), 120000)
                     : DEFAULT_COORDINATES.height;
 
                 const applyRestoredView = () => {
                     if (currentViewer.isDestroyed()) return;
-                    currentViewer.camera.setView({
-                        destination: Cesium.Cartesian3.fromDegrees(
-                            targetLng,
-                            targetLat,
-                            targetHeight
-                        ),
-                    });
+                    if (targetMode === Cesium.SceneMode.SCENE3D) {
+                        const centerTarget = Cesium.Cartesian3.fromDegrees(targetLng, targetLat, 0);
+                        currentViewer.camera.lookAt(
+                            centerTarget,
+                            new Cesium.HeadingPitchRange(
+                                0,
+                                Cesium.Math.toRadians(TACTICAL_3D_PITCH_DEG),
+                                targetHeight * 1.12
+                            )
+                        );
+                        currentViewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+                    } else {
+                        currentViewer.camera.setView({
+                            destination: Cesium.Cartesian3.fromDegrees(
+                                targetLng,
+                                targetLat,
+                                targetHeight
+                            ),
+                        });
+                    }
                     currentViewer.scene.requestRender();
                 };
 
@@ -317,6 +387,7 @@ export function BaseCesiumMap({
         updateSceneMode();
 
         return () => {
+            cancelled = true;
             removeMorphListener?.();
         };
     }, [mode, isLoaded]);
@@ -326,43 +397,99 @@ export function BaseCesiumMap({
         if (!v || !isLoaded || v.isDestroyed()) return;
         if (appliedLayerTypeRef.current === layerType) return;
 
+        const requestId = ++layerRequestIdRef.current;
+
         async function updateImagery() {
             const Cesium = await getCesium();
             const currentViewer = viewerRef.current;
             if (!currentViewer || currentViewer.isDestroyed()) return;
 
+            const layers = await createImageryLayersForType(Cesium, layerType);
+            if (
+                requestId !== layerRequestIdRef.current ||
+                !viewerRef.current ||
+                viewerRef.current.isDestroyed()
+            ) {
+                return;
+            }
+
             appliedLayerTypeRef.current = layerType;
-            currentViewer.imageryLayers.removeAll();
-
-            let provider: ImageryProvider;
-            if (layerType === "satellite") {
-                provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
-                    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
-                    { enablePickFeatures: false }
-                );
-            } else if (layerType === "carto") {
-                provider = new Cesium.UrlTemplateImageryProvider({
-                    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-                    subdomains: ["a", "b", "c", "d"],
-                });
-            } else {
-                provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
-                    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
-                    { enablePickFeatures: false }
-                );
-            }
-
-            if (!currentViewer.isDestroyed()) {
-                currentViewer.imageryLayers.addImageryProvider(provider);
-                currentViewer.scene.requestRender();
-            }
+            applyConfiguredImageryLayers(viewerRef.current, layers);
+            viewerRef.current.scene.requestRender();
         }
 
         updateImagery();
     }, [layerType, isLoaded]);
 
+    useEffect(() => {
+        const v = viewerRef.current;
+        if (!v || !isLoaded || v.isDestroyed()) return;
+
+        let cancelled = false;
+
+        async function sync3DEnvironment() {
+            const Cesium = await getCesium();
+            const currentViewer = viewerRef.current;
+            if (cancelled || !currentViewer || currentViewer.isDestroyed()) return;
+
+            const shouldUseWorldTerrain = mode === "3d" && enable3DTerrain && HAS_ION_TOKEN;
+            if (shouldUseWorldTerrain && appliedTerrainRef.current !== "world") {
+                try {
+                    const worldTerrain = await Cesium.createWorldTerrainAsync({
+                        requestVertexNormals: true,
+                    });
+                    if (!cancelled && !currentViewer.isDestroyed()) {
+                        currentViewer.terrainProvider = worldTerrain;
+                        appliedTerrainRef.current = "world";
+                        currentViewer.scene.requestRender();
+                    }
+                } catch {
+                    appliedTerrainRef.current = "ellipsoid";
+                }
+            } else if (!shouldUseWorldTerrain && appliedTerrainRef.current !== "ellipsoid") {
+                currentViewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+                appliedTerrainRef.current = "ellipsoid";
+                currentViewer.scene.requestRender();
+            }
+
+            const shouldShowBuildings = mode === "3d" && enable3DBuildings && HAS_ION_TOKEN;
+            if (shouldShowBuildings) {
+                if (osmBuildingsRef.current) {
+                    osmBuildingsRef.current.show = true;
+                    currentViewer.scene.requestRender();
+                } else {
+                    try {
+                        const tileset = await Cesium.createOsmBuildingsAsync({
+                            style: new Cesium.Cesium3DTileStyle({
+                                color: "color('rgba(30, 41, 59, 0.78)')",
+                            }),
+                        });
+                        if (cancelled || currentViewer.isDestroyed()) {
+                            tileset.destroy();
+                            return;
+                        }
+                        currentViewer.scene.primitives.add(tileset);
+                        osmBuildingsRef.current = tileset;
+                        currentViewer.scene.requestRender();
+                    } catch {
+                        // Gracefully continue without OSM buildings if Ion asset is unavailable
+                    }
+                }
+            } else if (osmBuildingsRef.current) {
+                osmBuildingsRef.current.show = false;
+                currentViewer.scene.requestRender();
+            }
+        }
+
+        sync3DEnvironment();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [mode, enable3DTerrain, enable3DBuildings, isLoaded]);
+
     return (
-        <CesiumContext.Provider value={{ viewer, isLoaded }}>
+        <CesiumContext.Provider value={{ viewer, isLoaded, hasIonToken: HAS_ION_TOKEN }}>
             <div className="relative w-full overflow-hidden select-none" style={{ height: "100%" }}>
                 <div
                     ref={containerRef}

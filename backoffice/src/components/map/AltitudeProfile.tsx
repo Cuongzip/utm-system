@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import type { Hub, ProfilePoint } from "@/types";
+import type { AirspaceZone, Hub, ProfilePoint } from "@/types";
 import { calculateDistance, formatAltitude, formatDistance } from "@/utils";
-import { isDuplicateCoord } from "@/utils/geo";
+import { computeAirspaceCrossings, isDuplicateCoord } from "@/utils/geo";
+import { getAirspaceZoneColor } from "./mapTokens";
 
 const CHART_PADDING = { top: 18, bottom: 22, left: 36, right: 36 } as const;
 
@@ -24,6 +25,7 @@ export interface AltitudeProfileProps<T extends BaseAltitudeWaypoint = BaseAltit
     onPointClick: (point: ProfilePoint) => void;
     departureHub: Hub | null;
     arrivalHub: Hub | null;
+    airspaceZones?: AirspaceZone[];
 }
 
 export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWaypoint>({
@@ -33,6 +35,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
     onPointClick,
     departureHub,
     arrivalHub,
+    airspaceZones = [],
 }: AltitudeProfileProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(600);
@@ -150,6 +153,16 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         };
     }, [waypoints, departureHub, arrivalHub]);
 
+    const crossingBands = useMemo(
+        () => computeAirspaceCrossings(segments, airspaceZones),
+        [segments, airspaceZones]
+    );
+
+    const penetratedCount = useMemo(
+        () => crossingBands.filter((b) => b.isPenetrated).length,
+        [crossingBands]
+    );
+
     const innerW = Math.max(10, chartWidth - CHART_PADDING.left - CHART_PADDING.right);
     const innerH = Math.max(10, chartHeight - CHART_PADDING.top - CHART_PADDING.bottom);
 
@@ -165,7 +178,8 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         (alt: number) => {
             const diff = maxAlt - minAlt;
             const range = diff === 0 ? 1 : diff;
-            const ratio = (alt - minAlt) / range;
+            const clampedAlt = Math.min(maxAlt, Math.max(minAlt, alt));
+            const ratio = (clampedAlt - minAlt) / range;
             return CHART_PADDING.top + innerH * (1 - ratio);
         },
         [maxAlt, minAlt, innerH]
@@ -209,10 +223,21 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
             ref={containerRef}
             className="bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-2 select-none relative shrink-0 w-full"
         >
-            <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-text-secondary)] mb-1">
-                <span className="font-bold tracking-wider text-[var(--color-text-primary)]">
-                    ALTITUDE PROFILE
-                </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[var(--color-text-secondary)] mb-1">
+                <div className="flex items-center gap-2.5">
+                    <span className="font-bold tracking-wider text-[var(--color-text-primary)]">
+                        ALTITUDE PROFILE
+                    </span>
+                    {penetratedCount > 0 ? (
+                        <span className="px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/35 text-[10px] font-bold text-red-600">
+                            {penetratedCount} ZONE PENETRATION
+                        </span>
+                    ) : crossingBands.length > 0 ? (
+                        <span className="px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-semibold text-cyan-700">
+                            {crossingBands.length} AIRSPACE SECTOR
+                        </span>
+                    ) : null}
+                </div>
                 <div className="flex items-center gap-4 text-[10px]">
                     <span>
                         DISTANCE:{" "}
@@ -240,8 +265,8 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                             y2={chartHeight}
                             gradientUnits="userSpaceOnUse"
                         >
-                            <stop offset="0%" stopColor="#475569" stopOpacity="0.18" />
-                            <stop offset="100%" stopColor="#475569" stopOpacity="0.0" />
+                            <stop offset="0%" stopColor="#0284c7" stopOpacity="0.22" />
+                            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.01" />
                         </linearGradient>
                     </defs>
 
@@ -270,12 +295,45 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                         );
                     })}
 
+                    {crossingBands.map((band, idx) => {
+                        const x1 = getX(band.startDistanceM);
+                        const x2 = getX(band.endDistanceM);
+                        const rectW = Math.max(3, x2 - x1);
+                        const yTop = getY(band.ceilingM);
+                        const yBottom = getY(band.floorM);
+                        const rectH = Math.max(2, yBottom - yTop);
+                        const color = getAirspaceZoneColor(band.zoneType);
+
+                        return (
+                            <g key={`${band.zoneId}-${idx}`}>
+                                <title>
+                                    {`${band.zoneName} (${band.floorM}–${band.ceilingM}m)${
+                                        band.isPenetrated ? " — VERTICAL PENETRATION" : ""
+                                    }`}
+                                </title>
+                                <rect
+                                    x={x1}
+                                    y={yTop}
+                                    width={rectW}
+                                    height={rectH}
+                                    fill={color}
+                                    fillOpacity={band.isPenetrated ? 0.24 : 0.12}
+                                    stroke={color}
+                                    strokeOpacity={band.isPenetrated ? 0.85 : 0.45}
+                                    strokeWidth={band.isPenetrated ? 1.4 : 1}
+                                    strokeDasharray={band.isPenetrated ? undefined : "3 2"}
+                                    rx={2}
+                                />
+                            </g>
+                        );
+                    })}
+
                     <path d={areaD} fill="url(#sharedAltitudeGradient)" />
 
                     <path
                         d={pathD}
                         fill="none"
-                        stroke="#334155"
+                        stroke="#0369a1"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -293,10 +351,10 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                         seg.point.waypoint.tempId === selectedWaypointId)));
 
                         const pointColor = seg.point.isDeparture
-                            ? "#334155"
+                            ? "#059669"
                             : seg.point.isArrival
-                              ? "#475569"
-                              : "#64748b";
+                              ? "#0284c7"
+                              : "#334155";
 
                         return (
                             <g
@@ -321,13 +379,13 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                     cy={y}
                                     r={isSelected ? 9 : 7}
                                     className="opacity-0 group-hover:opacity-25 transition-opacity"
-                                    fill={isSelected ? "#0f172a" : pointColor}
+                                    fill={isSelected ? "#0284c7" : pointColor}
                                 />
                                 <circle
                                     cx={x}
                                     cy={y}
                                     r={isSelected ? 6 : 4.5}
-                                    fill={isSelected ? "#0f172a" : pointColor}
+                                    fill={isSelected ? "#0284c7" : pointColor}
                                     stroke="#ffffff"
                                     strokeWidth={isSelected ? 2.5 : 1.5}
                                 />
@@ -337,7 +395,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                                     textAnchor="middle"
                                     className={`text-[10px] font-bold font-mono pointer-events-none transition-colors ${
                                         isSelected
-                                            ? "fill-slate-900 font-bold"
+                                            ? "fill-sky-700 font-bold"
                                             : "fill-[var(--color-text-secondary)] group-hover:fill-slate-900"
                                     }`}
                                 >

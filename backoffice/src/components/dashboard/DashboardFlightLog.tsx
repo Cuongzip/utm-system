@@ -19,6 +19,10 @@ export interface DashboardFlightLogProps {
     isLoading: boolean;
 }
 
+function compactHubCode(raw: string): string {
+    return raw.replace(/^HUB-/i, "");
+}
+
 export function DashboardFlightLog({
     flights = [],
     hubs = [],
@@ -39,15 +43,15 @@ export function DashboardFlightLog({
     }, [flights]);
 
     return (
-        <ChamferCard size="md" className="w-full">
-            <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-3">
+        <ChamferCard size="md" className="w-full lg:h-[312px]">
+            <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono uppercase tracking-wider">
                         Recent Flights
                     </span>
                     {!isLoading && flights.length > 0 && (
-                        <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                            · {recentFlights.length} of {flights.length}
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono font-semibold text-slate-500 tabular-nums">
+                            {flights.length}
                         </span>
                     )}
                 </div>
@@ -60,39 +64,43 @@ export function DashboardFlightLog({
                 </Link>
             </div>
 
-            {isLoading ? (
-                <div className="divide-y divide-[var(--color-border-subtle)]">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="px-4 py-3 flex items-center justify-between gap-3">
-                            <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-3.5 w-28" />
-                                <Skeleton className="h-3 w-36" />
+            <div className="overflow-y-auto overscroll-contain utm-scroll divide-y divide-[var(--color-border-subtle)] flex-1">
+                {isLoading ? (
+                    <div>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div
+                                key={i}
+                                className="px-4 py-2.5 flex items-center justify-between gap-3"
+                            >
+                                <div className="flex items-center gap-2.5 flex-1">
+                                    <Skeleton className="h-3.5 w-28" />
+                                    <Skeleton className="h-4 w-24" />
+                                </div>
+                                <Skeleton className="h-4 w-20" />
                             </div>
-                            <Skeleton className="h-5 w-16" />
-                        </div>
-                    ))}
-                </div>
-            ) : recentFlights.length === 0 ? (
-                <EmptyState compact title="No recent flight entries" />
-            ) : (
-                <div className="divide-y divide-[var(--color-border-subtle)]">
-                    {recentFlights.map((flight, idx) => {
-                        const flightCode = flight.flightNumber || "Unnumbered Flight";
-                        const depLabel = flight.departureHubId
+                        ))}
+                    </div>
+                ) : recentFlights.length === 0 ? (
+                    <EmptyState compact title="No recent flight entries" className="py-8" />
+                ) : (
+                    recentFlights.map((flight, idx) => {
+                        const flightCode = flight.flightNumber || "UNNUMBERED";
+                        const depFull = flight.departureHubId
                             ? hubCodeMap.get(flight.departureHubId)
                             : null;
-                        const arrLabel = flight.arrivalHubId
+                        const arrFull = flight.arrivalHubId
                             ? hubCodeMap.get(flight.arrivalHubId)
                             : null;
-                        const routeLabel =
-                            depLabel && arrLabel ? `${depLabel} → ${arrLabel}` : null;
-                        const timeStr =
-                            formatDateTime(
-                                flight.createdOn ||
-                                    flight.actualDeparture ||
-                                    flight.scheduledDeparture,
-                                "MMM d · HH:mm"
-                            ) || "Unscheduled";
+                        const shortRoute =
+                            depFull && arrFull
+                                ? `${compactHubCode(depFull)} → ${compactHubCode(arrFull)}`
+                                : null;
+                        const fullRoute =
+                            depFull && arrFull ? `${depFull} → ${arrFull}` : undefined;
+                        const rawTimestamp =
+                            flight.createdOn || flight.actualDeparture || flight.scheduledDeparture;
+                        const shortTime = formatDateTime(rawTimestamp, "HH:mm") || "--:--";
+                        const fullTime = formatDateTime(rawTimestamp, "MMM d · HH:mm") || undefined;
                         const status: FlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;
 
                         return (
@@ -103,31 +111,50 @@ export function DashboardFlightLog({
                                         ? `/dashboard/flights/${flight.id}`
                                         : "/dashboard/flights"
                                 }
-                                className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+                                className="px-4 py-[11px] grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_auto] items-center gap-3 hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
                             >
-                                <div className="min-w-0">
-                                    <div className="text-xs font-bold font-mono text-[var(--color-text-primary)] truncate">
-                                        {flightCode}
-                                    </div>
-                                    <div className="text-[11px] font-mono text-[var(--color-text-muted)] truncate">
-                                        {routeLabel ? `${routeLabel} · ${timeStr}` : timeStr}
-                                    </div>
+                                <span className="text-xs font-bold font-mono text-[var(--color-text-primary)] truncate">
+                                    {flightCode}
+                                </span>
+
+                                <div className="hidden sm:flex items-center min-w-0">
+                                    {shortRoute ? (
+                                        <span
+                                            title={fullRoute}
+                                            className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200/80 text-[10px] font-mono font-medium text-slate-600 truncate max-w-full"
+                                        >
+                                            {shortRoute}
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-mono text-slate-400">
+                                            Direct
+                                        </span>
+                                    )}
                                 </div>
 
-                                <StatusBadge
-                                    status={status}
-                                    label={
-                                        status === FLIGHT_STATUS.EMERGENCY_LANDING
-                                            ? "EMERG LAND"
-                                            : undefined
-                                    }
-                                    showDot
-                                />
+                                <div className="flex items-center justify-end gap-3 shrink-0">
+                                    <span
+                                        title={fullTime}
+                                        className="text-[11px] font-mono text-[var(--color-text-muted)] tabular-nums hidden xl:inline"
+                                    >
+                                        {shortTime}
+                                    </span>
+                                    <StatusBadge
+                                        status={status}
+                                        label={
+                                            status === FLIGHT_STATUS.EMERGENCY_LANDING
+                                                ? "EMERG LAND"
+                                                : undefined
+                                        }
+                                        showDot
+                                        className="min-w-[92px] justify-end"
+                                    />
+                                </div>
                             </Link>
                         );
-                    })}
-                </div>
-            )}
+                    })
+                )}
+            </div>
         </ChamferCard>
     );
 }

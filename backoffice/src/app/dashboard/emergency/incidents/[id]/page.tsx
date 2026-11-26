@@ -485,7 +485,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
 
                             {hasCoordinates ? (
                                 <div className="h-[420px] w-full">
-                                    <TacticalMapContainer initialLayerType="satellite">
+                                    <TacticalMapContainer initialLayerType="satellite-hybrid">
                                         <IncidentReplayLayer
                                             incidentLat={incident.latitude}
                                             incidentLng={incident.longitude}

@@ -6,6 +6,7 @@ import type { CesiumContextValue } from "./types";
 export const CesiumContext = createContext<CesiumContextValue>({
     viewer: null,
     isLoaded: false,
+    hasIonToken: false,
 });
 
 export function useCesium(): CesiumContextValue {

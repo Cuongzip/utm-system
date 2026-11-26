@@ -29,14 +29,17 @@ import {
     type ForesightPredictedConflict,
 } from "@/types";
 import { toast } from "sonner";
+import { isValidGeoPoint } from "@/utils";
 
 export interface DashboardTacticalMapProps {
     activeFlights: Flight[];
     hubs: Hub[];
     airspaceZones: AirspaceZone[];
     telemetryMap: Record<string, TelemetryRecord>;
-    activeTelemetryCount: number;
-    isSocketConnected: boolean;
+}
+
+function isRegionalPoint(lat: number, lng: number): boolean {
+    return isValidGeoPoint(lat, lng) && lat >= 8 && lat <= 24 && lng >= 100 && lng <= 112;
 }
 
 function PerspectiveResetHandler({
@@ -65,13 +68,17 @@ function PerspectiveResetHandler({
             ) {
                 return ((route as { coordinates: number[][] }).coordinates ?? [])
                     .filter((pt) => Array.isArray(pt) && pt.length >= 2)
-                    .map((pt) => ({ lng: Number(pt[0]), lat: Number(pt[1]) }));
+                    .map((pt) => ({ lng: Number(pt[0]), lat: Number(pt[1]) }))
+                    .filter((pt) => isRegionalPoint(pt.lat, pt.lng));
             }
             return [];
         });
 
         const hubPoints = hubs.flatMap((h) =>
-            h.location && h.location.latitude !== undefined && h.location.longitude !== undefined
+            h.location &&
+            h.location.latitude !== undefined &&
+            h.location.longitude !== undefined &&
+            isRegionalPoint(h.location.latitude, h.location.longitude)
                 ? [{ lat: h.location.latitude, lng: h.location.longitude }]
                 : []
         );
@@ -96,8 +103,6 @@ export function DashboardTacticalMap({
     hubs = [],
     airspaceZones = [],
     telemetryMap = {},
-    activeTelemetryCount = 0,
-    isSocketConnected = false,
 }: DashboardTacticalMapProps) {
     const [filterTraffic, setFilterTraffic] = useState(true);
     const [filterAirspace, setFilterAirspace] = useState(true);
@@ -167,8 +172,9 @@ export function DashboardTacticalMap({
 
     return (
         <TacticalMapContainer
-            initialLayerType="satellite"
-            className="w-full"
+            initialLayerType="satellite-hybrid"
+            className="w-full h-[520px] sm:h-[580px]"
+            hideBottomHud={foresightOpen}
             header={
                 <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)] z-10">
                     <span className="text-xs font-bold font-mono tracking-wider text-[var(--color-text-primary)] uppercase">
@@ -249,13 +255,13 @@ export function DashboardTacticalMap({
             }
             overlay={
                 <>
-                    <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 p-1 chamfer-sm bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-md text-xs font-mono">
+                    <div className="absolute top-3.5 left-3.5 z-30 pointer-events-auto">
                         <button
                             type="button"
                             onClick={handleReset}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                            className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-sm text-[11px] font-mono font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                         >
-                            <RotateCcw className="w-3.5 h-3.5 text-slate-300" />
+                            <RotateCcw className="w-3.5 h-3.5 text-slate-300" aria-hidden="true" />
                             <span>Reset</span>
                         </button>
                     </div>
@@ -297,28 +303,16 @@ export function DashboardTacticalMap({
                             onClose={handleToggleForesight}
                         />
                     )}
-
-                    <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-2.5 py-1 chamfer-sm bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300 pointer-events-none">
-                        {activeTelemetryCount > 0 ? (
-                            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                <span>
-                                    {activeTelemetryCount} LIVE{" "}
-                                    {isSocketConnected ? "(WS)" : "(POLL)"}
-                                </span>
-                            </span>
-                        ) : isSocketConnected ? (
-                            <span className="text-slate-200 font-medium">● WS READY</span>
-                        ) : (
-                            <span className="text-slate-400 font-medium">○ STANDBY</span>
-                        )}
-                    </div>
                 </>
             }
         >
             {filterTraffic && (
                 <>
-                    <FlightsLayer flights={activeFlights} hubs={activeHubs} />
+                    <FlightsLayer
+                        flights={activeFlights}
+                        hubs={activeHubs}
+                        showRouteLabels="focused"
+                    />
                     <LiveTelemetryLayer
                         flights={activeFlights}
                         telemetryMap={telemetryMap}

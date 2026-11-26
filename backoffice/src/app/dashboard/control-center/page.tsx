@@ -129,7 +129,7 @@ export default function ControlCenterPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 <div className="lg:col-span-8 h-[520px]">
                     <TacticalMapContainer
-                        initialLayerType="satellite"
+                        initialLayerType="satellite-hybrid"
                         className="w-full"
                         header={
                             <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)] z-10">
@@ -185,8 +185,12 @@ export default function ControlCenterPage() {
                         onEntityClick={(entityId) => {
                             const rawId = entityId
                                 .replace(/^drone-live-/, "")
+                                .replace(/^drone-trail-/, "")
+                                .replace(/^drone-tether-/, "")
                                 .replace(/^drone-heading-/, "")
                                 .replace(/^flight-route-/, "")
+                                .replace(/^flight-heading-/, "")
+                                .replace(/^flight-curtain-/, "")
                                 .replace(/^flight-label-/, "");
                             const found = flights.find((f) => f.id === rawId);
                             if (found) {
@@ -199,7 +203,7 @@ export default function ControlCenterPage() {
                             flights={flights}
                             selectedFlightId={selectedFlightId}
                             dimUnselected
-                            showRouteLabels="focused"
+                            showRouteLabels={selectedTelemetry ? "none" : "focused"}
                             hubs={hubs}
                         />
                         <LiveTelemetryLayer

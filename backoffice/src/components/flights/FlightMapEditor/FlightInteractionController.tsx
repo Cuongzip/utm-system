@@ -122,19 +122,18 @@ export function FlightInteractionController({
                     if (isDraggingRef.current && draggedWpIdRef.current) {
                         hasMovedRef.current = true;
                         const ray = viewer.camera.getPickRay(movement.endPosition);
-                        if (ray) {
-                            const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
-                            if (cartesian) {
-                                const carto = Cesium.Cartographic.fromCartesian(cartesian);
-                                const lat = Number(
-                                    Cesium.Math.toDegrees(carto.latitude).toFixed(6)
-                                );
-                                const lng = Number(
-                                    Cesium.Math.toDegrees(carto.longitude).toFixed(6)
-                                );
-                                onMoveWaypointRef.current(draggedWpIdRef.current, lat, lng);
-                                viewer.scene.requestRender();
-                            }
+                        const cartesian =
+                            (ray ? viewer.scene.globe.pick(ray, viewer.scene) : undefined) ??
+                            viewer.camera.pickEllipsoid(
+                                movement.endPosition,
+                                viewer.scene.globe.ellipsoid
+                            );
+                        if (cartesian) {
+                            const carto = Cesium.Cartographic.fromCartesian(cartesian);
+                            const lat = Number(Cesium.Math.toDegrees(carto.latitude).toFixed(6));
+                            const lng = Number(Cesium.Math.toDegrees(carto.longitude).toFixed(6));
+                            onMoveWaypointRef.current(draggedWpIdRef.current, lat, lng);
+                            viewer.scene.requestRender();
                         }
                         return;
                     }
@@ -180,7 +179,7 @@ export function FlightInteractionController({
 
                 const picked = viewer.scene.pick(click.position);
                 if (Cesium.defined(picked) && picked.id && picked.id.id) {
-                    const idStr = String(picked.id.id);
+                    const idStr = String(picked.id.id).replace(/^drop-/, "");
                     if (idStr.startsWith("flight-wp-")) {
                         const rawId = idStr.replace("flight-wp-", "");
                         const found = waypointsRef.current.find(
@@ -191,26 +190,28 @@ export function FlightInteractionController({
                             return;
                         }
                     }
-                    return;
+                    if (idStr === "flight-dep-hub" || idStr === "flight-arr-hub") {
+                        return;
+                    }
                 }
 
                 if (isReadOnlyRef.current) return;
 
                 if (modeRef.current === "add") {
                     const ray = viewer.camera.getPickRay(click.position);
-                    if (ray) {
-                        const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
-                        if (cartesian) {
-                            const carto = Cesium.Cartographic.fromCartesian(cartesian);
-                            const lat = Cesium.Math.toDegrees(carto.latitude);
-                            const lng = Cesium.Math.toDegrees(carto.longitude);
-                            onAddWaypointRef.current(
-                                Number(lat.toFixed(6)),
-                                Number(lng.toFixed(6)),
-                                altRef.current
-                            );
-                            viewer.scene.requestRender();
-                        }
+                    const cartesian =
+                        (ray ? viewer.scene.globe.pick(ray, viewer.scene) : undefined) ??
+                        viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+                    if (cartesian) {
+                        const carto = Cesium.Cartographic.fromCartesian(cartesian);
+                        const lat = Cesium.Math.toDegrees(carto.latitude);
+                        const lng = Cesium.Math.toDegrees(carto.longitude);
+                        onAddWaypointRef.current(
+                            Number(lat.toFixed(6)),
+                            Number(lng.toFixed(6)),
+                            altRef.current
+                        );
+                        viewer.scene.requestRender();
                     }
                 }
             }, Cesium.ScreenSpaceEventType.LEFT_CLICK);

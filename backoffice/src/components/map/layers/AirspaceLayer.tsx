@@ -1,23 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import type { AirspaceZone } from "@/types";
-import { MAP_TOKENS } from "../mapTokens";
+import { getAirspaceZoneColor } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
+import { addCrispBoundaryPolyline, buildClosedRingCartesian } from "../cesiumOutlineUtils";
 
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
     labelMaxDistance?: number;
 }
-
-const TYPE_COLOR_MAP: Record<string, string> = {
-    no_fly_zone: MAP_TOKENS.colors.airspace.no_fly_zone,
-    restricted: MAP_TOKENS.colors.airspace.restricted,
-    hub_corridor: MAP_TOKENS.colors.airspace.hub_corridor,
-    warning: MAP_TOKENS.colors.airspace.warning,
-};
 
 function formatCompactZoneName(zone: AirspaceZone): string {
     const raw = (zone.name || zone.id || "Zone").trim();
@@ -27,6 +21,17 @@ function formatCompactZoneName(zone: AirspaceZone): string {
 export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const [sceneRevision, setSceneRevision] = useState(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -43,6 +48,7 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
             });
             entityIdsRef.current = [];
 
+            const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
             const newEntityIds: string[] = [];
 
             zones.forEach((zone) => {
@@ -72,14 +78,16 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
                 const centerLng = sumLng / validCount;
                 const centerLat = sumLat / validCount;
 
-                const zoneTypeKey = zone.zoneType || "warning";
-                const baseColor = TYPE_COLOR_MAP[zoneTypeKey] || "#64748b";
+                const baseColor = getAirspaceZoneColor(zone.zoneType);
 
                 const floor = zone.altitudeFloor ?? 0;
                 const ceiling =
                     zone.altitudeCeiling !== undefined && zone.altitudeCeiling > floor
                         ? zone.altitudeCeiling
                         : floor + 150;
+
+                const ringHeight = is3D ? ceiling : 2;
+                const topRingPositions = buildClosedRingCartesian(Cesium, degreeArray, ringHeight);
 
                 const entity = viewer.entities.add({
                     id: zone.id,
@@ -90,32 +98,57 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
                         ),
                         material: Cesium.Color.fromAlpha(
                             Cesium.Color.fromCssColorString(baseColor),
-                            0.16
+                            is3D ? 0.18 : 0.16
                         ),
-                        outline: true,
+                        outline: is3D,
                         outlineColor: Cesium.Color.fromAlpha(
                             Cesium.Color.fromCssColorString(baseColor),
-                            0.8
+                            0.55
                         ),
-                        outlineWidth: 1.5,
-                        height: floor,
-                        extrudedHeight: ceiling,
+                        outlineWidth: 1,
+                        height: is3D ? floor : 0,
+                        extrudedHeight: is3D ? ceiling : undefined,
                     },
-                    position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, ceiling + 15),
+                    polyline:
+                        topRingPositions.length >= 2
+                            ? {
+                                  positions: topRingPositions,
+                                  width: 2.2,
+                                  material:
+                                      Cesium.Color.fromCssColorString(baseColor).withAlpha(0.9),
+                                  clampToGround: false,
+                              }
+                            : undefined,
+                    position: Cesium.Cartesian3.fromDegrees(
+                        centerLng,
+                        centerLat,
+                        is3D ? ceiling + 15 : 15
+                    ),
                     label: createTacticalLabel(Cesium, {
                         text: `${formatCompactZoneName(zone)} · ${floor}–${ceiling}m`,
                         isSelected: false,
-                        accentColor: "#f59e0b",
+                        accentColor: baseColor,
                         fontSize: 11,
                         maxDistance: labelMaxDistance,
                     }),
                 });
 
                 newEntityIds.push(entity.id);
+
+                if (is3D && floor > 0) {
+                    const floorRingId = addCrispBoundaryPolyline(Cesium, viewer, {
+                        id: `${zone.id}-floor-ring`,
+                        degreePairs: degreeArray,
+                        heightM: floor,
+                        colorCss: baseColor,
+                        alpha: 0.45,
+                        width: 1.4,
+                    });
+                    if (floorRingId) newEntityIds.push(floorRingId);
+                }
             });
 
             entityIdsRef.current = newEntityIds;
-
             viewer.scene.requestRender();
         }
 
@@ -132,7 +165,7 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, zones, labelMaxDistance]);
+    }, [viewer, isLoaded, zones, labelMaxDistance, sceneRevision]);
 
     return null;
 }

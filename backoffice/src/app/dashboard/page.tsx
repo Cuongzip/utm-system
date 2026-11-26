@@ -138,14 +138,12 @@ export default function DashboardPage() {
                 hubs={hubs}
                 airspaceZones={zones}
                 telemetryMap={telemetryMap}
-                activeTelemetryCount={activeTelemetryCount}
-                isSocketConnected={isSocketConnected}
             />
 
             <div
                 className={
                     showAlertColumn
-                        ? "grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start"
+                        ? "grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-stretch"
                         : "w-full"
                 }
             >

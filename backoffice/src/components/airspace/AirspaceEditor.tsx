@@ -60,6 +60,7 @@ export function AirspaceEditor({
         setRadiusMeters,
         polygonPoints,
         addPolygonPoint,
+        updatePolygonPoint,
         removePolygonPoint,
         undoPolygonPoint,
         clearPolygonPoints,
@@ -214,6 +215,10 @@ export function AirspaceEditor({
                         polygonPoints={polygonPoints}
                         onAddPolygonPoint={(lat, lng) => {
                             addPolygonPoint(lat, lng);
+                            clearFieldError("geometry", "geometry.coordinates");
+                        }}
+                        onUpdatePolygonPoint={(index, lat, lng) => {
+                            updatePolygonPoint(index, lat, lng);
                             clearFieldError("geometry", "geometry.coordinates");
                         }}
                         onUndoPolygonPoint={undoPolygonPoint}

@@ -203,6 +203,7 @@ export function FlightMapEditor({
                     selectedWaypointId={selectedWaypointId}
                     departureHub={departureHub}
                     arrivalHub={arrivalHub}
+                    airspaceZones={activeZones}
                     onWaypointClick={onSelectWaypoint}
                     onPointClick={handleProfilePointClick}
                 />

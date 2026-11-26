@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     useCesium,
     getCesium,
     getHubIconUri,
     getWaypointIconUri,
     createTacticalLabel,
+    addAltitudeDropLine,
+    addRouteCurtainWall,
 } from "@/components/map";
+import { calculateDistance } from "@/utils";
 import type { Hub } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 
@@ -38,6 +41,17 @@ export function FlightRouteRenderer({
 }: FlightRouteRendererProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
+    const [sceneRevision, setSceneRevision] = useState(0);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -56,25 +70,33 @@ export function FlightRouteRenderer({
 
             const newEntityIds: string[] = [];
             const routePositions: import("cesium").Cartesian3[] = [];
+            const routeCoordList: Array<{ lng: number; lat: number; alt: number }> = [];
 
             let depPos: import("cesium").Cartesian3 | null = null;
             if (
                 departureHub?.location?.latitude !== undefined &&
                 departureHub?.location?.longitude !== undefined
             ) {
+                const depAlt = departureHub.altitudeMsl ?? 10;
                 const pos = Cesium.Cartesian3.fromDegrees(
                     departureHub.location.longitude,
                     departureHub.location.latitude,
-                    departureHub.altitudeMsl ?? 10
+                    depAlt
                 );
                 depPos = pos;
                 routePositions.push(pos);
+                routeCoordList.push({
+                    lng: departureHub.location.longitude,
+                    lat: departureHub.location.latitude,
+                    alt: depAlt,
+                });
             }
 
             waypoints.forEach((wp) => {
                 const alt = wp.altitude ?? cruisingAltitude;
                 const pos = Cesium.Cartesian3.fromDegrees(wp.longitude, wp.latitude, alt);
                 routePositions.push(pos);
+                routeCoordList.push({ lng: wp.longitude, lat: wp.latitude, alt });
             });
 
             let arrPos: import("cesium").Cartesian3 | null = null;
@@ -83,27 +105,78 @@ export function FlightRouteRenderer({
                 arrivalHub?.location?.longitude !== undefined &&
                 arrivalHub.id !== departureHub?.id
             ) {
+                const arrAlt = arrivalHub.altitudeMsl ?? 10;
                 const pos = Cesium.Cartesian3.fromDegrees(
                     arrivalHub.location.longitude,
                     arrivalHub.location.latitude,
-                    arrivalHub.altitudeMsl ?? 10
+                    arrAlt
                 );
                 arrPos = pos;
                 routePositions.push(pos);
+                routeCoordList.push({
+                    lng: arrivalHub.location.longitude,
+                    lat: arrivalHub.location.latitude,
+                    alt: arrAlt,
+                });
             }
 
             if (routePositions.length >= 2) {
+                const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+                const routeArcType = is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC;
                 const lineId = "flight-planned-corridor";
                 viewer.entities.add({
                     id: lineId,
                     polyline: {
                         positions: routePositions,
-                        width: 3.0,
-                        material: Cesium.Color.fromCssColorString("#06b6d4"),
+                        arcType: routeArcType,
+                        width: 3.4,
+                        material: new Cesium.PolylineGlowMaterialProperty({
+                            glowPower: 0.18,
+                            color: Cesium.Color.fromCssColorString("#06b6d4"),
+                        }),
                         clampToGround: false,
                     },
                 });
                 newEntityIds.push(lineId);
+
+                for (let i = 0; i < routeCoordList.length - 1; i++) {
+                    const pStart = routeCoordList[i];
+                    const pEnd = routeCoordList[i + 1];
+                    if (calculateDistance(pStart.lat, pStart.lng, pEnd.lat, pEnd.lng) > 140) {
+                        const arrowId = `flight-planned-dir-${i}`;
+                        viewer.entities.add({
+                            id: arrowId,
+                            polyline: {
+                                positions: [
+                                    Cesium.Cartesian3.fromDegrees(
+                                        pStart.lng + (pEnd.lng - pStart.lng) * 0.42,
+                                        pStart.lat + (pEnd.lat - pStart.lat) * 0.42,
+                                        is3D ? pStart.alt + (pEnd.alt - pStart.alt) * 0.42 + 0.5 : 6
+                                    ),
+                                    Cesium.Cartesian3.fromDegrees(
+                                        pStart.lng + (pEnd.lng - pStart.lng) * 0.62,
+                                        pStart.lat + (pEnd.lat - pStart.lat) * 0.62,
+                                        is3D ? pStart.alt + (pEnd.alt - pStart.alt) * 0.62 + 0.5 : 6
+                                    ),
+                                ],
+                                arcType: routeArcType,
+                                width: 10,
+                                material: new Cesium.PolylineArrowMaterialProperty(
+                                    Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.95)
+                                ),
+                            },
+                        });
+                        newEntityIds.push(arrowId);
+                    }
+                }
+
+                const curtainId = addRouteCurtainWall(Cesium, viewer, {
+                    id: "flight-planned-curtain",
+                    points: routeCoordList,
+                    colorCss: "#06b6d4",
+                    alpha: 0.12,
+                });
+                if (curtainId) newEntityIds.push(curtainId);
             }
 
             if (depPos && departureHub) {
@@ -188,6 +261,16 @@ export function FlightRouteRenderer({
                     }),
                 });
                 newEntityIds.push(wpId);
+
+                const dropId = addAltitudeDropLine(Cesium, viewer, {
+                    id: `drop-${wpId}`,
+                    lng: wp.longitude,
+                    lat: wp.latitude,
+                    altitudeM: alt,
+                    colorCss: isSelected ? "#00e5ff" : "#38bdf8",
+                    alpha: isSelected ? 0.65 : 0.42,
+                });
+                if (dropId) newEntityIds.push(dropId);
             });
 
             entityIdsRef.current = newEntityIds;
@@ -203,6 +286,7 @@ export function FlightRouteRenderer({
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 });
+                viewer.scene.requestRender();
             }
             entityIdsRef.current = [];
         };
@@ -214,6 +298,7 @@ export function FlightRouteRenderer({
         waypoints,
         selectedWaypointId,
         cruisingAltitude,
+        sceneRevision,
     ]);
 
     return null;

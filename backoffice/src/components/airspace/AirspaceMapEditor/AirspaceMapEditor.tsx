@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Circle, Pentagon } from "lucide-react";
 import { TacticalMapContainer, MapUndoClear, MapZoneAction, AirspaceLayer } from "@/components/map";
 import { cn } from "@/lib";
-import { formatCoordinates } from "@/utils";
+import { calculatePolygonArea, formatArea, formatCoordinates } from "@/utils";
 import type { AirspaceZone, AirspaceZoneType } from "@/types";
 import type { GeometryMode, GeoPoint } from "../useAirspaceGeometry";
 import { AirspaceCameraController } from "./AirspaceCameraController";
@@ -19,6 +19,7 @@ export interface AirspaceMapEditorProps {
     radiusMeters: number;
     polygonPoints: GeoPoint[];
     onAddPolygonPoint: (lat: number, lng: number) => void;
+    onUpdatePolygonPoint: (index: number, lat: number, lng: number) => void;
     onUndoPolygonPoint: () => void;
     onClearPolygonPoints: () => void;
     zoneType: AirspaceZoneType;
@@ -37,6 +38,7 @@ export function AirspaceMapEditor({
     radiusMeters,
     polygonPoints,
     onAddPolygonPoint,
+    onUpdatePolygonPoint,
     onUndoPolygonPoint,
     onClearPolygonPoints,
     zoneType,
@@ -47,7 +49,15 @@ export function AirspaceMapEditor({
     className,
 }: AirspaceMapEditorProps) {
     const [showContextZones, setShowContextZones] = useState(false);
+    const [hoverPoint, setHoverPoint] = useState<GeoPoint | null>(null);
     const backgroundZones = existingZones.filter((z) => z.id !== currentZoneId);
+
+    const computedAreaSqM = useMemo(() => {
+        if (geometryMode === "radius") {
+            return radiusMeters > 0 ? Math.PI * radiusMeters * radiusMeters : 0;
+        }
+        return calculatePolygonArea(polygonPoints);
+    }, [geometryMode, radiusMeters, polygonPoints]);
 
     return (
         <TacticalMapContainer
@@ -104,8 +114,8 @@ export function AirspaceMapEditor({
                 </div>
             }
             overlay={
-                <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-                    <div className="px-3 py-1.5 bg-slate-900/90 backdrop-blur border border-slate-700/80 text-xs font-mono rounded shadow-lg flex items-center gap-3 text-slate-100">
+                <div className="absolute bottom-3 left-3 z-20 pointer-events-none max-w-[calc(100%-1.5rem)]">
+                    <div className="px-3 py-1.5 bg-slate-900/90 backdrop-blur border border-slate-700/80 text-xs font-mono rounded shadow-lg flex flex-wrap items-center gap-2.5 text-slate-100">
                         {geometryMode === "radius" ? (
                             <>
                                 <span>
@@ -113,15 +123,22 @@ export function AirspaceMapEditor({
                                     <strong className="text-white">
                                         {formatCoordinates(
                                             { latitude: center.lat, longitude: center.lng },
-                                            6
+                                            5
                                         )}
                                     </strong>
                                 </span>
-                                <span className="text-slate-500">|</span>
+                                <span className="text-slate-600">|</span>
                                 <span>
                                     Radius:{" "}
                                     <strong className="text-white font-bold">
                                         {radiusMeters}m
+                                    </strong>
+                                </span>
+                                <span className="text-slate-600">|</span>
+                                <span>
+                                    Area:{" "}
+                                    <strong className="text-cyan-300 font-bold">
+                                        {formatArea(computedAreaSqM)}
                                     </strong>
                                 </span>
                             </>
@@ -130,14 +147,25 @@ export function AirspaceMapEditor({
                                 <span>
                                     Vertices:{" "}
                                     <strong className="text-white">
-                                        {polygonPoints.length} points
+                                        {polygonPoints.length} pts
                                     </strong>
                                     {polygonPoints.length < 3 && (
                                         <span className="text-amber-400 ml-1.5 font-medium">
-                                            (min 3 required)
+                                            (min 3)
                                         </span>
                                     )}
                                 </span>
+                                {computedAreaSqM > 0 && (
+                                    <>
+                                        <span className="text-slate-600">|</span>
+                                        <span>
+                                            Area:{" "}
+                                            <strong className="text-cyan-300 font-bold">
+                                                {formatArea(computedAreaSqM)}
+                                            </strong>
+                                        </span>
+                                    </>
+                                )}
                             </>
                         )}
                     </div>
@@ -155,6 +183,8 @@ export function AirspaceMapEditor({
                 geometryMode={geometryMode}
                 onCenterChange={onCenterChange}
                 onAddPolygonPoint={onAddPolygonPoint}
+                onUpdatePolygonPoint={onUpdatePolygonPoint}
+                onHoverPointChange={setHoverPoint}
             />
 
             <ActiveAirspaceGraphic
@@ -162,6 +192,7 @@ export function AirspaceMapEditor({
                 center={center}
                 radiusMeters={radiusMeters}
                 polygonPoints={polygonPoints}
+                hoverPoint={geometryMode === "polygon" ? hoverPoint : null}
                 zoneType={zoneType}
                 altitudeFloor={altitudeFloor}
                 altitudeCeiling={altitudeCeiling}

@@ -144,6 +144,13 @@ export function useAirspaceGeometry(initialGeometry?: {
             { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) },
         ]);
 
+    const updatePolygonPoint = (index: number, lat: number, lng: number) =>
+        setPolygonPoints((prev) =>
+            prev.map((pt, i) =>
+                i === index ? { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) } : pt
+            )
+        );
+
     const removePolygonPoint = (index: number) =>
         setPolygonPoints((prev) => prev.filter((_, i) => i !== index));
 
@@ -185,6 +192,7 @@ export function useAirspaceGeometry(initialGeometry?: {
         setRadiusMeters,
         polygonPoints,
         addPolygonPoint,
+        updatePolygonPoint,
         removePolygonPoint,
         undoPolygonPoint,
         clearPolygonPoints,

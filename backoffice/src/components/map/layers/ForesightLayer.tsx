@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { Entity } from "cesium";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { getDroneIconUri, getConflictMarkerUri } from "../mapIcons";
@@ -22,42 +23,45 @@ export function ForesightLayer({
     selectedConflictId,
 }: ForesightLayerProps) {
     const { viewer, isLoaded } = useCesium();
-    const entityIdsRef = useRef<string[]>([]);
+    const staticEntityIdsRef = useRef<string[]>([]);
+    const ghostEntitiesRef = useRef<Map<string, Entity>>(new Map());
     const lastPredictionKeyRef = useRef<string | null>(null);
+
+    const activeData = simulatedPrediction ?? prediction;
+    const isSimPreview = Boolean(simulatedPrediction);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
 
         let cancelled = false;
+        const ghostMap = ghostEntitiesRef.current;
 
-        async function renderForesight() {
+        async function renderStaticTracksAndConflicts() {
             const Cesium = await getCesium();
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
-            for (const id of entityIdsRef.current) {
+            for (const id of staticEntityIdsRef.current) {
                 const entity = viewer.entities.getById(id);
                 if (entity) viewer.entities.remove(entity);
             }
-            entityIdsRef.current = [];
+            staticEntityIdsRef.current = [];
 
-            const activeData = simulatedPrediction ?? prediction;
             if (!activeData) {
+                for (const ghost of ghostMap.values()) {
+                    viewer.entities.remove(ghost);
+                }
+                ghostMap.clear();
                 viewer.scene.requestRender();
                 return;
             }
 
-            const nextIds: string[] = [];
+            const nextStaticIds: string[] = [];
             const boundsPoints: { lat: number; lng: number }[] = [];
-            const isSimPreview = Boolean(simulatedPrediction);
 
-            const objectLabelMap = new Map<string, string>();
             const droneObjectIds = new Set<string>();
             for (const obj of activeData.objects ?? []) {
-                if (obj.id) {
-                    objectLabelMap.set(obj.id, obj.label || obj.id.slice(0, 8));
-                    if (obj.kind !== "manned") {
-                        droneObjectIds.add(obj.id);
-                    }
+                if (obj.id && obj.kind !== "manned") {
+                    droneObjectIds.add(obj.id);
                 }
             }
 
@@ -96,41 +100,7 @@ export function ForesightLayer({
                         }),
                     },
                 });
-                nextIds.push(lineId);
-            }
-
-            const safeIdx = Math.min(Math.max(frameIndex, 0), Math.max(frames.length - 1, 0));
-            const currentFrame = frames[safeIdx];
-            if (currentFrame) {
-                const ghostIcon = getDroneIconUri(isSimPreview ? "#10b981" : "#38bdf8", "#ffffff");
-                for (const pt of currentFrame.objects ?? []) {
-                    if (!pt.id || typeof pt.lat !== "number" || typeof pt.lon !== "number") {
-                        continue;
-                    }
-                    const ghostId = `foresight-ghost-${pt.id}`;
-                    const labelText = objectLabelMap.get(pt.id) ?? pt.id.slice(0, 8);
-                    viewer.entities.add({
-                        id: ghostId,
-                        name: `Predicted: ${labelText}`,
-                        position: Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, pt.altitudeM ?? 80),
-                        billboard: {
-                            image: ghostIcon,
-                            width: 26,
-                            height: 26,
-                            eyeOffset: new Cesium.Cartesian3(0, 0, -35),
-                            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        },
-                        label: createTacticalLabel(Cesium, {
-                            text: `${labelText} · T+${currentFrame.tOffsetSec ?? 0}s`,
-                            isSelected: false,
-                            accentColor: isSimPreview ? "#10b981" : "#38bdf8",
-                            pixelOffset: new Cesium.Cartesian2(0, -18),
-                            eyeOffset: new Cesium.Cartesian3(0, 0, -35),
-                            maxDistance: 300000,
-                        }),
-                    });
-                    nextIds.push(ghostId);
-                }
+                nextStaticIds.push(lineId);
             }
 
             const conflictIcon = getConflictMarkerUri();
@@ -138,7 +108,7 @@ export function ForesightLayer({
                 if (typeof c.location?.lat !== "number" || typeof c.location?.lon !== "number") {
                     continue;
                 }
-                const cId = `foresight-conflict-${c.id || nextIds.length}`;
+                const cId = `foresight-conflict-${c.id || nextStaticIds.length}`;
                 const isSelected = Boolean(c.id && selectedConflictId === c.id);
                 viewer.entities.add({
                     id: cId,
@@ -164,11 +134,11 @@ export function ForesightLayer({
                         maxDistance: 300000,
                     }),
                 });
-                nextIds.push(cId);
+                nextStaticIds.push(cId);
                 boundsPoints.push({ lat: c.location.lat, lng: c.location.lon });
             }
 
-            entityIdsRef.current = nextIds;
+            staticEntityIdsRef.current = nextStaticIds;
 
             const predKey = activeData.generatedAt ?? null;
             if (predKey && predKey !== lastPredictionKeyRef.current && boundsPoints.length > 0) {
@@ -183,19 +153,125 @@ export function ForesightLayer({
             viewer.scene.requestRender();
         }
 
-        renderForesight();
+        renderStaticTracksAndConflicts();
 
         return () => {
             cancelled = true;
             if (viewer && !viewer.isDestroyed()) {
-                for (const id of entityIdsRef.current) {
+                for (const id of staticEntityIdsRef.current) {
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 }
+                viewer.scene.requestRender();
             }
-            entityIdsRef.current = [];
+            staticEntityIdsRef.current = [];
         };
-    }, [viewer, isLoaded, prediction, simulatedPrediction, frameIndex, selectedConflictId]);
+    }, [viewer, isLoaded, activeData, isSimPreview, selectedConflictId]);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+
+        let cancelled = false;
+        const ghostMap = ghostEntitiesRef.current;
+
+        async function updateGhostMarkers() {
+            const Cesium = await getCesium();
+            if (!viewer || viewer.isDestroyed() || cancelled) return;
+
+            const frames = activeData?.frames ?? [];
+            if (!activeData || frames.length === 0) {
+                for (const ghost of ghostMap.values()) {
+                    viewer.entities.remove(ghost);
+                }
+                ghostMap.clear();
+                viewer.scene.requestRender();
+                return;
+            }
+
+            const objectLabelMap = new Map<string, string>();
+            for (const obj of activeData.objects ?? []) {
+                if (obj.id) {
+                    objectLabelMap.set(obj.id, obj.label || obj.id.slice(0, 8));
+                }
+            }
+
+            const safeIdx = Math.min(Math.max(frameIndex, 0), frames.length - 1);
+            const currentFrame = frames[safeIdx];
+            const ghostIcon = getDroneIconUri(isSimPreview ? "#10b981" : "#38bdf8", "#ffffff");
+            const seenIds = new Set<string>();
+
+            for (const pt of currentFrame?.objects ?? []) {
+                if (!pt.id || typeof pt.lat !== "number" || typeof pt.lon !== "number") {
+                    continue;
+                }
+                seenIds.add(pt.id);
+                const labelBase = objectLabelMap.get(pt.id) ?? pt.id.slice(0, 8);
+                const labelText = `${labelBase} · T+${currentFrame.tOffsetSec ?? 0}s`;
+                const nextPos = Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, pt.altitudeM ?? 80);
+
+                const existing = ghostMap.get(pt.id);
+                if (existing) {
+                    existing.position = new Cesium.ConstantPositionProperty(nextPos);
+                    if (existing.billboard) {
+                        existing.billboard.image = new Cesium.ConstantProperty(ghostIcon);
+                    }
+                    if (existing.label) {
+                        existing.label.text = new Cesium.ConstantProperty(labelText);
+                    }
+                } else {
+                    const created = viewer.entities.add({
+                        id: `foresight-ghost-${pt.id}`,
+                        name: `Predicted: ${labelBase}`,
+                        position: nextPos,
+                        billboard: {
+                            image: ghostIcon,
+                            width: 26,
+                            height: 26,
+                            eyeOffset: new Cesium.Cartesian3(0, 0, -35),
+                            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                        },
+                        label: createTacticalLabel(Cesium, {
+                            text: labelText,
+                            isSelected: false,
+                            accentColor: isSimPreview ? "#10b981" : "#38bdf8",
+                            pixelOffset: new Cesium.Cartesian2(0, -18),
+                            eyeOffset: new Cesium.Cartesian3(0, 0, -35),
+                            maxDistance: 300000,
+                        }),
+                    });
+                    ghostMap.set(pt.id, created);
+                }
+            }
+
+            for (const [objId, stale] of ghostMap.entries()) {
+                if (!seenIds.has(objId)) {
+                    viewer.entities.remove(stale);
+                    ghostMap.delete(objId);
+                }
+            }
+
+            viewer.scene.requestRender();
+        }
+
+        updateGhostMarkers();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [viewer, isLoaded, activeData, isSimPreview, frameIndex]);
+
+    useEffect(() => {
+        const ghostMap = ghostEntitiesRef.current;
+        return () => {
+            if (viewer && !viewer.isDestroyed()) {
+                for (const ghost of ghostMap.values()) {
+                    viewer.entities.remove(ghost);
+                }
+                viewer.scene.requestRender();
+            }
+            ghostMap.clear();
+        };
+    }, [viewer]);
 
     return null;
 }

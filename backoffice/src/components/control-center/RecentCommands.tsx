@@ -36,7 +36,7 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
                 )}
             </div>
 
-            <div className="overflow-y-auto overscroll-contain divide-y divide-[var(--color-border-subtle)] text-[11px] font-mono flex-1 mr-0.5 my-0.5 max-h-[224px]">
+            <div className="overflow-y-auto overscroll-contain utm-scroll divide-y divide-[var(--color-border-subtle)] text-[11px] font-mono flex-1">
                 {!droneId ? (
                     <EmptyState
                         compact

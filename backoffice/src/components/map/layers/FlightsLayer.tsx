@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { ACTIVE_FLIGHT_STATUSES, DEFAULT_FLIGHT_STATUS, type Flight, type Hub } from "@/types";
 import { MAP_TOKENS } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
+import { addRouteCurtainWall } from "../cesiumOutlineUtils";
+import { calculateDistance, isValidGeoPoint } from "@/utils";
 
 export interface FlightHubCoord {
     lat: number;
@@ -41,12 +43,23 @@ export function FlightsLayer({
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
     const lastFocusedFlightIdRef = useRef<string | null>(null);
+    const [sceneRevision, setSceneRevision] = useState(0);
 
     useEffect(() => {
         if (!selectedFlightId) {
             lastFocusedFlightIdRef.current = null;
         }
     }, [selectedFlightId]);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
@@ -63,6 +76,7 @@ export function FlightsLayer({
             });
             entityIdsRef.current = [];
 
+            const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
             const effectiveHubMap = new Map<string, FlightHubCoord>();
             if (hubs && hubs.length > 0) {
                 hubs.forEach((h) => {
@@ -111,37 +125,47 @@ export function FlightsLayer({
                         ? (parsedRoute as { coordinates?: unknown })
                         : null;
 
+                const dep = flight.departureHubId
+                    ? effectiveHubMap.get(flight.departureHubId)
+                    : null;
+                const arr = flight.arrivalHubId ? effectiveHubMap.get(flight.arrivalHubId) : null;
+
+                if (plannedRoute?.coordinates && Array.isArray(plannedRoute.coordinates)) {
+                    const sanitizedCoords = (plannedRoute.coordinates as number[][])
+                        .filter(
+                            (pt) =>
+                                Array.isArray(pt) &&
+                                pt.length >= 2 &&
+                                isValidGeoPoint(Number(pt[1]), Number(pt[0]))
+                        )
+                        .map((pt) => [...pt]);
+
+                    if (sanitizedCoords.length >= 2) {
+                        coordinates = sanitizedCoords;
+                        if (dep && isValidGeoPoint(dep.lat, dep.lng)) {
+                            coordinates[0] = [dep.lng, dep.lat, coordinates[0][2] ?? 10];
+                        }
+                        if (arr && isValidGeoPoint(arr.lat, arr.lng)) {
+                            coordinates[coordinates.length - 1] = [
+                                arr.lng,
+                                arr.lat,
+                                coordinates[coordinates.length - 1][2] ?? 10,
+                            ];
+                        }
+                    }
+                }
+
                 if (
-                    plannedRoute?.coordinates &&
-                    Array.isArray(plannedRoute.coordinates) &&
-                    plannedRoute.coordinates.length >= 2
+                    coordinates.length < 2 &&
+                    dep &&
+                    arr &&
+                    isValidGeoPoint(dep.lat, dep.lng) &&
+                    isValidGeoPoint(arr.lat, arr.lng)
                 ) {
-                    coordinates = (plannedRoute.coordinates as number[][]).map((pt) => [...pt]);
-                    const dep = flight.departureHubId
-                        ? effectiveHubMap.get(flight.departureHubId)
-                        : null;
-                    const arr = flight.arrivalHubId
-                        ? effectiveHubMap.get(flight.arrivalHubId)
-                        : null;
-                    if (dep && coordinates.length > 0) {
-                        coordinates[0] = [dep.lng, dep.lat, coordinates[0][2] ?? 10];
-                    }
-                    if (arr && coordinates.length > 1) {
-                        coordinates[coordinates.length - 1] = [
-                            arr.lng,
-                            arr.lat,
-                            coordinates[coordinates.length - 1][2] ?? 10,
-                        ];
-                    }
-                } else if (flight.departureHubId && flight.arrivalHubId) {
-                    const dep = effectiveHubMap.get(flight.departureHubId);
-                    const arr = effectiveHubMap.get(flight.arrivalHubId);
-                    if (dep && arr) {
-                        coordinates = [
-                            [dep.lng, dep.lat, 10],
-                            [arr.lng, arr.lat, 10],
-                        ];
-                    }
+                    coordinates = [
+                        [dep.lng, dep.lat, 10],
+                        [arr.lng, arr.lat, 10],
+                    ];
                 }
 
                 if (coordinates.length < 2) continue;
@@ -160,7 +184,7 @@ export function FlightsLayer({
                 const baseRouteColor = STATUS_COLOR_MAP[normalizedStatus] || "#00a3bf";
                 const defaultAlt = flight.cruisingAltitudeM ?? 120;
 
-                const cartesianPositions: import("cesium").Cartesian3[] = [];
+                const parsedPoints: Array<{ lng: number; lat: number; alt: number }> = [];
                 coordinates.forEach((pt) => {
                     if (Array.isArray(pt) && pt.length >= 2) {
                         const lng = Number(pt[0]);
@@ -175,14 +199,32 @@ export function FlightsLayer({
                             lat >= -90 &&
                             lat <= 90
                         ) {
-                            cartesianPositions.push(Cesium.Cartesian3.fromDegrees(lng, lat, alt));
+                            const prev = parsedPoints[parsedPoints.length - 1];
+                            const sameHorizontal =
+                                prev &&
+                                Math.abs(prev.lng - lng) < 1e-6 &&
+                                Math.abs(prev.lat - lat) < 1e-6;
+                            if (!is3D && sameHorizontal) {
+                                prev.alt = Math.max(prev.alt, alt);
+                                return;
+                            }
+                            if (is3D && sameHorizontal && Math.abs(prev.alt - alt) < 0.5) {
+                                return;
+                            }
+                            parsedPoints.push({ lng, lat, alt });
                         }
                     }
                 });
 
+                const cartesianPositions = parsedPoints.map((p) =>
+                    Cesium.Cartesian3.fromDegrees(p.lng, p.lat, is3D ? p.alt : 5)
+                );
+
                 if (cartesianPositions.length < 2) continue;
 
                 const isDimmed = dimUnselected && hasActiveFocus && !isFocused;
+                const activeHex = isFocused ? "#00e5ff" : baseRouteColor;
+                const routeArcType = is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC;
 
                 const routeEntityId = `flight-route-${flight.id}`;
                 viewer.entities.add({
@@ -190,6 +232,7 @@ export function FlightsLayer({
                     name: flight.flightNumber || `Flight ${flight.id.slice(0, 8)}`,
                     polyline: {
                         positions: cartesianPositions,
+                        arcType: routeArcType,
                         width: isSelected
                             ? 4.5
                             : isConflictHighlighted
@@ -205,12 +248,61 @@ export function FlightsLayer({
                               })
                             : Cesium.Color.fromAlpha(
                                   Cesium.Color.fromCssColorString(baseRouteColor),
-                                  isDimmed ? 0.28 : 0.82
+                                  isDimmed ? 0.28 : 0.84
                               ),
                         clampToGround: false,
                     },
                 });
                 newEntityIds.push(routeEntityId);
+
+                if (!isDimmed) {
+                    const horizontalLegs = parsedPoints
+                        .slice(0, -1)
+                        .map((p, idx) => ({ pStart: p, pEnd: parsedPoints[idx + 1] }))
+                        .filter(
+                            ({ pStart, pEnd }) =>
+                                calculateDistance(pStart.lat, pStart.lng, pEnd.lat, pEnd.lng) > 160
+                        );
+                    const chosenLeg = horizontalLegs[Math.floor(horizontalLegs.length / 2)] ?? null;
+                    if (chosenLeg) {
+                        const { pStart, pEnd } = chosenLeg;
+                        const arrowFrom = Cesium.Cartesian3.fromDegrees(
+                            pStart.lng + (pEnd.lng - pStart.lng) * 0.42,
+                            pStart.lat + (pEnd.lat - pStart.lat) * 0.42,
+                            is3D ? pStart.alt + (pEnd.alt - pStart.alt) * 0.42 + 0.5 : 6
+                        );
+                        const arrowTo = Cesium.Cartesian3.fromDegrees(
+                            pStart.lng + (pEnd.lng - pStart.lng) * 0.62,
+                            pStart.lat + (pEnd.lat - pStart.lat) * 0.62,
+                            is3D ? pStart.alt + (pEnd.alt - pStart.alt) * 0.62 + 0.5 : 6
+                        );
+                        const arrowId = `flight-heading-${flight.id}`;
+                        viewer.entities.add({
+                            id: arrowId,
+                            polyline: {
+                                positions: [arrowFrom, arrowTo],
+                                arcType: routeArcType,
+                                width: isFocused ? 11 : 9,
+                                material: new Cesium.PolylineArrowMaterialProperty(
+                                    Cesium.Color.fromCssColorString(activeHex).withAlpha(
+                                        isFocused ? 0.98 : 0.85
+                                    )
+                                ),
+                            },
+                        });
+                        newEntityIds.push(arrowId);
+                    }
+                }
+
+                if (isFocused) {
+                    const curtainId = addRouteCurtainWall(Cesium, viewer, {
+                        id: `flight-curtain-${flight.id}`,
+                        points: parsedPoints,
+                        colorCss: activeHex,
+                        alpha: 0.11,
+                    });
+                    if (curtainId) newEntityIds.push(curtainId);
+                }
 
                 const shouldRenderLabel =
                     showRouteLabels === "all"
@@ -220,10 +312,10 @@ export function FlightsLayer({
                           : false;
 
                 if (shouldRenderLabel) {
-                    const midIdx = Math.floor(cartesianPositions.length / 2);
-                    const midCoord = coordinates[midIdx];
+                    const midIdx = Math.floor(parsedPoints.length / 2);
+                    const midCoord = parsedPoints[midIdx];
                     const midPos = cartesianPositions[midIdx];
-                    const bucketKey = `${Number(midCoord[1]).toFixed(2)}_${Number(midCoord[0]).toFixed(2)}`;
+                    const bucketKey = `${midCoord.lat.toFixed(2)}_${midCoord.lng.toFixed(2)}`;
                     const stackIdx = midpointStackCounter[bucketKey] ?? 0;
                     midpointStackCounter[bucketKey] = stackIdx + 1;
 
@@ -277,6 +369,7 @@ export function FlightsLayer({
                     const entity = viewer.entities.getById(id);
                     if (entity) viewer.entities.remove(entity);
                 });
+                viewer.scene.requestRender();
             }
             entityIdsRef.current = [];
         };
@@ -290,6 +383,7 @@ export function FlightsLayer({
         showRouteLabels,
         hubs,
         activeOnly,
+        sceneRevision,
     ]);
 
     return null;
