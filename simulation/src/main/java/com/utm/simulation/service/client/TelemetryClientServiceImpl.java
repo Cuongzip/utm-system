@@ -2,12 +2,15 @@ package com.utm.simulation.service.client;
 
 import com.utm.commonlibrary.utils.ClientUrlUtils;
 import com.utm.simulation.config.ServiceUrlConfig;
+import com.utm.simulation.viewmodel.client.TelemetryLatestVm;
 import com.utm.simulation.viewmodel.client.TelemetryPushVm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +49,26 @@ public class TelemetryClientServiceImpl implements TelemetryClientService {
             log.trace("Pushed simulation telemetry tick for drone '{}'", telemetry.droneId());
         } catch (Exception ex) {
             log.warn("Failed to push telemetry tick for drone '{}': {}", telemetry.droneId(), ex.getMessage());
+        }
+    }
+
+    @Override
+    public Optional<TelemetryLatestVm> getLatestFlightTelemetry(String flightId) {
+        if (flightId == null || flightId.isBlank()) {
+            return Optional.empty();
+        }
+        String configured = serviceUrlConfig.telemetry() != null ? serviceUrlConfig.telemetry().url() : null;
+        String baseUrl = ClientUrlUtils.normalizeBaseUrl(configured, "http://telemetry:8089", "telemetry");
+        String endpoint = baseUrl + "/api/v1/telemetry/flight/" + flightId.trim() + "/latest";
+        try {
+            TelemetryLatestVm latest = restClient.get()
+                    .uri(endpoint)
+                    .retrieve()
+                    .body(TelemetryLatestVm.class);
+            return Optional.ofNullable(latest);
+        } catch (Exception ex) {
+            log.debug("No existing telemetry found for flight '{}': {}", flightId, ex.getMessage());
+            return Optional.empty();
         }
     }
 }

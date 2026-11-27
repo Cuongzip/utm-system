@@ -600,4 +600,47 @@ class DroneCommandServiceImplTest {
                 assertThat(result).isNotNull();
                 assertThat(refreshedSent.getStatus()).isEqualTo(CommandStatus.CANCELLED);
         }
+
+        @Test
+        @DisplayName("DroneCommandAckConsumer advances command through EXECUTING to COMPLETED with timestamps")
+        void ackConsumer_advancesFromPendingThroughExecutingToCompleted() {
+                var ackConsumer = new com.utm.drone.kafka.DroneCommandAckConsumer(droneCommandRepository);
+                sampleCommand.setStatus(CommandStatus.SENT);
+                when(droneCommandRepository.findById(sampleCommand.getId())).thenReturn(Optional.of(sampleCommand));
+
+                ZonedDateTime execTime = ZonedDateTime.parse("2026-10-10T08:00:02Z");
+                ackConsumer.onCommandAckReceived(sampleCommand.getDroneId(),
+                                new com.utm.commonlibrary.kafka.event.DroneCommandAckEvent(
+                                                sampleCommand.getId(), sampleCommand.getDroneId(),
+                                                sampleCommand.getFlightId(), "RTL", "EXECUTING", 0,
+                                                "Executing 3D RTH trajectory", execTime));
+
+                assertThat(sampleCommand.getStatus()).isEqualTo(CommandStatus.EXECUTING);
+                assertThat(sampleCommand.getAcknowledgedAt()).isEqualTo(execTime);
+                assertThat(sampleCommand.getCompletedAt()).isNull();
+
+                ZonedDateTime doneTime = ZonedDateTime.parse("2026-10-10T08:01:45Z");
+                ackConsumer.onCommandAckReceived(sampleCommand.getDroneId(),
+                                new com.utm.commonlibrary.kafka.event.DroneCommandAckEvent(
+                                                sampleCommand.getId(), sampleCommand.getDroneId(),
+                                                sampleCommand.getFlightId(), "RTL", "COMPLETED", 0,
+                                                "RTH touchdown completed at departure hub", doneTime));
+
+                assertThat(sampleCommand.getStatus()).isEqualTo(CommandStatus.COMPLETED);
+                assertThat(sampleCommand.getCompletedAt()).isEqualTo(doneTime);
+        }
+
+        @Test
+        @DisplayName("markFailedIfUnacknowledged transitions unacked PENDING or SENT command to FAILED")
+        void markFailedIfUnacknowledged_whenStillSent_marksFailedWithReason() {
+                sampleCommand.setStatus(CommandStatus.SENT);
+                when(droneCommandRepository.findById(sampleCommand.getId())).thenReturn(Optional.of(sampleCommand));
+
+                droneCommandService.markFailedIfUnacknowledged(sampleCommand.getId());
+
+                assertThat(sampleCommand.getStatus()).isEqualTo(CommandStatus.FAILED);
+                assertThat(sampleCommand.getCompletedAt()).isNotNull();
+                assertThat(sampleCommand.getErrorMessage()).contains("No active aircraft or simulation runtime");
+                verify(droneCommandRepository).save(sampleCommand);
+        }
 }

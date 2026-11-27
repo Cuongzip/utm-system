@@ -125,4 +125,16 @@ class TelemetryEmergencyDetectorConsumerTest {
         assertThat(captor.getValue().severity()).isEqualTo(EmergencySeverity.CRITICAL);
         assertThat(captor.getValue().droneId()).isEqualTo("drone-6");
     }
+
+    @Test
+    @DisplayName("does not trigger MOTOR_FAILURE during commanded LANDING or EMERGENCY_STOP flight modes")
+    void onTelemetryReceived_commandedLandingDescent_doesNotTriggerMotorFailure() {
+        ZonedDateTime t0 = ZonedDateTime.parse("2026-11-23T10:15:00Z");
+
+        consumer.onTelemetryReceived("drone-7", new TelemetryStreamVm(
+                "drone-7", "flight-7", 10.7769, 106.7009, 45.0, 0.0, 90.0, 85.0, t0,
+                95.0, 0.9, 14, -6.0, "LANDING"));
+
+        verify(emergencyIncidentService, never()).createIncident(any(), any());
+    }
 }

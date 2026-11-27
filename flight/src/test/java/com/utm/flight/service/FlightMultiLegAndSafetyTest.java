@@ -260,4 +260,45 @@ class FlightMultiLegAndSafetyTest {
                 .satisfies(ex -> assertThat(((BadRequestException) ex).getErrorCode())
                         .isEqualTo(MessageCode.TRAJECTORY_CONFLICT_DETECTED));
     }
+
+    @Test
+    @DisplayName("returnToHome updates plannedRoute to 3D RTH corridor and completeFlight with departureHubId publishes actualLandingHubId")
+    void returnToHomeAndCompleteAtDepartureHub_updatesCorridorAndLandingHub() {
+        Flight activeFlight = Flight.builder()
+                .id("flt-rth-1")
+                .flightNumber("FLT-RTH-1")
+                .droneId("drone-rth-1")
+                .departureHubId("hub-dep-alpha")
+                .arrivalHubId("hub-arr-bravo")
+                .cruisingAltitudeM(65.0)
+                .status(FlightStatus.ACTIVE)
+                .plannedRoute(GeoJsonLineString.of(List.of(
+                        List.of(106.7000, 10.7700, 65.0),
+                        List.of(106.7150, 10.7900, 65.0),
+                        List.of(106.7300, 10.7700, 65.0))))
+                .build();
+
+        when(flightRepository.findById("flt-rth-1")).thenReturn(Optional.of(activeFlight));
+        when(telemetryClientService.getLatestFlightTelemetry("flt-rth-1")).thenReturn(Optional.of(
+                new TelemetryBriefVm(10.7900, 106.7150, 65.0, 15.0, 90.0, 82.0, ZonedDateTime.now())));
+        when(hubClientService.getHubById("hub-dep-alpha")).thenReturn(Optional.of(
+                new com.utm.flight.viewmodel.client.HubBriefVm("hub-dep-alpha", "H-ALPHA", "Alpha Hub",
+                        new com.utm.flight.viewmodel.flight.LocationVm(10.7700, 106.7000), 10.0)));
+        when(flightRepository.saveAndFlush(activeFlight)).thenReturn(activeFlight);
+        when(flightMapper.toVm(activeFlight)).thenReturn(mock(FlightVm.class));
+
+        flightService.returnToHome("flt-rth-1", "Operator C2 RTH command");
+
+        assertThat(activeFlight.getStatus()).isEqualTo(FlightStatus.DIVERTED);
+        assertThat(activeFlight.getPlannedRoute().coordinates()).containsExactly(
+                List.of(106.7150, 10.7900, 65.0),
+                List.of(106.7000, 10.7700, 65.0),
+                List.of(106.7000, 10.7700, 0.0));
+
+        flightService.completeFlight("flt-rth-1", "hub-dep-alpha");
+
+        assertThat(activeFlight.getStatus()).isEqualTo(FlightStatus.COMPLETED);
+        verify(flightEventPublisher).publish(eq(FlightLifecycleEvent.FLIGHT_COMPLETED), eq(activeFlight),
+                eq("hub-dep-alpha"), eq(null), eq(null));
+    }
 }

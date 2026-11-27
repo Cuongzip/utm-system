@@ -583,7 +583,13 @@ public class FlightServiceImpl implements FlightService {
         // Gate 3: Live drone availability, hub location, and real current battery sufficiency
         if (droneOpt.isPresent()) {
             DroneBriefVm drone = droneOpt.get();
-            if (drone.status() != null && ("in_flight".equalsIgnoreCase(drone.status())
+            boolean blockedByOtherFlight = "in_flight".equalsIgnoreCase(drone.status())
+                    && flightRepository.findByDroneId(flight.getDroneId()).stream()
+                            .anyMatch(other -> other != null
+                                    && !Objects.equals(other.getId(), flight.getId())
+                                    && (other.getStatus() == FlightStatus.ACTIVE
+                                            || other.getStatus() == FlightStatus.DIVERTED));
+            if (drone.status() != null && (blockedByOtherFlight
                     || "charging".equalsIgnoreCase(drone.status())
                     || "maintenance".equalsIgnoreCase(drone.status())
                     || "offline".equalsIgnoreCase(drone.status())
@@ -626,6 +632,11 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     public FlightVm completeFlight(String id) {
+        return completeFlight(id, null);
+    }
+
+    @Override
+    public FlightVm completeFlight(String id, String landingHubId) {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
@@ -633,6 +644,7 @@ public class FlightServiceImpl implements FlightService {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE, "Only active flights can be completed");
         }
 
+        String trimmedLandingHub = (landingHubId != null && !landingHubId.isBlank()) ? landingHubId.trim() : null;
         TelemetryCompletionSnapshot snapshot = fetchTelemetryCompletionSnapshot(flight);
         Flight savedFlight = runFlightMutation(id, flight, target -> {
             if (target.getStatus() != FlightStatus.ACTIVE && target.getStatus() != FlightStatus.DIVERTED) {
@@ -641,13 +653,21 @@ public class FlightServiceImpl implements FlightService {
             applyTelemetrySnapshot(target, snapshot);
             target.setStatus(FlightStatus.COMPLETED);
             target.setActualArrival(ZonedDateTime.now());
+            if (trimmedLandingHub != null && Objects.equals(trimmedLandingHub, target.getDepartureHubId())
+                    && !Objects.equals(trimmedLandingHub, target.getArrivalHubId())) {
+                String updatedNotes = (target.getNotes() != null ? target.getNotes() + "\n" : "")
+                        + "Completed return-to-home landing at departure hub";
+                target.setNotes(updatedNotes);
+            }
             return flightRepository.saveAndFlush(target);
         });
-        publishEvent(FlightLifecycleEvent.FLIGHT_COMPLETED, savedFlight, savedFlight.getArrivalHubId(), null, null);
+        String effectiveLandingHub = trimmedLandingHub != null ? trimmedLandingHub : savedFlight.getArrivalHubId();
+        publishEvent(FlightLifecycleEvent.FLIGHT_COMPLETED, savedFlight, effectiveLandingHub, null, null);
         if (conflictClientService != null) {
-            conflictClientService.resolveConformanceConflicts(id, "Flight completed at arrival hub");
+            conflictClientService.resolveConformanceConflicts(id, "Flight completed at hub " + effectiveLandingHub);
         }
-        log.info("Flight ID: {} completed successfully (endingBatteryPct={})", id, savedFlight.getEndingBatteryPct());
+        log.info("Flight ID: {} completed successfully at hub={} (endingBatteryPct={})",
+                id, effectiveLandingHub, savedFlight.getEndingBatteryPct());
         return flightMapper.toVm(savedFlight);
     }
 
@@ -709,9 +729,9 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
 
-        if (flight.getStatus() != FlightStatus.ACTIVE) {
+        if (flight.getStatus() != FlightStatus.ACTIVE && flight.getStatus() != FlightStatus.DIVERTED) {
             throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
-                    "Only active flights can be diverted");
+                    "Only active or diverted flights can be diverted");
         }
 
         String trimmedHubId = (targetHubId != null && !targetHubId.isBlank()) ? targetHubId.trim() : null;
@@ -726,9 +746,9 @@ public class FlightServiceImpl implements FlightService {
         Optional<HubBriefVm> resolvedDivertHub = divertHubOpt;
 
         Flight savedFlight = runFlightMutation(id, flight, target -> {
-            if (target.getStatus() != FlightStatus.ACTIVE) {
+            if (target.getStatus() != FlightStatus.ACTIVE && target.getStatus() != FlightStatus.DIVERTED) {
                 throw new BadRequestException(MessageCode.INVALID_FLIGHT_STATE,
-                        "Only active flights can be diverted");
+                        "Only active or diverted flights can be diverted");
             }
             if (trimmedHubId != null) {
                 target.setArrivalHubId(trimmedHubId);
@@ -753,6 +773,7 @@ public class FlightServiceImpl implements FlightService {
                 });
             }
             target.setStatus(FlightStatus.DIVERTED);
+            target.setConformanceStatus(ConformanceStatus.CONFORMANT);
             if (reason != null && !reason.isBlank()) {
                 String updatedNotes = (target.getNotes() != null ? target.getNotes() + "\n" : "")
                         + "Diverted: " + reason.trim();
@@ -761,7 +782,144 @@ public class FlightServiceImpl implements FlightService {
             return flightRepository.saveAndFlush(target);
         });
         publishEvent(FlightLifecycleEvent.FLIGHT_DIVERTED, savedFlight, savedFlight.getArrivalHubId(), null, reason);
+        if (conflictClientService != null) {
+            conflictClientService.resolveConformanceConflicts(id, "Flight diverted along updated corridor");
+        }
         log.warn("Flight ID: {} diverted to hub {}", id, savedFlight.getArrivalHubId());
+        return flightMapper.toVm(savedFlight);
+    }
+
+    @Override
+    public FlightVm returnToHome(String id, String reason) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
+
+        if (flight.getStatus() != FlightStatus.ACTIVE && flight.getStatus() != FlightStatus.DIVERTED) {
+            return flightMapper.toVm(flight);
+        }
+
+        Optional<TelemetryBriefVm> latestTel = telemetryClientService != null
+                ? telemetryClientService.getLatestFlightTelemetry(id)
+                : Optional.empty();
+        Optional<HubBriefVm> depHubOpt = Optional.empty();
+        if (flight.getDepartureHubId() != null && !flight.getDepartureHubId().isBlank() && hubClientService != null) {
+            try {
+                depHubOpt = hubClientService.getHubById(flight.getDepartureHubId().trim());
+            } catch (Exception ex) {
+                log.debug("Could not fetch departure hub {} for RTH corridor: {}", flight.getDepartureHubId(), ex.getMessage());
+            }
+        }
+        Optional<HubBriefVm> resolvedDepHub = depHubOpt;
+
+        Flight savedFlight = runFlightMutation(id, flight, target -> {
+            if (target.getStatus() != FlightStatus.ACTIVE && target.getStatus() != FlightStatus.DIVERTED) {
+                return target;
+            }
+            List<List<Double>> existingCoords = parseRouteCoordinates(target.getPlannedRoute());
+            double baseCruiseAlt = target.getCruisingAltitudeM() != null && target.getCruisingAltitudeM() > 0
+                    ? target.getCruisingAltitudeM()
+                    : DEFAULT_CRUISING_ALT_AGL;
+
+            Double depLat = null;
+            Double depLon = null;
+            if (resolvedDepHub.isPresent() && hasValidCoordinates(resolvedDepHub.get())) {
+                depLat = resolvedDepHub.get().location().lat();
+                depLon = resolvedDepHub.get().location().lng();
+            } else if (!existingCoords.isEmpty() && existingCoords.getFirst().size() >= 2) {
+                depLon = existingCoords.getFirst().get(0);
+                depLat = existingCoords.getFirst().get(1);
+            }
+
+            Double curLat = latestTel.map(TelemetryBriefVm::latitude).orElse(depLat);
+            Double curLon = latestTel.map(TelemetryBriefVm::longitude).orElse(depLon);
+            double curAlt = latestTel.map(TelemetryBriefVm::altitude).filter(a -> a > 0.0).orElse(baseCruiseAlt);
+            double safeRtlAlt = Math.max(curAlt, Math.max(baseCruiseAlt, 40.0));
+
+            if (depLat != null && depLon != null && curLat != null && curLon != null) {
+                List<List<Double>> rthCoords = new ArrayList<>();
+                rthCoords.add(List.of(curLon, curLat, safeRtlAlt));
+                rthCoords.add(List.of(depLon, depLat, safeRtlAlt));
+                rthCoords.add(List.of(depLon, depLat, 0.0));
+                target.setPlannedRoute(GeoJsonLineString.of(rthCoords));
+            }
+            target.setStatus(FlightStatus.DIVERTED);
+            target.setConformanceStatus(ConformanceStatus.CONFORMANT);
+            if (reason != null && !reason.isBlank()) {
+                String updatedNotes = (target.getNotes() != null ? target.getNotes() + "\n" : "")
+                        + "RTH initiated: " + reason.trim();
+                target.setNotes(updatedNotes);
+            }
+            return flightRepository.saveAndFlush(target);
+        });
+        publishEvent(FlightLifecycleEvent.FLIGHT_DIVERTED, savedFlight, savedFlight.getDepartureHubId(), null,
+                reason != null ? reason : "Return-to-home command initiated");
+        if (conflictClientService != null) {
+            conflictClientService.resolveConformanceConflicts(id, "Flight executing authorized RTH corridor to departure hub");
+        }
+        log.info("Flight ID: {} transitioned to RTH corridor toward departure hub {}", id, savedFlight.getDepartureHubId());
+        return flightMapper.toVm(savedFlight);
+    }
+
+    @Override
+    public FlightVm resumePlannedRoute(String id) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
+
+        if (flight.getStatus() != FlightStatus.DIVERTED) {
+            return flightMapper.toVm(flight);
+        }
+
+        Optional<TelemetryBriefVm> latestTel = telemetryClientService != null
+                ? telemetryClientService.getLatestFlightTelemetry(id)
+                : Optional.empty();
+        Optional<HubBriefVm> arrHubOpt = Optional.empty();
+        if (flight.getArrivalHubId() != null && !flight.getArrivalHubId().isBlank() && hubClientService != null) {
+            try {
+                arrHubOpt = hubClientService.getHubById(flight.getArrivalHubId().trim());
+            } catch (Exception ex) {
+                log.debug("Could not fetch arrival hub {} on RESUME: {}", flight.getArrivalHubId(), ex.getMessage());
+            }
+        }
+        Optional<HubBriefVm> resolvedArrHub = arrHubOpt;
+
+        Flight savedFlight = runFlightMutation(id, flight, target -> {
+            if (target.getStatus() != FlightStatus.DIVERTED) {
+                return target;
+            }
+            double cruiseAlt = target.getCruisingAltitudeM() != null && target.getCruisingAltitudeM() > 0
+                    ? target.getCruisingAltitudeM()
+                    : DEFAULT_CRUISING_ALT_AGL;
+            List<List<Double>> resumedCoords = new ArrayList<>();
+            latestTel.ifPresent(tel -> {
+                if (tel.latitude() != null && tel.longitude() != null) {
+                    resumedCoords.add(List.of(tel.longitude(), tel.latitude(),
+                            tel.altitude() != null && tel.altitude() > 0 ? tel.altitude() : cruiseAlt));
+                }
+            });
+            if (target.getWaypoints() != null) {
+                for (var wp : target.getWaypoints()) {
+                    if (wp != null && wp.latitude() != null && wp.longitude() != null) {
+                        resumedCoords.add(List.of(wp.longitude(), wp.latitude(),
+                                wp.altitude() != null && wp.altitude() > 0 ? wp.altitude() : cruiseAlt));
+                    }
+                }
+            }
+            resolvedArrHub.ifPresent(arrHub -> {
+                if (hasValidCoordinates(arrHub)) {
+                    resumedCoords.add(List.of(arrHub.location().lng(), arrHub.location().lat(), cruiseAlt));
+                }
+            });
+            if (resumedCoords.size() >= 2) {
+                target.setPlannedRoute(GeoJsonLineString.of(resumedCoords));
+            }
+            target.setStatus(FlightStatus.ACTIVE);
+            target.setConformanceStatus(ConformanceStatus.CONFORMANT);
+            return flightRepository.saveAndFlush(target);
+        });
+        if (conflictClientService != null) {
+            conflictClientService.resolveConformanceConflicts(id, "Flight resumed planned corridor");
+        }
+        log.info("Flight ID: {} resumed ACTIVE planned trajectory", id);
         return flightMapper.toVm(savedFlight);
     }
 

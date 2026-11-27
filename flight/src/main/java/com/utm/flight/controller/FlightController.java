@@ -239,9 +239,11 @@ public class FlightController {
     })
     public ResponseEntity<FlightVm> completeFlight(
             @Parameter(description = "Unique UUID identifier of the flight", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable String id
+            @PathVariable String id,
+            @Parameter(description = "Optional actual landing Hub ID (e.g. departure hub after RTH)")
+            @RequestParam(required = false) String landingHubId
     ) {
-        return ResponseEntity.ok(flightService.completeFlight(id));
+        return ResponseEntity.ok(flightService.completeFlight(id, landingHubId));
     }
 
     @PostMapping("/{id}/abort")

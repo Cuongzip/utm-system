@@ -140,22 +140,66 @@ public class FlightClientServiceImpl implements FlightClientService {
 
     @Override
     public boolean completeFlight(String flightId, String bearerToken) {
+        return completeFlight(flightId, null, bearerToken);
+    }
+
+    @Override
+    public boolean completeFlight(String flightId, String landingHubId, String bearerToken) {
         if (flightId == null || flightId.isBlank() || !isFlightUrlConfigured()) {
             return false;
         }
         String endpoint = buildBaseUrl() + "/api/v1/flights/" + flightId.trim() + "/complete";
+        if (landingHubId != null && !landingHubId.isBlank()) {
+            endpoint = endpoint + "?landingHubId=" + java.net.URLEncoder.encode(landingHubId.trim(), java.nio.charset.StandardCharsets.UTF_8);
+        }
         try {
             var req = restClient.post().uri(endpoint);
             if (bearerToken != null && !bearerToken.isBlank()) {
                 req.header("Authorization", "Bearer " + bearerToken.replace("Bearer ", "").trim());
             }
             req.retrieve().toBodilessEntity();
-            log.info("Synchronized flight '{}' -> COMPLETED from simulation finish", flightId);
+            log.info("Synchronized flight '{}' -> COMPLETED (landingHub={}) from simulation finish",
+                    flightId, landingHubId != null ? landingHubId : "arrival");
             return true;
         } catch (Exception ex) {
             log.warn("Could not complete flight '{}' from simulation: {}", flightId, ex.getMessage());
             return false;
         }
+    }
+
+    @Override
+    public FlightDetailVm findControllableFlightByDroneId(String droneId) {
+        if (droneId == null || droneId.isBlank() || !isFlightUrlConfigured() || objectMapper == null) {
+            return null;
+        }
+        String endpoint = buildBaseUrl() + "/api/v1/flights?droneId="
+                + java.net.URLEncoder.encode(droneId.trim(), java.nio.charset.StandardCharsets.UTF_8)
+                + "&limit=10";
+        try {
+            String rawJson = restClient.get().uri(endpoint).retrieve().body(String.class);
+            if (rawJson == null || rawJson.isBlank()) {
+                return null;
+            }
+            JsonNode root = objectMapper.readTree(rawJson);
+            JsonNode items = root.get("items");
+            if (items == null || !items.isArray()) {
+                return null;
+            }
+            for (String preferredStatus : List.of("active", "diverted", "authorized")) {
+                for (JsonNode node : items) {
+                    JsonNode statusNode = node.get("status");
+                    if (statusNode != null && preferredStatus.equalsIgnoreCase(statusNode.asText())) {
+                        JsonNode idNode = node.get("id");
+                        if (idNode != null && !idNode.asText().isBlank()) {
+                            return getFlightDetail(idNode.asText());
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.debug("Could not look up controllable flight for drone '{}': {}", droneId, ex.getMessage());
+        }
+        return null;
     }
 
     @Override

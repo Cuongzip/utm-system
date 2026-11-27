@@ -23,6 +23,14 @@ public interface FlightClientService {
         return completeFlight(flightId);
     }
 
+    default boolean completeFlight(String flightId, String landingHubId, String bearerToken) {
+        return completeFlight(flightId, bearerToken);
+    }
+
+    default FlightDetailVm findControllableFlightByDroneId(String droneId) {
+        return null;
+    }
+
     default boolean abortFlight(String flightId, String reason) {
         return false;
     }

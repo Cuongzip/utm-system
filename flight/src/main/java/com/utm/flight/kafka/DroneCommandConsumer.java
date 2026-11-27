@@ -55,19 +55,35 @@ public class DroneCommandConsumer extends BaseCdcConsumer<String, DroneCommandEv
         }
         String cmdType = event.commandType().trim().toUpperCase(Locale.ROOT);
         Flight flight = flightRepository.findById(event.flightId()).orElse(null);
-        if (flight == null || flight.getStatus() != FlightStatus.ACTIVE) {
+        if (flight == null) {
             return;
         }
 
         try {
-            if ("GOTO".equals(cmdType) && event.parameters() != null && !event.parameters().isBlank()) {
+            if ("TAKEOFF".equals(cmdType) && flight.getStatus() == FlightStatus.AUTHORIZED) {
+                flightService.startFlight(flight.getId());
+                log.info("Started authorized flight {} on C2 TAKEOFF command", flight.getId());
+                return;
+            }
+            if (flight.getStatus() != FlightStatus.ACTIVE && flight.getStatus() != FlightStatus.DIVERTED) {
+                return;
+            }
+            if ("RTL".equals(cmdType)) {
+                flightService.returnToHome(flight.getId(), "C2 RTH command issued for drone " + event.droneId());
+                log.info("Updated flight {} corridor to RTH toward departure hub", flight.getId());
+            } else if ("RESUME".equals(cmdType) && flight.getStatus() == FlightStatus.DIVERTED) {
+                flightService.resumePlannedRoute(flight.getId());
+                log.info("Resumed active flight corridor for flight {}", flight.getId());
+            } else if ("GOTO".equals(cmdType) && event.parameters() != null && !event.parameters().isBlank()) {
                 JsonNode params = objectMapper.readTree(event.parameters());
                 String targetHubId = params.hasNonNull("targetHubId") ? params.get("targetHubId").asText() : null;
                 String incidentId = params.hasNonNull("incidentId") ? params.get("incidentId").asText() : null;
-                if (targetHubId != null && !targetHubId.isBlank() && incidentId != null && !incidentId.isBlank()) {
-                    flightService.divertFlight(flight.getId(), targetHubId,
-                            "Emergency divert command for incident " + incidentId);
-                    log.info("Diverted active flight {} to hub {} due to C2 GOTO command",
+                if (targetHubId != null && !targetHubId.isBlank()) {
+                    String divertReason = (incidentId != null && !incidentId.isBlank())
+                            ? "Emergency divert command for incident " + incidentId
+                            : "Operator GOTO hub diversion command";
+                    flightService.divertFlight(flight.getId(), targetHubId, divertReason);
+                    log.info("Diverted flight {} to hub {} due to C2 GOTO command",
                             flight.getId(), targetHubId);
                 }
             } else if ("EMERGENCY_STOP".equals(cmdType)) {

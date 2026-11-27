@@ -59,13 +59,19 @@ public class DroneCommandAckConsumer extends BaseCdcConsumer<String, DroneComman
             }
             cmd.setStatus(nextStatus);
             ZonedDateTime ts = ack.timestamp() != null ? ack.timestamp() : ZonedDateTime.now();
-            if (nextStatus == CommandStatus.ACKNOWLEDGED && cmd.getAcknowledgedAt() == null) {
+            if ((nextStatus == CommandStatus.ACKNOWLEDGED
+                    || nextStatus == CommandStatus.EXECUTING
+                    || nextStatus == CommandStatus.COMPLETED)
+                    && cmd.getAcknowledgedAt() == null) {
                 cmd.setAcknowledgedAt(ts);
-            } else if (nextStatus == CommandStatus.COMPLETED) {
+            }
+            if (nextStatus == CommandStatus.COMPLETED) {
                 cmd.setCompletedAt(ts);
-            } else if (nextStatus == CommandStatus.FAILED) {
+            } else if (nextStatus == CommandStatus.FAILED || nextStatus == CommandStatus.CANCELLED) {
                 cmd.setCompletedAt(ts);
-                cmd.setErrorMessage(ack.message());
+                if (ack.message() != null && !ack.message().isBlank()) {
+                    cmd.setErrorMessage(ack.message());
+                }
             }
             if (ack.retryCount() != null) {
                 cmd.setRetryCount(ack.retryCount());

@@ -150,7 +150,15 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
     @Override
     @Scheduled(fixedDelay = 5000)
     public void checkActiveFlightsConformance() {
-        List<Flight> activeFlights = flightRepository.findByStatus(FlightStatus.ACTIVE);
+        List<Flight> activeFlights = new ArrayList<>();
+        List<Flight> primaryActive = flightRepository.findByStatus(FlightStatus.ACTIVE);
+        if (primaryActive != null) {
+            activeFlights.addAll(primaryActive);
+        }
+        List<Flight> divertedActive = flightRepository.findByStatus(FlightStatus.DIVERTED);
+        if (divertedActive != null) {
+            activeFlights.addAll(divertedActive);
+        }
         if (activeFlights.isEmpty()) {
             reportedEmergencyTypes.clear();
             lastReachedWaypointIndex.clear();
@@ -168,7 +176,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         lastReachedWaypointIndex.keySet().retainAll(activeIds);
         lastKnownBatteryPct.keySet().retainAll(activeIds);
 
-        log.debug("Running 4D conformance watchdog for {} active flight(s)", activeFlights.size());
+        log.debug("Running 4D conformance watchdog for {} active/diverted flight(s)", activeFlights.size());
         for (Flight flight : activeFlights) {
             try {
                 Optional<TelemetryBriefVm> telemetryOpt = telemetryClientService.getLatestFlightTelemetry(flight.getId());
@@ -176,7 +184,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
                 if (transactionTemplate != null) {
                     outcome = transactionTemplate.execute(status -> flightRepository.findByIdForUpdate(flight.getId())
                             .or(() -> flightRepository.findById(flight.getId()))
-                            .filter(managed -> managed.getStatus() == FlightStatus.ACTIVE)
+                            .filter(managed -> managed.getStatus() == FlightStatus.ACTIVE
+                                    || managed.getStatus() == FlightStatus.DIVERTED)
                             .map(managed -> evaluateAndPersist(managed, telemetryOpt))
                             .orElse(null));
                 } else {
@@ -243,7 +252,14 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices, null);
         }
 
-        if (prevAlt != null && prevTime != null && telemetry.altitude() != null) {
+        String modeUpper = telemetry.flightMode() != null ? telemetry.flightMode().trim().toUpperCase() : "";
+        boolean isCommandedVerticalPhase = "LANDING".equals(modeUpper)
+                || "TAKEOFF".equals(modeUpper)
+                || "RTL".equals(modeUpper)
+                || "EMERGENCY_STOP".equals(modeUpper)
+                || "LANDED".equals(modeUpper);
+
+        if (!isCommandedVerticalPhase && prevAlt != null && prevTime != null && telemetry.altitude() != null) {
             long dtMs = Duration.between(prevTime, telemetry.getEffectiveTimestamp()).toMillis();
             if (dtMs >= 500 && dtMs <= 10000) {
                 double dtSec = dtMs / 1000.0;
@@ -318,7 +334,8 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
         List<String> violations = new ArrayList<>();
         boolean isLateralBreached = result.crossTrackDistanceM() > conformance.getCorridorRadiusM();
-        boolean isVerticalBreached = result.verticalErrorM() > conformance.getAltitudeBufferM();
+        boolean isVerticalBreached = !isCommandedVerticalPhase
+                && result.verticalErrorM() > conformance.getAltitudeBufferM();
 
         if (isLateralBreached) {
             violations.add(String.format("Cross-track deviation %.1fm exceeds corridor radius %.1fm",
@@ -567,7 +584,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
     private void handleMissingTelemetry(Flight flight, FlightConformance conformance, ZonedDateTime now,
             List<ConflictNotice> conflictNotices, List<EmergencyNotice> emergencyNotices) {
-        if (flight.getStatus() == FlightStatus.ACTIVE) {
+        if (flight.getStatus() == FlightStatus.ACTIVE || flight.getStatus() == FlightStatus.DIVERTED) {
             ZonedDateTime referenceTime = conformance.getLastTelemetryTime() != null
                     ? conformance.getLastTelemetryTime()
                     : (flight.getActualDeparture() != null ? flight.getActualDeparture() : now);

@@ -30,8 +30,25 @@ public record TelemetryBriefVm(
 
         @Schema(description = "Telemetry timestamp")
         @JsonAlias({"timestamp", "createdOn"})
-        ZonedDateTime timestamp
+        ZonedDateTime timestamp,
+
+        @Schema(description = "Autopilot flight mode", example = "AUTONOMOUS")
+        String flightMode,
+
+        @Schema(description = "Vertical climb/descent speed in m/s", example = "-3.5")
+        Double verticalSpeed
 ) {
+    public TelemetryBriefVm(
+            Double latitude,
+            Double longitude,
+            Double altitude,
+            Double speed,
+            Double heading,
+            Double batteryPercentage,
+            ZonedDateTime timestamp) {
+        this(latitude, longitude, altitude, speed, heading, batteryPercentage, timestamp, null, null);
+    }
+
     public ZonedDateTime getEffectiveTimestamp() {
         return timestamp != null ? timestamp : ZonedDateTime.now();
     }

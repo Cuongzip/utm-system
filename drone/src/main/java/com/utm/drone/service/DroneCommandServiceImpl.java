@@ -44,11 +44,14 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class DroneCommandServiceImpl implements DroneCommandService {
 
+    private static final long DEFAULT_UNACKED_COMMAND_TIMEOUT_MS = 15_000L;
+
     private final DroneRepository droneRepository;
     private final DroneCommandRepository droneCommandRepository;
     private final DroneCommandMapper droneCommandMapper;
     private final DroneCommandEventPublisher commandEventPublisher;
     private final TransactionTemplate transactionTemplate;
+    private volatile long unackedCommandTimeoutMs = DEFAULT_UNACKED_COMMAND_TIMEOUT_MS;
     private final ScheduledExecutorService commandScheduler = Executors.newScheduledThreadPool(2,
             Thread.ofVirtual().name("drone-cmd-sim-", 0).factory());
 
@@ -148,56 +151,93 @@ public class DroneCommandServiceImpl implements DroneCommandService {
             commandEventPublisher.publishAfterCommit(saved);
         }
 
-        scheduleSimulationAfterCommit(saved.getId(), saved.getCommandType());
+        scheduleLifecycleAfterCommit(saved.getId(), saved.getCommandType());
 
         return droneCommandMapper.toVm(saved);
     }
 
-    private void scheduleSimulationAfterCommit(String commandId, CommandType commandType) {
+    void setUnackedCommandTimeoutMs(long timeoutMs) {
+        this.unackedCommandTimeoutMs = Math.max(50L, timeoutMs);
+    }
+
+    private void scheduleLifecycleAfterCommit(String commandId, CommandType commandType) {
+        Runnable task = () -> {
+            if (isConfigOnlyCommand(commandType)) {
+                simulateConfigCommandExecution(commandId);
+            } else {
+                scheduleUnackedWatchdog(commandId);
+            }
+        };
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    simulateExecution(commandId, commandType);
+                    task.run();
                 }
             });
         } else {
-            simulateExecution(commandId, commandType);
+            task.run();
         }
     }
 
-    private void simulateExecution(String commandId, CommandType commandType) {
-        long ackDelay = Math.min(500, getAckDelay(commandType));
-        long execDelay = Math.min(1000, getExecuteDelay(commandType));
-        long completeDelay = Math.min(2000, getCompleteDelay(commandType));
+    private boolean isConfigOnlyCommand(CommandType commandType) {
+        return commandType == CommandType.UPDATE_MISSION
+                || commandType == CommandType.SET_HOME
+                || commandType == CommandType.CONFIGURE;
+    }
 
+    private void scheduleUnackedWatchdog(String commandId) {
         commandScheduler.schedule(() -> {
             try {
-                boolean acked = advanceCommandStatus(commandId, CommandStatus.ACKNOWLEDGED);
-                if (!acked) {
+                markFailedIfUnacknowledged(commandId);
+            } catch (Exception e) {
+                log.error("Error evaluating command ACK timeout for {}: {}", commandId, e.getMessage());
+            }
+        }, unackedCommandTimeoutMs, TimeUnit.MILLISECONDS);
+    }
+
+    void markFailedIfUnacknowledged(String commandId) {
+        try {
+            droneCommandRepository.findById(commandId).ifPresent(cmd -> {
+                if (cmd.getStatus() == CommandStatus.PENDING || cmd.getStatus() == CommandStatus.SENT) {
+                    cmd.setStatus(CommandStatus.FAILED);
+                    cmd.setCompletedAt(ZonedDateTime.now());
+                    cmd.setErrorMessage("No active aircraft or simulation runtime acknowledged command");
+                    droneCommandRepository.save(cmd);
+                    log.warn("Command {} ({}) timed out without runtime/device ACK", cmd.getId(), cmd.getCommandType());
+                }
+            });
+        } catch (OptimisticLockingFailureException ex) {
+            log.debug("Command {} updated concurrently during timeout check: {}", commandId, ex.getMessage());
+        }
+    }
+
+    private void simulateConfigCommandExecution(String commandId) {
+        commandScheduler.schedule(() -> {
+            try {
+                if (!advanceCommandStatus(commandId, CommandStatus.ACKNOWLEDGED)) {
                     return;
                 }
                 commandScheduler.schedule(() -> {
                     try {
-                        boolean executing = advanceCommandStatus(commandId, CommandStatus.EXECUTING);
-                        if (!executing) {
+                        if (!advanceCommandStatus(commandId, CommandStatus.EXECUTING)) {
                             return;
                         }
                         commandScheduler.schedule(() -> {
                             try {
                                 advanceCommandStatus(commandId, CommandStatus.COMPLETED);
                             } catch (Exception e) {
-                                log.error("Error completing simulated command {}: {}", commandId, e.getMessage());
+                                log.error("Error completing config command {}: {}", commandId, e.getMessage());
                             }
-                        }, completeDelay, TimeUnit.MILLISECONDS);
+                        }, 500L, TimeUnit.MILLISECONDS);
                     } catch (Exception e) {
-                        log.error("Error executing simulated command {}: {}", commandId, e.getMessage());
+                        log.error("Error executing config command {}: {}", commandId, e.getMessage());
                     }
-                }, execDelay, TimeUnit.MILLISECONDS);
+                }, 300L, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
-                log.error("Error acknowledging simulated command {}: {}", commandId, e.getMessage());
+                log.error("Error acknowledging config command {}: {}", commandId, e.getMessage());
             }
-        }, ackDelay, TimeUnit.MILLISECONDS);
+        }, 200L, TimeUnit.MILLISECONDS);
     }
 
     private boolean advanceCommandStatus(String commandId, CommandStatus targetStatus) {
@@ -226,14 +266,6 @@ public class DroneCommandServiceImpl implements DroneCommandService {
                     cmd.setStatus(CommandStatus.COMPLETED);
                     cmd.setCompletedAt(ZonedDateTime.now());
                     droneCommandRepository.save(cmd);
-                    if (cmd.getCommandType() == CommandType.LAND || cmd.getCommandType() == CommandType.RTL) {
-                        droneRepository.findById(cmd.getDroneId()).ifPresent(drone -> {
-                            if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
-                                drone.setStatus(DroneStatus.AVAILABLE);
-                                droneRepository.save(drone);
-                            }
-                        });
-                    }
                     log.info("Command {} ({}) completed successfully", cmd.getId(), cmd.getCommandType());
                     return true;
                 }
@@ -386,23 +418,5 @@ public class DroneCommandServiceImpl implements DroneCommandService {
             case 1, 2 -> 2;
             default -> 1;
         };
-    }
-
-    private long getAckDelay(CommandType commandType) {
-        if (commandType == CommandType.EMERGENCY_STOP)
-            return 100;
-        return 300;
-    }
-
-    private long getExecuteDelay(CommandType commandType) {
-        if (commandType == CommandType.EMERGENCY_STOP)
-            return 200;
-        return 800;
-    }
-
-    private long getCompleteDelay(CommandType commandType) {
-        if (commandType == CommandType.EMERGENCY_STOP)
-            return 500;
-        return 2000;
     }
 }

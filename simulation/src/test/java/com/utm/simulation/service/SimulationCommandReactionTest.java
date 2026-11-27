@@ -177,4 +177,118 @@ class SimulationCommandReactionTest {
 
         assertThat(entity.getSpeed()).isEqualTo(15.0);
     }
+
+    @Test
+    @DisplayName("handleDroneCommand RTL wakes PAUSED session, executes 3D cruise + 0m descent, publishes COMPLETED ACK, and completes flight at departureHubId")
+    void handleDroneCommand_rtlWakesPausedSessionDescendsToZeroAndCompletesAtDepartureHub() {
+        String sessionId = "sim-rtl-3d";
+        String flightId = "flt-rtl-3d";
+        String droneId = "drn-rtl-3d";
+        var ackPublisher = org.mockito.Mockito.mock(com.utm.simulation.kafka.SimulationCommandAckPublisher.class);
+        simulationService.setCommandAckPublisher(ackPublisher);
+
+        GeoJsonLineStringVm route = new GeoJsonLineStringVm("LineString", List.of(
+                List.of(106.7000, 10.7700, 60.0),
+                List.of(106.7010, 10.7700, 60.0)));
+        FlightDetailVm activeFlight = new FlightDetailVm(
+                flightId, "FLT-RTL-3D", droneId, "hub-dep-alpha", "hub-arr-bravo", 60.0, route, 2,
+                Collections.emptyList(), "active");
+        SimulationSession entity = SimulationSession.builder()
+                .id(sessionId)
+                .flightId(flightId)
+                .droneId(droneId)
+                .status(SimulationStatus.RUNNING)
+                .speed(20.0)
+                .timeScale(5.0)
+                .currentBattery(92.0)
+                .build();
+        SimulationSessionVm vm = new SimulationSessionVm(
+                sessionId, flightId, droneId, SimulationStatus.RUNNING, 20.0, 5.0,
+                10.7700, 106.7000, 60.0, 90.0, 92.0, 0.0, 120.0, 0.0, 0, null,
+                ZonedDateTime.now(), ZonedDateTime.now());
+        SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(flightId, 20.0, 5.0, 92.0);
+
+        when(flightClientService.getFlightDetail(flightId)).thenReturn(activeFlight);
+        when(sessionRepository.existsByDroneIdAndStatusIn(eq(droneId), anyList())).thenReturn(false);
+        when(sessionRepository.existsByFlightIdAndStatusIn(eq(flightId), anyList())).thenReturn(false);
+        when(simulationMapper.toEntity(createVm)).thenReturn(entity);
+        when(sessionRepository.saveAndFlush(entity)).thenReturn(entity);
+        when(simulationMapper.toVm(entity)).thenReturn(vm);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(entity));
+        when(sessionRepository.save(entity)).thenReturn(entity);
+        when(simulationMapper.toEventEntity(eq(sessionId), anyString(), any(), anyString(), anyString(), any()))
+                .thenReturn(SimulationEvent.builder().id("evt-rtl-3d").sessionId(sessionId).build());
+        when(eventRepository.save(any(SimulationEvent.class)))
+                .thenReturn(SimulationEvent.builder().id("evt-rtl-3d").sessionId(sessionId).build());
+
+        simulationService.createSession(createVm);
+        simulationService.stepSessionOnce(sessionId);
+        simulationService.pauseSession(sessionId);
+        assertThat(entity.getStatus()).isEqualTo(SimulationStatus.PAUSED);
+
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-rtl-full", droneId, flightId, "RTL", 1, "{}", "PENDING", ZonedDateTime.now()));
+
+        assertThat(entity.getStatus()).isEqualTo(SimulationStatus.RUNNING);
+        verify(ackPublisher).publishAck(eq("cmd-rtl-full"), eq(droneId), eq(flightId), eq("RTL"), eq("EXECUTING"), anyString());
+        verify(ackPublisher, org.mockito.Mockito.never())
+                .publishAck(eq("cmd-rtl-full"), anyString(), anyString(), anyString(), eq("COMPLETED"), anyString());
+
+        for (int i = 0; i < 15 && entity.getStatus() == SimulationStatus.RUNNING; i++) {
+            simulationService.stepSessionOnce(sessionId);
+        }
+
+        assertThat(entity.getStatus()).isEqualTo(SimulationStatus.COMPLETED);
+        assertThat(entity.getCurrentAlt()).isEqualTo(0.0);
+        verify(ackPublisher).publishAck(eq("cmd-rtl-full"), eq(droneId), eq(flightId), eq("RTL"), eq("COMPLETED"), anyString());
+        verify(flightClientService).completeFlight(eq(flightId), eq("hub-dep-alpha"), any());
+    }
+
+    @Test
+    @DisplayName("handleDroneCommand TAKEOFF auto-attaches runtime for AUTHORIZED flight and starts flight")
+    void handleDroneCommand_takeoffOnAuthorizedFlight_autoStartsAndClimbs() {
+        String sessionId = "sim-auto-tkof";
+        String flightId = "flt-auto-tkof";
+        String droneId = "drn-auto-tkof";
+        var ackPublisher = org.mockito.Mockito.mock(com.utm.simulation.kafka.SimulationCommandAckPublisher.class);
+        simulationService.setCommandAckPublisher(ackPublisher);
+
+        GeoJsonLineStringVm route = new GeoJsonLineStringVm("LineString", List.of(
+                List.of(106.7000, 10.7700, 40.0),
+                List.of(106.7100, 10.7800, 40.0)));
+        FlightDetailVm authorizedFlight = new FlightDetailVm(
+                flightId, "FLT-TKOF-01", droneId, "hub-dep", "hub-arr", 40.0, route, 2,
+                Collections.emptyList(), "authorized");
+        SimulationSession entity = SimulationSession.builder()
+                .id(sessionId)
+                .flightId(flightId)
+                .droneId(droneId)
+                .status(SimulationStatus.RUNNING)
+                .build();
+
+        when(flightClientService.getFlightDetail(flightId)).thenReturn(authorizedFlight);
+        when(flightClientService.startFlight(flightId)).thenReturn(true);
+        when(simulationMapper.toEntity(any(SimulationSessionCreateVm.class))).thenReturn(entity);
+        when(sessionRepository.saveAndFlush(entity)).thenReturn(entity);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(entity));
+        when(sessionRepository.save(entity)).thenReturn(entity);
+        when(simulationMapper.toEventEntity(eq(sessionId), anyString(), any(), anyString(), anyString(), any()))
+                .thenReturn(SimulationEvent.builder().id("evt-tkof").sessionId(sessionId).build());
+        when(eventRepository.save(any(SimulationEvent.class)))
+                .thenReturn(SimulationEvent.builder().id("evt-tkof").sessionId(sessionId).build());
+
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-tkof-1", droneId, flightId, "TAKEOFF", 2, "{}", "PENDING", ZonedDateTime.now()));
+
+        verify(flightClientService).startFlight(flightId);
+        verify(ackPublisher).publishAck(eq("cmd-tkof-1"), eq(droneId), eq(flightId), eq("TAKEOFF"), eq("EXECUTING"), anyString());
+        assertThat(entity.getCurrentAlt()).isEqualTo(0.0);
+
+        for (int i = 0; i < 12; i++) {
+            simulationService.stepSessionOnce(sessionId);
+        }
+
+        assertThat(entity.getCurrentAlt()).isGreaterThanOrEqualTo(39.5);
+        verify(ackPublisher).publishAck(eq("cmd-tkof-1"), eq(droneId), eq(flightId), eq("TAKEOFF"), eq("COMPLETED"), anyString());
+    }
 }

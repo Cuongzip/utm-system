@@ -47,9 +47,21 @@ public interface FlightService {
 
     FlightVm completeFlight(String id);
 
+    default FlightVm completeFlight(String id, String landingHubId) {
+        return completeFlight(id);
+    }
+
     FlightVm abortFlight(String id, FlightAbortVm abortVm);
 
     default FlightVm divertFlight(String id, String targetHubId, String reason) {
         throw new UnsupportedOperationException("divertFlight not implemented");
+    }
+
+    default FlightVm returnToHome(String id, String reason) {
+        throw new UnsupportedOperationException("returnToHome not implemented");
+    }
+
+    default FlightVm resumePlannedRoute(String id) {
+        throw new UnsupportedOperationException("resumePlannedRoute not implemented");
     }
 }

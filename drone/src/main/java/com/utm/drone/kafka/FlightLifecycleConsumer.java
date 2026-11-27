@@ -94,19 +94,17 @@ public class FlightLifecycleConsumer extends BaseCdcConsumer<String, FlightLifec
                             drone.getId(), drone.getCurrentHubId(), drone.getCurrentBatteryPct(), stopover, drone.getStatus());
                 }
                 case FlightLifecycleEvent.FLIGHT_DIVERTED -> {
-                    if (event.actualLandingHubId() != null && !event.actualLandingHubId().isBlank()) {
-                        drone.setCurrentHubId(event.actualLandingHubId());
-                    }
                     if (event.endingBatteryPct() != null) {
                         double clamped = Math.max(0.0, Math.min(100.0, event.endingBatteryPct()));
                         drone.setCurrentBatteryPct(Math.round(clamped * 10.0) / 10.0);
                     }
-                    if (drone.getStatus() == DroneStatus.IN_FLIGHT) {
-                        drone.setStatus(DroneStatus.AVAILABLE);
+                    if (drone.getStatus() != DroneStatus.MAINTENANCE) {
+                        drone.setStatus(DroneStatus.IN_FLIGHT);
+                        drone.setCurrentHubId(null);
                     }
                     droneRepository.save(drone);
-                    log.info("Synced drone {} after FLIGHT_DIVERTED (currentHub={}, battery={}%)",
-                            drone.getId(), drone.getCurrentHubId(), drone.getCurrentBatteryPct());
+                    log.info("Synced drone {} during FLIGHT_DIVERTED (remains IN_FLIGHT toward targetHub={})",
+                            drone.getId(), event.arrivalHubId());
                 }
                 case FlightLifecycleEvent.FLIGHT_EMERGENCY_LANDING -> {
                     if (event.actualLandingHubId() != null && !event.actualLandingHubId().isBlank()) {

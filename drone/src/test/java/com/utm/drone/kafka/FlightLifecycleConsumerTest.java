@@ -105,4 +105,42 @@ class FlightLifecycleConsumerTest {
         assertThat(drone.getStatus()).isEqualTo(DroneStatus.AVAILABLE);
         verify(droneRepository).save(drone);
     }
+
+    @Test
+    @DisplayName("FLIGHT_DIVERTED keeps drone IN_FLIGHT until actual FLIGHT_COMPLETED touchdown at departure hub")
+    void onFlightEventReceived_divertedThenCompletedAtDepartureHub_keepsInFlightThenLandsAtDepartureHub() {
+        Drone drone = Drone.builder()
+                .id("drone-4")
+                .status(DroneStatus.IN_FLIGHT)
+                .currentBatteryPct(90.0)
+                .totalFlights(3)
+                .build();
+        when(droneRepository.findById("drone-4")).thenReturn(Optional.of(drone));
+
+        FlightLifecycleEvent divertedEvent = new FlightLifecycleEvent(
+                FlightLifecycleEvent.FLIGHT_DIVERTED,
+                "flt-4", "FLT-4", null, null, null, null,
+                "drone-4", "hub-dep", "hub-dep", "hub-dep",
+                "diverted", null, null, "RTH to departure hub", ZonedDateTime.now(),
+                84.0, null, null);
+
+        consumer.onFlightEventReceived("flt-4", divertedEvent);
+
+        assertThat(drone.getStatus()).isEqualTo(DroneStatus.IN_FLIGHT);
+        assertThat(drone.getCurrentHubId()).isNull();
+        assertThat(drone.getCurrentBatteryPct()).isEqualTo(84.0);
+
+        FlightLifecycleEvent completedAtDep = new FlightLifecycleEvent(
+                FlightLifecycleEvent.FLIGHT_COMPLETED,
+                "flt-4", "FLT-4", null, null, null, null,
+                "drone-4", "hub-dep", "hub-arr", "hub-dep",
+                "completed", null, 0.25, "RTH completed", ZonedDateTime.now(),
+                76.5, "none", null);
+
+        consumer.onFlightEventReceived("flt-4", completedAtDep);
+
+        assertThat(drone.getStatus()).isEqualTo(DroneStatus.AVAILABLE);
+        assertThat(drone.getCurrentHubId()).isEqualTo("hub-dep");
+        assertThat(drone.getCurrentBatteryPct()).isEqualTo(76.5);
+    }
 }

@@ -200,7 +200,12 @@ public class TelemetryEmergencyDetectorConsumer extends BaseCdcConsumer<String, 
 
         Double vertSpeed = telemetry.verticalSpeed();
         Double alt = telemetry.altitude();
-        if (vertSpeed != null && vertSpeed <= MOTOR_FAILURE_DESCENT_MPS && (alt == null || alt > 5.0)
+        String mode = telemetry.flightMode() != null ? telemetry.flightMode().trim().toUpperCase() : "";
+        boolean commandedDescent = "LANDING".equals(mode)
+                || "RTL".equals(mode)
+                || "EMERGENCY_STOP".equals(mode)
+                || "LANDED".equals(mode);
+        if (!commandedDescent && vertSpeed != null && vertSpeed <= MOTOR_FAILURE_DESCENT_MPS && (alt == null || alt > 5.0)
                 && !isOnCooldown(droneId + ":MOTOR_FAILURE", sampleTime)) {
             Map<String, Object> motorData = buildSensorData(telemetry, "verticalSpeed", vertSpeed);
             if (alt != null) {
