@@ -14,10 +14,18 @@ import {
 } from "lucide-react";
 import { ChamferCard, ConfirmDialog } from "@/components/ui";
 import { droneService } from "@/services";
-import { QUERY_KEYS } from "@/hooks";
+import { QUERY_KEYS, useDroneCommands } from "@/hooks";
+import { cn } from "@/lib";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ACTIVE_FLIGHT_STATUSES, COMMAND_TYPE, type CommandType, type FlightStatus } from "@/types";
+import {
+    ACTIVE_FLIGHT_STATUSES,
+    COMMAND_TYPE,
+    FLIGHT_STATUS,
+    IN_PROGRESS_COMMAND_STATUSES,
+    type CommandType,
+    type FlightStatus,
+} from "@/types";
 
 interface FlightControlProps {
     droneId?: string | null;
@@ -47,6 +55,17 @@ export function FlightControl({
     const tc = useTranslations("common");
     const queryClient = useQueryClient();
     const [pendingConfirm, setPendingConfirm] = useState<CommandActionConfig | null>(null);
+    const { data: commandList } = useDroneCommands(droneId);
+
+    const activeCommandType = useMemo(() => {
+        const items = commandList?.items ?? [];
+        const running = items.find(
+            (cmd) =>
+                cmd.status != null &&
+                IN_PROGRESS_COMMAND_STATUSES.includes(cmd.status.toLowerCase())
+        );
+        return running?.commandType ? running.commandType.toLowerCase() : null;
+    }, [commandList]);
 
     const gridCommands: CommandActionConfig[] = useMemo(
         () => [
@@ -122,6 +141,8 @@ export function FlightControl({
             if (droneId) {
                 queryClient.invalidateQueries({ queryKey: QUERY_KEYS.droneCommands(droneId) });
             }
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightsAll });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dronesAll });
         },
         meta: { defaultErrorMessage: t("confirmDialogs.failedToast") },
     });
@@ -159,9 +180,11 @@ export function FlightControl({
 
     const statusIndicator = !isAvailable
         ? t("noTarget")
-        : hasLiveLink === false
-          ? t("linkStandby")
-          : t("c2Armed");
+        : flightStatus === FLIGHT_STATUS.AUTHORIZED
+          ? t("readyForTakeoff")
+          : hasLiveLink === false
+            ? t("linkStandby")
+            : t("c2Armed");
 
     return (
         <>
@@ -178,9 +201,10 @@ export function FlightControl({
                     <div className="grid grid-cols-3 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden">
                         {gridCommands.map((action) => {
                             const Icon = action.icon;
-                            const isExecuting =
+                            const isDispatching =
                                 sendCommandMutation.isPending &&
                                 sendCommandMutation.variables === action.type;
+                            const isCommandActive = activeCommandType === action.type;
                             const disabledReason = getDisabledReason(action.type);
                             const isDisabled =
                                 Boolean(disabledReason) || sendCommandMutation.isPending;
@@ -190,15 +214,26 @@ export function FlightControl({
                                     key={action.type}
                                     type="button"
                                     disabled={isDisabled}
+                                    aria-pressed={isCommandActive}
                                     title={
                                         disabledReason ??
                                         t("disabledReasons.dispatchCmd", { label: action.label })
                                     }
                                     onClick={() => handleTriggerCommand(action)}
-                                    className="h-[62px] px-1 bg-[var(--color-surface-panel)] hover:bg-slate-100 active:bg-slate-200/70 text-slate-800 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-35 disabled:hover:bg-[var(--color-surface-panel)] disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+                                    className={cn(
+                                        "h-[62px] px-1 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400",
+                                        isCommandActive
+                                            ? "bg-slate-900 text-white hover:bg-slate-800"
+                                            : "bg-[var(--color-surface-panel)] hover:bg-slate-100 active:bg-slate-200/70 text-slate-800 disabled:hover:bg-[var(--color-surface-panel)]"
+                                    )}
                                 >
-                                    {isExecuting ? (
-                                        <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                                    {isDispatching || isCommandActive ? (
+                                        <Loader2
+                                            className={cn(
+                                                "h-4 w-4 animate-spin",
+                                                isCommandActive ? "text-white" : "text-slate-600"
+                                            )}
+                                        />
                                     ) : (
                                         <Icon className="h-4 w-4 text-slate-600" />
                                     )}

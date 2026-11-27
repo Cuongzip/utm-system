@@ -4,13 +4,15 @@ import { useState, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Compass } from "lucide-react";
 import { ChamferCard, StatusBadge, Tooltip } from "@/components/ui";
-import { useFlightConformance } from "@/hooks";
+import { isTelemetryFresh, useFlightConformance } from "@/hooks";
 import { formatCoordinates } from "@/utils";
 import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { FlightSelectorPopover } from "./FlightSelectorPopover";
 import {
+    ACTIVE_FLIGHT_STATUSES,
     CONFORMANCE_STATUS,
     DEFAULT_FLIGHT_STATUS,
+    FLIGHT_STATUS,
     type Drone,
     type Flight,
     type TelemetryRecord,
@@ -56,7 +58,13 @@ export function LiveTelemetry({
         return map;
     }, [drones]);
 
-    const hasTelemetry = Boolean(telemetry);
+    const isAirborne = Boolean(flight?.status && ACTIVE_FLIGHT_STATUSES.includes(flight.status));
+    const isFresh = isAirborne && isTelemetryFresh(telemetry);
+    const linkBadgeStatus = isFresh
+        ? "live"
+        : flight?.status === FLIGHT_STATUS.AUTHORIZED
+          ? "standby"
+          : "offline";
     const altitudeMeters = telemetry?.altitude != null ? Math.round(telemetry.altitude) : null;
     const speedKmh = telemetry?.speed != null ? Math.round(telemetry.speed * 3.6) : null;
     const batteryPercent =
@@ -73,8 +81,14 @@ export function LiveTelemetry({
         (activeDroneId ? droneRegistration : translateStatusLabel("standby", locale) || "STANDBY");
 
     const rawStatus = flight?.status ?? DEFAULT_FLIGHT_STATUS;
+    const autopilotMode =
+        isFresh && telemetry?.flightMode
+            ? telemetry.flightMode.replace(/_/g, " ").toUpperCase()
+            : null;
     const flightModeLabel =
-        translateStatusLabel(rawStatus, locale) ?? rawStatus.replace(/_/g, " ").toUpperCase();
+        autopilotMode ??
+        translateStatusLabel(rawStatus, locale) ??
+        rawStatus.replace(/_/g, " ").toUpperCase();
     const conformanceState =
         conformance?.status ?? flight?.conformanceStatus ?? CONFORMANCE_STATUS.UNKNOWN;
     const corridorTooltip =
@@ -116,7 +130,7 @@ export function LiveTelemetry({
                         <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
                             {t("liveTelemetry")}
                         </span>
-                        <StatusBadge status={hasTelemetry ? "live" : "offline"} />
+                        <StatusBadge status={linkBadgeStatus} />
                     </div>
 
                     <FlightSelectorPopover

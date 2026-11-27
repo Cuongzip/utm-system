@@ -60,7 +60,12 @@ export const EDITABLE_FLIGHT_STATUSES: readonly FlightStatus[] = [
 export const ACTIVE_FLIGHT_STATUSES: readonly FlightStatus[] = [
     FLIGHT_STATUS.ACTIVE,
     FLIGHT_STATUS.DIVERTED,
-    FLIGHT_STATUS.EMERGENCY_LANDING,
+] as const;
+
+export const CONTROLLABLE_FLIGHT_STATUSES: readonly FlightStatus[] = [
+    FLIGHT_STATUS.ACTIVE,
+    FLIGHT_STATUS.DIVERTED,
+    FLIGHT_STATUS.AUTHORIZED,
 ] as const;
 
 export const DEFAULT_FLIGHT_STATUS: FlightStatus = FLIGHT_STATUS.PLANNED;

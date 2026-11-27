@@ -4,8 +4,14 @@ import React, { useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { StatusBadge, Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
+import { isTelemetryFresh } from "@/hooks";
 import { cn } from "@/lib";
-import { DEFAULT_FLIGHT_STATUS, type Flight, type TelemetryRecord } from "@/types";
+import {
+    ACTIVE_FLIGHT_STATUSES,
+    DEFAULT_FLIGHT_STATUS,
+    type Flight,
+    type TelemetryRecord,
+} from "@/types";
 
 export interface FlightSelectorPopoverProps {
     isOpen: boolean;
@@ -51,7 +57,8 @@ export function FlightSelectorPopover({
                 : t("unassigned");
             const status = item.status ?? DEFAULT_FLIGHT_STATUS;
             const code = item.flightNumber || "Flight";
-            const hasLive = Boolean(telemetryMap[item.id]);
+            const hasLive =
+                ACTIVE_FLIGHT_STATUSES.includes(status) && isTelemetryFresh(telemetryMap[item.id]);
             return { item, reg, status, code, hasLive };
         });
     }, [flights, droneRegMap, telemetryMap, t]);

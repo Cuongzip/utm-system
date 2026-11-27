@@ -1,16 +1,32 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { telemetryService, ApiError } from "@/services";
 import { useStomp, useTelemetryStream } from "./useStomp";
-import type { Flight, TelemetryRecord } from "@/types";
+import { ACTIVE_FLIGHT_STATUSES, type Flight, type TelemetryRecord } from "@/types";
 
 const POLL_INTERVAL_MS = 1000;
+const DEFAULT_FRESH_TELEMETRY_MS = 15000;
+
+export function isTelemetryFresh(
+    record?: TelemetryRecord | null,
+    maxAgeMs = DEFAULT_FRESH_TELEMETRY_MS
+): boolean {
+    if (!record?.timestamp) return false;
+    const ts = Date.parse(record.timestamp);
+    if (Number.isNaN(ts)) return false;
+    return Date.now() - ts <= maxAgeMs;
+}
 
 export function useLiveTelemetry(flights: Flight[]) {
     const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryRecord>>({});
     const isPollingRef = useRef(false);
     const { isConnected: isSocketConnected } = useStomp();
+
+    const airborneFlights = useMemo(
+        () => flights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status)),
+        [flights]
+    );
 
     const handleIncomingTelemetry = useCallback(
         (record: TelemetryRecord) => {
@@ -18,7 +34,7 @@ export function useLiveTelemetry(flights: Flight[]) {
 
             let targetFlightId = record.flightId;
             if (!targetFlightId && record.droneId) {
-                const matched = flights.find((f) => f.droneId === record.droneId);
+                const matched = airborneFlights.find((f) => f.droneId === record.droneId);
                 if (matched) {
                     targetFlightId = matched.id;
                 }
@@ -31,13 +47,13 @@ export function useLiveTelemetry(flights: Flight[]) {
                 [targetFlightId!]: record,
             }));
         },
-        [flights]
+        [airborneFlights]
     );
 
     useTelemetryStream(handleIncomingTelemetry);
 
     useEffect(() => {
-        if (flights.length === 0) return;
+        if (airborneFlights.length === 0) return;
 
         let alive = true;
 
@@ -46,7 +62,7 @@ export function useLiveTelemetry(flights: Flight[]) {
             isPollingRef.current = true;
 
             try {
-                const promises = flights.map(async (flight) => {
+                const promises = airborneFlights.map(async (flight) => {
                     const latest = await telemetryService
                         .getLatestByFlightId(flight.id)
                         .catch((err) =>
@@ -63,10 +79,17 @@ export function useLiveTelemetry(flights: Flight[]) {
                                     ? null
                                     : Promise.reject(err)
                             );
-                        return {
-                            flightId: flight.id,
-                            latest: droneLatest,
-                        };
+                        if (
+                            droneLatest &&
+                            (!droneLatest.flightId || droneLatest.flightId === flight.id) &&
+                            isTelemetryFresh(droneLatest, 30000)
+                        ) {
+                            return {
+                                flightId: flight.id,
+                                latest: droneLatest,
+                            };
+                        }
+                        return { flightId: flight.id, latest: null };
                     }
                     return { flightId: flight.id, latest };
                 });
@@ -92,14 +115,14 @@ export function useLiveTelemetry(flights: Flight[]) {
 
         pollTelemetry();
 
-        const activeInterval = isSocketConnected ? 10000 : POLL_INTERVAL_MS;
+        const activeInterval = isSocketConnected ? 5000 : POLL_INTERVAL_MS;
         const intervalId = setInterval(pollTelemetry, activeInterval);
 
         return () => {
             alive = false;
             clearInterval(intervalId);
         };
-    }, [flights, isSocketConnected]);
+    }, [airborneFlights, isSocketConnected]);
 
     const activeTelemetryCount = Object.keys(telemetryMap).length;
 

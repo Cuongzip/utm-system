@@ -205,6 +205,7 @@ export const enCore = {
         flightControl: "FLIGHT CONTROL",
         noTarget: "NO TARGET",
         linkStandby: "LINK STANDBY",
+        readyForTakeoff: "READY FOR TKOF",
         c2Armed: "C2 ARMED",
         commands: {
             tkof: "TKOF",
@@ -498,6 +499,7 @@ export const viCore: typeof enCore = {
         flightControl: "LỆNH ĐIỀU KHIỂN",
         noTarget: "CHƯA CHỌN UAV",
         linkStandby: "CHỜ KẾT NỐI",
+        readyForTakeoff: "SẴN SÀNG CẤT CÁNH",
         c2Armed: "SẴN SÀNG C2",
         commands: {
             tkof: "CẤT CÁNH",

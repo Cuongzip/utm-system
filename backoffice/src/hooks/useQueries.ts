@@ -17,12 +17,13 @@ import { fleetService } from "@/services/fleetService";
 import { weatherAisService } from "@/services/weatherAisService";
 import { intelligenceService } from "@/services/intelligenceService";
 import { apiClient } from "@/services/apiClient";
-import type {
-    IncidentQueryParams,
-    EmergencyStatsQueryParams,
-    EmergencyTrendsQueryParams,
-    ConflictQueryParams,
-    AuthenticatedUser,
+import {
+    IN_PROGRESS_COMMAND_STATUSES,
+    type IncidentQueryParams,
+    type EmergencyStatsQueryParams,
+    type EmergencyTrendsQueryParams,
+    type ConflictQueryParams,
+    type AuthenticatedUser,
 } from "@/types";
 
 export const QUERY_KEYS = {
@@ -131,11 +132,12 @@ export function useDronesAll() {
     });
 }
 
-export function useFlightsAll() {
+export function useFlightsAll(refetchIntervalMs?: number | false) {
     return useQuery({
         queryKey: QUERY_KEYS.flightsAll,
         queryFn: () => flightService.getAll(),
-        staleTime: 1000 * 15,
+        staleTime: refetchIntervalMs ? 0 : 1000 * 15,
+        refetchInterval: refetchIntervalMs,
     });
 }
 
@@ -159,7 +161,15 @@ export function useDroneCommands(droneId?: string | null) {
         queryKey: QUERY_KEYS.droneCommands(droneId || ""),
         queryFn: () => droneService.getCommands(droneId!, { limit: 10 }),
         enabled: Boolean(droneId),
-        refetchInterval: 3000,
+        refetchInterval: (query) => {
+            const items = query.state.data?.items ?? [];
+            const hasActive = items.some(
+                (cmd) =>
+                    cmd.status != null &&
+                    IN_PROGRESS_COMMAND_STATUSES.includes(cmd.status.toLowerCase())
+            );
+            return hasActive ? 1500 : 3000;
+        },
     });
 }
 

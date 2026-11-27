@@ -20,6 +20,7 @@ import {
     fitCameraToBounds,
 } from "@/components/map";
 import {
+    isTelemetryFresh,
     useLiveTelemetry,
     useFlightsAll,
     useHubsAll,
@@ -29,7 +30,13 @@ import {
 } from "@/hooks";
 import { cn } from "@/lib";
 import { compareCreatedDesc } from "@/utils";
-import { type Flight, type Hub, ACTIVE_FLIGHT_STATUSES, AIRSPACE_ZONE_STATUS } from "@/types";
+import {
+    type Flight,
+    type Hub,
+    ACTIVE_FLIGHT_STATUSES,
+    CONTROLLABLE_FLIGHT_STATUSES,
+    AIRSPACE_ZONE_STATUS,
+} from "@/types";
 
 function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flight[] }) {
     const { viewer, isLoaded } = useCesium();
@@ -80,7 +87,7 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
 
 export default function ControlCenterPage() {
     const t = useTranslations("controlCenter");
-    const { data: allFlights = [] } = useFlightsAll();
+    const { data: allFlights = [] } = useFlightsAll(3000);
     const { data: hubs = [] } = useHubsAll();
     const { data: drones = [] } = useDronesAll();
     const { data: airspaceZones = [] } = useAirspaceAll();
@@ -98,8 +105,13 @@ export default function ControlCenterPage() {
 
     const flights = useMemo(() => {
         return allFlights
-            .filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status))
-            .sort(compareCreatedDesc);
+            .filter((f) => f.status && CONTROLLABLE_FLIGHT_STATUSES.includes(f.status))
+            .sort((a, b) => {
+                const aAirborne = a.status && ACTIVE_FLIGHT_STATUSES.includes(a.status) ? 0 : 1;
+                const bAirborne = b.status && ACTIVE_FLIGHT_STATUSES.includes(b.status) ? 0 : 1;
+                if (aAirborne !== bAirborne) return aAirborne - bAirborne;
+                return compareCreatedDesc(a, b);
+            });
     }, [allFlights]);
 
     const relevantHubs = useMemo(() => {
@@ -122,7 +134,16 @@ export default function ControlCenterPage() {
     const { telemetryMap } = useLiveTelemetry(flights);
 
     const selectedFlight = flights.find((f) => f.id === selectedFlightId) ?? null;
-    const selectedTelemetry = selectedFlightId ? (telemetryMap[selectedFlightId] ?? null) : null;
+    const isSelectedAirborne = Boolean(
+        selectedFlight?.status && ACTIVE_FLIGHT_STATUSES.includes(selectedFlight.status)
+    );
+    const selectedTelemetry =
+        selectedFlightId && isSelectedAirborne ? (telemetryMap[selectedFlightId] ?? null) : null;
+    const hasFreshLink = isSelectedAirborne && isTelemetryFresh(selectedTelemetry);
+    const airborneFlights = useMemo(
+        () => flights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status)),
+        [flights]
+    );
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-5 shrink-0">
@@ -209,7 +230,7 @@ export default function ControlCenterPage() {
                             hubs={hubs}
                         />
                         <LiveTelemetryLayer
-                            flights={flights}
+                            flights={airborneFlights}
                             telemetryMap={telemetryMap}
                             selectedFlightId={selectedFlightId}
                             autoFollowSelected={false}
@@ -240,7 +261,7 @@ export default function ControlCenterPage() {
                     flightId={selectedFlight?.id}
                     flightStatus={selectedFlight?.status}
                     altitudeM={selectedTelemetry?.altitude ?? null}
-                    hasLiveLink={Boolean(selectedTelemetry)}
+                    hasLiveLink={hasFreshLink}
                 />
                 <RecentCommands droneId={selectedFlight?.droneId} />
                 <ActiveAlerts />

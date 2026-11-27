@@ -13,7 +13,7 @@ type CommandStatusGenerated = NonNullable<
 export type CommandType = CommandTypeGenerated | Uppercase<CommandTypeGenerated>;
 type CommandStatus = CommandStatusGenerated | Uppercase<CommandStatusGenerated>;
 
-const COMMAND_STATUS = {
+export const COMMAND_STATUS = {
     PENDING: "pending",
     SENT: "sent",
     ACKNOWLEDGED: "acknowledged",
@@ -22,6 +22,13 @@ const COMMAND_STATUS = {
     FAILED: "failed",
     CANCELLED: "cancelled",
 } as const satisfies Record<string, CommandStatusGenerated>;
+
+export const IN_PROGRESS_COMMAND_STATUSES: readonly string[] = [
+    COMMAND_STATUS.PENDING,
+    COMMAND_STATUS.SENT,
+    COMMAND_STATUS.ACKNOWLEDGED,
+    COMMAND_STATUS.EXECUTING,
+] as const;
 
 export const COMMAND_TYPE = {
     TAKEOFF: "takeoff",
