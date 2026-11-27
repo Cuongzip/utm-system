@@ -10,7 +10,7 @@ Hướng dẫn thao tác không gian bản đồ 3D/2D, quy ước màu sắc hi
 
 Giao diện được chia làm 3 vùng cố định:
 
-- **Thanh điều hướng trái (Sidebar)**: Chia thành 4 cụm nghiệp vụ (`Operations`, `Planning & Assets`, `Safety & Weather`, `Platform`), nút mở trợ lý **Operations Copilot (AI)** và thông tin tài khoản / nút đăng xuất (`Sign Out`). Trên thiết bị màn hình nhỏ, thanh này thu gọn thành nút menu góc trên trái.
+- **Thanh điều hướng trái (Sidebar)**: Chia thành 4 cụm nghiệp vụ (`Operations`, `Planning & Assets`, `Safety & Weather`, `Platform`) cùng thông tin tài khoản / nút đăng xuất (`Sign Out`). Trên thiết bị màn hình nhỏ, thanh này thu gọn thành nút menu góc trên trái.
 - **Thanh tiêu đề trang (Page Header)**: Hiển thị tên phân hệ, trạng thái kết nối trực tuyến (ví dụ `15 LIVE WS`, `ONLINE`, `STANDBY`) và các nút tác vụ chính ở góc phải.
 - **Không gian làm việc trung tâm**: Bảng dữ liệu, biểu đồ KPI hoặc giao diện chia đôi Bản đồ — Biểu mẫu (`Split View`).
 
@@ -67,8 +67,9 @@ Hiển thị tự động theo thời gian thực:
 
 ## 4. Trợ lý AI (Operations Copilot) & Cài đặt (Settings)
 
-- **Operations Copilot (`AI`)**: Nhấp nút **Operations Copilot** ở cuối thanh menu trái để mở bảng hội thoại trợ lý điều hành — hỗ trợ tóm tắt nhanh tình trạng không phận, giải thích cảnh báo xung đột hoặc tra cứu thông tin chuyến bay bằng ngôn ngữ tự nhiên.
+- **Operations Copilot (`AI`)**: Nút vát góc biểu tượng **Robot** nổi ở góc dưới bên phải màn hình — có thể **kéo thả tự do** sang bất kỳ vị trí nào (cả khi thu gọn lẫn khi đang mở bảng chat) để không che khuất bản đồ hay bảng dữ liệu. Nhấp vào nút để mở trợ lý điều hành tóm tắt tình trạng không phận, giải thích cảnh báo xung đột hoặc tra cứu chuyến bay; nhấn `Esc` để thu gọn nhanh.
 - **Settings (`/dashboard/settings`)**:
   - Tra cứu hồ sơ tài khoản, vai trò chính và bảng đối chiếu 12 quyền nghiệp vụ được cấp.
+  - Chuyển đổi ngôn ngữ hiển thị toàn ứng dụng giữa **English** và **Tiếng Việt** (đồng bộ cả giao diện, thông báo lỗi và phân tích từ máy chủ).
   - Cài đặt chế độ bản đồ mặc định (`2D` / `3D`) và lớp nền yêu thích.
   - Mở nhanh trang tài liệu cổng tích hợp `Swagger UI` (dành cho kỹ thuật viên).
