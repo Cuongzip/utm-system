@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Landmark, Edit, PowerOff } from "lucide-react";
 import {
     ChamferCard,
@@ -21,12 +22,7 @@ import {
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
 import { formatDate, formatNullable } from "@/utils";
-import {
-    type Organization,
-    DEFAULT_ORGANIZATION_STATUS,
-    ORGANIZATION_STATUS,
-    ORGANIZATION_TYPE_LABELS,
-} from "@/types";
+import { type Organization, DEFAULT_ORGANIZATION_STATUS, ORGANIZATION_STATUS } from "@/types";
 
 export interface OrganizationsTableProps {
     organizations: Organization[];
@@ -47,6 +43,9 @@ export function OrganizationsTable({
     onEditOrganization,
     onDeleteOrganization,
 }: OrganizationsTableProps) {
+    const t = useTranslations("organizations.table");
+    const tOrg = useTranslations("organizations");
+    const tCommon = useTranslations("common");
     const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(organizations);
@@ -54,7 +53,7 @@ export function OrganizationsTable({
     const getActions = (org: Organization): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
             {
-                label: "Edit",
+                label: tCommon("edit"),
                 icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onEditOrganization(org),
             },
@@ -62,7 +61,7 @@ export function OrganizationsTable({
 
         if (org.status !== ORGANIZATION_STATUS.INACTIVE) {
             items.push({
-                label: "Deactivate",
+                label: t("deactivate"),
                 icon: <PowerOff className="w-3.5 h-3.5" />,
                 danger: true,
                 onClick: () => setOrgToDelete(org),
@@ -80,32 +79,28 @@ export function OrganizationsTable({
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>REGISTRATION</TableHead>
-                            <TableHead>ORGANIZATION</TableHead>
-                            <TableHead>TYPE</TableHead>
-                            <TableHead>STATUS</TableHead>
-                            <TableHead>CONTACT</TableHead>
-                            <TableHead>CREATED</TableHead>
-                            {canManage && <TableHead align="right">ACTIONS</TableHead>}
+                            <TableHead>{t("colRegistration")}</TableHead>
+                            <TableHead>{t("colOrganization")}</TableHead>
+                            <TableHead>{t("colType")}</TableHead>
+                            <TableHead>{t("colStatus")}</TableHead>
+                            <TableHead>{t("colContact")}</TableHead>
+                            <TableHead>{t("colCreated")}</TableHead>
+                            {canManage && <TableHead align="right">{t("colActions")}</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={colSpan} message="Loading organizations..." />
+                            <TableLoading colSpan={colSpan} message={t("loading")} />
                         ) : organizations.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={colSpan} className="py-10 text-center">
                                     <EmptyState
                                         icon={Landmark}
                                         title={
-                                            hasFilters
-                                                ? "No matching organizations"
-                                                : "No organizations found"
+                                            hasFilters ? t("emptyFilteredTitle") : t("emptyTitle")
                                         }
                                         description={
-                                            hasFilters
-                                                ? "No organizations match the active search or status filter."
-                                                : "Register operators, enterprises, or civil aviation authorities."
+                                            hasFilters ? t("emptyFilteredDesc") : t("emptyDesc")
                                         }
                                         action={
                                             hasFilters && onClearFilters ? (
@@ -114,7 +109,7 @@ export function OrganizationsTable({
                                                     size="sm"
                                                     onClick={onClearFilters}
                                                 >
-                                                    Clear Filters
+                                                    {t("clearFilters")}
                                                 </ChamferButton>
                                             ) : undefined
                                         }
@@ -124,10 +119,9 @@ export function OrganizationsTable({
                         ) : (
                             paginatedItems.map((org) => {
                                 const regText = formatNullable(org.registrationNumber);
-                                const typeLabel = org.type
-                                    ? (ORGANIZATION_TYPE_LABELS[org.type] ?? org.type.toUpperCase())
-                                    : "—";
+                                const typeLabel = org.type ? tOrg(`types.${org.type}`) : "—";
                                 const contactText = formatNullable(org.contactInfo);
+                                const currentStatus = org.status ?? DEFAULT_ORGANIZATION_STATUS;
 
                                 return (
                                     <TableRow
@@ -159,7 +153,13 @@ export function OrganizationsTable({
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge
-                                                status={org.status ?? DEFAULT_ORGANIZATION_STATUS}
+                                                status={currentStatus}
+                                                label={
+                                                    currentStatus ===
+                                                    ORGANIZATION_STATUS.PENDING_VERIFICATION
+                                                        ? tOrg("statusPendingVerification")
+                                                        : undefined
+                                                }
                                             />
                                         </TableCell>
                                         <TableCell
@@ -192,15 +192,15 @@ export function OrganizationsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="organizations"
+                    itemLabel={tOrg("itemLabel")}
                 />
             </ChamferCard>
 
             <ConfirmDialog
                 isOpen={Boolean(orgToDelete)}
-                title="Deactivate Organization"
-                description={`Are you sure you want to deactivate "${orgToDelete?.name}"? Its status will be switched to inactive.`}
-                confirmText="Deactivate"
+                title={t("deactivateTitle")}
+                description={t("deactivateDesc", { name: orgToDelete?.name ?? "" })}
+                confirmText={t("deactivate")}
                 onConfirm={() => {
                     if (orgToDelete) {
                         onDeleteOrganization(orgToDelete.id);

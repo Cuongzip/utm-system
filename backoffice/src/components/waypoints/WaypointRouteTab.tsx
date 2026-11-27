@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { AlertCircle, PlaneTakeoff, PlaneLanding } from "lucide-react";
 import { WAYPOINT_TYPE, type Hub } from "@/types";
 import type { WaypointItem } from "./types";
@@ -43,6 +44,7 @@ export function WaypointRouteTab<T extends WaypointItem>({
     fieldErrors,
     onClearFieldError,
 }: WaypointRouteTabProps<T>) {
+    const t = useTranslations("waypoints");
     const selectedIdx = selectedWaypoint
         ? waypoints.findIndex(
               (w) =>
@@ -67,7 +69,9 @@ export function WaypointRouteTab<T extends WaypointItem>({
     );
     const totalPoints = waypoints.length + (departureHub ? 1 : 0) + (arrivalHub ? 1 : 0);
     const routeSummaryLabel =
-        hubStopCount > 0 ? `${hubStopCount + 1} legs` : `${totalPoints} points`;
+        hubStopCount > 0
+            ? t("legsCount", { count: hubStopCount + 1 })
+            : t("pointsCount", { count: totalPoints });
 
     return (
         <div className="space-y-3">
@@ -87,7 +91,10 @@ export function WaypointRouteTab<T extends WaypointItem>({
                     defaultAltitude={defaultAltitude}
                     isReadOnly={isReadOnly}
                     fieldErrors={fieldErrors}
-                    waypointIndex={selectedIdx >= 0 ? (departureHub ? 1 : 0) + selectedIdx : -1}
+                    waypointIndex={selectedIdx}
+                    altWaypointIndex={
+                        selectedIdx >= 0 && departureHub ? selectedIdx + 1 : undefined
+                    }
                     onClearFieldError={onClearFieldError}
                 />
             ) : (
@@ -116,14 +123,17 @@ export function WaypointRouteTab<T extends WaypointItem>({
                                     </span>
                                     <div className="text-xs font-mono">
                                         <span className="font-semibold text-[var(--color-text-primary)]">
-                                            Departure Station (Select in Details tab)
+                                            {t("selectDepartureInDetails")}
                                         </span>
                                         <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5">
-                                            Origin Vertiport
+                                            {t("originVertiport")}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="pr-1 text-[var(--color-text-muted)]" title="Origin">
+                                <div
+                                    className="pr-1 text-[var(--color-text-muted)]"
+                                    title={t("origin")}
+                                >
                                     <PlaneTakeoff className="w-4 h-4" />
                                 </div>
                             </div>
@@ -171,16 +181,16 @@ export function WaypointRouteTab<T extends WaypointItem>({
                                     </span>
                                     <div className="text-xs font-mono">
                                         <span className="font-semibold text-[var(--color-text-primary)]">
-                                            Arrival Station (Select in Details tab)
+                                            {t("selectArrivalInDetails")}
                                         </span>
                                         <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5">
-                                            Destination Vertiport
+                                            {t("destinationVertiport")}
                                         </span>
                                     </div>
                                 </div>
                                 <div
                                     className="pr-1 text-[var(--color-text-muted)]"
-                                    title="Destination"
+                                    title={t("destination")}
                                 >
                                     <PlaneLanding className="w-4 h-4" />
                                 </div>

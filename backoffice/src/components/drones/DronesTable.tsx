@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Bot, Edit, PowerOff } from "lucide-react";
 import {
     ChamferCard,
@@ -44,6 +45,9 @@ export function DronesTable({
     onEditDrone,
     onDeleteDrone,
 }: DronesTableProps) {
+    const t = useTranslations("drones.table");
+    const tDrones = useTranslations("drones");
+    const tCommon = useTranslations("common");
     const [droneToDelete, setDroneToDelete] = useState<Drone | null>(null);
     const { data: hubs = [] } = useHubsAll();
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
@@ -61,14 +65,14 @@ export function DronesTable({
         const items: ActionMenuItem[] = [];
         if (canEdit) {
             items.push({
-                label: "Edit",
+                label: tCommon("edit"),
                 icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onEditDrone(drone),
             });
         }
         if (canDelete) {
             items.push({
-                label: "Decommission",
+                label: t("decommission"),
                 icon: <PowerOff className="w-3.5 h-3.5" />,
                 danger: true,
                 onClick: () => setDroneToDelete(drone),
@@ -83,30 +87,28 @@ export function DronesTable({
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>REGISTRATION</TableHead>
-                            <TableHead>MANUFACTURER</TableHead>
-                            <TableHead>MODEL</TableHead>
-                            <TableHead>HOME HUB</TableHead>
-                            <TableHead>STATUS</TableHead>
-                            <TableHead>SPECS</TableHead>
-                            {hasActions && <TableHead align="right">ACTIONS</TableHead>}
+                            <TableHead>{t("colRegistration")}</TableHead>
+                            <TableHead>{t("colManufacturer")}</TableHead>
+                            <TableHead>{t("colModel")}</TableHead>
+                            <TableHead>{t("colHomeHub")}</TableHead>
+                            <TableHead>{t("colStatus")}</TableHead>
+                            <TableHead>{t("colSpecs")}</TableHead>
+                            {hasActions && <TableHead align="right">{t("colActions")}</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={colSpan} message="Loading drone fleet..." />
+                            <TableLoading colSpan={colSpan} message={t("loading")} />
                         ) : drones.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={colSpan} className="py-10 text-center">
                                     <EmptyState
                                         icon={Bot}
                                         title={
-                                            hasFilters ? "No matching drones" : "No drones found"
+                                            hasFilters ? t("emptyFilteredTitle") : t("emptyTitle")
                                         }
                                         description={
-                                            hasFilters
-                                                ? "No drones match the active search or status filter."
-                                                : "Register a drone to monitor its status and telemetry."
+                                            hasFilters ? t("emptyFilteredDesc") : t("emptyDesc")
                                         }
                                         action={
                                             hasFilters && onClearFilters ? (
@@ -115,7 +117,7 @@ export function DronesTable({
                                                     size="sm"
                                                     onClick={onClearFilters}
                                                 >
-                                                    Clear Filters
+                                                    {t("clearFilters")}
                                                 </ChamferButton>
                                             ) : undefined
                                         }
@@ -125,13 +127,13 @@ export function DronesTable({
                         ) : (
                             paginatedItems.map((drone) => {
                                 const regText = drone.registrationNumber || drone.id;
-                                const mfgText = drone.manufacturer || "Unknown";
+                                const mfgText = drone.manufacturer || t("unknownManufacturer");
                                 const modelText = drone.model || "—";
                                 const hubText = formatHubName(
                                     drone.homeHub,
                                     drone.homeHubId,
                                     hubMap,
-                                    "Unassigned"
+                                    t("unassignedHub")
                                 );
                                 const isAwayFromHome = Boolean(
                                     drone.currentHubId && drone.currentHubId !== drone.homeHubId
@@ -141,7 +143,10 @@ export function DronesTable({
                                       drone.currentHubId!.slice(0, 8)
                                     : null;
                                 const hubTooltip = currentHubLabel
-                                    ? `${hubText} (Current: ${currentHubLabel})`
+                                    ? t("currentHubTooltip", {
+                                          home: hubText,
+                                          current: currentHubLabel,
+                                      })
                                     : hubText;
 
                                 const payloadPart = formatNullable(
@@ -159,12 +164,16 @@ export function DronesTable({
                                 const specsTooltipParts: string[] = [primarySpecs];
                                 if (drone.currentBatteryPct != null) {
                                     specsTooltipParts.push(
-                                        `Charge: ${Math.round(drone.currentBatteryPct)}%`
+                                        t("chargeTooltip", {
+                                            pct: Math.round(drone.currentBatteryPct),
+                                        })
                                     );
                                 }
                                 if (drone.totalFlightHours != null) {
                                     specsTooltipParts.push(
-                                        `Hours: ${drone.totalFlightHours.toFixed(1)}h`
+                                        t("hoursTooltip", {
+                                            hours: drone.totalFlightHours.toFixed(1),
+                                        })
                                     );
                                 }
                                 const specsTooltip = specsTooltipParts.join(" · ");
@@ -234,7 +243,7 @@ export function DronesTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="drones"
+                    itemLabel={tDrones("itemLabel")}
                 />
             </ChamferCard>
 
@@ -247,17 +256,17 @@ export function DronesTable({
                         setDroneToDelete(null);
                     }
                 }}
-                title="Decommission Drone"
+                title={t("decommissionTitle")}
                 description={
                     <span>
-                        Are you sure you want to decommission drone{" "}
+                        {t("decommissionDescPrefix")}
                         <strong className="text-slate-900">
                             {droneToDelete?.registrationNumber || droneToDelete?.id}
                         </strong>
-                        ? This drone will be unassigned from any active flight routes.
+                        {t("decommissionDescSuffix")}
                     </span>
                 }
-                confirmText="Decommission"
+                confirmText={t("decommission")}
             />
         </div>
     );

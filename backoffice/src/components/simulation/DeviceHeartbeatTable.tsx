@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Radio, Power, PowerOff, Loader2 } from "lucide-react";
 import {
     ChamferCard,
@@ -33,6 +34,8 @@ export function DeviceHeartbeatTable({
     onPowerOnDevice,
     onPowerOffDevice,
 }: DeviceHeartbeatTableProps) {
+    const t = useTranslations("simulation.devicesTable");
+    const tCommon = useTranslations("common");
     const [pendingDevices, setPendingDevices] = useState<Record<string, boolean>>({});
     const sortedDevices = useMemo(() => [...devices].sort(compareCreatedDesc), [devices]);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
@@ -60,26 +63,23 @@ export function DeviceHeartbeatTable({
             <Table fixed={false}>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>DEVICE IDENTIFIER</TableHead>
-                        <TableHead>DRONE</TableHead>
-                        <TableHead>CONNECTION STATUS</TableHead>
-                        <TableHead>LAST HEARTBEAT</TableHead>
-                        <TableHead align="right">VIRTUAL POWER</TableHead>
+                        <TableHead>{t("colDeviceId")}</TableHead>
+                        <TableHead>{t("colDrone")}</TableHead>
+                        <TableHead>{t("colConnectionStatus")}</TableHead>
+                        <TableHead>{t("colLastHeartbeat")}</TableHead>
+                        <TableHead align="right">{t("colVirtualPower")}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {loading ? (
-                        <TableLoading
-                            colSpan={5}
-                            message="Loading registered hardware devices..."
-                        />
+                        <TableLoading colSpan={5} message={t("loading")} />
                     ) : devices.length === 0 ? (
                         <TableRow>
                             <TableCell colSpan={5} className="py-10 text-center">
                                 <EmptyState
                                     icon={Radio}
-                                    title="No registered devices found"
-                                    description="Register hardware devices in Connectivity to simulate virtual power and heartbeats."
+                                    title={t("emptyTitle")}
+                                    description={t("emptyDesc")}
                                 />
                             </TableCell>
                         </TableRow>
@@ -96,7 +96,7 @@ export function DeviceHeartbeatTable({
                                     : "—");
                             const lastSeenRelative = device.lastSeenAt
                                 ? formatRelativeTime(device.lastSeenAt)
-                                : "Never";
+                                : tCommon("never");
                             const lastSeenTooltip = device.lastSeenAt
                                 ? formatDateTime(device.lastSeenAt)
                                 : undefined;
@@ -147,9 +147,7 @@ export function DeviceHeartbeatTable({
                                             disabled={isPending}
                                             onClick={() => handleTogglePower(deviceId, isOnline)}
                                             title={
-                                                isOnline
-                                                    ? "Power OFF virtual device"
-                                                    : "Power ON virtual device"
+                                                isOnline ? t("powerOffTitle") : t("powerOnTitle")
                                             }
                                         >
                                             {isPending ? (
@@ -159,7 +157,7 @@ export function DeviceHeartbeatTable({
                                             ) : (
                                                 <Power className="w-3.5 h-3.5" />
                                             )}
-                                            <span>{isOnline ? "Power Off" : "Power On"}</span>
+                                            <span>{isOnline ? t("powerOff") : t("powerOn")}</span>
                                         </ChamferButton>
                                     </TableCell>
                                 </TableRow>
@@ -173,7 +171,7 @@ export function DeviceHeartbeatTable({
                 totalPages={totalPages}
                 totalItems={totalItems}
                 onPageChange={setCurrentPage}
-                itemLabel="devices"
+                itemLabel={t("itemLabel")}
             />
         </ChamferCard>
     );

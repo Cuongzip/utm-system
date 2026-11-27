@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { StatusBadge } from "@/components/ui";
 import { useFlightFeasibility } from "@/hooks";
 import { formatDistance } from "@/utils";
@@ -20,6 +21,7 @@ export function FlightFeasibilityCard({
     drone = null,
     overrideReason,
 }: FlightFeasibilityCardProps) {
+    const t = useTranslations("flights.feasibility");
     const { data: liveResult } = useFlightFeasibility(flightId, Boolean(flightId) && distanceM > 0);
 
     const localEstimate = useMemo(() => {
@@ -56,16 +58,16 @@ export function FlightFeasibilityCard({
         <div className="p-3 border border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-subtle)] text-xs space-y-2.5">
             <div className="flex items-center justify-between gap-2">
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-800">
-                    Route Feasibility
+                    {t("title")}
                 </span>
                 <StatusBadge
                     status={verdict}
                     label={
                         verdict === FEASIBILITY_VERDICT.GO
-                            ? "FEASIBLE"
+                            ? t("feasible")
                             : verdict === FEASIBILITY_VERDICT.MARGINAL
-                              ? "MARGINAL"
-                              : "NO GO"
+                              ? t("marginal")
+                              : t("noGo")
                     }
                 />
             </div>
@@ -73,7 +75,7 @@ export function FlightFeasibilityCard({
             <div className="grid grid-cols-3 divide-x divide-[var(--color-border-default)] py-1.5 font-mono text-[11px] border-t border-b border-[var(--color-border-default)] text-[var(--color-text-secondary)]">
                 <div className="pr-2">
                     <span className="text-[var(--color-text-muted)] text-[10px] uppercase block">
-                        Distance
+                        {t("distance")}
                     </span>
                     <span className="font-bold text-[var(--color-text-primary)] tabular-nums">
                         {formatDistance(distanceM, 2)}
@@ -81,15 +83,15 @@ export function FlightFeasibilityCard({
                 </div>
                 <div className="px-2">
                     <span className="text-[var(--color-text-muted)] text-[10px] uppercase block">
-                        Est. Time
+                        {t("estTime")}
                     </span>
                     <span className="font-bold text-[var(--color-text-primary)] tabular-nums">
-                        ~{estimatedDurationMin} min
+                        {t("minutesShort", { count: estimatedDurationMin })}
                     </span>
                 </div>
                 <div className="pl-2">
                     <span className="text-[var(--color-text-muted)] text-[10px] uppercase block">
-                        Margin
+                        {t("margin")}
                     </span>
                     <span className="font-bold text-[var(--color-text-primary)] tabular-nums">
                         {marginPct >= 0 ? `+${marginPct.toFixed(1)}%` : `${marginPct.toFixed(1)}%`}
@@ -100,9 +102,14 @@ export function FlightFeasibilityCard({
             <div className="space-y-1">
                 <div className="flex items-center justify-between font-mono text-[10px] text-[var(--color-text-muted)] tabular-nums">
                     <span>
-                        Energy: {Math.round(requiredWh)} / {Math.round(usableWh)} Wh
+                        {t("energyUsage", {
+                            required: Math.round(requiredWh),
+                            usable: Math.round(usableWh),
+                        })}
                     </span>
-                    {windSpeedMs != null && <span>Wind {windSpeedMs.toFixed(1)} m/s</span>}
+                    {windSpeedMs != null && (
+                        <span>{t("wind", { speed: windSpeedMs.toFixed(1) })}</span>
+                    )}
                 </div>
                 <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
                     <div
@@ -126,7 +133,7 @@ export function FlightFeasibilityCard({
             {trimmedOverride && (
                 <div className="pt-2 border-t border-[var(--color-border-default)]">
                     <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] block">
-                        Override Note
+                        {t("overrideNote")}
                     </span>
                     <p className="text-[11px] font-mono text-[var(--color-text-primary)] mt-0.5 leading-relaxed">
                         {trimmedOverride}

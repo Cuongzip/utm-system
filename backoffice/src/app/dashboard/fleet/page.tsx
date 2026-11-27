@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -35,6 +36,8 @@ import { fleetService } from "@/services";
 type FleetTab = "hubs" | "rebalancing" | "config";
 
 export default function FleetPage() {
+    const t = useTranslations("fleet");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const { canManageFleet, isLoading: permissionsLoading } = usePermissions();
     const [activeTab, setActiveTab] = useState<FleetTab>("hubs");
@@ -54,9 +57,9 @@ export default function FleetPage() {
 
     const activateConfigMutation = useMutation({
         mutationFn: (id: string) => fleetService.activateConfig(id),
-        meta: { defaultErrorMessage: "Failed to switch fleet mode" },
+        meta: { defaultErrorMessage: t("switchModeFailed") },
         onSuccess: (cfg) => {
-            toast.success(`Switched active fleet profile to "${cfg.name}".`);
+            toast.success(t("switchedProfileToast", { name: cfg.name ?? "" }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fleetConfigs });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fleetActiveConfig });
         },
@@ -76,15 +79,15 @@ export default function FleetPage() {
     const fleetTabs = useMemo(
         () =>
             [
-                { id: "hubs", label: "Hub Status", count: overview?.hubStatuses?.length },
+                { id: "hubs", label: t("tabs.hubs"), count: overview?.hubStatuses?.length },
                 {
                     id: "rebalancing",
-                    label: "Rebalancing",
+                    label: t("tabs.rebalancing"),
                     count: pendingTasks.length + activeTasks.length,
                 },
-                { id: "config", label: "Configuration" },
+                { id: "config", label: t("tabs.config") },
             ] as const,
-        [overview?.hubStatuses?.length, pendingTasks.length, activeTasks.length]
+        [t, overview?.hubStatuses?.length, pendingTasks.length, activeTasks.length]
     );
 
     const handleRefresh = () => {
@@ -99,7 +102,7 @@ export default function FleetPage() {
     if (permissionsLoading) {
         return (
             <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-5">
-                <PageHeader title="FLEET" />
+                <PageHeader title={t("title")} />
                 <FleetKpiStrip loading />
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {Array.from({ length: 3 }).map((_, idx) => (
@@ -119,12 +122,12 @@ export default function FleetPage() {
     if (!canManageFleet) {
         return (
             <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-5">
-                <PageHeader title="FLEET" />
+                <PageHeader title={t("title")} />
                 <ChamferCard size="md">
                     <EmptyState
                         icon={ShieldAlert}
-                        title="Access Restricted"
-                        description="Fleet orchestration requires Admin or Hub Operator permissions."
+                        title={t("accessRestrictedTitle")}
+                        description={t("accessRestrictedDesc")}
                     />
                 </ChamferCard>
             </div>
@@ -133,11 +136,11 @@ export default function FleetPage() {
 
     return (
         <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-5">
-            <PageHeader title="FLEET">
+            <PageHeader title={t("title")}>
                 {configOptions.length > 0 && (
                     <div className="w-full sm:w-52">
                         <CustomSelect
-                            ariaLabel="Active fleet mode"
+                            ariaLabel={t("activeModeAria")}
                             value={activeConfig?.id ?? ""}
                             onValueChange={(id) => {
                                 if (id && id !== activeConfig?.id) {
@@ -145,21 +148,21 @@ export default function FleetPage() {
                                 }
                             }}
                             options={configOptions}
-                            placeholder="Active Mode"
+                            placeholder={t("activeModePlaceholder")}
                             disabled={activateConfigMutation.isPending}
                         />
                     </div>
                 )}
                 <ChamferButton variant="outline" size="sm" onClick={handleRefresh}>
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Refresh</span>
+                    <span>{tCommon("refresh")}</span>
                 </ChamferButton>
             </PageHeader>
 
             {overviewError && !overview ? (
                 <ErrorState
-                    title="Unable to load fleet overview"
-                    description="The Fleet Service did not respond. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={handleRefresh}
                 />
             ) : (
@@ -170,7 +173,7 @@ export default function FleetPage() {
                         tabs={fleetTabs}
                         activeTab={activeTab}
                         onTabChange={setActiveTab}
-                        ariaLabel="Fleet views"
+                        ariaLabel={t("viewsAria")}
                     />
 
                     {activeTab === "hubs" && (

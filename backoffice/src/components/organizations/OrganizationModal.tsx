@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useForm, Controller, type Resolver, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput, AutoGenInput } from "@/components/ui";
 import { parseApiError } from "@/utils";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { createOrganizationBody, updateOrganizationBody } from "@/generated/organization";
 import {
     ORGANIZATION_TYPES,
-    ORGANIZATION_TYPE_LABELS,
     DEFAULT_ORGANIZATION_TYPE,
     ORGANIZATION_STATUSES,
+    ORGANIZATION_STATUS,
     DEFAULT_ORGANIZATION_STATUS,
     type Organization,
     type CreateOrganizationPayload,
@@ -28,24 +30,31 @@ export interface OrganizationModalProps {
     ) => Promise<unknown>;
 }
 
-const TYPE_OPTIONS = ORGANIZATION_TYPES.map((t) => ({
-    value: t,
-    label: ORGANIZATION_TYPE_LABELS[t] ?? t.toUpperCase(),
-}));
-
-const STATUS_OPTIONS = ORGANIZATION_STATUSES.map((s) => ({
-    value: s,
-    label: s.replace(/_/g, " ").toUpperCase(),
-}));
-
 export function OrganizationModal({
     isOpen,
     organizationToEdit,
     onClose,
     onSubmit,
 }: OrganizationModalProps) {
+    const t = useTranslations("organizations.form");
+    const tOrg = useTranslations("organizations");
+    const tCommon = useTranslations("common");
+    const locale = useLocale() as AppLocale;
     const [loading, setLoading] = useState(false);
     const isEdit = Boolean(organizationToEdit);
+
+    const typeOptions = ORGANIZATION_TYPES.map((orgType) => ({
+        value: orgType,
+        label: tOrg(`types.${orgType}`),
+    }));
+
+    const statusOptions = ORGANIZATION_STATUSES.map((s) => ({
+        value: s,
+        label:
+            s === ORGANIZATION_STATUS.PENDING_VERIFICATION
+                ? tOrg("statusPendingVerification")
+                : (translateStatusLabel(s, locale) ?? s.replace(/_/g, " ").toUpperCase()),
+    }));
 
     const {
         register,
@@ -100,7 +109,7 @@ export function OrganizationModal({
             }
             onClose();
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to save organization");
+            const parsed = parseApiError(err, tOrg("saveError"));
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as Path<OrganizationFormPayload>, { message: msg });
@@ -115,28 +124,28 @@ export function OrganizationModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={isEdit ? "Edit Organization" : "Register Organization"}
+            title={isEdit ? tOrg("editTitle") : tOrg("registerBtn")}
             maxWidth="500px"
             onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
-            submitText={isEdit ? "Save Changes" : "Register Organization"}
-            loadingText="Saving..."
+            submitText={isEdit ? tCommon("saveChanges") : tOrg("registerBtn")}
+            loadingText={tCommon("saving")}
         >
             <AutoGenInput
                 id="orgRegistrationNumber"
-                label="Registration Number"
+                label={t("registrationNumber")}
                 showAutoGen={!isEdit}
                 disabled={isEdit}
-                manualPlaceholder="e.g. ORG-2026-VN01"
+                manualPlaceholder={t("registrationPlaceholder")}
                 error={errors.registrationNumber?.message}
                 {...register("registrationNumber")}
             />
 
             <FormInput
                 id="orgName"
-                label="Organization Name"
+                label={t("nameLabel")}
                 required
-                placeholder="e.g. SkyLink Drone Logistics JSC"
+                placeholder={t("namePlaceholder")}
                 error={errors.name?.message}
                 {...register("name")}
             />
@@ -144,7 +153,7 @@ export function OrganizationModal({
             <div className="form-row-2">
                 <div className="form-group">
                     <label className="form-label" htmlFor="orgType">
-                        Organization Type {!isEdit && <span className="text-red-500">*</span>}
+                        {t("typeLabel")} {!isEdit && <span className="text-red-500">*</span>}
                     </label>
                     <Controller
                         name="type"
@@ -155,7 +164,7 @@ export function OrganizationModal({
                                 value={field.value ?? DEFAULT_ORGANIZATION_TYPE}
                                 disabled={isEdit}
                                 onValueChange={field.onChange}
-                                options={TYPE_OPTIONS}
+                                options={typeOptions}
                                 error={Boolean(errors.type)}
                             />
                         )}
@@ -166,7 +175,7 @@ export function OrganizationModal({
                 {isEdit && (
                     <div className="form-group">
                         <label className="form-label" htmlFor="orgStatus">
-                            Operational Status
+                            {t("statusLabel")}
                         </label>
                         <Controller
                             name="status"
@@ -176,7 +185,7 @@ export function OrganizationModal({
                                     id="orgStatus"
                                     value={field.value ?? DEFAULT_ORGANIZATION_STATUS}
                                     onValueChange={field.onChange}
-                                    options={STATUS_OPTIONS}
+                                    options={statusOptions}
                                     error={Boolean(errors.status)}
                                 />
                             )}
@@ -190,12 +199,12 @@ export function OrganizationModal({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="orgContactInfo">
-                    Contact Information
+                    {t("contactLabel")}
                 </label>
                 <textarea
                     id="orgContactInfo"
                     rows={3}
-                    placeholder="Operations email, hotline phone, and registered office address..."
+                    placeholder={t("contactPlaceholder")}
                     className="form-input resize-none"
                     {...register("contactInfo")}
                 />

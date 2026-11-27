@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Compass, Check, AlertTriangle } from "lucide-react";
 import { Modal, CustomSelect, FormInput, Skeleton, TacticalCallout } from "@/components/ui";
 import { useConflictAdvice } from "@/hooks";
-import { validateSchema } from "@/utils";
+import type { AppLocale } from "@/i18n";
+import { localizeServerText, validateSchema } from "@/utils";
 import { resolveConflictBody } from "@/generated/conflict";
 import {
     RESOLUTION_STRATEGIES,
@@ -22,11 +24,6 @@ export interface ResolveConflictModalProps {
     onResolve: (id: string, payload: ResolveConflictPayload) => Promise<void> | void;
     isSubmitting: boolean;
 }
-
-const STRATEGY_OPTIONS = RESOLUTION_STRATEGIES.map((strategy) => ({
-    value: strategy,
-    label: strategy.replace(/_/g, " ").toUpperCase(),
-}));
 
 function matchResolutionStrategy(raw?: string): ResolutionStrategy {
     if (!raw) return RESOLUTION_STRATEGY.ALTITUDE_CHANGE;
@@ -48,6 +45,8 @@ function ResolveConflictModalBody({
     onResolve,
     isSubmitting,
 }: ResolveConflictModalBodyProps) {
+    const locale = useLocale() as AppLocale;
+    const t = useTranslations("conflicts");
     const [strategy, setStrategy] = useState<ResolutionStrategy>(
         RESOLUTION_STRATEGY.ALTITUDE_CHANGE
     );
@@ -55,6 +54,36 @@ function ResolveConflictModalBody({
     const [targetAltitudeM, setTargetAltitudeM] = useState<string>("");
     const [targetSpeed, setTargetSpeed] = useState<string>("");
     const [selectedAdviceRank, setSelectedAdviceRank] = useState<number | null>(null);
+
+    const strategyOptions = useMemo(
+        () =>
+            RESOLUTION_STRATEGIES.map((s) => ({
+                value: s,
+                label: t.has(`strategies.${s}`)
+                    ? t(`strategies.${s}`)
+                    : s.replace(/_/g, " ").toUpperCase(),
+            })),
+        [t]
+    );
+
+    const formatStrategyLabel = (raw?: string) => {
+        if (!raw) return "";
+        const normalized = raw.toLowerCase();
+        const knownKeys = [
+            "hover",
+            "reroute",
+            "divert_altitude",
+            "return_to_base",
+            "speed_adjustment",
+            "altitude_change",
+            "hold",
+            "auto_cleared",
+        ] as const;
+        if ((knownKeys as readonly string[]).includes(normalized)) {
+            return t(`strategies.${normalized as (typeof knownKeys)[number]}`);
+        }
+        return raw.replace(/_/g, " ").toUpperCase();
+    };
 
     const { data: advice, isLoading: adviceLoading } = useConflictAdvice(
         conflict.id,
@@ -70,7 +99,7 @@ function ResolveConflictModalBody({
         const mappedStrategy = matchResolutionStrategy(option.strategy);
         setStrategy(mappedStrategy);
         setSelectedAdviceRank(option.rank);
-        setNotes(option.rationale || "");
+        setNotes(option.rationale ? localizeServerText(option.rationale, locale) : "");
 
         const actions = option.recommendedActions || {};
         const altCandidate = actions.targetAltitudeM ?? actions.altitudeM ?? actions.newAltitudeM;
@@ -105,9 +134,12 @@ function ResolveConflictModalBody({
         await onResolve(conflict.id, validation.data);
     };
 
-    const conflictTitle = conflict.conflictType
-        ? conflict.conflictType.replace(/_/g, " ").toUpperCase()
-        : "AIRSPACE CONFLICT";
+    const conflictTitle =
+        conflict.conflictType && t.has(`types.${conflict.conflictType}`)
+            ? t(`types.${conflict.conflictType}`)
+            : conflict.conflictType
+              ? conflict.conflictType.replace(/_/g, " ").toUpperCase()
+              : t("fallbackType");
 
     const adviceOptions = advice?.options
         ? [...advice.options].sort((a, b) => a.rank - b.rank)
@@ -117,18 +149,22 @@ function ResolveConflictModalBody({
         <Modal
             isOpen
             onClose={onClose}
-            title="Resolve Airspace Conflict"
+            title={t("modal.title")}
             maxWidth="520px"
             onSubmit={handleSubmit}
             loading={isSubmitting}
-            submitText="Apply Resolution"
-            loadingText="Applying Resolution..."
+            submitText={t("modal.submitText")}
+            loadingText={t("modal.loadingText")}
         >
             <TacticalCallout
                 tone="warning"
                 icon={AlertTriangle}
                 title={conflictTitle}
-                description={conflict.description}
+                description={
+                    conflict.description
+                        ? localizeServerText(conflict.description, locale)
+                        : undefined
+                }
                 rightSlot={
                     <span className="text-[11px] font-mono text-slate-500 uppercase">
                         CNF-{conflict.id.slice(0, 6).toUpperCase()}
@@ -141,10 +177,10 @@ function ResolveConflictModalBody({
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-800">
                             <Compass className="w-3.5 h-3.5 text-slate-600" />
-                            <span>Tactical Advisor</span>
+                            <span>{t("modal.advisorTitle")}</span>
                         </div>
                         <span className="font-mono text-[10px] text-slate-500 uppercase">
-                            Select maneuver
+                            {t("modal.selectManeuver")}
                         </span>
                     </div>
 
@@ -152,7 +188,7 @@ function ResolveConflictModalBody({
                         <div
                             role="status"
                             aria-busy="true"
-                            aria-label="Computing separation maneuvers"
+                            aria-label={t("modal.computingAria")}
                             className="space-y-1.5"
                         >
                             {Array.from({ length: 2 }).map((_, idx) => (
@@ -167,7 +203,7 @@ function ResolveConflictModalBody({
                                     <Skeleton className="h-3 w-56" />
                                 </div>
                             ))}
-                            <span className="sr-only">Computing separation maneuvers...</span>
+                            <span className="sr-only">{t("modal.computingAria")}</span>
                         </div>
                     ) : (
                         <div className="space-y-1.5">
@@ -190,17 +226,17 @@ function ResolveConflictModalBody({
                                                 {isSelected && (
                                                     <Check className="w-3.5 h-3.5 text-slate-900 shrink-0" />
                                                 )}
-                                                <span>
-                                                    {opt.strategy.replace(/_/g, " ").toUpperCase()}
-                                                </span>
+                                                <span>{formatStrategyLabel(opt.strategy)}</span>
                                                 {isRecommended && (
                                                     <span className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px]">
-                                                        RECOMMENDED
+                                                        {t("modal.recommended")}
                                                     </span>
                                                 )}
                                             </div>
                                             <span className="font-mono text-[11px] text-slate-500 shrink-0 tabular-nums">
-                                                +{Math.round(opt.expectedSeparationGainM)}m sep
+                                                {t("modal.sepGain", {
+                                                    gain: Math.round(opt.expectedSeparationGainM),
+                                                })}
                                                 {opt.estimatedDelaySeconds > 0
                                                     ? ` · +${opt.estimatedDelaySeconds}s`
                                                     : ""}
@@ -208,7 +244,7 @@ function ResolveConflictModalBody({
                                         </div>
                                         {opt.rationale && (
                                             <p className="mt-1 text-[11px] text-slate-600 leading-snug">
-                                                {opt.rationale}
+                                                {localizeServerText(opt.rationale, locale)}
                                             </p>
                                         )}
                                     </button>
@@ -221,7 +257,7 @@ function ResolveConflictModalBody({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="resolution-strategy">
-                    Resolution Strategy <span className="text-red-500">*</span>
+                    {t("modal.strategyLabel")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     id="resolution-strategy"
@@ -230,43 +266,43 @@ function ResolveConflictModalBody({
                         setStrategy(val as ResolutionStrategy);
                         setSelectedAdviceRank(null);
                     }}
-                    options={STRATEGY_OPTIONS}
-                    placeholder="Select strategy..."
+                    options={strategyOptions}
+                    placeholder={t("modal.strategyPlaceholder")}
                 />
             </div>
 
             {isAltitudeStrategy && (
                 <FormInput
                     id="target-altitude"
-                    label="Target Altitude (m MSL)"
+                    label={t("modal.targetAltitude")}
                     type="number"
                     value={targetAltitudeM}
                     onChange={(e) => setTargetAltitudeM(e.target.value)}
-                    placeholder="e.g. 150"
+                    placeholder={t("modal.targetAltitudePlaceholder")}
                 />
             )}
 
             {isSpeedStrategy && (
                 <FormInput
                     id="target-speed"
-                    label="Target Speed (m/s)"
+                    label={t("modal.targetSpeed")}
                     type="number"
                     value={targetSpeed}
                     onChange={(e) => setTargetSpeed(e.target.value)}
-                    placeholder="e.g. 12"
+                    placeholder={t("modal.targetSpeedPlaceholder")}
                 />
             )}
 
             <div className="form-group">
                 <label className="form-label" htmlFor="resolution-notes">
-                    Operator Notes
+                    {t("modal.operatorNotes")}
                 </label>
                 <textarea
                     id="resolution-notes"
                     rows={3}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Specify avoidance vector, clearance rationale, or ATC instructions..."
+                    placeholder={t("modal.notesPlaceholder")}
                     className="form-input resize-none"
                 />
             </div>

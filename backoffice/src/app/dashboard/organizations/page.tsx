@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
+import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,11 +23,14 @@ import {
     type UpdateOrganizationPayload,
 } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = createStatusOptions(ORGANIZATION_STATUSES);
-
 export default function OrganizationsPage() {
+    const t = useTranslations("organizations");
     const queryClient = useQueryClient();
     const { canManageOrganizations } = usePermissions();
+
+    const statusOptions: SelectOption[] = createStatusOptions(ORGANIZATION_STATUSES, {
+        pending_verification: t("statusPendingVerification"),
+    });
 
     const fetchOrganizations = useCallback(
         () => organizationService.getOrganizations({ limit: 0 }),
@@ -52,7 +56,7 @@ export default function OrganizationsPage() {
         queryKey: QUERY_KEYS.organizations,
         fetchFn: fetchOrganizations,
         deleteFn: deleteOrganization,
-        entityName: "Organization",
+        entityName: t("entityName"),
     });
 
     const saveMutation = useMutation({
@@ -67,15 +71,11 @@ export default function OrganizationsPage() {
                 ? organizationService.updateOrganization(id, payload as UpdateOrganizationPayload)
                 : organizationService.createOrganization(payload as CreateOrganizationPayload),
         onSuccess: (_data, variables) => {
-            toast.success(
-                variables.id
-                    ? "Organization updated successfully"
-                    : "Organization registered successfully"
-            );
+            toast.success(variables.id ? t("updatedToast") : t("registeredToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.organizations });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.organizationsAll });
         },
-        meta: { defaultErrorMessage: "Failed to save organization" },
+        meta: { defaultErrorMessage: t("saveError") },
     });
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -108,11 +108,11 @@ export default function OrganizationsPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="ORGANIZATIONS">
+            <PageHeader title={t("title")}>
                 {canManageOrganizations && (
                     <ChamferButton variant="dark" size="sm" onClick={openCreateModal}>
                         <Plus className="w-4 h-4 text-white" />
-                        <span>Register Organization</span>
+                        <span>{t("registerBtn")}</span>
                     </ChamferButton>
                 )}
             </PageHeader>
@@ -120,19 +120,20 @@ export default function OrganizationsPage() {
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Search organization name, registration, or contact..."
+                searchPlaceholder={t("searchPlaceholder")}
                 statusFilter={statusFilter}
                 onStatusFilterChange={setStatusFilter}
-                statusOptions={STATUS_OPTIONS}
+                statusOptions={statusOptions}
                 onClearFilters={clearFilters}
                 totalCount={organizations.length}
                 filteredCount={filteredOrganizations.length}
+                itemLabel={t("itemLabel")}
             />
 
             {isError && organizations.length === 0 ? (
                 <ErrorState
-                    title="Unable to load organizations"
-                    description="The Organization Service could not be reached. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={refresh}
                 />
             ) : (

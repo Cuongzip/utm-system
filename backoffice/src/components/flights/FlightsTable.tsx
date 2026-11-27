@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
     PlaneTakeoff,
     Play,
@@ -75,6 +76,7 @@ export function FlightsTable({
     hubMap = new Map(),
     droneMap = new Map(),
 }: FlightsTableProps) {
+    const t = useTranslations("flights");
     const [flightToAbort, setFlightToAbort] = useState<Flight | null>(null);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(flights);
@@ -87,7 +89,7 @@ export function FlightsTable({
 
         const items: ActionMenuItem[] = [
             {
-                label: isEditable ? "Edit Flight Plan" : "View Details",
+                label: isEditable ? t("actions.editPlan") : t("actions.viewDetails"),
                 icon: isEditable ? (
                     <Pencil className="w-3.5 h-3.5 text-slate-500" />
                 ) : (
@@ -96,7 +98,7 @@ export function FlightsTable({
                 onClick: () => onSelectFlight(flight),
             },
             {
-                label: "Pre-Flight Briefing",
+                label: t("actions.briefing"),
                 icon: <FileSearch className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onOpenBriefing(flight),
             },
@@ -108,7 +110,7 @@ export function FlightsTable({
             authStatus === FLIGHT_AUTHORIZATION_STATUS.PENDING
         ) {
             items.push({
-                label: "Authorize Flight",
+                label: t("actions.authorize"),
                 icon: <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onAuthorizeFlight(flight),
             });
@@ -116,7 +118,7 @@ export function FlightsTable({
 
         if (status === FLIGHT_STATUS.AUTHORIZED) {
             items.push({
-                label: "Start Flight",
+                label: t("actions.start"),
                 icon: <Play className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onStartFlight(flight),
             });
@@ -124,12 +126,12 @@ export function FlightsTable({
 
         if (status === FLIGHT_STATUS.ACTIVE) {
             items.push({
-                label: "Complete Flight",
+                label: t("actions.complete"),
                 icon: <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onCompleteFlight(flight),
             });
             items.push({
-                label: "Abort Flight",
+                label: t("actions.abort"),
                 icon: <AlertTriangle className="w-3.5 h-3.5" />,
                 danger: true,
                 onClick: () => setFlightToAbort(flight),
@@ -145,30 +147,28 @@ export function FlightsTable({
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>FLIGHT NUMBER</TableHead>
-                            <TableHead>DRONE</TableHead>
-                            <TableHead>DEPARTURE HUB</TableHead>
-                            <TableHead>ARRIVAL HUB</TableHead>
-                            <TableHead>STATUS</TableHead>
-                            <TableHead>DEPARTURE</TableHead>
-                            <TableHead align="right">ACTIONS</TableHead>
+                            <TableHead>{t("table.flightNumber")}</TableHead>
+                            <TableHead>{t("table.drone")}</TableHead>
+                            <TableHead>{t("table.departureHub")}</TableHead>
+                            <TableHead>{t("table.arrivalHub")}</TableHead>
+                            <TableHead>{t("table.status")}</TableHead>
+                            <TableHead>{t("table.departure")}</TableHead>
+                            <TableHead align="right">{t("table.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={7} message="Loading flight operations..." />
+                            <TableLoading colSpan={7} message={t("table.loading")} />
                         ) : flights.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="py-10 text-center">
                                     <EmptyState
                                         icon={PlaneTakeoff}
                                         title={
-                                            hasFilters ? "No matching flights" : "No flights found"
+                                            hasFilters ? t("empty.filteredTitle") : t("empty.title")
                                         }
                                         description={
-                                            hasFilters
-                                                ? "No flight plans match the active search or status filter."
-                                                : "Register a new flight operation or corridor mission."
+                                            hasFilters ? t("empty.filteredDesc") : t("empty.desc")
                                         }
                                         action={
                                             hasFilters && onClearFilters ? (
@@ -177,11 +177,11 @@ export function FlightsTable({
                                                     size="sm"
                                                     onClick={onClearFilters}
                                                 >
-                                                    Clear Filters
+                                                    {t("empty.clearFilters")}
                                                 </ChamferButton>
                                             ) : (
                                                 {
-                                                    label: "+ New Flight",
+                                                    label: t("empty.newFlight"),
                                                     onClick: onNewFlight,
                                                 }
                                             )
@@ -192,7 +192,7 @@ export function FlightsTable({
                         ) : (
                             paginatedItems.map((flight) => {
                                 const isSelected = selectedFlightId === flight.id;
-                                const flightNum = flight.flightNumber || "Unnumbered";
+                                const flightNum = flight.flightNumber || t("unnumbered");
 
                                 const droneName = flight.droneId
                                     ? droneMap.get(flight.droneId) || flight.droneId.slice(0, 8)
@@ -279,7 +279,7 @@ export function FlightsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="flights"
+                    itemLabel={t("itemLabel")}
                 />
             </ChamferCard>
 
@@ -292,18 +292,17 @@ export function FlightsTable({
                         setFlightToAbort(null);
                     }
                 }}
-                title="Abort Flight Operation"
+                title={t("abortDialog.title")}
                 description={
                     <span>
-                        Are you sure you want to abort flight{" "}
+                        {t("abortDialog.descBefore")}{" "}
                         <strong className="text-slate-900">
                             {flightToAbort?.flightNumber || flightToAbort?.id}
                         </strong>
-                        ? The remote pilot will be instructed to initiate immediate contingency
-                        landing.
+                        {t("abortDialog.descAfter")}
                     </span>
                 }
-                confirmText="Abort Flight"
+                confirmText={t("abortDialog.confirm")}
             />
         </div>
     );

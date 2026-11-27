@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
 import {
     PageHeader,
@@ -16,6 +17,7 @@ import { usePermissions, useIntegrationApiKeys } from "@/hooks";
 type DeveloperTab = "keys" | "tester" | "docs";
 
 export default function DeveloperPage() {
+    const t = useTranslations("developer");
     const { canManageApiKeys, isLoading: permissionsLoading } = usePermissions();
     const { data: keys = [] } = useIntegrationApiKeys();
     const [activeTab, setActiveTab] = useState<DeveloperTab>("keys");
@@ -23,7 +25,7 @@ export default function DeveloperPage() {
     if (permissionsLoading) {
         return (
             <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
-                <PageHeader title="DEVELOPER PORTAL" />
+                <PageHeader title={t("title")} />
                 <div className="flex items-center gap-4 border-b border-slate-200 pb-2.5">
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-4 w-28" />
@@ -43,12 +45,12 @@ export default function DeveloperPage() {
     if (!canManageApiKeys) {
         return (
             <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
-                <PageHeader title="DEVELOPER PORTAL" />
+                <PageHeader title={t("title")} />
                 <ChamferCard size="md">
                     <EmptyState
                         icon={ShieldAlert}
-                        title="Administrator Access Required"
-                        description="OEM API key management and integration credentials are restricted to Admin operators."
+                        title={t("adminRequiredTitle")}
+                        description={t("adminRequiredDesc")}
                     />
                 </ChamferCard>
             </div>
@@ -58,20 +60,20 @@ export default function DeveloperPage() {
     const activeKeysCount = keys.filter((k) => k.isActive !== false && !k.revokedAt).length;
 
     const tabs: readonly UnderlineTabItem<DeveloperTab>[] = [
-        { id: "keys", label: "API Keys", count: activeKeysCount },
-        { id: "tester", label: "API Playground" },
-        { id: "docs", label: "Docs & Root CA" },
+        { id: "keys", label: t("tabKeys"), count: activeKeysCount },
+        { id: "tester", label: t("tabTester") },
+        { id: "docs", label: t("tabDocs") },
     ];
 
     return (
         <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
-            <PageHeader title="DEVELOPER PORTAL" />
+            <PageHeader title={t("title")} />
 
             <UnderlineTabs
                 tabs={tabs}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                ariaLabel="Developer portal sections"
+                ariaLabel={t("tabsAria")}
             />
 
             {activeTab === "keys" && <ApiKeysTab />}

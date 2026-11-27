@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { getDateFnsLocale } from "@/i18n";
 import { toValidDate } from "./toValidDate";
 
 export function formatDateTime(
@@ -8,7 +9,7 @@ export function formatDateTime(
     const d = toValidDate(val);
     if (!d) return "--";
     try {
-        return format(d, pattern);
+        return format(d, pattern, { locale: getDateFnsLocale() });
     } catch {
         return String(val);
     }

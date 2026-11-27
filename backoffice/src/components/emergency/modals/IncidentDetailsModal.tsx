@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Activity, AlertTriangle, ExternalLink } from "lucide-react";
@@ -22,7 +23,8 @@ import {
     TableLoading,
     type UnderlineTabItem,
 } from "@/components/ui";
-import { formatDateTime, formatTime } from "@/utils";
+import { translateStatusLabel, useAppLocale } from "@/i18n";
+import { formatDateTime, formatTime, localizeServerText } from "@/utils";
 import { emergencyService } from "@/services/emergencyService";
 import { QUERY_KEYS, useDronesAll, useFlightsAll, useEmergencyIncidentBlackbox } from "@/hooks";
 import {
@@ -30,10 +32,11 @@ import {
     CLOSED_INCIDENT_STATUSES,
     DEFAULT_INCIDENT_STATUS,
     EMERGENCY_SEVERITY,
+    EMERGENCY_TYPES,
     ROOT_CAUSES,
     ROOT_CAUSE,
-    ROOT_CAUSE_LABELS,
     type EmergencyIncidentVm,
+    type EmergencyType,
     type RootCause,
 } from "@/types";
 
@@ -46,17 +49,6 @@ export interface IncidentDetailsModalProps {
 }
 
 type ModalTab = "overview" | "blackbox" | "root_cause";
-
-const MODAL_TABS: readonly UnderlineTabItem<ModalTab>[] = [
-    { id: "overview", label: "Overview" },
-    { id: "blackbox", label: "Blackbox" },
-    { id: "root_cause", label: "Root Cause" },
-];
-
-const ROOT_CAUSE_OPTIONS = ROOT_CAUSES.map((cause) => ({
-    value: cause,
-    label: ROOT_CAUSE_LABELS[cause],
-}));
 
 interface IncidentDetailsModalBodyProps {
     incident: EmergencyIncidentVm;
@@ -71,9 +63,30 @@ function IncidentDetailsModalBody({
     onConfirmAction,
     onResolveIncident,
 }: IncidentDetailsModalBodyProps) {
+    const t = useTranslations("emergency");
+    const tCommon = useTranslations("common");
+    const locale = useAppLocale();
     const queryClient = useQueryClient();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
+
+    const modalTabs = useMemo<readonly UnderlineTabItem<ModalTab>[]>(
+        () => [
+            { id: "overview", label: t("modals.details.tabOverview") },
+            { id: "blackbox", label: t("modals.details.tabBlackbox") },
+            { id: "root_cause", label: t("modals.details.tabRootCause") },
+        ],
+        [t]
+    );
+
+    const rootCauseOptions = useMemo(
+        () =>
+            ROOT_CAUSES.map((cause) => ({
+                value: cause,
+                label: t(`rootCauses.${cause}`),
+            })),
+        [t]
+    );
 
     const [activeTab, setActiveTab] = useState<ModalTab>("overview");
     const [rootCause, setRootCause] = useState<RootCause>(incident.rootCause ?? ROOT_CAUSE.UNKNOWN);
@@ -93,11 +106,11 @@ function IncidentDetailsModalBody({
                 lessonsLearned: lessonsLearned.trim() || undefined,
             }),
         onSuccess: () => {
-            toast.success("Post-incident root cause report saved");
+            toast.success(t("modals.details.reportSavedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
         },
-        meta: { defaultErrorMessage: "Failed to save root cause report" },
+        meta: { defaultErrorMessage: t("modals.details.reportSaveFailed") },
     });
 
     const droneMap = useMemo(
@@ -132,7 +145,7 @@ function IncidentDetailsModalBody({
           (effectiveDroneId.length > 12
               ? `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
               : effectiveDroneId)
-        : "Unknown Drone";
+        : t("activeList.unknownDrone");
 
     const investigationLink = (
         <Link
@@ -140,7 +153,7 @@ function IncidentDetailsModalBody({
             onClick={onClose}
             className="mr-auto inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-600 hover:text-slate-900 transition-colors"
         >
-            <span>Full Investigation</span>
+            <span>{t("modals.details.fullInvestigation")}</span>
             <ExternalLink className="w-3.5 h-3.5" />
         </Link>
     );
@@ -156,7 +169,7 @@ function IncidentDetailsModalBody({
                     type="button"
                     onClick={onClose}
                 >
-                    Close
+                    {tCommon("close")}
                 </ChamferButton>
                 {activeTab === "root_cause" ? (
                     <ChamferButton
@@ -167,7 +180,9 @@ function IncidentDetailsModalBody({
                         disabled={saveRootCauseMutation.isPending}
                         onClick={() => saveRootCauseMutation.mutate()}
                     >
-                        {saveRootCauseMutation.isPending ? "Saving..." : "Save Report"}
+                        {saveRootCauseMutation.isPending
+                            ? tCommon("saving")
+                            : t("modals.details.saveReport")}
                     </ChamferButton>
                 ) : isAwaiting ? (
                     <>
@@ -181,7 +196,7 @@ function IncidentDetailsModalBody({
                                 onClose();
                             }}
                         >
-                            Reject
+                            {t("activeList.reject")}
                         </ChamferButton>
                         <ChamferButton
                             size="sm"
@@ -193,7 +208,7 @@ function IncidentDetailsModalBody({
                                 onClose();
                             }}
                         >
-                            Confirm Action
+                            {t("activeList.confirmAction")}
                         </ChamferButton>
                     </>
                 ) : canResolve ? (
@@ -207,7 +222,7 @@ function IncidentDetailsModalBody({
                             onClose();
                         }}
                     >
-                        Resolve Incident
+                        {t("activeList.resolveIncident")}
                     </ChamferButton>
                 ) : null}
             </div>
@@ -215,33 +230,45 @@ function IncidentDetailsModalBody({
     );
 
     const calloutTone = incident.severity === EMERGENCY_SEVERITY.WARNING ? "warning" : "critical";
+    const typeLabel =
+        incident.emergencyType &&
+        (EMERGENCY_TYPES as readonly string[]).includes(incident.emergencyType)
+            ? t(`types.${incident.emergencyType as EmergencyType}`)
+            : incident.emergencyType?.replace(/_/g, " ").toUpperCase();
 
     const detailRows = [
-        { label: "Aircraft", value: droneLabel },
-        { label: "Flight", value: flightLabel || "—" },
+        { label: t("modals.confirm.aircraft"), value: droneLabel },
+        { label: t("modals.confirm.flight"), value: flightLabel || "—" },
         {
-            label: "Severity",
-            value: incident.severity ? incident.severity.toUpperCase() : "CRITICAL",
+            label: t("modals.details.severity"),
+            value: translateStatusLabel(incident.severity ?? "critical", locale) ?? "CRITICAL",
         },
-        { label: "Action Required", value: incident.responseAction || "Operator Inspection" },
-        { label: "Detected At", value: formatDateTime(incident.detectedAt) },
         {
-            label: "Current Status",
-            value: isAwaiting
-                ? "PENDING CONFIRMATION"
-                : incident.status
-                  ? incident.status.replace(/_/g, " ").toUpperCase()
-                  : "ACTIVE",
+            label: t("modals.details.actionRequired"),
+            value: incident.responseAction || t("modals.details.operatorInspection"),
+        },
+        { label: t("modals.details.detectedAt"), value: formatDateTime(incident.detectedAt) },
+        {
+            label: t("modals.details.currentStatus"),
+            value:
+                translateStatusLabel(incident.status ?? "active", locale) ??
+                (incident.status ? incident.status.replace(/_/g, " ").toUpperCase() : "ACTIVE"),
         },
     ];
 
     return (
-        <Modal isOpen onClose={onClose} title="Incident Details" maxWidth="560px" footer={footer}>
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={t("modals.details.title")}
+            maxWidth="560px"
+            footer={footer}
+        >
             <UnderlineTabs
-                tabs={MODAL_TABS}
+                tabs={modalTabs}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                ariaLabel="Incident detail tabs"
+                ariaLabel={t("modals.details.tabsAria")}
                 className="-mt-1"
             />
 
@@ -251,13 +278,13 @@ function IncidentDetailsModalBody({
                         tone={calloutTone}
                         icon={AlertTriangle}
                         title={
-                            incident.message ||
-                            incident.emergencyType?.replace(/_/g, " ").toUpperCase()
+                            incident.message
+                                ? localizeServerText(incident.message, locale)
+                                : typeLabel
                         }
                         rightSlot={
                             <StatusBadge
                                 status={incident.status ?? DEFAULT_INCIDENT_STATUS}
-                                label={isAwaiting ? "AWAITING CONFIRMATION" : undefined}
                                 dotShape="circle"
                             />
                         }
@@ -282,7 +309,7 @@ function IncidentDetailsModalBody({
                     {incident.timeline && incident.timeline.length > 0 && (
                         <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                                Incident Timeline
+                                {t("modals.details.incidentTimeline")}
                             </span>
                             <div className="border border-[var(--color-border-default)] rounded-md divide-y divide-[var(--color-border-default)] max-h-36 overflow-y-auto bg-[var(--color-surface-panel)]">
                                 {incident.timeline.map((evt, idx) => (
@@ -291,7 +318,7 @@ function IncidentDetailsModalBody({
                                         className="px-3 py-2 flex justify-between items-center text-xs gap-3"
                                     >
                                         <span className="text-[var(--color-text-primary)] font-medium truncate">
-                                            {evt.event}
+                                            {localizeServerText(evt.event, locale)}
                                         </span>
                                         <span className="text-[var(--color-text-muted)] text-[11px] shrink-0 font-mono tabular-nums">
                                             {formatTime(evt.timestamp)}
@@ -309,19 +336,29 @@ function IncidentDetailsModalBody({
                     {!blackboxLoading && blackboxEntries.length === 0 ? (
                         <EmptyState
                             icon={Activity}
-                            title="No Blackbox Samples"
-                            description="No high-frequency telemetry samples were captured for this incident."
+                            title={t("detail.noBlackboxTitle")}
+                            description={t("detail.noBlackboxDesc")}
                         />
                     ) : (
                         <div className="border border-[var(--color-border-default)] rounded-md overflow-hidden max-h-72 overflow-y-auto">
                             <Table fixed={false}>
                                 <TableHeader className="sticky top-0 z-10">
                                     <TableRow>
-                                        <TableHead className="px-3 py-2.5">TIME</TableHead>
-                                        <TableHead className="px-3 py-2.5">ALT (M)</TableHead>
-                                        <TableHead className="px-3 py-2.5">SPD (M/S)</TableHead>
-                                        <TableHead className="px-3 py-2.5">BAT</TableHead>
-                                        <TableHead className="px-3 py-2.5">EVENT / CMD</TableHead>
+                                        <TableHead className="px-3 py-2.5">
+                                            {t("detail.colTime")}
+                                        </TableHead>
+                                        <TableHead className="px-3 py-2.5">
+                                            {t("detail.colAlt")}
+                                        </TableHead>
+                                        <TableHead className="px-3 py-2.5">
+                                            {t("detail.colSpdMs")}
+                                        </TableHead>
+                                        <TableHead className="px-3 py-2.5">
+                                            {t("detail.colBat")}
+                                        </TableHead>
+                                        <TableHead className="px-3 py-2.5">
+                                            {t("detail.colEventCmd")}
+                                        </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -329,7 +366,7 @@ function IncidentDetailsModalBody({
                                         <TableLoading
                                             colSpan={5}
                                             rows={4}
-                                            message="Loading blackbox recording..."
+                                            message={t("detail.loadingBlackbox")}
                                         />
                                     ) : (
                                         blackboxEntries.slice(0, 15).map((entry) => {
@@ -395,41 +432,41 @@ function IncidentDetailsModalBody({
                 <div className="flex flex-col gap-3.5">
                     <div className="form-group">
                         <label className="form-label" htmlFor="rootCauseCategory">
-                            Root Cause Category
+                            {t("detail.rootCauseLabel")}
                         </label>
                         <CustomSelect
                             id="rootCauseCategory"
                             value={rootCause}
                             onValueChange={(val) => setRootCause(val as RootCause)}
-                            options={ROOT_CAUSE_OPTIONS}
-                            placeholder="Select root cause..."
+                            options={rootCauseOptions}
+                            placeholder={t("detail.rootCausePlaceholder")}
                         />
                     </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="rootCauseNotes">
-                            Investigation Notes
+                            {t("detail.notesLabel")}
                         </label>
                         <textarea
                             id="rootCauseNotes"
                             rows={3}
                             value={rootCauseNotes}
                             onChange={(e) => setRootCauseNotes(e.target.value)}
-                            placeholder="Summarize root cause analysis findings..."
+                            placeholder={t("detail.notesPlaceholder")}
                             className="form-input resize-none"
                         />
                     </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="lessonsLearned">
-                            Lessons Learned / Corrective Actions
+                            {t("detail.lessonsLabel")}
                         </label>
                         <textarea
                             id="lessonsLearned"
                             rows={2}
                             value={lessonsLearned}
                             onChange={(e) => setLessonsLearned(e.target.value)}
-                            placeholder="Preventive actions or SOP adjustments..."
+                            placeholder={t("detail.lessonsPlaceholder")}
                             className="form-input resize-none"
                         />
                     </div>

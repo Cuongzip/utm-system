@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { PageHeader, ChamferButton, ErrorState, UnderlineTabs } from "@/components/ui";
@@ -16,18 +17,24 @@ import { HUB_STATUS } from "@/types";
 
 type WeatherTab = "hub" | "aviation" | "notam" | "adsb";
 
-const WEATHER_TABS = [
-    { id: "hub", label: "Hub Weather & Forecast" },
-    { id: "aviation", label: "METAR / TAF / SIGMET" },
-    { id: "notam", label: "NOTAM Board" },
-    { id: "adsb", label: "Live ADS-B Traffic" },
-] as const;
-
 export default function WeatherPage() {
+    const t = useTranslations("weather");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const { data: hubs = [], isLoading: hubsLoading, isError: hubsError } = useHubsAll();
     const [selectedHubIdState, setSelectedHubIdState] = useState<string>("");
     const [activeTab, setActiveTab] = useState<WeatherTab>("hub");
+
+    const weatherTabs = useMemo(
+        () =>
+            [
+                { id: "hub", label: t("tabs.hub") },
+                { id: "aviation", label: t("tabs.aviation") },
+                { id: "notam", label: t("tabs.notam") },
+                { id: "adsb", label: t("tabs.adsb") },
+            ] as const,
+        [t]
+    );
 
     const orderedHubs = useMemo(() => {
         return [...hubs].sort((a, b) => {
@@ -60,17 +67,17 @@ export default function WeatherPage() {
 
     return (
         <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-5">
-            <PageHeader title="WEATHER & AIS">
+            <PageHeader title={t("title")}>
                 <ChamferButton variant="outline" size="sm" onClick={handleRefreshAll}>
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Refresh</span>
+                    <span>{tCommon("refresh")}</span>
                 </ChamferButton>
             </PageHeader>
 
             {hubsError && orderedHubs.length === 0 ? (
                 <ErrorState
-                    title="Unable to load vertiport hubs for weather assessment"
-                    description="Hub coordinates could not be loaded. Retry to refresh weather briefings."
+                    title={t("hubsLoadErrorTitle")}
+                    description={t("hubsLoadErrorDesc")}
                     onRetry={handleRefreshAll}
                 />
             ) : (
@@ -86,10 +93,10 @@ export default function WeatherPage() {
             )}
 
             <UnderlineTabs
-                tabs={WEATHER_TABS}
+                tabs={weatherTabs}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                ariaLabel="Weather and AIS views"
+                ariaLabel={t("tabsAriaLabel")}
             />
 
             {activeTab === "hub" && <HubWeatherDetailCard hub={selectedHub} />}

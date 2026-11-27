@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import type { AirspaceZone, Hub, ProfilePoint } from "@/types";
 import { calculateDistance, formatAltitude, formatDistance } from "@/utils";
 import { computeAirspaceCrossings, isDuplicateCoord } from "@/utils/geo";
@@ -37,6 +38,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
     arrivalHub,
     airspaceZones = [],
 }: AltitudeProfileProps<T>) {
+    const t = useTranslations("map");
     const containerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(600);
     const chartHeight = 110;
@@ -211,9 +213,9 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                 className="bg-[var(--color-surface-panel)] border-t border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] select-none font-mono shrink-0 w-full"
             >
                 <span className="font-bold tracking-wider text-[var(--color-text-secondary)]">
-                    ALTITUDE PROFILE
+                    {t("altitudeProfile")}
                 </span>
-                <span>Add waypoints or hubs to inspect vertical trajectory profile</span>
+                <span>{t("altitudeProfileEmpty")}</span>
             </div>
         );
     }
@@ -226,27 +228,27 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[var(--color-text-secondary)] mb-1">
                 <div className="flex items-center gap-2.5">
                     <span className="font-bold tracking-wider text-[var(--color-text-primary)]">
-                        ALTITUDE PROFILE
+                        {t("altitudeProfile")}
                     </span>
                     {penetratedCount > 0 ? (
                         <span className="px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/35 text-[10px] font-bold text-red-600">
-                            {penetratedCount} ZONE PENETRATION
+                            {t("zonePenetration", { count: penetratedCount })}
                         </span>
                     ) : crossingBands.length > 0 ? (
                         <span className="px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-semibold text-cyan-700">
-                            {crossingBands.length} AIRSPACE SECTOR
+                            {t("airspaceSector", { count: crossingBands.length })}
                         </span>
                     ) : null}
                 </div>
                 <div className="flex items-center gap-4 text-[10px]">
                     <span>
-                        DISTANCE:{" "}
+                        {t("distance")}{" "}
                         <strong className="text-[var(--color-text-primary)]">
                             {formatDistance(totalDistance)}
                         </strong>
                     </span>
                     <span>
-                        CEILING:{" "}
+                        {t("ceiling")}{" "}
                         <strong className="text-[var(--color-text-primary)]">
                             {formatAltitude(maxAlt)}
                         </strong>
@@ -308,7 +310,7 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                             <g key={`${band.zoneId}-${idx}`}>
                                 <title>
                                     {`${band.zoneName} (${band.floorM}–${band.ceilingM}m)${
-                                        band.isPenetrated ? " — VERTICAL PENETRATION" : ""
+                                        band.isPenetrated ? t("verticalPenetration") : ""
                                     }`}
                                 </title>
                                 <rect
@@ -369,10 +371,13 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                             >
                                 <title>
                                     {seg.point.isDeparture
-                                        ? `Departure Vertiport: ${departureHub?.name || "DEP"} (Click to navigate)`
+                                        ? t("depTooltip", { name: departureHub?.name || "DEP" })
                                         : seg.point.isArrival
-                                          ? `Arrival Vertiport: ${arrivalHub?.name || "ARR"} (Click to navigate)`
-                                          : `Waypoint ${seg.point.label} (${formatAltitude(seg.point.altitude)}) (Click to navigate)`}
+                                          ? t("arrTooltip", { name: arrivalHub?.name || "ARR" })
+                                          : t("wpTooltip", {
+                                                label: seg.point.label,
+                                                alt: formatAltitude(seg.point.altitude),
+                                            })}
                                 </title>
                                 <circle
                                     cx={x}

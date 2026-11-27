@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
 import { Calendar as CalendarIcon, Clock, X, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./Popover";
 import { Calendar } from "./Calendar";
 import { cn } from "@/lib";
+import { getDateFnsLocale, type AppLocale } from "@/i18n";
 
 export interface DateTimePickerProps {
     value: string;
@@ -18,10 +20,13 @@ export interface DateTimePickerProps {
 export function DateTimePicker({
     value,
     onChange,
-    placeholder = "Select date & time...",
+    placeholder,
     disabled = false,
     error = false,
 }: DateTimePickerProps) {
+    const t = useTranslations("common");
+    const locale = useLocale() as AppLocale;
+    const resolvedPlaceholder = placeholder ?? t("selectDateTime");
     const [open, setOpen] = useState(false);
 
     const parsedDate = useMemo(() => {
@@ -97,7 +102,9 @@ export function DateTimePicker({
         onChange?.("");
     };
 
-    const displayText = parsedDate ? format(parsedDate, "MMM dd, yyyy · HH:mm") : "";
+    const displayText = parsedDate
+        ? format(parsedDate, "MMM dd, yyyy · HH:mm", { locale: getDateFnsLocale(locale) })
+        : "";
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -117,7 +124,7 @@ export function DateTimePicker({
                             className="h-4 w-4 shrink-0 text-slate-500"
                             aria-hidden="true"
                         />
-                        <span className="truncate">{displayText || placeholder}</span>
+                        <span className="truncate">{displayText || resolvedPlaceholder}</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -125,7 +132,7 @@ export function DateTimePicker({
                             <span
                                 role="button"
                                 tabIndex={0}
-                                aria-label="Clear date"
+                                aria-label={t("clearDate")}
                                 onClick={handleClear}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" || e.key === " ") {
@@ -134,7 +141,7 @@ export function DateTimePicker({
                                     }
                                 }}
                                 className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                title="Clear date"
+                                title={t("clearDate")}
                             >
                                 <X className="h-3.5 w-3.5" aria-hidden="true" />
                             </span>
@@ -196,7 +203,7 @@ export function DateTimePicker({
                                 onClick={handleSetNow}
                                 className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded cursor-pointer transition-colors"
                             >
-                                Now
+                                {t("now")}
                             </button>
                             <button
                                 type="button"
@@ -204,7 +211,7 @@ export function DateTimePicker({
                                 className="px-2.5 py-1 text-[11px] font-semibold text-white bg-[var(--color-border-dark)] hover:bg-slate-800 rounded cursor-pointer transition-colors flex items-center gap-1"
                             >
                                 <Check className="w-3 h-3" aria-hidden="true" />
-                                Done
+                                {t("done")}
                             </button>
                         </div>
                     </div>

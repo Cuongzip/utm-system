@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useForm, Controller, type Path, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput, type SelectOption } from "@/components/ui";
 import { useFlightsAll, useDronesAll } from "@/hooks";
 import { parseApiError } from "@/utils";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { createSessionBody } from "@/generated";
 import type { CreateSimulationSessionPayload, SimulationSession } from "@/types";
 
@@ -31,6 +33,9 @@ export function AddSimulationModal({
     onSubmit,
     activeSessions = [],
 }: AddSimulationModalProps) {
+    const t = useTranslations("simulation.launchModal");
+    const tSim = useTranslations("simulation");
+    const locale = useLocale() as AppLocale;
     const { data: flights = [], isLoading: flightsLoading } = useFlightsAll();
     const { data: drones = [] } = useDronesAll();
     const [loading, setLoading] = useState(false);
@@ -81,7 +86,9 @@ export function AddSimulationModal({
                 .map((flight) => {
                     const flightLabel =
                         flight.flightNumber || `FLT-${flight.id.slice(0, 8).toUpperCase()}`;
-                    const statusLabel = flight.status ? `(${flight.status})` : "";
+                    const statusLabel = flight.status
+                        ? `(${translateStatusLabel(flight.status, locale) ?? flight.status})`
+                        : "";
                     const drone = flight.droneId ? droneMap.get(flight.droneId) : undefined;
                     const droneReg = flight.droneId
                         ? drone?.registrationNumber ||
@@ -92,7 +99,7 @@ export function AddSimulationModal({
                         flight.status?.toLowerCase() === "authorized" &&
                         drone?.status &&
                         !["available", "idle"].includes(drone.status.toLowerCase())
-                            ? ` [${drone.status}]`
+                            ? ` [${translateStatusLabel(drone.status, locale) ?? drone.status}]`
                             : "";
                     const droneLabel = droneReg ? `· ${droneReg}${droneStateHint}` : "";
                     return {
@@ -100,7 +107,7 @@ export function AddSimulationModal({
                         value: flight.id,
                     };
                 }),
-        [flights, droneMap, busyFlightIds, busyDroneIds]
+        [flights, droneMap, busyFlightIds, busyDroneIds, locale]
     );
 
     const {
@@ -135,7 +142,7 @@ export function AddSimulationModal({
             await onSubmit(payload);
             onClose();
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to launch simulation");
+            const parsed = parseApiError(err, tSim("launchModalError"));
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as Path<CreateSimulationSessionPayload>, { message: msg });
@@ -150,15 +157,15 @@ export function AddSimulationModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Launch Simulation Session"
+            title={t("title")}
             onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
-            submitText="Launch Simulation"
-            loadingText="Launching..."
+            submitText={tSim("launchBtn")}
+            loadingText={t("loadingText")}
         >
             <div className="form-group">
                 <label className="form-label" htmlFor="flightId">
-                    Flight Plan <span className="text-red-500">*</span>
+                    {t("flightPlanLabel")} <span className="text-red-500">*</span>
                 </label>
                 <Controller
                     name="flightId"
@@ -171,10 +178,10 @@ export function AddSimulationModal({
                             options={flightOptions}
                             placeholder={
                                 flightsLoading
-                                    ? "Loading flight plans..."
+                                    ? t("loadingFlights")
                                     : flightOptions.length === 0
-                                      ? "No authorized or active flights available..."
-                                      : "Select an authorized or active flight plan..."
+                                      ? t("noFlightsPlaceholder")
+                                      : t("selectFlightPlaceholder")
                             }
                             disabled={loading || flightsLoading || flightOptions.length === 0}
                             error={Boolean(errors.flightId)}
@@ -182,10 +189,7 @@ export function AddSimulationModal({
                     )}
                 />
                 {!flightsLoading && flightOptions.length === 0 && (
-                    <span className="text-xs text-slate-500 mt-1 block">
-                        Only ATC-authorized or active flights without a running simulation appear
-                        here. Authorize a flight plan in Flights first.
-                    </span>
+                    <span className="text-xs text-slate-500 mt-1 block">{t("noFlightsHint")}</span>
                 )}
                 {errors.flightId?.message && (
                     <span className="form-error-msg">{errors.flightId.message}</span>
@@ -195,7 +199,7 @@ export function AddSimulationModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <FormInput
                     id="speed"
-                    label="Speed (m/s)"
+                    label={t("speedMs")}
                     type="number"
                     step="0.5"
                     min="1"
@@ -206,7 +210,7 @@ export function AddSimulationModal({
 
                 <FormInput
                     id="timeScale"
-                    label="Time Scale (x)"
+                    label={t("timeScaleX")}
                     type="number"
                     step="0.5"
                     min="0.1"
@@ -218,7 +222,7 @@ export function AddSimulationModal({
 
                 <FormInput
                     id="startBattery"
-                    label="Initial Battery (%)"
+                    label={t("initialBatteryPct")}
                     type="number"
                     step="1"
                     min="10"

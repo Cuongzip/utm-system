@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { SearchInput } from "./SearchInput";
 import { CustomSelect, type SelectOption } from "./CustomSelect";
@@ -27,13 +28,17 @@ export function TableFilterBar({
     statusFilter,
     onStatusFilterChange,
     statusOptions,
-    statusPlaceholder = "All Statuses",
+    statusPlaceholder,
     onClearFilters,
     totalCount,
     filteredCount,
-    itemLabel = "records",
+    itemLabel,
     extraSlot,
 }: TableFilterBarProps) {
+    const t = useTranslations("common");
+    const resolvedStatusPlaceholder = statusPlaceholder ?? t("allStatuses");
+    const resolvedItemLabel = itemLabel ?? t("records");
+
     const hasActiveFilters =
         Boolean(searchQuery.trim()) ||
         (statusFilter !== "all" && statusFilter !== "__all__" && statusFilter !== "");
@@ -61,8 +66,8 @@ export function TableFilterBar({
                         value={statusFilter}
                         onValueChange={(val) => onStatusFilterChange(val || "all")}
                         options={statusOptions}
-                        placeholder={statusPlaceholder}
-                        ariaLabel={statusPlaceholder}
+                        placeholder={resolvedStatusPlaceholder}
+                        ariaLabel={resolvedStatusPlaceholder}
                         className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
                     />
                 </div>
@@ -74,14 +79,18 @@ export function TableFilterBar({
                         className="inline-flex items-center gap-1 h-[34px] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-surface-panel)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                     >
                         <X className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Clear</span>
+                        <span>{t("clear")}</span>
                     </button>
                 )}
             </div>
 
             {hasActiveFilters && totalCount !== undefined && filteredCount !== undefined && (
                 <span className="text-xs font-mono tabular-nums text-[var(--color-text-secondary)]">
-                    Showing {filteredCount} of {totalCount} {itemLabel}
+                    {t("showingFiltered", {
+                        filtered: filteredCount,
+                        total: totalCount,
+                        label: resolvedItemLabel,
+                    })}
                 </span>
             )}
         </div>

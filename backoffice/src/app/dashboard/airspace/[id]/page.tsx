@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertCircle, ArrowLeft } from "lucide-react";
@@ -13,6 +14,7 @@ import type { UpdateAirspaceZonePayload } from "@/types";
 export default function EditAirspacePage() {
     const router = useRouter();
     const params = useParams();
+    const t = useTranslations("airspace");
     const queryClient = useQueryClient();
     const zoneId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
 
@@ -26,20 +28,20 @@ export default function EditAirspacePage() {
             airspaceService.updateZone(zoneId, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspace });
-            toast.success("Airspace zone updated successfully");
+            toast.success(t("updatedToast"));
             router.push("/dashboard/airspace");
         },
-        meta: { defaultErrorMessage: "Failed to update airspace zone" },
+        meta: { defaultErrorMessage: t("updateFailed") },
     });
 
     const deleteMutation = useMutation({
         mutationFn: () => airspaceService.deleteZone(zoneId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspace });
-            toast.success("Airspace zone deactivated successfully");
+            toast.success(t("deactivatedToast"));
             router.push("/dashboard/airspace");
         },
-        meta: { defaultErrorMessage: "Failed to delete airspace zone" },
+        meta: { defaultErrorMessage: t("deleteFailed") },
     });
 
     if (zoneLoading || hubsLoading) {
@@ -51,14 +53,10 @@ export default function EditAirspacePage() {
             <div className="flex items-center justify-center min-h-[60vh] p-8">
                 <EmptyState
                     icon={AlertCircle}
-                    title="Airspace Zone Not Found"
-                    description={
-                        zoneError instanceof Error
-                            ? zoneError.message
-                            : "The requested airspace zone does not exist or may have been removed."
-                    }
+                    title={t("notFoundTitle")}
+                    description={zoneError instanceof Error ? zoneError.message : t("notFoundDesc")}
                     action={{
-                        label: "Back to Airspace Management",
+                        label: t("backToAirspace"),
                         onClick: () => router.push("/dashboard/airspace"),
                         icon: ArrowLeft,
                         variant: "chamfer",

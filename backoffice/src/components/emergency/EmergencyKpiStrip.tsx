@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Clock, CheckCircle2, Activity } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
@@ -18,36 +19,37 @@ export function EmergencyKpiStrip({
     avgResponseTime,
     isLoading = false,
 }: EmergencyKpiMetrics) {
+    const t = useTranslations("emergency.kpi");
     const items: KpiItem[] = [
         {
             id: "active-emergencies",
-            label: "Active Incidents",
+            label: t("activeIncidents"),
             value: activeCount,
-            subValue: activeCount > 0 ? "Action required" : "All clear",
+            subValue: activeCount > 0 ? t("actionRequired") : t("allClear"),
             icon: AlertTriangle,
             iconClassName: activeCount > 0 ? "text-red-600" : undefined,
             statusDot: activeCount > 0 ? "critical" : undefined,
         },
         {
             id: "pending-confirmation",
-            label: "Pending Confirmation",
+            label: t("pendingConfirmation"),
             value: pendingCount,
-            subValue: pendingCount > 0 ? "Awaiting operator" : "None",
+            subValue: pendingCount > 0 ? t("awaitingOperator") : t("none"),
             icon: Clock,
             iconClassName: pendingCount > 0 ? "text-amber-600" : undefined,
         },
         {
             id: "resolved",
-            label: "Resolved",
+            label: t("resolved"),
             value: resolvedCount,
-            subValue: "Total closed",
+            subValue: t("totalClosed"),
             icon: CheckCircle2,
         },
         {
             id: "avg-response-time",
-            label: "Avg Response Time",
+            label: t("avgResponseTime"),
             value: `${avgResponseTime}s`,
-            subValue: "Detection to action",
+            subValue: t("detectionToAction"),
             icon: Activity,
         },
     ];

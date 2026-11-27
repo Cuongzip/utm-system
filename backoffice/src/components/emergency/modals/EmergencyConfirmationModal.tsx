@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertOctagon, AlertTriangle, Check, Clock, ShieldAlert, X } from "lucide-react";
 import { Modal, ChamferButton, StatusBadge, TacticalCallout } from "@/components/ui";
+import { useAppLocale } from "@/i18n";
 import { useDronesAll, useFlightsAll } from "@/hooks";
+import { localizeServerText } from "@/utils";
 import {
     EMERGENCY_SEVERITY,
+    EMERGENCY_TYPES,
     RESPONSE_ACTION,
+    RESPONSE_ACTIONS,
+    type EmergencyType,
     type PendingConfirmationVm,
     type ResponseAction,
 } from "@/types";
@@ -19,17 +25,6 @@ export interface EmergencyConfirmationModalProps {
     submitting?: boolean;
 }
 
-const ACTION_LABELS: Record<ResponseAction, string> = {
-    [RESPONSE_ACTION.RTH]: "Return to Home (RTH)",
-    [RESPONSE_ACTION.LAND]: "Immediate Vertical Landing",
-    [RESPONSE_ACTION.HOVER]: "Hold Position (Hover)",
-    [RESPONSE_ACTION.DIVERT]: "Divert to Nearest Safe Zone",
-    [RESPONSE_ACTION.DESCEND]: "Controlled Descent",
-    [RESPONSE_ACTION.CLIMB]: "Climb to Safe Altitude",
-    [RESPONSE_ACTION.ESTOP]: "Emergency Stop (ESTOP)",
-    [RESPONSE_ACTION.NONE]: "No Automated Action",
-};
-
 export function EmergencyConfirmationModal({
     isOpen,
     pendingConfirmations,
@@ -37,6 +32,8 @@ export function EmergencyConfirmationModal({
     onConfirmAction,
     submitting = false,
 }: EmergencyConfirmationModalProps) {
+    const t = useTranslations("emergency");
+    const locale = useAppLocale();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
     const [nowMs, setNowMs] = useState(() => Date.now());
@@ -95,12 +92,19 @@ export function EmergencyConfirmationModal({
           (effectiveDroneId.length > 12
               ? `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
               : effectiveDroneId)
-        : "Unknown Drone";
+        : t("activeList.unknownDrone");
 
     const proposedAction =
         incident.responseAction ?? protocol?.responseAction ?? RESPONSE_ACTION.NONE;
-    const actionDescription = ACTION_LABELS[proposedAction] ?? proposedAction;
+    const actionDescription = (RESPONSE_ACTIONS as readonly string[]).includes(proposedAction)
+        ? t(`actionDescriptions.${proposedAction as ResponseAction}`)
+        : proposedAction;
     const remainingQueueCount = Math.max(0, pendingConfirmations.length - 1);
+    const typeLabel =
+        incident.emergencyType &&
+        (EMERGENCY_TYPES as readonly string[]).includes(incident.emergencyType)
+            ? t(`types.${incident.emergencyType as EmergencyType}`)
+            : incident.emergencyType?.replace(/_/g, " ") || "—";
 
     const footer = (
         <div className="flex items-center justify-between w-full gap-2">
@@ -113,11 +117,11 @@ export function EmergencyConfirmationModal({
                     onClick={onClose}
                     disabled={submitting}
                 >
-                    Dismiss
+                    {t("modals.confirm.dismiss")}
                 </ChamferButton>
                 {remainingQueueCount > 0 && (
                     <span className="text-[11px] font-mono text-slate-500">
-                        +{remainingQueueCount} more pending
+                        {t("modals.confirm.morePending", { count: remainingQueueCount })}
                     </span>
                 )}
             </div>
@@ -131,7 +135,7 @@ export function EmergencyConfirmationModal({
                     onClick={() => onConfirmAction(current.incidentId, false)}
                 >
                     <X className="w-3.5 h-3.5" />
-                    <span>Reject</span>
+                    <span>{t("activeList.reject")}</span>
                 </ChamferButton>
                 <ChamferButton
                     variant="dark"
@@ -142,7 +146,7 @@ export function EmergencyConfirmationModal({
                     onClick={() => onConfirmAction(current.incidentId, true)}
                 >
                     <Check className="w-3.5 h-3.5" />
-                    <span>Confirm Action</span>
+                    <span>{t("activeList.confirmAction")}</span>
                 </ChamferButton>
             </div>
         </div>
@@ -152,7 +156,7 @@ export function EmergencyConfirmationModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Emergency Action Required"
+            title={t("modals.confirm.title")}
             maxWidth="540px"
             footer={footer}
         >
@@ -161,22 +165,16 @@ export function EmergencyConfirmationModal({
                     tone={severity === EMERGENCY_SEVERITY.WARNING ? "warning" : "critical"}
                     icon={SeverityIcon}
                     title={
-                        incident.message || incident.emergencyType?.replace(/_/g, " ").toUpperCase()
+                        incident.message ? localizeServerText(incident.message, locale) : typeLabel
                     }
-                    description="Supervised Mode — Operator confirmation required"
-                    rightSlot={
-                        <StatusBadge
-                            status={severity}
-                            label={severity.toUpperCase()}
-                            dotShape="circle"
-                        />
-                    }
+                    description={t("modals.confirm.supervisedDesc")}
+                    rightSlot={<StatusBadge status={severity} dotShape="circle" />}
                 />
 
                 <dl className="grid grid-cols-2 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden text-xs font-mono">
                     <div className="bg-[var(--color-surface-panel)] px-3 py-2.5">
                         <dt className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                            Aircraft
+                            {t("modals.confirm.aircraft")}
                         </dt>
                         <dd className="font-bold text-[var(--color-text-primary)] mt-0.5 truncate">
                             {droneLabel}
@@ -184,7 +182,7 @@ export function EmergencyConfirmationModal({
                     </div>
                     <div className="bg-[var(--color-surface-panel)] px-3 py-2.5">
                         <dt className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                            Flight
+                            {t("modals.confirm.flight")}
                         </dt>
                         <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 truncate">
                             {flightLabel || "—"}
@@ -192,18 +190,18 @@ export function EmergencyConfirmationModal({
                     </div>
                     <div className="bg-[var(--color-surface-panel)] px-3 py-2.5">
                         <dt className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                            Emergency Type
+                            {t("detail.emergencyType")}
                         </dt>
-                        <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 capitalize truncate">
-                            {incident.emergencyType?.replace(/_/g, " ") || "—"}
+                        <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 truncate">
+                            {typeLabel}
                         </dd>
                     </div>
                     <div className="bg-[var(--color-surface-panel)] px-3 py-2.5">
                         <dt className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                            Protocol
+                            {t("modals.confirm.protocol")}
                         </dt>
                         <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 truncate">
-                            {protocol?.name || "Standard Failsafe"}
+                            {protocol?.name || t("modals.confirm.standardFailsafe")}
                         </dd>
                     </div>
                 </dl>
@@ -211,7 +209,7 @@ export function EmergencyConfirmationModal({
                 <div className="px-3.5 py-2.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] flex items-center justify-between gap-3">
                     <div>
                         <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] block">
-                            Proposed Failsafe Action
+                            {t("modals.confirm.proposedAction")}
                         </span>
                         <span className="text-sm font-bold text-[var(--color-text-primary)] mt-0.5 block">
                             {actionDescription}
@@ -230,8 +228,8 @@ export function EmergencyConfirmationModal({
                             />
                             <span>
                                 {protocol?.autoExecuteOnTimeout === false
-                                    ? "Confirmation expires in"
-                                    : "Auto-execute if no response in"}
+                                    ? t("modals.confirm.expiresIn")
+                                    : t("modals.confirm.autoExecuteIn")}
                             </span>
                         </span>
                         <span

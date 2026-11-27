@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Satellite, ZapOff, WifiOff, TriangleAlert, ShieldAlert, Loader2 } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge } from "@/components/ui";
@@ -60,6 +61,8 @@ export const CHAOS_SCENARIOS: ScenarioDefinition[] = [
 ];
 
 export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosPanelProps) {
+    const t = useTranslations("simulation.chaos");
+    const tScenarios = useTranslations("simulation.scenarios");
     const normStatus = String(session.status || "").toLowerCase();
     const isRunning = normStatus === SIMULATION_STATUS.RUNNING;
     const activeScenario = session.activeScenario;
@@ -69,28 +72,28 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
         mutationFn: (scenario: ScenarioDefinition) =>
             simulationService.injectScenario(session.id, { scenario: scenario.type }),
         onSuccess: (_data, scenario) => {
-            toast.success(`Injected scenario: ${scenario.name}`);
+            toast.success(t("injectedToast", { name: tScenarios(`${scenario.type}.name`) }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationEvents(session.id) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(session.id) });
             onScenarioInjected();
         },
-        meta: { defaultErrorMessage: "Failed to inject emergency scenario" },
+        meta: { defaultErrorMessage: t("injectError") },
     });
 
     const clearMutation = useMutation({
         mutationFn: () => simulationService.clearScenario(session.id),
         onSuccess: () => {
-            toast.success("Emergency scenario cleared. Restored normal flight.");
+            toast.success(t("clearedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationEvents(session.id) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(session.id) });
             onScenarioInjected();
         },
-        meta: { defaultErrorMessage: "Failed to clear emergency scenario" },
+        meta: { defaultErrorMessage: t("clearError") },
     });
 
     const handleAction = (scenario: ScenarioDefinition, isThisActive: boolean) => {
         if (!isRunning) {
-            toast.error("Simulation session must be RUNNING to control emergency scenarios");
+            toast.error(t("mustBeRunningToast"));
             return;
         }
         if (isThisActive) {
@@ -106,11 +109,11 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
         <ChamferCard size="md" className="w-full" innerClassName="overflow-hidden">
             <div className="px-4 py-2.5 border-b border-[var(--color-border-default)] flex items-center justify-between gap-2 bg-[var(--color-surface-subtle)]">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                    FAULT & EMERGENCY SCENARIO INJECTION
+                    {t("heading")}
                 </span>
                 {!isRunning && (
                     <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                        Session must be RUNNING to inject faults
+                        {t("mustBeRunningHint")}
                     </span>
                 )}
             </div>
@@ -118,6 +121,7 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-[var(--color-border-default)]">
                 {CHAOS_SCENARIOS.map((sc) => {
                     const Icon = sc.icon;
+                    const scenarioName = tScenarios(`${sc.type}.name`);
                     const isThisInjecting =
                         injectMutation.isPending && injectMutation.variables?.type === sc.type;
                     const isThisActive = activeScenario?.toLowerCase() === sc.type.toLowerCase();
@@ -140,11 +144,15 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                                         )}
                                     />
                                     <span className="text-xs font-mono font-bold text-slate-900 truncate">
-                                        {sc.name}
+                                        {scenarioName}
                                     </span>
                                 </div>
                                 {isThisActive && (
-                                    <StatusBadge status="alert" label="ACTIVE" dotShape="circle" />
+                                    <StatusBadge
+                                        status="alert"
+                                        label={t("activeBadge")}
+                                        dotShape="circle"
+                                    />
                                 )}
                             </div>
 
@@ -158,9 +166,9 @@ export function SessionChaosPanel({ session, onScenarioInjected }: SessionChaosP
                                 {isThisInjecting || isThisClearing ? (
                                     <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : isThisActive ? (
-                                    <span>Clear Fault</span>
+                                    <span>{t("clearFault")}</span>
                                 ) : (
-                                    <span>Inject</span>
+                                    <span>{t("inject")}</span>
                                 )}
                             </ChamferButton>
                         </div>

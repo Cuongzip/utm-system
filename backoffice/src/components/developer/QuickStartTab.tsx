@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { Copy, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ChamferCard, ChamferButton, Skeleton } from "@/components/ui";
@@ -8,40 +9,6 @@ import { useConnectivityCaCertificate } from "@/hooks";
 import { formatDateTime } from "@/utils";
 
 type SnippetLang = "curl" | "python" | "javascript";
-
-const ENDPOINTS = [
-    {
-        method: "POST",
-        path: "/api/v1/integration/telemetry",
-        scope: "telemetry:write",
-        summary: "Ingest real-time OEM aircraft position, altitude, heading, speed, and battery.",
-        fields: "droneId*, latitude*, longitude*, altitude*, flightId?, heading?, speed?, batteryLevel?, armed?",
-    },
-    {
-        method: "POST",
-        path: "/api/v1/integration/register",
-        scope: "drone:register",
-        summary:
-            "Register a third-party OEM drone and automatically provision its hardware device.",
-        fields: "registrationNumber*, model*, manufacturer?, serialNumber?, ownerId?, homeHubId?, maxPayload?, maxRange?",
-    },
-    {
-        method: "GET",
-        path: "/api/v1/integration/status",
-        scope: "status:read",
-        summary:
-            "Query aggregated operational and online connectivity status for the key's manufacturer fleet.",
-        fields: "Header: X-API-Key (no query parameters required)",
-    },
-    {
-        method: "GET",
-        path: "/api/v1/connectivity/ca-certificate",
-        scope: "Public / Authenticated",
-        summary:
-            "Retrieve the PEM-encoded UTM Root CA X.509 v3 certificate for hardware mTLS trust verification.",
-        fields: "Returns { caCertificatePem, commonName, expiresAt }",
-    },
-] as const;
 
 function subscribeNoop() {
     return () => {};
@@ -115,10 +82,47 @@ console.log(await res.json());`,
 }
 
 export function QuickStartTab() {
+    const t = useTranslations("developer.docs");
     const [lang, setLang] = useState<SnippetLang>("curl");
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedCa, setCopiedCa] = useState(false);
     const { data: caCert, isLoading: caLoading } = useConnectivityCaCertificate();
+
+    const endpoints = useMemo(
+        () => [
+            {
+                method: "POST" as const,
+                path: "/api/v1/integration/telemetry",
+                scope: "telemetry:write",
+                summary: t("epTelemetrySummary"),
+                fields: "droneId*, latitude*, longitude*, altitude*, flightId?, heading?, speed?, batteryLevel?, armed?",
+            },
+            {
+                method: "POST" as const,
+                path: "/api/v1/integration/register",
+                scope: "drone:register",
+                summary: t("epRegisterSummary"),
+                fields: "registrationNumber*, model*, manufacturer?, serialNumber?, ownerId?, homeHubId?, maxPayload?, maxRange?",
+            },
+            {
+                method: "GET" as const,
+                path: "/api/v1/integration/status",
+                scope: "status:read",
+                summary: t("epStatusSummary"),
+                fields: t("epStatusFields"),
+            },
+            {
+                method: "GET" as const,
+                path: "/api/v1/connectivity/ca-certificate",
+                scope: t("epCaScope"),
+                summary: t("epCaSummary"),
+                fields: t("epCaFields", {
+                    shape: "{ caCertificatePem, commonName, expiresAt }",
+                }),
+            },
+        ],
+        [t]
+    );
 
     const gatewayBaseUrl = useSyncExternalStore(
         subscribeNoop,
@@ -130,7 +134,7 @@ export function QuickStartTab() {
     const copySnippet = async () => {
         await navigator.clipboard.writeText(snippets[lang]);
         setCopiedCode(true);
-        toast.success("Snippet copied to clipboard.");
+        toast.success(t("snippetCopiedToast"));
         setTimeout(() => setCopiedCode(false), 2000);
     };
 
@@ -138,7 +142,7 @@ export function QuickStartTab() {
         if (!caCert?.caCertificatePem) return;
         await navigator.clipboard.writeText(caCert.caCertificatePem);
         setCopiedCa(true);
-        toast.success("Root CA PEM copied to clipboard.");
+        toast.success(t("caCopiedToast"));
         setTimeout(() => setCopiedCa(false), 2000);
     };
 
@@ -159,7 +163,7 @@ export function QuickStartTab() {
                 <ChamferCard size="md">
                     <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                            Integration Quick Start
+                            {t("quickStartHeading")}
                         </span>
                         <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1 rounded-md bg-slate-100 p-0.5 border border-slate-200">
@@ -190,7 +194,7 @@ export function QuickStartTab() {
                                 ) : (
                                     <Copy className="w-3 h-3" />
                                 )}
-                                <span>{copiedCode ? "Copied" : "Copy"}</span>
+                                <span>{copiedCode ? t("copied") : t("copy")}</span>
                             </ChamferButton>
                         </div>
                     </div>
@@ -204,11 +208,11 @@ export function QuickStartTab() {
                 <ChamferCard size="md">
                     <div className="px-4 py-3 border-b border-slate-200">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                            OEM Integration Endpoints
+                            {t("endpointsHeading")}
                         </span>
                     </div>
                     <div className="divide-y divide-slate-200">
-                        {ENDPOINTS.map((ep) => (
+                        {endpoints.map((ep) => (
                             <div key={ep.path} className="p-4 flex flex-col gap-1.5">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
@@ -242,7 +246,7 @@ export function QuickStartTab() {
             <ChamferCard size="md">
                 <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        UTM Root CA X.509 Certificate (mTLS)
+                        {t("rootCaHeading")}
                     </span>
                     {caCert?.caCertificatePem && (
                         <div className="flex items-center gap-2">
@@ -252,11 +256,11 @@ export function QuickStartTab() {
                                 ) : (
                                     <Copy className="w-3 h-3" />
                                 )}
-                                <span>{copiedCa ? "Copied" : "Copy PEM"}</span>
+                                <span>{copiedCa ? t("copied") : t("copyPem")}</span>
                             </ChamferButton>
                             <ChamferButton variant="dark" size="xs" onClick={downloadCaPem}>
                                 <Download className="w-3 h-3" />
-                                <span>Download .pem</span>
+                                <span>{t("downloadPem")}</span>
                             </ChamferButton>
                         </div>
                     )}
@@ -280,7 +284,9 @@ export function QuickStartTab() {
                                 </span>
                                 {caCert.expiresAt && (
                                     <span>
-                                        <strong className="text-slate-800">Expires:</strong>{" "}
+                                        <strong className="text-slate-800">
+                                            {t("expiresLabel")}
+                                        </strong>{" "}
                                         {formatDateTime(caCert.expiresAt)}
                                     </span>
                                 )}
@@ -290,10 +296,7 @@ export function QuickStartTab() {
                             </pre>
                         </>
                     ) : (
-                        <p className="text-xs text-slate-500">
-                            Root CA certificate is not currently exposed by the connectivity
-                            service.
-                        </p>
+                        <p className="text-xs text-slate-500">{t("caUnavailable")}</p>
                     )}
                 </div>
             </ChamferCard>

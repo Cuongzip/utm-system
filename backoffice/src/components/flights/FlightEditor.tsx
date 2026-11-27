@@ -2,8 +2,21 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2, FileSearch } from "lucide-react";
-import { SplitMapLayout, ChamferButton, StatusBadge } from "@/components/ui";
+import { useTranslations } from "next-intl";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+    ArrowLeft,
+    Save,
+    Loader2,
+    FileSearch,
+    ShieldCheck,
+    Play,
+    Radio,
+    CheckCircle2,
+    AlertTriangle,
+} from "lucide-react";
+import { SplitMapLayout, ChamferButton, StatusBadge, ConfirmDialog } from "@/components/ui";
 import {
     FlightMapEditor,
     FlightFormSidebar,
@@ -14,12 +27,17 @@ import {
     determineActiveTabFromFlightErrors,
     estimateRouteFeasibility,
 } from "@/components/flights";
+import { QUERY_KEYS, usePermissions } from "@/hooks";
+import { flightService } from "@/services/flightService";
 import { clearFieldError, validateSchema } from "@/utils";
 import { createFlightBody, updateFlightBody } from "@/generated/flight";
 import {
     getInitialFlightFormPayload,
     EDITABLE_FLIGHT_STATUSES,
+    ACTIVE_FLIGHT_STATUSES,
     DEFAULT_FLIGHT_STATUS,
+    FLIGHT_STATUS,
+    FLIGHT_AUTHORIZATION_STATUS,
     FEASIBILITY_VERDICT,
     WAYPOINT_ACTION_TYPE,
     HUB_STATUS,
@@ -27,6 +45,7 @@ import {
     type Drone,
     type Flight,
     type FlightStatus,
+    type FlightAuthorizationStatus,
     type CreateFlightPayload,
     type UpdateFlightPayload,
     type FlightFormPayload,
@@ -50,9 +69,15 @@ export function FlightEditor({
     loading = false,
 }: FlightEditorProps) {
     const router = useRouter();
+    const t = useTranslations("flights");
+    const tCommon = useTranslations("common");
+    const tWp = useTranslations("waypoints");
+    const queryClient = useQueryClient();
+    const { canAuthorizeFlight } = usePermissions();
 
     const [submitting, setSubmitting] = useState(false);
     const [briefingOpen, setBriefingOpen] = useState(false);
+    const [confirmAbortOpen, setConfirmAbortOpen] = useState(false);
     const [prevInitialData, setPrevInitialData] = useState(initialData);
     const [rawFormData, setRawFormData] = useState<FlightFormPayload>(() =>
         getInitialFlightFormPayload(initialData)
@@ -167,7 +192,7 @@ export function FlightEditor({
 
         if (isFeasibilityWarning && !formData.feasibilityOverride?.trim()) {
             setFieldErrors({
-                feasibilityOverride: "Reason is required",
+                feasibilityOverride: t("validation.overrideReasonRequired"),
             });
             setActiveSidebarTab("details");
             return;
@@ -241,7 +266,9 @@ export function FlightEditor({
                 ? [
                       {
                           sequence: 1,
-                          name: `Departure: ${selectedDepHub.name || selectedDepHub.code || "Hub"}`,
+                          name: t("editor.departureWpName", {
+                              hub: selectedDepHub.name || selectedDepHub.code || "Hub",
+                          }),
                           latitude: selectedDepHub.location.latitude,
                           longitude: selectedDepHub.location.longitude,
                           altitude: selectedDepHub.altitudeMsl ?? 0,
@@ -251,7 +278,11 @@ export function FlightEditor({
                 : []),
             ...waypoints.map((wp, idx) => ({
                 sequence: (selectedDepHub?.location ? 2 : 1) + idx,
-                name: wp.name?.trim() || `Waypoint ${(selectedDepHub?.location ? 2 : 1) + idx}`,
+                name:
+                    wp.name?.trim() ||
+                    tWp("defaultWaypointName", {
+                        seq: (selectedDepHub?.location ? 2 : 1) + idx,
+                    }),
                 latitude: wp.latitude,
                 longitude: wp.longitude,
                 altitude: wp.altitude ?? alt,
@@ -262,7 +293,9 @@ export function FlightEditor({
                 ? [
                       {
                           sequence: (selectedDepHub?.location ? 2 : 1) + waypoints.length,
-                          name: `Arrival: ${selectedArrHub.name || selectedArrHub.code || "Hub"}`,
+                          name: t("editor.arrivalWpName", {
+                              hub: selectedArrHub.name || selectedArrHub.code || "Hub",
+                          }),
                           latitude: selectedArrHub.location.latitude,
                           longitude: selectedArrHub.location.longitude,
                           altitude: selectedArrHub.altitudeMsl ?? 0,
@@ -294,12 +327,88 @@ export function FlightEditor({
     );
 
     const flightStatus: FlightStatus = initialData?.status ?? DEFAULT_FLIGHT_STATUS;
+    const authStatus: FlightAuthorizationStatus =
+        initialData?.authorizationStatus ?? FLIGHT_AUTHORIZATION_STATUS.PENDING;
+    const flightLabel = formData.flightNumber || initialData?.flightNumber || initialData?.id || "";
+
+    const invalidateFlightQueries = () => {
+        if (initialData?.id) {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightDetail(initialData.id) });
+        }
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightsAll });
+    };
+
+    const authorizeMutation = useMutation({
+        mutationFn: () => flightService.authorizeFlight(initialData!.id),
+        onSuccess: () => {
+            toast.success(t("toasts.authorized", { flight: flightLabel }));
+            invalidateFlightQueries();
+        },
+        meta: { defaultErrorMessage: t("toasts.authorizeFailed") },
+    });
+
+    const startMutation = useMutation({
+        mutationFn: () => flightService.startFlight(initialData!.id),
+        onSuccess: () => {
+            toast.success(t("toasts.started", { flight: flightLabel }));
+            invalidateFlightQueries();
+        },
+        meta: { defaultErrorMessage: t("toasts.startFailed") },
+    });
+
+    const completeMutation = useMutation({
+        mutationFn: () => flightService.completeFlight(initialData!.id),
+        onSuccess: () => {
+            toast.success(t("toasts.completed", { flight: flightLabel }));
+            invalidateFlightQueries();
+        },
+        meta: { defaultErrorMessage: t("toasts.completeFailed") },
+    });
+
+    const abortMutation = useMutation({
+        mutationFn: () => flightService.abortFlight(initialData!.id),
+        onSuccess: () => {
+            toast.success(t("toasts.aborted", { flight: flightLabel }));
+            setConfirmAbortOpen(false);
+            invalidateFlightQueries();
+        },
+        meta: { defaultErrorMessage: t("toasts.abortFailed") },
+    });
+
+    const isLifecyclePending =
+        authorizeMutation.isPending ||
+        startMutation.isPending ||
+        completeMutation.isPending ||
+        abortMutation.isPending;
+
+    const canAuthorizeNow = Boolean(
+        mode === "edit" &&
+        initialData?.id &&
+        canAuthorizeFlight &&
+        (flightStatus === FLIGHT_STATUS.PLANNED || flightStatus === FLIGHT_STATUS.SCHEDULED) &&
+        authStatus === FLIGHT_AUTHORIZATION_STATUS.PENDING
+    );
+    const canStartNow = Boolean(
+        mode === "edit" && initialData?.id && flightStatus === FLIGHT_STATUS.AUTHORIZED
+    );
+    const isActiveNow = Boolean(
+        mode === "edit" && initialData?.id && ACTIVE_FLIGHT_STATUSES.includes(flightStatus)
+    );
+    const canCompleteOrAbortNow = Boolean(
+        mode === "edit" && initialData?.id && flightStatus === FLIGHT_STATUS.ACTIVE
+    );
+
     const pageTitle =
         mode === "create"
-            ? "REGISTER NEW FLIGHT"
+            ? t("editor.newTitle")
             : isReadOnly
-              ? `VIEW FLIGHT PLAN: ${formData.flightNumber || initialData?.flightNumber || ""}`
-              : `EDIT FLIGHT PLAN: ${formData.flightNumber || initialData?.flightNumber || ""}`;
+              ? t("editor.viewTitle", {
+                    flight: formData.flightNumber || initialData?.flightNumber || "",
+                })
+              : t("editor.editTitle", {
+                    flight: formData.flightNumber || initialData?.flightNumber || "",
+                });
 
     return (
         <>
@@ -307,7 +416,7 @@ export function FlightEditor({
                 title={pageTitle}
                 badges={mode === "edit" ? <StatusBadge status={flightStatus} showDot /> : null}
                 headerActions={
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {mode === "edit" && initialData?.id && (
                             <ChamferButton
                                 variant="outline"
@@ -316,7 +425,78 @@ export function FlightEditor({
                                 onClick={() => setBriefingOpen(true)}
                             >
                                 <FileSearch className="w-3.5 h-3.5 text-current" />
-                                <span>Briefing</span>
+                                <span>{t("editor.briefing")}</span>
+                            </ChamferButton>
+                        )}
+
+                        {canAuthorizeNow && (
+                            <ChamferButton
+                                variant="outline"
+                                size="sm"
+                                clip="xs"
+                                onClick={() => authorizeMutation.mutate()}
+                                disabled={isLifecyclePending || submitting}
+                            >
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>
+                                    {authorizeMutation.isPending
+                                        ? t("editor.authorizing")
+                                        : t("editor.authorize")}
+                                </span>
+                            </ChamferButton>
+                        )}
+
+                        {canStartNow && (
+                            <ChamferButton
+                                variant="outline"
+                                size="sm"
+                                clip="xs"
+                                onClick={() => startMutation.mutate()}
+                                disabled={isLifecyclePending || submitting}
+                            >
+                                <Play className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>
+                                    {startMutation.isPending
+                                        ? t("editor.starting")
+                                        : t("editor.startFlight")}
+                                </span>
+                            </ChamferButton>
+                        )}
+
+                        {canCompleteOrAbortNow && (
+                            <>
+                                <ChamferButton
+                                    variant="outline"
+                                    size="sm"
+                                    clip="xs"
+                                    onClick={() => completeMutation.mutate()}
+                                    disabled={isLifecyclePending}
+                                >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>{t("editor.complete")}</span>
+                                </ChamferButton>
+                                <ChamferButton
+                                    variant="outline"
+                                    size="sm"
+                                    clip="xs"
+                                    onClick={() => setConfirmAbortOpen(true)}
+                                    disabled={isLifecyclePending}
+                                >
+                                    <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                                    <span>{t("editor.abort")}</span>
+                                </ChamferButton>
+                            </>
+                        )}
+
+                        {isActiveNow && (
+                            <ChamferButton
+                                href="/dashboard/control-center"
+                                variant="dark"
+                                size="sm"
+                                clip="sm"
+                            >
+                                <Radio className="w-3.5 h-3.5 text-white" />
+                                <span>{t("editor.controlCenter")}</span>
                             </ChamferButton>
                         )}
 
@@ -325,10 +505,10 @@ export function FlightEditor({
                             size="sm"
                             clip="xs"
                             onClick={() => router.push("/dashboard/flights")}
-                            disabled={submitting}
+                            disabled={submitting || isLifecyclePending}
                         >
                             <ArrowLeft className="w-3.5 h-3.5 text-current" />
-                            <span>{isReadOnly ? "Back" : "Cancel"}</span>
+                            <span>{isReadOnly ? tCommon("back") : tCommon("cancel")}</span>
                         </ChamferButton>
 
                         {!isReadOnly && (
@@ -337,14 +517,18 @@ export function FlightEditor({
                                 size="sm"
                                 clip="sm"
                                 onClick={handleSave}
-                                disabled={submitting || loading}
+                                disabled={submitting || loading || isLifecyclePending}
                             >
                                 {submitting ? (
                                     <Loader2 className="w-4 h-4 animate-spin text-white" />
                                 ) : (
                                     <Save className="w-4 h-4 text-white" />
                                 )}
-                                <span>{mode === "create" ? "Save Flight" : "Update Plan"}</span>
+                                <span>
+                                    {mode === "create"
+                                        ? t("editor.saveFlight")
+                                        : t("editor.updatePlan")}
+                                </span>
                             </ChamferButton>
                         )}
                     </div>
@@ -401,6 +585,16 @@ export function FlightEditor({
                 flightId={initialData?.id}
                 flightNumber={formData.flightNumber || initialData?.flightNumber}
                 onClose={() => setBriefingOpen(false)}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmAbortOpen}
+                onClose={() => setConfirmAbortOpen(false)}
+                onConfirm={() => abortMutation.mutate()}
+                title={t("editor.abortActiveTitle")}
+                description={t("editor.abortActiveDesc", { flight: flightLabel })}
+                confirmText={t("abortDialog.confirm")}
+                loading={abortMutation.isPending}
             />
         </>
     );

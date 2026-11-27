@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronRight, Pause, Play, Square } from "lucide-react";
@@ -52,6 +53,7 @@ export function MissionDetailsTab({
     onClearFieldError,
 }: MissionDetailsTabProps) {
     const router = useRouter();
+    const t = useTranslations("missions");
     const queryClient = useQueryClient();
     const [confirmAbortOpen, setConfirmAbortOpen] = useState(false);
 
@@ -87,29 +89,29 @@ export function MissionDetailsTab({
     const pauseMutation = useMutation({
         mutationFn: (executionId: string) => missionService.pauseExecution(executionId),
         onSuccess: () => {
-            toast.success("Mission execution paused");
+            toast.success(t("toasts.executionPaused"));
             invalidateExecutionQueries();
         },
-        meta: { defaultErrorMessage: "Failed to pause execution" },
+        meta: { defaultErrorMessage: t("toasts.pauseFailed") },
     });
 
     const resumeMutation = useMutation({
         mutationFn: (executionId: string) => missionService.resumeExecution(executionId),
         onSuccess: () => {
-            toast.success("Mission execution resumed");
+            toast.success(t("toasts.executionResumed"));
             invalidateExecutionQueries();
         },
-        meta: { defaultErrorMessage: "Failed to resume execution" },
+        meta: { defaultErrorMessage: t("toasts.resumeFailed") },
     });
 
     const abortMutation = useMutation({
         mutationFn: (executionId: string) => missionService.abortExecution(executionId),
         onSuccess: () => {
-            toast.success("Mission execution aborted");
+            toast.success(t("toasts.executionAborted"));
             setConfirmAbortOpen(false);
             invalidateExecutionQueries();
         },
-        meta: { defaultErrorMessage: "Failed to abort execution" },
+        meta: { defaultErrorMessage: t("toasts.abortFailed") },
     });
 
     const isControlPending =
@@ -119,11 +121,11 @@ export function MissionDetailsTab({
         <div className="space-y-4">
             <AutoGenInput
                 id="missionCode"
-                label="Code"
+                label={t("details.code")}
                 showAutoGen={!isEdit}
                 disabled={isEdit || isReadOnly}
                 required
-                manualPlaceholder="e.g. MSN-HAN01"
+                manualPlaceholder={t("details.codePlaceholder")}
                 value={formData.code ?? ""}
                 onChange={(e) => {
                     onFormChange("code", e.target.value);
@@ -134,9 +136,9 @@ export function MissionDetailsTab({
 
             <FormInput
                 id="missionName"
-                label="Mission Name"
+                label={t("details.name")}
                 required
-                placeholder="Enter mission name"
+                placeholder={t("details.namePlaceholder")}
                 value={formData.name || ""}
                 disabled={isReadOnly}
                 onChange={(e) => {
@@ -148,12 +150,12 @@ export function MissionDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="missionDesc">
-                    Description
+                    {t("details.description")}
                 </label>
                 <textarea
                     id="missionDesc"
                     rows={3}
-                    placeholder="Optional description"
+                    placeholder={t("details.descriptionPlaceholder")}
                     value={formData.description || ""}
                     disabled={isReadOnly}
                     onChange={(e) => onFormChange("description", e.target.value)}
@@ -162,19 +164,19 @@ export function MissionDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Assigned Drone</label>
+                <label className="form-label">{t("details.defaultDrone")}</label>
                 <CustomSelect
                     value={effectiveDroneValue}
                     disabled={isReadOnly}
                     onValueChange={onDroneIdChange}
                     options={droneOptions}
-                    placeholder="Auto-dispatch from fleet (optional)"
+                    placeholder={t("details.defaultDronePlaceholder")}
                 />
             </div>
 
             <div className="form-group">
                 <label className="form-label">
-                    Departure Vertiport <span className="text-red-500">*</span>
+                    {t("details.departureHub")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     value={formData.departureHubId || ""}
@@ -184,7 +186,7 @@ export function MissionDetailsTab({
                         onClearFieldError("departureHubId");
                     }}
                     options={hubOptions}
-                    placeholder="Select departure hub"
+                    placeholder={t("details.selectDepartureHub")}
                     className={cn(fieldErrors.departureHubId && "form-input-error")}
                 />
                 {fieldErrors.departureHubId && (
@@ -193,7 +195,7 @@ export function MissionDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Arrival Vertiport</label>
+                <label className="form-label">{t("details.arrivalHub")}</label>
                 <CustomSelect
                     value={formData.arrivalHubId || ""}
                     disabled={isReadOnly}
@@ -202,7 +204,7 @@ export function MissionDetailsTab({
                         onClearFieldError("arrivalHubId");
                     }}
                     options={arrivalHubOptions}
-                    placeholder="Same as departure"
+                    placeholder={t("details.sameAsDeparture")}
                     className={cn(fieldErrors.arrivalHubId && "form-input-error")}
                 />
                 {fieldErrors.arrivalHubId && (
@@ -215,9 +217,13 @@ export function MissionDetailsTab({
                     <div className="px-3 py-2.5 border-b border-[var(--color-border-default)] space-y-2">
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-800">
-                                Execution ({latestExecution.completedLegs ?? 0}/
-                                {latestExecution.totalLegs ?? latestExecution.legs?.length ?? 1}{" "}
-                                Legs)
+                                {t("details.executionHeader", {
+                                    completed: latestExecution.completedLegs ?? 0,
+                                    total:
+                                        latestExecution.totalLegs ??
+                                        latestExecution.legs?.length ??
+                                        1,
+                                })}
                             </span>
                             <StatusBadge
                                 status={
@@ -237,7 +243,7 @@ export function MissionDetailsTab({
                                         onClick={() => pauseMutation.mutate(latestExecution.id!)}
                                     >
                                         <Pause className="w-3 h-3" />
-                                        <span>Pause</span>
+                                        <span>{t("details.pause")}</span>
                                     </ChamferButton>
                                 )}
                                 {canResumeExec && (
@@ -248,7 +254,7 @@ export function MissionDetailsTab({
                                         onClick={() => resumeMutation.mutate(latestExecution.id!)}
                                     >
                                         <Play className="w-3 h-3" />
-                                        <span>Resume</span>
+                                        <span>{t("details.resume")}</span>
                                     </ChamferButton>
                                 )}
                                 {canAbortExec && (
@@ -259,7 +265,7 @@ export function MissionDetailsTab({
                                         onClick={() => setConfirmAbortOpen(true)}
                                     >
                                         <Square className="w-3 h-3 text-slate-600" />
-                                        <span>Abort</span>
+                                        <span>{t("details.abort")}</span>
                                     </ChamferButton>
                                 )}
                             </div>
@@ -274,7 +280,9 @@ export function MissionDetailsTab({
                                     : undefined;
                                 const flightLabel =
                                     matchedFlight?.flightNumber ||
-                                    (leg.flightId ? "Assigned Flight" : "Pending");
+                                    (leg.flightId
+                                        ? t("details.assignedFlight")
+                                        : t("details.pendingFlight"));
 
                                 return (
                                     <button
@@ -323,9 +331,9 @@ export function MissionDetailsTab({
                         abortMutation.mutate(latestExecution.id);
                     }
                 }}
-                title="Abort Mission Execution"
-                description="This will cancel all pending flight legs and command any airborne leg aircraft to abort immediately."
-                confirmText="Abort Mission"
+                title={t("details.abortDialogTitle")}
+                description={t("details.abortDialogDesc")}
+                confirmText={t("details.abortDialogConfirm")}
                 loading={abortMutation.isPending}
             />
         </div>

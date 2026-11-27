@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -12,16 +13,19 @@ import {
     type SelectOption,
 } from "@/components/ui";
 import { MissionsTable, ExecuteMissionModal } from "@/components/missions";
+import { useAppLocale } from "@/i18n";
 import { missionService } from "@/services/missionService";
 import { useCrudList, useHubsAll, QUERY_KEYS } from "@/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createStatusOptions, compareCreatedDesc } from "@/utils";
-import { MISSION_STATUSES, MISSION_STATUS_LABELS, type Mission } from "@/types";
-
-const STATUS_OPTIONS: SelectOption[] = createStatusOptions(MISSION_STATUSES, MISSION_STATUS_LABELS);
+import { MISSION_STATUSES, type Mission } from "@/types";
 
 export default function MissionsPage() {
     const router = useRouter();
+    const t = useTranslations("missions");
+    const tCommon = useTranslations("common");
+    useAppLocale();
+    const statusOptions: SelectOption[] = createStatusOptions(MISSION_STATUSES);
     const queryClient = useQueryClient();
     const { data: hubs = [] } = useHubsAll();
 
@@ -76,37 +80,37 @@ export default function MissionsPage() {
     const scheduleMissionMutation = useMutation({
         mutationFn: (mission: Mission) => missionService.scheduleMission(mission.id),
         onSuccess: (_data, mission) => {
-            toast.success(`Mission "${mission.name || mission.id}" scheduled for dispatch`);
+            toast.success(t("toasts.scheduled", { name: mission.name || mission.id }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
         },
-        meta: { defaultErrorMessage: "Failed to schedule mission" },
+        meta: { defaultErrorMessage: t("toasts.scheduleFailed") },
     });
 
     const unscheduleMissionMutation = useMutation({
         mutationFn: (mission: Mission) => missionService.unscheduleMission(mission.id),
         onSuccess: (_data, mission) => {
-            toast.success(`Mission "${mission.name || mission.id}" reverted to draft`);
+            toast.success(t("toasts.unscheduled", { name: mission.name || mission.id }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
         },
-        meta: { defaultErrorMessage: "Failed to unschedule mission" },
+        meta: { defaultErrorMessage: t("toasts.unscheduleFailed") },
     });
 
     const duplicateMissionMutation = useMutation({
         mutationFn: (mission: Mission) => missionService.duplicateMission(mission.id),
         onSuccess: (_data, mission) => {
-            toast.success(`Mission "${mission.name || mission.id}" duplicated as draft`);
+            toast.success(t("toasts.duplicated", { name: mission.name || mission.id }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
         },
-        meta: { defaultErrorMessage: "Failed to duplicate mission" },
+        meta: { defaultErrorMessage: t("toasts.duplicateFailed") },
     });
 
     const deleteMissionMutation = useMutation({
         mutationFn: (mission: Mission) => missionService.deleteMission(mission.id),
         onSuccess: (_data, mission) => {
-            toast.success(`Mission "${mission.name || mission.id}" deleted successfully`);
+            toast.success(t("toasts.deleted", { name: mission.name || mission.id }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
         },
-        meta: { defaultErrorMessage: "Failed to delete mission" },
+        meta: { defaultErrorMessage: t("toasts.deleteFailed") },
     });
 
     const handleExecute = (mission: Mission) => {
@@ -115,7 +119,7 @@ export default function MissionsPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="MISSION PLANNING">
+            <PageHeader title={t("title")}>
                 <ChamferButton
                     variant="outline"
                     size="sm"
@@ -123,7 +127,7 @@ export default function MissionsPage() {
                     onClick={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions })}
                 >
                     <RotateCw className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Refresh</span>
+                    <span>{tCommon("refresh")}</span>
                 </ChamferButton>
 
                 <ChamferButton
@@ -132,17 +136,17 @@ export default function MissionsPage() {
                     onClick={() => router.push("/dashboard/missions/new")}
                 >
                     <Plus className="w-4 h-4 text-white" />
-                    <span>New Mission</span>
+                    <span>{t("newMission")}</span>
                 </ChamferButton>
             </PageHeader>
 
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Search mission code or name..."
+                searchPlaceholder={t("searchPlaceholder")}
                 statusFilter={statusFilter}
                 onStatusFilterChange={setStatusFilter}
-                statusOptions={STATUS_OPTIONS}
+                statusOptions={statusOptions}
                 onClearFilters={clearFilters}
                 totalCount={missions.length}
                 filteredCount={filteredMissions.length}
@@ -150,8 +154,8 @@ export default function MissionsPage() {
 
             {isError && missions.length === 0 ? (
                 <ErrorState
-                    title="Unable to load missions"
-                    description="The Mission Service could not be reached. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={refresh}
                 />
             ) : (

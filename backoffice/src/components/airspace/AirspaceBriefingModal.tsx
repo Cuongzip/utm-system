@@ -1,8 +1,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Play, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+    Loader2,
+    Play,
+    CheckCircle2,
+    AlertTriangle,
+    ChevronDown,
+    ChevronRight,
+    SlidersHorizontal,
+} from "lucide-react";
 import {
     Modal,
     ChamferButton,
@@ -18,6 +27,7 @@ import {
     TableCell,
 } from "@/components/ui";
 import { useHubsAll } from "@/hooks";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { formatCoordinates, formatAltitude, formatNullable, validateSchema } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
 import { checkPathBody } from "@/generated/airspace";
@@ -30,11 +40,15 @@ interface AirspaceBriefingModalProps {
 }
 
 function WaypointInputs({
+    idPrefix,
     title,
+    labels,
     point,
     onChange,
 }: {
+    idPrefix: string;
     title: string;
+    labels: { lat: string; lon: string; alt: string };
     point: PathPoint;
     onChange: (field: keyof PathPoint, val: number) => void;
 }) {
@@ -61,8 +75,6 @@ function WaypointInputs({
             }
         };
 
-    const prefix = title.toLowerCase().replace(/\s+/g, "-");
-
     return (
         <div className="p-3 bg-slate-50 rounded-md border border-slate-200 flex flex-col gap-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-600">
@@ -70,8 +82,8 @@ function WaypointInputs({
             </span>
             <div className="grid grid-cols-3 gap-2">
                 <FormInput
-                    id={`${prefix}-lat`}
-                    label="Latitude"
+                    id={`${idPrefix}-lat`}
+                    label={labels.lat}
                     type="text"
                     inputMode="decimal"
                     value={latStr}
@@ -81,8 +93,8 @@ function WaypointInputs({
                     className="font-mono text-xs"
                 />
                 <FormInput
-                    id={`${prefix}-lon`}
-                    label="Longitude"
+                    id={`${idPrefix}-lon`}
+                    label={labels.lon}
                     type="text"
                     inputMode="decimal"
                     value={lonStr}
@@ -92,8 +104,8 @@ function WaypointInputs({
                     className="font-mono text-xs"
                 />
                 <FormInput
-                    id={`${prefix}-alt`}
-                    label="Altitude (m)"
+                    id={`${idPrefix}-alt`}
+                    label={labels.alt}
                     type="text"
                     inputMode="decimal"
                     value={altStr}
@@ -108,11 +120,16 @@ function WaypointInputs({
 }
 
 export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModalProps) {
+    const locale = useLocale() as AppLocale;
+    const t = useTranslations("airspace");
+    const tCommon = useTranslations("common");
     const { data: hubs = [] } = useHubsAll();
     const [originHubId, setOriginHubId] = useState("");
     const [destHubId, setDestHubId] = useState("");
-    const [start, setStart] = useState<PathPoint>({ lat: 10.8185, lon: 106.6588, alt: 100 });
+    const [start, setStart] = useState<PathPoint>({ lat: 10.8185, lon: 106.6588, alt: 120 });
     const [end, setEnd] = useState<PathPoint>({ lat: 10.7715, lon: 106.7214, alt: 120 });
+    const [cruiseAltStr, setCruiseAltStr] = useState<string>("120");
+    const [showAdvanced, setShowAdvanced] = useState(false);
     const [coordVersion, setCoordVersion] = useState(0);
     const [spacingM, setSpacingM] = useState<number>(200);
     const [spacingStr, setSpacingStr] = useState<string>("200");
@@ -145,7 +162,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
             setValidationError(null);
             setCheckResult(data);
         },
-        meta: { defaultErrorMessage: "Failed to perform airspace pre-flight check" },
+        meta: { defaultErrorMessage: t("briefing.checkFailed") },
     });
 
     const updateWaypoint =
@@ -191,8 +208,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
             spacingM: spacingM ?? 200,
         });
         if (!validation.success) {
-            const firstMsg =
-                Object.values(validation.errors)[0] || "Invalid trajectory coordinates.";
+            const firstMsg = Object.values(validation.errors)[0] || t("briefing.invalidCoords");
             setValidationError(firstMsg);
             return;
         }
@@ -206,6 +222,20 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
         onClose();
     };
 
+    const resolveZoneTypeBadge = (zoneType?: string | null) => {
+        const effective = zoneType ?? DEFAULT_AIRSPACE_ZONE_TYPE;
+        if (translateStatusLabel(effective, locale)) return undefined;
+        if (effective === "hub_zone") return t("zoneTypeBadges.hub_zone");
+        if (effective === "temporary_restriction") return t("zoneTypeBadges.temporary_restriction");
+        return undefined;
+    };
+
+    const waypointLabels = {
+        lat: t("briefing.latitude"),
+        lon: t("briefing.longitude"),
+        alt: t("briefing.altitudeM"),
+    };
+
     const violations = checkResult?.violations || [];
     const isSafe = checkResult?.safe === true && violations.length === 0;
 
@@ -213,7 +243,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
         <Modal
             isOpen={isOpen}
             onClose={handleClose}
-            title="Pre-Flight Airspace Check"
+            title={t("briefing.title")}
             maxWidth="620px"
             footer={
                 <div className="flex items-center justify-between w-full gap-2">
@@ -231,7 +261,9 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <Play className="w-3.5 h-3.5 text-white" />
                         )}
                         <span>
-                            {checkMutation.isPending ? "Checking Path..." : "Run Airspace Check"}
+                            {checkMutation.isPending
+                                ? t("briefing.checking")
+                                : t("briefing.runCheck")}
                         </span>
                     </ChamferButton>
 
@@ -242,80 +274,144 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                         type="button"
                         onClick={handleClose}
                     >
-                        Close
+                        {tCommon("close")}
                     </ChamferButton>
                 </div>
             }
         >
-            <div className="flex flex-col gap-4">
-                {hubOptions.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="form-group">
-                            <label htmlFor="briefing-origin-hub" className="form-label">
-                                Origin Vertiport
-                            </label>
-                            <CustomSelect
-                                id="briefing-origin-hub"
-                                value={originHubId}
-                                onValueChange={handleSelectOriginHub}
-                                options={hubOptions}
-                                placeholder="Select departure hub..."
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="briefing-dest-hub" className="form-label">
-                                Destination Vertiport
-                            </label>
-                            <CustomSelect
-                                id="briefing-dest-hub"
-                                value={destHubId}
-                                onValueChange={handleSelectDestHub}
-                                options={hubOptions}
-                                placeholder="Select arrival hub..."
+            <div className="flex flex-col gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    {hubOptions.length > 0 && (
+                        <>
+                            <div className="form-group sm:col-span-5">
+                                <label htmlFor="briefing-origin-hub" className="form-label">
+                                    {t("briefing.originHub")}
+                                </label>
+                                <CustomSelect
+                                    id="briefing-origin-hub"
+                                    value={originHubId}
+                                    onValueChange={handleSelectOriginHub}
+                                    options={hubOptions}
+                                    placeholder={t("briefing.originHubPlaceholder")}
+                                />
+                            </div>
+                            <div className="form-group sm:col-span-5">
+                                <label htmlFor="briefing-dest-hub" className="form-label">
+                                    {t("briefing.destHub")}
+                                </label>
+                                <CustomSelect
+                                    id="briefing-dest-hub"
+                                    value={destHubId}
+                                    onValueChange={handleSelectDestHub}
+                                    options={hubOptions}
+                                    placeholder={t("briefing.destHubPlaceholder")}
+                                />
+                            </div>
+                        </>
+                    )}
+                    <div
+                        className={
+                            hubOptions.length > 0 ? "form-group sm:col-span-2" : "form-group w-44"
+                        }
+                    >
+                        <FormInput
+                            id="briefing-cruise-alt"
+                            label={t("briefing.cruiseAlt")}
+                            type="number"
+                            min="5"
+                            max="1000"
+                            value={cruiseAltStr}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setCruiseAltStr(val);
+                                const parsed = parseFloat(val);
+                                if (!isNaN(parsed) && parsed >= 0) {
+                                    setStart((prev) => ({ ...prev, alt: parsed }));
+                                    setEnd((prev) => ({ ...prev, alt: parsed }));
+                                    setCoordVersion((v) => v + 1);
+                                    setValidationError(null);
+                                }
+                            }}
+                            onBlur={() => {
+                                const parsed = parseFloat(cruiseAltStr);
+                                if (isNaN(parsed) || parsed < 0) {
+                                    setCruiseAltStr(String(end.alt ?? 120));
+                                }
+                            }}
+                            className="font-mono text-xs"
+                        />
+                    </div>
+                </div>
+
+                <div className="rounded-md border border-slate-200 bg-slate-50/80 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] font-mono text-slate-600 tabular-nums">
+                        {formatCoordinates({ latitude: start.lat, longitude: start.lon }, 4)} →{" "}
+                        {formatCoordinates({ latitude: end.lat, longitude: end.lon }, 4)} ·{" "}
+                        {formatAltitude(end.alt)}
+                    </span>
+                    <button
+                        type="button"
+                        aria-expanded={showAdvanced}
+                        onClick={() => setShowAdvanced((prev) => !prev)}
+                        className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-slate-700 hover:text-slate-950 cursor-pointer"
+                    >
+                        <SlidersHorizontal className="w-3 h-3 text-slate-500" />
+                        <span>{t("briefing.customCoords")}</span>
+                        {showAdvanced ? (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                        )}
+                    </button>
+                </div>
+
+                {showAdvanced && (
+                    <div className="flex flex-col gap-3 pt-1">
+                        <WaypointInputs
+                            key={`start-${coordVersion}`}
+                            idPrefix="origin-waypoint"
+                            title={t("briefing.originWaypoint")}
+                            labels={waypointLabels}
+                            point={start}
+                            onChange={updateWaypoint(setStart)}
+                        />
+
+                        <WaypointInputs
+                            key={`end-${coordVersion}`}
+                            idPrefix="dest-waypoint"
+                            title={t("briefing.destWaypoint")}
+                            labels={waypointLabels}
+                            point={end}
+                            onChange={updateWaypoint(setEnd)}
+                        />
+
+                        <div className="w-48">
+                            <FormInput
+                                id="briefing-sample-spacing"
+                                label={t("briefing.sampleSpacing")}
+                                type="number"
+                                min="10"
+                                max="5000"
+                                value={spacingStr}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSpacingStr(val);
+                                    const parsed = parseInt(val, 10);
+                                    if (!isNaN(parsed) && parsed > 0) {
+                                        setSpacingM(parsed);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const parsed = parseInt(spacingStr, 10);
+                                    if (isNaN(parsed) || parsed <= 0) {
+                                        setSpacingStr(String(spacingM ?? 200));
+                                    }
+                                }}
+                                className="font-mono text-xs"
                             />
                         </div>
                     </div>
                 )}
-
-                <WaypointInputs
-                    key={`start-${coordVersion}`}
-                    title="Origin Waypoint"
-                    point={start}
-                    onChange={updateWaypoint(setStart)}
-                />
-
-                <WaypointInputs
-                    key={`end-${coordVersion}`}
-                    title="Destination Waypoint"
-                    point={end}
-                    onChange={updateWaypoint(setEnd)}
-                />
-
-                <div className="w-48">
-                    <FormInput
-                        id="briefing-sample-spacing"
-                        label="Sample Spacing (m)"
-                        type="number"
-                        min="10"
-                        max="5000"
-                        value={spacingStr}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            setSpacingStr(val);
-                            const parsed = parseInt(val, 10);
-                            if (!isNaN(parsed) && parsed > 0) {
-                                setSpacingM(parsed);
-                            }
-                        }}
-                        onBlur={() => {
-                            const parsed = parseInt(spacingStr, 10);
-                            if (isNaN(parsed) || parsed <= 0) {
-                                setSpacingStr(String(spacingM ?? 200));
-                            }
-                        }}
-                        className="font-mono text-xs"
-                    />
-                </div>
 
                 {validationError && (
                     <span className="form-error-msg" role="alert">
@@ -329,29 +425,42 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             <TacticalCallout
                                 tone="success"
                                 icon={CheckCircle2}
-                                title="Route Clear — No Airspace Violations"
-                                description="All sampled trajectory coordinates conform to open flight corridors."
-                                rightSlot={<StatusBadge status="go" label="CLEAR" />}
+                                title={t("briefing.routeClearTitle")}
+                                description={t("briefing.routeClearDesc")}
+                                rightSlot={
+                                    <StatusBadge status="go" label={t("briefing.clearBadge")} />
+                                }
                             />
                         ) : (
                             <>
                                 <TacticalCallout
                                     tone="warning"
                                     icon={AlertTriangle}
-                                    title={`Route Compromised (${violations.length} Sector Violation${
-                                        violations.length > 1 ? "s" : ""
-                                    })`}
-                                    description="Trajectory intersects restricted or prohibited airspace sectors."
-                                    rightSlot={<StatusBadge status="no_go" label="CONFLICT" />}
+                                    title={
+                                        violations.length === 1
+                                            ? t("briefing.routeCompromisedSingle")
+                                            : t("briefing.routeCompromisedPlural", {
+                                                  count: violations.length,
+                                              })
+                                    }
+                                    description={t("briefing.routeCompromisedDesc")}
+                                    rightSlot={
+                                        <StatusBadge
+                                            status="no_go"
+                                            label={t("briefing.conflictBadge")}
+                                        />
+                                    }
                                 />
 
-                                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-md">
+                                <div className="max-h-48 overflow-y-auto utm-scroll border border-slate-200 rounded-md">
                                     <Table fixed={false}>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>ZONE NAME</TableHead>
-                                                <TableHead>TYPE</TableHead>
-                                                <TableHead>CONFLICT COORDINATE</TableHead>
+                                                <TableHead>{t("briefing.colZoneName")}</TableHead>
+                                                <TableHead>{t("briefing.colType")}</TableHead>
+                                                <TableHead>
+                                                    {t("briefing.colConflictCoord")}
+                                                </TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -361,7 +470,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                                                         {formatNullable(
                                                             v.name ?? v.zoneId,
                                                             undefined,
-                                                            "Unnamed Zone"
+                                                            t("briefing.unnamedZone")
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
@@ -370,6 +479,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                                                                 v.zoneType ??
                                                                 DEFAULT_AIRSPACE_ZONE_TYPE
                                                             }
+                                                            label={resolveZoneTypeBadge(v.zoneType)}
                                                         />
                                                     </TableCell>
                                                     <TableCell mono>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Cloud } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState, Skeleton, TacticalCallout } from "@/components/ui";
 import { useWeatherMetar, useWeatherTaf, useWeatherSigmet } from "@/hooks";
@@ -9,6 +10,7 @@ import { formatDateTime } from "@/utils";
 type ReportTab = "metar" | "taf" | "sigmet";
 
 export function AviationReportsCard() {
+    const t = useTranslations("weather");
     const [tab, setTab] = useState<ReportTab>("metar");
     const { data: metars = [], isLoading: metarLoading } = useWeatherMetar();
     const { data: tafs = [], isLoading: tafLoading } = useWeatherTaf(true);
@@ -24,11 +26,11 @@ export function AviationReportsCard() {
         <ChamferCard size="md">
             <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                    Aviation Bulletins · NOAA AWC
+                    {t("aviation.heading")}
                 </span>
                 <div
                     role="tablist"
-                    aria-label="Aviation report categories"
+                    aria-label={t("aviation.categoriesAria")}
                     className="flex items-center gap-1 rounded-md bg-slate-100 p-0.5 border border-slate-200"
                 >
                     {reportTabs.map((item) => {
@@ -71,8 +73,8 @@ export function AviationReportsCard() {
                     ) : metars.length === 0 ? (
                         <EmptyState
                             icon={Cloud}
-                            title="No METAR Observations"
-                            description="No aerodrome METAR bulletins returned by NOAA AWC."
+                            title={t("aviation.noMetarTitle")}
+                            description={t("aviation.noMetarDesc")}
                         />
                     ) : (
                         <div className="divide-y divide-slate-200">
@@ -92,14 +94,14 @@ export function AviationReportsCard() {
                                         <div className="flex items-center gap-3">
                                             <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-600 tabular-nums">
                                                 <span>
-                                                    TEMP{" "}
+                                                    {t("aviation.temp")}{" "}
                                                     <strong className="text-slate-900">
                                                         {m.temperatureC ?? "—"}°/
                                                         {m.dewpointC ?? "—"}°
                                                     </strong>
                                                 </span>
                                                 <span>
-                                                    WIND{" "}
+                                                    {t("aviation.wind")}{" "}
                                                     <strong className="text-slate-900">
                                                         {m.windSpeedKt != null
                                                             ? `${m.windDirectionDeg ?? "VRB"}° @ ${m.windSpeedKt}kt`
@@ -107,7 +109,7 @@ export function AviationReportsCard() {
                                                     </strong>
                                                 </span>
                                                 <span>
-                                                    VIS{" "}
+                                                    {t("aviation.vis")}{" "}
                                                     <strong className="text-slate-900">
                                                         {m.visibilityM != null
                                                             ? `${(m.visibilityM / 1000).toFixed(1)}km`
@@ -115,7 +117,7 @@ export function AviationReportsCard() {
                                                     </strong>
                                                 </span>
                                                 <span>
-                                                    QNH{" "}
+                                                    {t("aviation.qnh")}{" "}
                                                     <strong className="text-slate-900">
                                                         {m.altimeterHpa != null
                                                             ? `${Math.round(m.altimeterHpa)} hPa`
@@ -156,35 +158,37 @@ export function AviationReportsCard() {
                     ) : tafs.length === 0 ? (
                         <EmptyState
                             icon={Cloud}
-                            title="No TAF Forecasts"
-                            description="No Terminal Aerodrome Forecasts available at this time."
+                            title={t("aviation.noTafTitle")}
+                            description={t("aviation.noTafDesc")}
                         />
                     ) : (
                         <div className="divide-y divide-slate-200">
-                            {tafs.map((t, idx) => (
-                                <div key={t.icaoId ?? idx} className="p-4 flex flex-col gap-2">
+                            {tafs.map((tItem, idx) => (
+                                <div key={tItem.icaoId ?? idx} className="p-4 flex flex-col gap-2">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <div>
                                             <span className="font-mono text-sm font-bold text-slate-900">
-                                                {t.icaoId}
+                                                {tItem.icaoId}
                                             </span>
-                                            {t.stationName && (
+                                            {tItem.stationName && (
                                                 <span className="text-xs text-slate-500 ml-2">
-                                                    {t.stationName}
+                                                    {tItem.stationName}
                                                 </span>
                                             )}
                                         </div>
                                         <span className="text-[11px] font-mono text-slate-500">
-                                            {t.validTimeFrom
-                                                ? `Valid ${formatDateTime(t.validTimeFrom)}`
+                                            {tItem.validTimeFrom
+                                                ? t("aviation.validFrom", {
+                                                      time: formatDateTime(tItem.validTimeFrom),
+                                                  })
                                                 : ""}
-                                            {t.validTimeTo
-                                                ? ` → ${formatDateTime(t.validTimeTo)}`
+                                            {tItem.validTimeTo
+                                                ? ` → ${formatDateTime(tItem.validTimeTo)}`
                                                 : ""}
                                         </span>
                                     </div>
                                     <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-mono text-slate-700 whitespace-pre-wrap break-words">
-                                        {t.rawTaf || "—"}
+                                        {tItem.rawTaf || "—"}
                                     </div>
                                 </div>
                             ))}
@@ -204,8 +208,8 @@ export function AviationReportsCard() {
                     ) : sigmets.length === 0 ? (
                         <EmptyState
                             icon={AlertTriangle}
-                            title="No Active SIGMET Advisories"
-                            description="No severe hazardous weather SIGMETs are currently active in monitored FIRs."
+                            title={t("aviation.noSigmetTitle")}
+                            description={t("aviation.noSigmetDesc")}
                         />
                     ) : (
                         <div className="flex flex-col gap-3">

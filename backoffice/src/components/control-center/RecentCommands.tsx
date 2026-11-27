@@ -1,17 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Clock, Terminal } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState, Skeleton } from "@/components/ui";
 import { useDroneCommands } from "@/hooks";
 import { formatTime } from "@/utils";
-import { type DroneCommand, DEFAULT_COMMAND_STATUS } from "@/types";
+import { COMMAND_TYPE, type DroneCommand, DEFAULT_COMMAND_STATUS } from "@/types";
 
 export interface RecentCommandsProps {
     droneId?: string | null;
 }
 
 export function RecentCommands({ droneId }: RecentCommandsProps) {
+    const t = useTranslations("controlCenter");
     const { data: commandList, isLoading } = useDroneCommands(droneId);
 
     const commands: DroneCommand[] = useMemo(() => {
@@ -23,32 +25,53 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
         });
     }, [commandList]);
 
+    const getCommandDisplayName = (cmdType?: string | null) => {
+        switch (cmdType) {
+            case COMMAND_TYPE.TAKEOFF:
+                return t("commands.tkof");
+            case COMMAND_TYPE.LAND:
+                return t("commands.land");
+            case COMMAND_TYPE.RTL:
+                return t("commands.rth");
+            case COMMAND_TYPE.PAUSE:
+                return t("commands.pause");
+            case COMMAND_TYPE.HOVER:
+                return t("commands.hover");
+            case COMMAND_TYPE.RESUME:
+                return t("commands.resume");
+            case COMMAND_TYPE.EMERGENCY_STOP:
+                return t("commands.emergencyStop");
+            default:
+                return (cmdType || "").replace(/_/g, " ");
+        }
+    };
+
     return (
         <ChamferCard size="lg" className="h-[272px]">
             <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between gap-3 shrink-0">
-                <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono tracking-wider uppercase">
-                    Recent Commands
+                <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono tracking-wider uppercase truncate">
+                    {t("recentCommands")}
                 </span>
                 {commands.length > 0 && (
-                    <span className="text-[10px] font-mono text-[var(--color-text-muted)] font-semibold">
-                        {commands.length} LOGGED
+                    <span className="text-[10px] font-mono text-[var(--color-text-muted)] font-semibold shrink-0">
+                        {t("loggedCount", { count: commands.length })}
                     </span>
                 )}
             </div>
 
-            <div className="overflow-y-auto overscroll-contain utm-scroll divide-y divide-[var(--color-border-subtle)] text-[11px] font-mono flex-1">
+            <div className="overflow-y-auto overscroll-contain divide-y divide-[var(--color-border-subtle)] text-[11px] font-mono flex-1 mr-0.5 my-0.5 max-h-[224px]">
                 {!droneId ? (
                     <EmptyState
                         compact
                         icon={Terminal}
-                        title="No drone selected"
+                        title={t("noDroneSelected")}
                         className="py-8"
                     />
                 ) : isLoading ? (
                     <div
                         role="status"
                         aria-busy="true"
-                        aria-label="Loading commands"
+                        aria-label={t("loadingCommands")}
                         className="flex flex-col divide-y divide-[var(--color-border-subtle)]"
                     >
                         {Array.from({ length: 4 }).map((_, idx) => (
@@ -63,10 +86,15 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
                                 <Skeleton className="h-4 w-16" />
                             </div>
                         ))}
-                        <span className="sr-only">Loading commands...</span>
+                        <span className="sr-only">{t("loadingCommands")}</span>
                     </div>
                 ) : commands.length === 0 ? (
-                    <EmptyState compact icon={Clock} title="No recent commands" className="py-8" />
+                    <EmptyState
+                        compact
+                        icon={Clock}
+                        title={t("noRecentCommands")}
+                        className="py-8"
+                    />
                 ) : (
                     commands.map((cmd) => (
                         <div
@@ -80,7 +108,7 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
                                         : "--:--:--"}
                                 </span>
                                 <span className="font-bold text-[var(--color-text-primary)] uppercase shrink-0 font-mono">
-                                    {(cmd.commandType || "").replace(/_/g, " ")}
+                                    {getCommandDisplayName(cmd.commandType)}
                                 </span>
                                 {cmd.errorMessage && (
                                     <span

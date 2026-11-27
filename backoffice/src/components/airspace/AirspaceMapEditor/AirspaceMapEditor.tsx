@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Circle, Pentagon } from "lucide-react";
 import { TacticalMapContainer, MapUndoClear, MapZoneAction, AirspaceLayer } from "@/components/map";
 import { cn } from "@/lib";
@@ -48,6 +49,7 @@ export function AirspaceMapEditor({
     currentZoneId,
     className,
 }: AirspaceMapEditorProps) {
+    const t = useTranslations("airspace");
     const [showContextZones, setShowContextZones] = useState(false);
     const [hoverPoint, setHoverPoint] = useState<GeoPoint | null>(null);
     const backgroundZones = existingZones.filter((z) => z.id !== currentZoneId);
@@ -74,10 +76,10 @@ export function AirspaceMapEditor({
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
-                            title="Circle radius mode"
+                            title={t("boundary.circleModeTitle")}
                         >
                             <Circle className="w-3.5 h-3.5" />
-                            <span>Radius (Circle)</span>
+                            <span>{t("boundary.radiusCircle")}</span>
                         </button>
 
                         <button
@@ -89,10 +91,10 @@ export function AirspaceMapEditor({
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
-                            title="Draw polygon corridor"
+                            title={t("boundary.polygonModeTitle")}
                         >
                             <Pentagon className="w-3.5 h-3.5" />
-                            <span>Draw Polygon</span>
+                            <span>{t("boundary.drawPolygon")}</span>
                         </button>
                     </div>
 
@@ -119,7 +121,7 @@ export function AirspaceMapEditor({
                         {geometryMode === "radius" ? (
                             <>
                                 <span>
-                                    Center:{" "}
+                                    {t("boundary.hudCenter")}{" "}
                                     <strong className="text-white">
                                         {formatCoordinates(
                                             { latitude: center.lat, longitude: center.lng },
@@ -129,14 +131,14 @@ export function AirspaceMapEditor({
                                 </span>
                                 <span className="text-slate-600">|</span>
                                 <span>
-                                    Radius:{" "}
+                                    {t("boundary.hudRadius")}{" "}
                                     <strong className="text-white font-bold">
                                         {radiusMeters}m
                                     </strong>
                                 </span>
                                 <span className="text-slate-600">|</span>
                                 <span>
-                                    Area:{" "}
+                                    {t("boundary.hudArea")}{" "}
                                     <strong className="text-cyan-300 font-bold">
                                         {formatArea(computedAreaSqM)}
                                     </strong>
@@ -145,13 +147,13 @@ export function AirspaceMapEditor({
                         ) : (
                             <>
                                 <span>
-                                    Vertices:{" "}
+                                    {t("boundary.hudVertices")}{" "}
                                     <strong className="text-white">
-                                        {polygonPoints.length} pts
+                                        {t("boundary.hudPts", { count: polygonPoints.length })}
                                     </strong>
                                     {polygonPoints.length < 3 && (
                                         <span className="text-amber-400 ml-1.5 font-medium">
-                                            (min 3)
+                                            {t("boundary.hudMin3")}
                                         </span>
                                     )}
                                 </span>
@@ -159,7 +161,7 @@ export function AirspaceMapEditor({
                                     <>
                                         <span className="text-slate-600">|</span>
                                         <span>
-                                            Area:{" "}
+                                            {t("boundary.hudArea")}{" "}
                                             <strong className="text-cyan-300 font-bold">
                                                 {formatArea(computedAreaSqM)}
                                             </strong>

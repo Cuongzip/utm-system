@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     RefreshCw,
@@ -54,6 +55,8 @@ export function FleetRebalancingTab({
     historyTasks,
     loading,
 }: FleetRebalancingTabProps) {
+    const t = useTranslations("fleet.rebalancing");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const { data: hubs = [] } = useHubsAll();
     const { data: drones = [] } = useDronesAll();
@@ -98,22 +101,22 @@ export function FleetRebalancingTab({
 
     const analyzeMutation = useMutation({
         mutationFn: () => fleetService.analyzeRebalancing(),
-        meta: { defaultErrorMessage: "Failed to analyze rebalancing needs" },
+        meta: { defaultErrorMessage: t("analyzeError") },
         onSuccess: (data) => {
             setRecommendations(data);
             if (data.length === 0) {
-                toast.success("Fleet distribution is balanced — no rebalancing needed.");
+                toast.success(t("balancedToast"));
             } else {
-                toast.success(`Found ${data.length} rebalancing recommendation(s).`);
+                toast.success(t("recommendationsToast", { count: data.length }));
             }
         },
     });
 
     const createMutation = useMutation({
         mutationFn: fleetService.createRebalancing,
-        meta: { defaultErrorMessage: "Failed to create rebalancing task" },
+        meta: { defaultErrorMessage: t("createError") },
         onSuccess: () => {
-            toast.success("Rebalancing task created.");
+            toast.success(t("createdToast"));
             setManualModalOpen(false);
             setSourceHubId("");
             setTargetHubId("");
@@ -128,36 +131,36 @@ export function FleetRebalancingTab({
             await fleetService.approveRebalancing(id);
             return fleetService.executeRebalancing(id);
         },
-        meta: { defaultErrorMessage: "Failed to approve and execute rebalancing" },
+        meta: { defaultErrorMessage: t("approveExecuteError") },
         onSuccess: () => {
-            toast.success("Rebalancing approved and dispatched.");
+            toast.success(t("approvedExecutedToast"));
             invalidateFleet();
         },
     });
 
     const approveMutation = useMutation({
         mutationFn: (id: string) => fleetService.approveRebalancing(id),
-        meta: { defaultErrorMessage: "Failed to approve rebalancing task" },
+        meta: { defaultErrorMessage: t("approveError") },
         onSuccess: () => {
-            toast.success("Rebalancing task approved.");
+            toast.success(t("approvedToast"));
             invalidateFleet();
         },
     });
 
     const executeMutation = useMutation({
         mutationFn: (id: string) => fleetService.executeRebalancing(id),
-        meta: { defaultErrorMessage: "Failed to execute rebalancing task" },
+        meta: { defaultErrorMessage: t("executeError") },
         onSuccess: () => {
-            toast.success("Repositioning flight dispatched.");
+            toast.success(t("executedToast"));
             invalidateFleet();
         },
     });
 
     const completeMutation = useMutation({
         mutationFn: (id: string) => fleetService.completeRebalancing(id),
-        meta: { defaultErrorMessage: "Failed to complete rebalancing task" },
+        meta: { defaultErrorMessage: t("completeError") },
         onSuccess: () => {
-            toast.success("Rebalancing task completed and drone hub updated.");
+            toast.success(t("completedToast"));
             invalidateFleet();
         },
     });
@@ -165,9 +168,9 @@ export function FleetRebalancingTab({
     const cancelMutation = useMutation({
         mutationFn: (id: string) =>
             fleetService.cancelRebalancing(id, { reason: "Cancelled by operator" }),
-        meta: { defaultErrorMessage: "Failed to cancel rebalancing task" },
+        meta: { defaultErrorMessage: t("cancelError") },
         onSuccess: () => {
-            toast.success("Rebalancing task cancelled.");
+            toast.success(t("cancelledToast"));
             setTaskToCancel(null);
             invalidateFleet();
         },
@@ -203,11 +206,11 @@ export function FleetRebalancingTab({
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!sourceHubId || !targetHubId || !droneId) {
-            toast.error("Select source hub, target hub, and drone.");
+            toast.error(t("selectRequiredToast"));
             return;
         }
         if (sourceHubId === targetHubId) {
-            toast.error("Source and target hub must be different.");
+            toast.error(t("differentHubsToast"));
             return;
         }
         createMutation.mutate({ sourceHubId, targetHubId, droneId, autoApprove });
@@ -224,10 +227,10 @@ export function FleetRebalancingTab({
         () => [
             ...[...pendingTasks]
                 .sort(compareCreatedDesc)
-                .map((t) => ({ task: t, kind: "pending" as const })),
+                .map((task) => ({ task, kind: "pending" as const })),
             ...[...activeTasks]
                 .sort(compareCreatedDesc)
-                .map((t) => ({ task: t, kind: "active" as const })),
+                .map((task) => ({ task, kind: "active" as const })),
         ],
         [pendingTasks, activeTasks]
     );
@@ -246,7 +249,7 @@ export function FleetRebalancingTab({
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
-                    Hub Rebalancing Operations
+                    {t("heading")}
                 </h2>
                 <div className="flex items-center gap-2">
                     <ChamferButton
@@ -260,7 +263,7 @@ export function FleetRebalancingTab({
                         ) : (
                             <RefreshCw className="w-3.5 h-3.5" />
                         )}
-                        <span>Analyze Needs</span>
+                        <span>{t("analyzeNeeds")}</span>
                     </ChamferButton>
                     <ChamferButton
                         variant="dark"
@@ -268,7 +271,7 @@ export function FleetRebalancingTab({
                         onClick={() => setManualModalOpen(true)}
                     >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Manual Rebalance</span>
+                        <span>{t("manualRebalance")}</span>
                     </ChamferButton>
                 </div>
             </div>
@@ -277,21 +280,20 @@ export function FleetRebalancingTab({
                 <ChamferCard size="md">
                     <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
-                            Analysis Recommendations ({recommendations.length})
+                            {t("recommendationsTitle", { count: recommendations.length })}
                         </span>
                         <button
                             type="button"
                             onClick={() => setRecommendations(null)}
                             className="text-xs font-mono text-slate-400 hover:text-slate-700 cursor-pointer"
                         >
-                            Dismiss
+                            {t("dismiss")}
                         </button>
                     </div>
 
                     {recommendations.length === 0 ? (
                         <div className="px-4 py-3 text-xs font-mono text-slate-500">
-                            All active hubs meet minimum drone reserve thresholds. No repositioning
-                            required.
+                            {t("allHubsMeetReserve")}
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-200">
@@ -303,17 +305,20 @@ export function FleetRebalancingTab({
                                     <div className="min-w-0 flex flex-col gap-0.5">
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                                             <span className="truncate">
-                                                {rec.sourceHub?.hubName ?? "Source"}
+                                                {rec.sourceHub?.hubName ?? t("sourceFallback")}
                                             </span>
                                             <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                             <span className="truncate">
-                                                {rec.targetHub?.hubName ?? "Target"}
+                                                {rec.targetHub?.hubName ?? t("targetFallback")}
                                             </span>
                                         </div>
                                         <div className="text-[11px] font-mono text-slate-600">
-                                            Drone:{" "}
-                                            {rec.recommendedDrone?.registrationNumber ?? "Auto"} ·
-                                            Priority {rec.priority ?? 1}
+                                            {t("recMeta", {
+                                                drone:
+                                                    rec.recommendedDrone?.registrationNumber ??
+                                                    t("autoFallback"),
+                                                priority: rec.priority ?? 1,
+                                            })}
                                             {rec.reason ? ` · ${rec.reason}` : ""}
                                         </div>
                                     </div>
@@ -330,7 +335,7 @@ export function FleetRebalancingTab({
                                             })
                                         }
                                     >
-                                        Queue
+                                        {t("queueBtn")}
                                     </ChamferButton>
                                 </div>
                             ))}
@@ -342,10 +347,13 @@ export function FleetRebalancingTab({
             <ChamferCard size="md">
                 <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
-                        Active Rebalancing Queue
+                        {t("activeQueueTitle")}
                     </span>
                     <span className="text-[11px] font-mono text-slate-500">
-                        {pendingTasks.length} pending · {activeTasks.length} in progress
+                        {t("queueCounts", {
+                            pending: pendingTasks.length,
+                            active: activeTasks.length,
+                        })}
                     </span>
                 </div>
 
@@ -364,9 +372,7 @@ export function FleetRebalancingTab({
                 ) : queueTasks.length === 0 ? (
                     <div className="px-4 py-4 flex items-center gap-2 text-xs font-mono text-slate-500">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>
-                            Fleet balanced across active vertiports — 0 pending or active transfers.
-                        </span>
+                        <span>{t("queueEmpty")}</span>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-200">
@@ -399,11 +405,13 @@ export function FleetRebalancingTab({
                                             />
                                         </div>
                                         <div className="text-[11px] font-mono text-slate-500">
-                                            Drone: {resolveDroneLabel(task.droneId)} · Trigger:{" "}
-                                            {task.trigger || "manual"} · Priority{" "}
-                                            {task.priority ?? 1}
+                                            {t("taskMeta", {
+                                                drone: resolveDroneLabel(task.droneId),
+                                                trigger: task.trigger || t("manualTrigger"),
+                                                priority: task.priority ?? 1,
+                                            })}
                                             {task.startedAt
-                                                ? ` · Started ${formatDateTime(task.startedAt)}`
+                                                ? ` · ${t("startedAt", { time: formatDateTime(task.startedAt) })}`
                                                 : ""}
                                         </div>
                                     </div>
@@ -416,7 +424,7 @@ export function FleetRebalancingTab({
                                             onClick={() => setTaskToCancel(task)}
                                         >
                                             <XCircle className="w-3 h-3 text-red-600" />
-                                            <span>Cancel</span>
+                                            <span>{tCommon("cancel")}</span>
                                         </ChamferButton>
 
                                         {isPending ? (
@@ -430,7 +438,7 @@ export function FleetRebalancingTab({
                                                     }
                                                 >
                                                     <Check className="w-3 h-3 text-emerald-600" />
-                                                    <span>Approve</span>
+                                                    <span>{t("approve")}</span>
                                                 </ChamferButton>
                                                 <ChamferButton
                                                     variant="dark"
@@ -442,7 +450,7 @@ export function FleetRebalancingTab({
                                                     }
                                                 >
                                                     <Play className="w-3 h-3" />
-                                                    <span>Approve &amp; Execute</span>
+                                                    <span>{t("approveAndExecute")}</span>
                                                 </ChamferButton>
                                             </>
                                         ) : isApprovedOnly ? (
@@ -455,7 +463,7 @@ export function FleetRebalancingTab({
                                                 }
                                             >
                                                 <Play className="w-3 h-3" />
-                                                <span>Execute</span>
+                                                <span>{t("execute")}</span>
                                             </ChamferButton>
                                         ) : (
                                             <ChamferButton
@@ -467,7 +475,7 @@ export function FleetRebalancingTab({
                                                 }
                                             >
                                                 <CheckCircle2 className="w-3 h-3" />
-                                                <span>Complete</span>
+                                                <span>{t("complete")}</span>
                                             </ChamferButton>
                                         )}
                                     </div>
@@ -481,28 +489,28 @@ export function FleetRebalancingTab({
             <ChamferCard size="md">
                 <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
-                        Rebalancing History
+                        {t("historyTitle")}
                     </span>
                     <span className="text-xs font-mono text-slate-400">
-                        {historyTasks.length} records
+                        {t("recordsCount", { count: historyTasks.length })}
                     </span>
                 </div>
                 {historyTasks.length === 0 ? (
                     <EmptyState
                         icon={RefreshCw}
-                        title="No Rebalancing History"
-                        description="Completed or cancelled hub rebalancing transfers will appear here."
+                        title={t("noHistoryTitle")}
+                        description={t("noHistoryDesc")}
                     />
                 ) : (
                     <>
                         <Table fixed={false}>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>DRONE</TableHead>
-                                    <TableHead>TRANSFER ROUTE</TableHead>
-                                    <TableHead>TRIGGER</TableHead>
-                                    <TableHead>STATUS</TableHead>
-                                    <TableHead>CREATED</TableHead>
+                                    <TableHead>{t("colDrone")}</TableHead>
+                                    <TableHead>{t("colRoute")}</TableHead>
+                                    <TableHead>{t("colTrigger")}</TableHead>
+                                    <TableHead>{t("colStatus")}</TableHead>
+                                    <TableHead>{t("colCreated")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -534,7 +542,7 @@ export function FleetRebalancingTab({
                             totalPages={totalPages}
                             totalItems={totalItems}
                             onPageChange={setCurrentPage}
-                            itemLabel="transfers"
+                            itemLabel={t("itemLabel")}
                         />
                     </>
                 )}
@@ -543,15 +551,15 @@ export function FleetRebalancingTab({
             <Modal
                 isOpen={manualModalOpen}
                 onClose={() => setManualModalOpen(false)}
-                title="Create Manual Rebalancing Task"
+                title={t("modalTitle")}
                 onSubmit={handleManualSubmit}
                 loading={createMutation.isPending}
-                submitText="Create Task"
-                loadingText="Creating..."
+                submitText={t("createTaskBtn")}
+                loadingText={t("creatingTask")}
             >
                 <div className="form-group">
                     <label className="form-label" htmlFor="rebalance-source-hub">
-                        Source Hub <span className="text-red-500">*</span>
+                        {t("sourceHubLabel")} <span className="text-red-500">*</span>
                     </label>
                     <CustomSelect
                         id="rebalance-source-hub"
@@ -561,42 +569,42 @@ export function FleetRebalancingTab({
                             setDroneId("");
                         }}
                         options={hubOptions}
-                        placeholder="Select donor hub"
+                        placeholder={t("sourceHubPlaceholder")}
                     />
                 </div>
                 <div className="form-group">
                     <label className="form-label" htmlFor="rebalance-target-hub">
-                        Target Hub <span className="text-red-500">*</span>
+                        {t("targetHubLabel")} <span className="text-red-500">*</span>
                     </label>
                     <CustomSelect
                         id="rebalance-target-hub"
                         value={targetHubId}
                         onValueChange={setTargetHubId}
                         options={hubOptions.filter((o) => o.value !== sourceHubId)}
-                        placeholder="Select destination hub"
+                        placeholder={t("targetHubPlaceholder")}
                     />
                 </div>
                 <div className="form-group">
                     <label className="form-label" htmlFor="rebalance-drone">
-                        Drone <span className="text-red-500">*</span>
+                        {t("droneLabel")} <span className="text-red-500">*</span>
                     </label>
                     <CustomSelect
                         id="rebalance-drone"
                         value={droneId}
                         onValueChange={setDroneId}
                         options={droneOptions}
-                        placeholder="Select drone to reposition"
+                        placeholder={t("dronePlaceholder")}
                     />
                 </div>
                 <div className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2.5">
                     <div>
-                        <div className="text-xs font-semibold text-slate-800">Auto-approve</div>
-                        <div className="text-[11px] text-slate-500">
-                            Skip pending review and mark approved immediately
+                        <div className="text-xs font-semibold text-slate-800">
+                            {t("autoApproveTitle")}
                         </div>
+                        <div className="text-[11px] text-slate-500">{t("autoApproveDesc")}</div>
                     </div>
                     <Switch
-                        label="Auto-approve rebalancing task"
+                        label={t("autoApproveAria")}
                         checked={autoApprove}
                         onCheckedChange={setAutoApprove}
                     />
@@ -609,9 +617,9 @@ export function FleetRebalancingTab({
                 onConfirm={() => {
                     if (taskToCancel?.id) cancelMutation.mutate(taskToCancel.id);
                 }}
-                title="Cancel Rebalancing Task"
-                description="Cancel this hub rebalancing transfer? Any scheduled repositioning will not proceed."
-                confirmText="Cancel Task"
+                title={t("cancelDialogTitle")}
+                description={t("cancelDialogDesc")}
+                confirmText={t("cancelDialogConfirm")}
                 loading={cancelMutation.isPending}
             />
         </div>

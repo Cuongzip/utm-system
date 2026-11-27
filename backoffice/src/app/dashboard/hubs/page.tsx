@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useCallback, useMemo, useEffect, useDeferredValue } from "react";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Columns2, Plus, Table2 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,17 +31,24 @@ import {
 } from "@/types";
 import { cn } from "@/lib";
 
-const STATUS_OPTIONS: SelectOption[] = createStatusOptions(HUB_STATUSES);
 const FALLBACK_CENTER = { latitude: 10.7769, longitude: 106.7009 };
+const HUB_STATUS_RANK: Record<string, number> = {
+    [HUB_STATUS.ACTIVE]: 0,
+    [HUB_STATUS.MAINTENANCE]: 1,
+    [HUB_STATUS.INACTIVE]: 2,
+};
 
 type HubsViewMode = "split" | "table";
 
 function HubsWorkspace() {
+    const t = useTranslations("hubs");
     const queryClient = useQueryClient();
     const searchParams = useSearchParams();
     const { data: currentUser } = useCurrentUser();
     const canManageHubs = hasAnyRole(currentUser?.roles, ["admin"]);
     const canEditHubs = hasAnyRole(currentUser?.roles, ["admin", "hub_operator"]);
+
+    const statusOptions: SelectOption[] = createStatusOptions(HUB_STATUSES);
 
     const {
         data: hubs = [],
@@ -105,18 +113,14 @@ function HubsWorkspace() {
             return hubService.createHub(payload as CreateHubPayload);
         },
         onSuccess: (saved, variables) => {
-            toast.success(
-                variables.id
-                    ? "Vertiport hub updated successfully"
-                    : "Vertiport hub created successfully"
-            );
+            toast.success(variables.id ? t("updatedToast") : t("createdToast"));
             if (saved?.id) {
                 setHighlightedHubId(saved.id);
             }
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubs });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubsAll });
         },
-        meta: { defaultErrorMessage: "Failed to save hub" },
+        meta: { defaultErrorMessage: t("saveError") },
     });
 
     const changeStatusMutation = useMutation({
@@ -125,23 +129,23 @@ function HubsWorkspace() {
         onSuccess: (_data, variables) => {
             const label =
                 variables.status === HUB_STATUS.MAINTENANCE
-                    ? "Hub placed into maintenance"
-                    : "Hub activated successfully";
+                    ? t("maintenanceToast")
+                    : t("activatedToast");
             toast.success(label);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubs });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubsAll });
         },
-        meta: { defaultErrorMessage: "Failed to update hub status" },
+        meta: { defaultErrorMessage: t("statusError") },
     });
 
     const deactivateHubMutation = useMutation({
         mutationFn: (id: string) => hubService.deleteHub(id),
         onSuccess: () => {
-            toast.success("Vertiport hub deactivated successfully");
+            toast.success(t("deactivatedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubs });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubsAll });
         },
-        meta: { defaultErrorMessage: "Failed to deactivate hub" },
+        meta: { defaultErrorMessage: t("deactivateError") },
     });
 
     const hubMetricsMap = useMemo(() => {
@@ -239,7 +243,12 @@ function HubsWorkspace() {
 
                 return matchesSearch && matchesStatus;
             })
-            .sort(compareCreatedDesc);
+            .sort((a, b) => {
+                const rankA = HUB_STATUS_RANK[(a.status || HUB_STATUS.ACTIVE).toLowerCase()] ?? 1;
+                const rankB = HUB_STATUS_RANK[(b.status || HUB_STATUS.ACTIVE).toLowerCase()] ?? 1;
+                if (rankA !== rankB) return rankA - rankB;
+                return compareCreatedDesc(a, b);
+            });
     }, [hubs, deferredSearchQuery, statusFilter]);
 
     const hasActiveFilters = Boolean(searchQuery.trim()) || statusFilter !== "all";
@@ -310,10 +319,10 @@ function HubsWorkspace() {
                 isSplitDesktop ? "flex-1 min-h-0 lg:overflow-hidden" : "min-h-full"
             )}
         >
-            <PageHeader title="HUBS">
+            <PageHeader title={t("title")}>
                 <div
                     role="group"
-                    aria-label="Workspace layout"
+                    aria-label={t("layoutAria")}
                     className="inline-flex items-center rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] p-0.5"
                 >
                     <button
@@ -328,7 +337,7 @@ function HubsWorkspace() {
                         )}
                     >
                         <Columns2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Split</span>
+                        <span>{t("splitView")}</span>
                     </button>
                     <button
                         type="button"
@@ -345,22 +354,22 @@ function HubsWorkspace() {
                         )}
                     >
                         <Table2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Table</span>
+                        <span>{t("tableView")}</span>
                     </button>
                 </div>
 
                 {canManageHubs && !isCreatingNewHub && (
                     <ChamferButton variant="dark" size="sm" onClick={openCreateEditor}>
                         <Plus className="w-4 h-4 text-white" aria-hidden="true" />
-                        <span>Add Hub</span>
+                        <span>{t("addHub")}</span>
                     </ChamferButton>
                 )}
             </PageHeader>
 
             {hubsError && hubs.length === 0 ? (
                 <ErrorState
-                    title="Unable to load hubs"
-                    description="The Hub Service did not respond. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={() => refetchHubs()}
                 />
             ) : (
@@ -382,13 +391,14 @@ function HubsWorkspace() {
                         <TableFilterBar
                             searchQuery={searchQuery}
                             onSearchChange={setSearchQuery}
-                            searchPlaceholder="Search by hub code or name…"
+                            searchPlaceholder={t("searchPlaceholder")}
                             statusFilter={statusFilter}
                             onStatusFilterChange={setStatusFilter}
-                            statusOptions={STATUS_OPTIONS}
+                            statusOptions={statusOptions}
                             onClearFilters={handleClearFilters}
                             totalCount={hubs.length}
                             filteredCount={filteredHubs.length}
+                            itemLabel={t("itemLabel")}
                         />
                     )}
 

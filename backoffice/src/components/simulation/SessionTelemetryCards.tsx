@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { BatteryCharging, Gauge, Compass, Navigation } from "lucide-react";
 import { KpiStrip } from "@/components/ui";
 import { formatAltitude, formatDistance, formatSpeed } from "@/utils";
@@ -10,6 +11,7 @@ export interface SessionTelemetryCardsProps {
 }
 
 export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
+    const t = useTranslations("simulation.telemetryCards");
     const isC2Lost =
         String(session.activeScenario || "").toLowerCase() === SIMULATION_SCENARIO.C2_LOST;
     const battery = session.currentBattery ?? 100;
@@ -27,21 +29,21 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
             : "text-red-600";
 
     const batterySubValue = isC2Lost
-        ? "LINK LOST"
+        ? t("linkLost")
         : battery > 50
-          ? "NOMINAL"
+          ? t("nominal")
           : battery > 20
-            ? "MODERATE"
-            : "CRITICAL";
+            ? t("moderate")
+            : t("critical");
 
-    const speedSubValue = isC2Lost ? "C2 HOVER FAILSAFE" : formatSpeed(speed);
+    const speedSubValue = isC2Lost ? t("c2HoverFailsafe") : formatSpeed(speed);
 
     return (
         <KpiStrip
             items={[
                 {
                     id: "battery",
-                    label: "BATTERY",
+                    label: t("battery"),
                     value: `${battery.toFixed(1)}%`,
                     subValue: batterySubValue,
                     icon: BatteryCharging,
@@ -49,21 +51,21 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
                 },
                 {
                     id: "speed",
-                    label: "GROUND SPEED",
+                    label: t("groundSpeed"),
                     value: `${speed.toFixed(1)} m/s`,
                     subValue: speedSubValue,
                     icon: Gauge,
                 },
                 {
                     id: "altitude",
-                    label: "ALTITUDE & HEADING",
+                    label: t("altitudeHeading"),
                     value: formatAltitude(alt),
-                    subValue: `HDG ${heading.toFixed(0)}°`,
+                    subValue: t("hdgSub", { deg: heading.toFixed(0) }),
                     icon: Compass,
                 },
                 {
                     id: "trajectory",
-                    label: "TRAJECTORY",
+                    label: t("trajectory"),
                     value: `${progress.toFixed(1)}%`,
                     subValue: `${formatDistance(session.traveledDistance ?? 0)} / ${formatDistance(session.totalDistance ?? 0)}`,
                     icon: Navigation,

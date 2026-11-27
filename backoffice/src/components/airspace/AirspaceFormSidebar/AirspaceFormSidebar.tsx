@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChamferCard } from "@/components/ui";
 import { cn } from "@/lib";
 import type { AirspaceZoneFormPayload, Hub } from "@/types";
@@ -52,6 +53,7 @@ export function AirspaceFormSidebar({
     fieldErrors = {},
     onClearFieldError,
 }: AirspaceFormSidebarProps) {
+    const t = useTranslations("airspace");
     const hasGeometryError = Boolean(fieldErrors.geometry || fieldErrors["geometry.coordinates"]);
 
     const hasDetailErrors = Boolean(
@@ -80,7 +82,7 @@ export function AirspaceFormSidebar({
                             hasDetailErrors && "text-red-600"
                         )}
                     >
-                        <span>Details</span>
+                        <span>{t("editor.tabDetails")}</span>
                         {hasDetailErrors && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}
@@ -98,7 +100,7 @@ export function AirspaceFormSidebar({
                         )}
                     >
                         <span>
-                            Boundary{" "}
+                            {t("editor.tabBoundary")}{" "}
                             {geometryMode === "polygon" && polygonPoints.length > 0
                                 ? `(${polygonPoints.length})`
                                 : ""}

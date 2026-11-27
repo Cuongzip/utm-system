@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Tooltip } from "@/components/ui";
 import { cn } from "@/lib";
@@ -28,6 +29,7 @@ export function MapInspector({
     actions,
     onClose,
 }: MapInspectorProps) {
+    const t = useTranslations("map");
     const gridClass =
         metaItems.length === 3
             ? "grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_minmax(0,1fr)]"
@@ -62,12 +64,12 @@ export function MapInspector({
 
                         <div className="flex items-center gap-1.5 shrink-0">
                             {actions}
-                            <Tooltip content="Close inspector" side="left">
+                            <Tooltip content={t("closeInspector")} side="left">
                                 <button
                                     type="button"
                                     onClick={onClose}
                                     className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors cursor-pointer shrink-0"
-                                    aria-label="Close inspector"
+                                    aria-label={t("closeInspector")}
                                 >
                                     <X className="w-4 h-4" aria-hidden="true" />
                                 </button>

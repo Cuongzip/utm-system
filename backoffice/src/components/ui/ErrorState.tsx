@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { AlertCircle, RotateCw } from "lucide-react";
 import { cn } from "@/lib";
 import { ChamferCard } from "./ChamferCard";
@@ -17,14 +18,18 @@ export interface ErrorStateProps {
 }
 
 export function ErrorState({
-    title = "Failed to load data",
-    description = "The service did not respond as expected. Check connectivity or try again.",
+    title,
+    description,
     onRetry,
     retrying = false,
     compact = false,
     wrapped = true,
     className,
 }: ErrorStateProps) {
+    const t = useTranslations("common");
+    const resolvedTitle = title ?? t("failedToLoad");
+    const resolvedDesc = description ?? t("failedToLoadDesc");
+
     const content = (
         <div
             role="alert"
@@ -48,16 +53,16 @@ export function ErrorState({
                     compact ? "text-xs" : "text-sm"
                 )}
             >
-                {title}
+                {resolvedTitle}
             </h3>
-            {description && (
+            {resolvedDesc && (
                 <p
                     className={cn(
                         "text-slate-500 mt-1 max-w-md",
                         compact ? "text-[11px] leading-relaxed" : "text-xs"
                     )}
                 >
-                    {description}
+                    {resolvedDesc}
                 </p>
             )}
             {onRetry && (
@@ -73,7 +78,7 @@ export function ErrorState({
                         className={cn("w-3.5 h-3.5 text-slate-600", retrying && "animate-spin")}
                         aria-hidden="true"
                     />
-                    <span>{retrying ? "Retrying..." : "Retry"}</span>
+                    <span>{retrying ? t("retrying") : t("retry")}</span>
                 </ChamferButton>
             )}
         </div>

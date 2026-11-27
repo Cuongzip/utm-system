@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
 import { cn } from "@/lib";
 
@@ -10,6 +11,7 @@ export interface MapZoneActionProps {
 }
 
 export function MapZoneAction({ active, onToggle, count }: MapZoneActionProps) {
+    const t = useTranslations("map");
     return (
         <button
             type="button"
@@ -20,10 +22,10 @@ export function MapZoneAction({ active, onToggle, count }: MapZoneActionProps) {
                     ? "bg-[var(--color-surface-card)] border-[var(--color-border-default)] text-[var(--color-text-primary)] font-bold"
                     : "border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)]"
             )}
-            title="Toggle background airspace sectors"
+            title={t("toggleZonesTitle")}
         >
             <Layers className="w-3.5 h-3.5" />
-            <span>Zones ({count})</span>
+            <span>{t("zonesCount", { count })}</span>
         </button>
     );
 }

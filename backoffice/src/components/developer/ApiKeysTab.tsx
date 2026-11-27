@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Plus, Copy, Check, ShieldOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -32,13 +33,15 @@ import {
 } from "@/types";
 import { formatDateTime, validateSchema, clearFieldError, compareCreatedDesc } from "@/utils";
 
-const SCOPE_DESCRIPTIONS: Record<OemApiKeyScope, string> = {
-    "telemetry:write": "Ingest live drone GPS/attitude telemetry",
-    "drone:register": "Register OEM drones & hardware devices",
-    "status:read": "Read manufacturer fleet connectivity status",
+const SCOPE_DESC_KEY: Record<OemApiKeyScope, "telemetryWrite" | "droneRegister" | "statusRead"> = {
+    "telemetry:write": "telemetryWrite",
+    "drone:register": "droneRegister",
+    "status:read": "statusRead",
 };
 
 export function ApiKeysTab() {
+    const t = useTranslations("developer.keys");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const { data: rawKeys = [], isLoading } = useIntegrationApiKeys();
     const keys = useMemo(() => [...rawKeys].sort(compareCreatedDesc), [rawKeys]);
@@ -60,7 +63,7 @@ export function ApiKeysTab() {
 
     const createMutation = useMutation({
         mutationFn: connectivityService.createApiKey,
-        meta: { defaultErrorMessage: "Failed to create API key" },
+        meta: { defaultErrorMessage: t("createError") },
         onSuccess: (res) => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.integrationKeys });
             setCreateOpen(false);
@@ -72,20 +75,20 @@ export function ApiKeysTab() {
             if (res.apiKey) {
                 setCreatedKey({
                     apiKey: res.apiKey,
-                    name: res.keyInfo?.name || "New API Key",
+                    name: res.keyInfo?.name || t("newKeyFallback"),
                 });
             }
-            toast.success("OEM API key generated.");
+            toast.success(t("createdToast"));
         },
     });
 
     const revokeMutation = useMutation({
         mutationFn: (id: string) => connectivityService.revokeApiKey(id),
-        meta: { defaultErrorMessage: "Failed to revoke API key" },
+        meta: { defaultErrorMessage: t("revokeError") },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.integrationKeys });
             setKeyToRevoke(null);
-            toast.success("API key revoked.");
+            toast.success(t("revokedToast"));
         },
     });
 
@@ -119,7 +122,7 @@ export function ApiKeysTab() {
         if (!createdKey) return;
         await navigator.clipboard.writeText(createdKey.apiKey);
         setCopiedNewKey(true);
-        toast.success("API key copied to clipboard.");
+        toast.success(t("copiedToast"));
         setTimeout(() => setCopiedNewKey(false), 2000);
     };
 
@@ -127,7 +130,7 @@ export function ApiKeysTab() {
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs font-mono text-[var(--color-text-secondary)]">
-                    Authenticate external manufacturer gateways via{" "}
+                    {t("subtitlePrefix")}{" "}
                     <code className="text-[var(--color-text-primary)] font-semibold">
                         X-API-Key
                     </code>
@@ -141,7 +144,7 @@ export function ApiKeysTab() {
                     }}
                 >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Create API Key</span>
+                    <span>{t("createBtn")}</span>
                 </ChamferButton>
             </div>
 
@@ -149,15 +152,15 @@ export function ApiKeysTab() {
                 <TacticalCallout
                     tone="warning"
                     icon={AlertTriangle}
-                    title={`Save API Key Now — Shown Once (${createdKey.name})`}
-                    description="Store this secret securely in your OEM bridge configuration. It cannot be retrieved again after dismissal."
+                    title={t("saveKeyTitle", { name: createdKey.name })}
+                    description={t("saveKeyDesc")}
                     rightSlot={
                         <button
                             type="button"
                             onClick={() => setCreatedKey(null)}
                             className="text-xs font-mono text-slate-500 hover:text-slate-900 cursor-pointer"
                         >
-                            Dismiss
+                            {t("dismiss")}
                         </button>
                     }
                 >
@@ -171,7 +174,7 @@ export function ApiKeysTab() {
                             ) : (
                                 <Copy className="w-3.5 h-3.5" />
                             )}
-                            <span>{copiedNewKey ? "Copied" : "Copy"}</span>
+                            <span>{copiedNewKey ? t("copied") : t("copy")}</span>
                         </ChamferButton>
                     </div>
                 </TacticalCallout>
@@ -181,25 +184,25 @@ export function ApiKeysTab() {
                 {!isLoading && keys.length === 0 ? (
                     <EmptyState
                         icon={KeyRound}
-                        title="No OEM API Keys Issued"
-                        description="Create an API key to authenticate external OEM telemetry or drone registration integrations."
+                        title={t("emptyTitle")}
+                        description={t("emptyDesc")}
                     />
                 ) : (
                     <Table fixed={false}>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>KEY NAME</TableHead>
-                                <TableHead>MANUFACTURER</TableHead>
-                                <TableHead>PREFIX</TableHead>
-                                <TableHead>SCOPES</TableHead>
-                                <TableHead>STATUS</TableHead>
-                                <TableHead>EXPIRES</TableHead>
-                                <TableHead align="right">ACTION</TableHead>
+                                <TableHead>{t("colKeyName")}</TableHead>
+                                <TableHead>{t("colManufacturer")}</TableHead>
+                                <TableHead>{t("colPrefix")}</TableHead>
+                                <TableHead>{t("colScopes")}</TableHead>
+                                <TableHead>{t("colStatus")}</TableHead>
+                                <TableHead>{t("colExpires")}</TableHead>
+                                <TableHead align="right">{t("colAction")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableLoading colSpan={7} rows={4} message="Loading API keys..." />
+                                <TableLoading colSpan={7} rows={4} message={t("loading")} />
                             ) : (
                                 keys.map((k) => {
                                     const isActive = k.isActive !== false && !k.revokedAt;
@@ -209,7 +212,9 @@ export function ApiKeysTab() {
                                                 <div>{k.name || "—"}</div>
                                                 {k.lastUsedAt && (
                                                     <div className="text-[10px] font-mono text-slate-400 font-normal">
-                                                        Last used {formatDateTime(k.lastUsedAt)}
+                                                        {t("lastUsed", {
+                                                            time: formatDateTime(k.lastUsedAt),
+                                                        })}
                                                     </div>
                                                 )}
                                             </TableCell>
@@ -230,13 +235,12 @@ export function ApiKeysTab() {
                                             <TableCell>
                                                 <StatusBadge
                                                     status={isActive ? "active" : "revoked"}
-                                                    label={isActive ? "ACTIVE" : "REVOKED"}
                                                 />
                                             </TableCell>
                                             <TableCell mono>
                                                 {k.expiresAt
                                                     ? formatDateTime(k.expiresAt)
-                                                    : "Never"}
+                                                    : tCommon("never")}
                                             </TableCell>
                                             <TableCell align="right">
                                                 {isActive && k.id ? (
@@ -246,7 +250,7 @@ export function ApiKeysTab() {
                                                         onClick={() => setKeyToRevoke(k)}
                                                     >
                                                         <ShieldOff className="w-3 h-3 text-red-600" />
-                                                        <span>Revoke</span>
+                                                        <span>{t("revoke")}</span>
                                                     </ChamferButton>
                                                 ) : (
                                                     <span className="text-xs font-mono text-slate-400">
@@ -266,39 +270,39 @@ export function ApiKeysTab() {
             <Modal
                 isOpen={createOpen}
                 onClose={() => setCreateOpen(false)}
-                title="Create OEM API Key"
+                title={t("modalTitle")}
                 onSubmit={handleCreateSubmit}
                 loading={createMutation.isPending}
-                submitText="Generate Key"
-                loadingText="Generating..."
+                submitText={t("generateBtn")}
+                loadingText={t("generating")}
             >
                 <FormInput
                     id="api-key-name"
-                    label="Key Name"
+                    label={t("keyNameLabel")}
                     required
                     value={name}
                     onChange={(e) => {
                         setName(e.target.value);
                         clearFieldError(setFieldErrors, "name");
                     }}
-                    placeholder="e.g. DJI Dock 2 Production Bridge"
+                    placeholder={t("keyNamePlaceholder")}
                     error={fieldErrors.name}
                 />
                 <FormInput
                     id="api-key-manufacturer"
-                    label="Manufacturer Name"
+                    label={t("manufacturerLabel")}
                     required
                     value={manufacturerName}
                     onChange={(e) => {
                         setManufacturerName(e.target.value);
                         clearFieldError(setFieldErrors, "manufacturerName");
                     }}
-                    placeholder="e.g. DJI Enterprise"
+                    placeholder={t("manufacturerPlaceholder")}
                     error={fieldErrors.manufacturerName}
                 />
                 <FormInput
                     id="api-key-expires-days"
-                    label="Validity Duration (days)"
+                    label={t("validityDaysLabel")}
                     type="number"
                     min={1}
                     max={3650}
@@ -308,7 +312,7 @@ export function ApiKeysTab() {
                 />
 
                 <div className="flex flex-col gap-1.5">
-                    <span className="form-label">Granted Scopes</span>
+                    <span className="form-label">{t("grantedScopesLabel")}</span>
                     <div className="border border-[var(--color-border-default)] rounded-md divide-y divide-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
                         {OEM_API_KEY_SCOPES.map((scope) => {
                             const checked = scopes.includes(scope);
@@ -328,7 +332,7 @@ export function ApiKeysTab() {
                                             {scope}
                                         </div>
                                         <div className="text-[11px] text-slate-500">
-                                            {SCOPE_DESCRIPTIONS[scope]}
+                                            {t(`scopes.${SCOPE_DESC_KEY[scope]}`)}
                                         </div>
                                     </div>
                                 </label>
@@ -344,9 +348,11 @@ export function ApiKeysTab() {
                 onConfirm={() => {
                     if (keyToRevoke?.id) revokeMutation.mutate(keyToRevoke.id);
                 }}
-                title="Revoke OEM API Key"
-                description={`Revoke "${keyToRevoke?.name ?? "this key"}"? Any OEM gateway authenticating with this key will be rejected immediately.`}
-                confirmText="Revoke Key"
+                title={t("revokeModalTitle")}
+                description={t("revokeModalDesc", {
+                    name: keyToRevoke?.name ?? t("thisKeyFallback"),
+                })}
+                confirmText={t("revokeKeyConfirm")}
                 loading={revokeMutation.isPending}
             />
         </div>

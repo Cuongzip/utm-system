@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Building2, Search, X } from "lucide-react";
@@ -21,6 +22,7 @@ function HubAircraftSlideOver({
     hub: HubFleetStatus | null;
     onClose: () => void;
 }) {
+    const t = useTranslations("fleet.hubStatus");
     const [searchQuery, setSearchQuery] = useState("");
     const hubId = hub?.hubId ?? "";
 
@@ -59,16 +61,16 @@ function HubAircraftSlideOver({
                     <div className="px-5 py-4 border-b border-[var(--color-border-default)] flex items-start justify-between gap-3 shrink-0">
                         <div className="min-w-0">
                             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 block">
-                                Stationed Fleet Roster
+                                {t("stationedRoster")}
                             </span>
                             <DialogPrimitive.Title className="text-base font-bold text-slate-900 truncate mt-0.5">
-                                {hub?.hubName || "Vertiport Hub"}
+                                {hub?.hubName || t("vertiportHubFallback")}
                             </DialogPrimitive.Title>
                         </div>
                         <DialogPrimitive.Close asChild>
                             <button
                                 type="button"
-                                aria-label="Close drawer"
+                                aria-label={t("closeDrawerAria")}
                                 className="w-7 h-7 rounded border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:bg-[var(--color-surface-card)] text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                             >
                                 <X className="w-4 h-4" aria-hidden="true" />
@@ -82,7 +84,7 @@ function HubAircraftSlideOver({
                                 {available}
                             </div>
                             <div className="text-[10px] font-mono uppercase text-slate-500">
-                                Avail
+                                {t("availShort")}
                             </div>
                         </div>
                         <div>
@@ -90,7 +92,7 @@ function HubAircraftSlideOver({
                                 {busy}
                             </div>
                             <div className="text-[10px] font-mono uppercase text-slate-500">
-                                Flight
+                                {t("flightShort")}
                             </div>
                         </div>
                         <div>
@@ -98,7 +100,7 @@ function HubAircraftSlideOver({
                                 {charging}
                             </div>
                             <div className="text-[10px] font-mono uppercase text-slate-500">
-                                Charge
+                                {t("chargeShort")}
                             </div>
                         </div>
                         <div>
@@ -106,7 +108,7 @@ function HubAircraftSlideOver({
                                 {maintenance}
                             </div>
                             <div className="text-[10px] font-mono uppercase text-slate-500">
-                                Maint
+                                {t("maintShort")}
                             </div>
                         </div>
                     </div>
@@ -119,15 +121,15 @@ function HubAircraftSlideOver({
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Filter registration or model..."
-                                    aria-label="Filter stationed aircraft"
+                                    placeholder={t("filterPlaceholder")}
+                                    aria-label={t("filterAria")}
                                     className="w-full h-8 pl-8 pr-7 text-xs rounded border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[var(--color-border-dark)] focus:bg-white"
                                 />
                                 {searchQuery && (
                                     <button
                                         type="button"
                                         onClick={() => setSearchQuery("")}
-                                        aria-label="Clear filter"
+                                        aria-label={t("clearFilterAria")}
                                         className="absolute right-2 text-slate-400 hover:text-slate-700 cursor-pointer"
                                     >
                                         <X className="w-3.5 h-3.5" />
@@ -142,7 +144,7 @@ function HubAircraftSlideOver({
                             <div
                                 role="status"
                                 aria-busy="true"
-                                aria-label="Loading stationed drones"
+                                aria-label={t("loadingAria")}
                                 className="divide-y divide-slate-100 py-2"
                             >
                                 {Array.from({ length: 5 }).map((_, idx) => (
@@ -157,15 +159,13 @@ function HubAircraftSlideOver({
                                         <Skeleton className="h-5 w-20" />
                                     </div>
                                 ))}
-                                <span className="sr-only">Loading stationed drones...</span>
+                                <span className="sr-only">{t("loadingSr")}</span>
                             </div>
                         ) : filteredDrones.length === 0 ? (
                             <EmptyState
                                 compact
                                 title={
-                                    searchQuery
-                                        ? "No matching aircraft"
-                                        : "No aircraft stationed at this hub"
+                                    searchQuery ? t("noMatchingAircraft") : t("noStationedAtHub")
                                 }
                                 className="py-10"
                             />
@@ -178,7 +178,7 @@ function HubAircraftSlideOver({
                                     >
                                         <div className="min-w-0">
                                             <div className="font-mono font-bold text-slate-900 truncate">
-                                                {drone.registrationNumber || "Unnamed Drone"}
+                                                {drone.registrationNumber || t("unnamedDrone")}
                                             </div>
                                             <div className="text-[11px] text-slate-500 truncate mt-0.5">
                                                 {[drone.manufacturer, drone.model]
@@ -202,9 +202,16 @@ function HubAircraftSlideOver({
 
                     <div className="px-5 py-3 border-t border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] flex items-center justify-between text-[11px] font-mono text-slate-500 shrink-0">
                         <span>
-                            Showing {filteredDrones.length} of {drones.length} aircraft
+                            {t("showingAircraft", {
+                                shown: filteredDrones.length,
+                                total: drones.length,
+                            })}
                         </span>
-                        <span>Pad Utilization {Math.round(hub?.capacityUtilization ?? 0)}%</span>
+                        <span>
+                            {t("padUtilizationPct", {
+                                pct: Math.round(hub?.capacityUtilization ?? 0),
+                            })}
+                        </span>
                     </div>
                 </DialogPrimitive.Content>
             </DialogPrimitive.Portal>
@@ -213,6 +220,7 @@ function HubAircraftSlideOver({
 }
 
 export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabProps) {
+    const t = useTranslations("fleet.hubStatus");
     const [selectedHub, setSelectedHub] = useState<HubFleetStatus | null>(null);
     const { data: allHubs = [] } = useHubsAll();
 
@@ -267,8 +275,8 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
             <ChamferCard size="md">
                 <EmptyState
                     icon={Building2}
-                    title="No Vertiport Hub Data"
-                    description="Register active vertiport hubs and assign drones to monitor hub-level readiness."
+                    title={t("noHubDataTitle")}
+                    description={t("noHubDataDesc")}
                 />
             </ChamferCard>
         );
@@ -301,27 +309,27 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
                                         <h3 className="text-sm font-bold text-slate-900 truncate">
-                                            {hub.hubName || "Vertiport Hub"}
+                                            {hub.hubName || t("vertiportHubFallback")}
                                         </h3>
                                         <p className="text-[11px] font-mono text-slate-500">
-                                            {available}/{total} drones available
+                                            {t("dronesAvailableCount", { available, total })}
                                         </p>
                                     </div>
                                     <StatusBadge
                                         status={readinessStatus}
                                         label={
                                             readinessStatus === "active"
-                                                ? "READY"
+                                                ? t("ready")
                                                 : readinessStatus === "warning"
-                                                  ? "LOW STOCK"
-                                                  : "STANDBY"
+                                                  ? t("lowStock")
+                                                  : t("standby")
                                         }
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
-                                        <span>Pad Utilization</span>
+                                        <span>{t("padUtilization")}</span>
                                         <span className="font-bold text-slate-800 tabular-nums">
                                             {utilizationPct}%
                                         </span>
@@ -344,7 +352,7 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                             {available}
                                         </div>
                                         <div className="text-[10px] font-mono uppercase text-slate-500">
-                                            Avail
+                                            {t("availShort")}
                                         </div>
                                     </div>
                                     <div>
@@ -352,7 +360,7 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                             {busy}
                                         </div>
                                         <div className="text-[10px] font-mono uppercase text-slate-500">
-                                            Flight
+                                            {t("flightShort")}
                                         </div>
                                     </div>
                                     <div>
@@ -360,7 +368,7 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                             {charging}
                                         </div>
                                         <div className="text-[10px] font-mono uppercase text-slate-500">
-                                            Charge
+                                            {t("chargeShort")}
                                         </div>
                                     </div>
                                     <div>
@@ -368,7 +376,7 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                             {maintenance}
                                         </div>
                                         <div className="text-[10px] font-mono uppercase text-slate-500">
-                                            Maint
+                                            {t("maintShort")}
                                         </div>
                                     </div>
                                 </div>
@@ -379,12 +387,12 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                         onClick={() => setSelectedHub(hub)}
                                         className="pt-2.5 border-t border-slate-200 inline-flex items-center justify-between w-full text-xs font-mono font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded group"
                                     >
-                                        <span>View stationed aircraft ({total})</span>
+                                        <span>{t("viewStationedAircraft", { total })}</span>
                                         <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-800 group-hover:translate-x-0.5 transition-all" />
                                     </button>
                                 ) : (
                                     <div className="pt-2.5 border-t border-slate-100 text-xs font-mono text-slate-400">
-                                        No stationed aircraft
+                                        {t("noStationedAircraft")}
                                     </div>
                                 )}
                             </div>

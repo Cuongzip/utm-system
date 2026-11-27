@@ -1,6 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChamferCard, type SelectOption } from "@/components/ui";
+import { translateStatusLabel, useAppLocale } from "@/i18n";
 import { cn } from "@/lib";
 import {
     DEFAULT_DRONE_STATUS,
@@ -69,16 +71,22 @@ export function MissionFormSidebar({
     fieldErrors = {},
     onClearFieldError,
 }: MissionFormSidebarProps) {
+    const t = useTranslations("missions");
+    const locale = useAppLocale();
     const hasWaypointErrors = Boolean(
         fieldErrors.waypoints || Object.keys(fieldErrors).some((k) => k.startsWith("waypoints."))
     );
 
     const droneOptions: SelectOption[] = [
-        { value: "", label: "No drone assigned" },
-        ...drones.map((d) => ({
-            value: d.id,
-            label: `${d.model || d.registrationNumber || d.id} (${d.status ?? DEFAULT_DRONE_STATUS})`,
-        })),
+        { value: "", label: t("details.noDroneAssigned") },
+        ...drones.map((d) => {
+            const rawStatus = d.status ?? DEFAULT_DRONE_STATUS;
+            const statusLabel = translateStatusLabel(rawStatus, locale) ?? rawStatus;
+            return {
+                value: d.id,
+                label: `${d.model || d.registrationNumber || d.id} (${statusLabel})`,
+            };
+        }),
     ];
 
     const hubOptions: SelectOption[] = hubs.map((h) => ({
@@ -87,7 +95,7 @@ export function MissionFormSidebar({
     }));
 
     const arrivalHubOptions: SelectOption[] = [
-        { value: "", label: "Same as departure" },
+        { value: "", label: t("details.sameAsDeparture") },
         ...hubOptions,
     ];
 
@@ -112,7 +120,7 @@ export function MissionFormSidebar({
                                 "text-red-600"
                         )}
                     >
-                        <span>Details</span>
+                        <span>{t("tabs.details")}</span>
                         {(fieldErrors.code ||
                             fieldErrors.name ||
                             fieldErrors.departureHubId ||
@@ -132,7 +140,9 @@ export function MissionFormSidebar({
                             hasWaypointErrors && "text-red-600"
                         )}
                     >
-                        <span>Waypoints {totalPoints > 0 && `(${totalPoints})`}</span>
+                        <span>
+                            {t("tabs.waypoints")} {totalPoints > 0 && `(${totalPoints})`}
+                        </span>
                         {hasWaypointErrors && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}
@@ -149,14 +159,14 @@ export function MissionFormSidebar({
                             fieldErrors.scheduledAt && "text-red-600"
                         )}
                     >
-                        <span>Schedule</span>
+                        <span>{t("tabs.schedule")}</span>
                         {fieldErrors.scheduledAt && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 p-5 overflow-y-auto space-y-4">
+                <div className="flex-1 min-h-0 p-5 overflow-y-auto utm-scroll space-y-4">
                     {activeTab === "details" && (
                         <MissionDetailsTab
                             missionId={missionId}

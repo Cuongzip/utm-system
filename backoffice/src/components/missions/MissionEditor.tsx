@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Save, Loader2, Play } from "lucide-react";
@@ -37,12 +38,12 @@ import {
     MISSION_STATUS,
     MISSION_SCHEDULE_TYPE,
     STOPOVER_TYPE,
-    HUB_STATUS,
 } from "@/types";
 
 export interface MissionSaveData {
     payload: CreateMissionPayload | UpdateMissionPayload;
     waypoints: Waypoint[];
+    persistedWaypoints?: Waypoint[];
     defaultAltitude: number;
     droneId?: string;
 }
@@ -65,15 +66,28 @@ export function MissionEditor({
     loading = false,
 }: MissionEditorProps) {
     const router = useRouter();
+    const t = useTranslations("missions");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
 
     const [submitting, setSubmitting] = useState(false);
     const [droneId, setDroneId] = useState(initialData?.droneId || "");
     const [isExecuteOpen, setIsExecuteOpen] = useState(false);
 
+    const [prevMissionId, setPrevMissionId] = useState(initialData?.id);
+    const [persistedWaypoints, setPersistedWaypoints] = useState<Waypoint[]>(
+        () => initialData?.waypoints ?? []
+    );
     const [formData, setFormData] = useState<MissionFormPayload>(() =>
         getInitialMissionFormPayload(initialData)
     );
+
+    if (initialData?.id !== prevMissionId) {
+        setPrevMissionId(initialData?.id);
+        setFormData(getInitialMissionFormPayload(initialData));
+        setDroneId(initialData?.droneId || "");
+        setPersistedWaypoints(initialData?.waypoints ?? []);
+    }
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "waypoints" | "schedule">(
         "details"
@@ -85,27 +99,6 @@ export function MissionEditor({
     const isReadOnly = Boolean(
         mode === "edit" && initialData?.status && initialData.status !== MISSION_STATUS.DRAFT
     );
-
-    useEffect(() => {
-        setFormData(getInitialMissionFormPayload(initialData));
-        setDroneId(initialData?.droneId || "");
-    }, [initialData]);
-
-    const activeHubs = useMemo(
-        () => hubs.filter((h) => (h.status || "").toLowerCase() !== HUB_STATUS.INACTIVE),
-        [hubs]
-    );
-
-    useEffect(() => {
-        const pool = activeHubs.length > 0 ? activeHubs : hubs;
-        if (mode === "create" && pool.length > 0) {
-            setFormData((prev) => ({
-                ...prev,
-                departureHubId: prev.departureHubId || pool[0].id,
-                arrivalHubId: prev.arrivalHubId || (pool.length > 1 ? pool[1].id : pool[0].id),
-            }));
-        }
-    }, [mode, hubs, activeHubs]);
 
     const handleFormChange = <K extends keyof MissionFormPayload>(
         field: K,
@@ -166,7 +159,7 @@ export function MissionEditor({
     const autoPlanHubsMutation = useMutation({
         mutationFn: async () => {
             if (!initialData?.id) {
-                throw new Error("Save the mission first before auto-planning stopover hubs");
+                throw new Error(t("toasts.saveBeforeAutoPlan"));
             }
             const normalizedWaypoints = waypoints.map((wp, idx) => ({
                 ...wp,
@@ -174,7 +167,7 @@ export function MissionEditor({
             }));
             await syncMissionWaypoints(
                 initialData.id,
-                initialData.waypoints ?? [],
+                persistedWaypoints,
                 normalizedWaypoints,
                 defaultAltitude,
                 selectedDepartureHub,
@@ -188,14 +181,24 @@ export function MissionEditor({
         },
         onSuccess: (result) => {
             if (Array.isArray(result.waypoints)) {
+                const updatedServerWaypoints = result.waypoints as Waypoint[];
+                setPersistedWaypoints(updatedServerWaypoints);
                 setWaypoints(
                     extractIntermediateWaypoints(
-                        result.waypoints as Waypoint[],
+                        updatedServerWaypoints,
                         selectedDepartureHub,
                         selectedArrivalHub
                     )
                 );
                 setSelectedWaypointId(null);
+                onClearWaypointErrors();
+                if (initialData?.id) {
+                    queryClient.setQueryData(
+                        QUERY_KEYS.missionDetail(initialData.id),
+                        (old: Mission | undefined) =>
+                            old ? { ...old, waypoints: updatedServerWaypoints } : old
+                    );
+                }
             }
             if (initialData?.id) {
                 queryClient.invalidateQueries({
@@ -209,16 +212,12 @@ export function MissionEditor({
             const inserted = result.insertedHubCount ?? 0;
             const legs = result.plannedLegCount ?? 1;
             if (inserted > 0) {
-                toast.success(
-                    `Inserted ${inserted} charging HUB stopover${inserted > 1 ? "s" : ""} across ${legs} flight legs`
-                );
+                toast.success(t("toasts.autoPlannedInserted", { count: inserted, legs }));
             } else {
-                toast.success(
-                    `Route fits within battery range (${legs} flight leg${legs > 1 ? "s" : ""})`
-                );
+                toast.success(t("toasts.autoPlannedFits", { legs }));
             }
         },
-        meta: { defaultErrorMessage: "Failed to auto-plan stopover hubs" },
+        meta: { defaultErrorMessage: t("toasts.autoPlanFailed") },
     });
 
     const handleSave = async () => {
@@ -248,9 +247,9 @@ export function MissionEditor({
 
         if (formData.scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED) {
             if (!formData.scheduledAt || !formData.scheduledAt.trim()) {
-                newFieldErrors.scheduledAt = "Scheduled departure time is required";
+                newFieldErrors.scheduledAt = t("validation.scheduledRequired");
             } else if (new Date(formData.scheduledAt).getTime() <= Date.now()) {
-                newFieldErrors.scheduledAt = "Scheduled departure time must be in the future";
+                newFieldErrors.scheduledAt = t("validation.scheduledFuture");
             }
         }
 
@@ -291,11 +290,12 @@ export function MissionEditor({
             await onSave({
                 payload: validation.data as CreateMissionPayload | UpdateMissionPayload,
                 waypoints: routeWaypoints,
+                persistedWaypoints,
                 defaultAltitude,
                 droneId: droneId || undefined,
             });
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to save mission");
+            const parsed = parseApiError(err, t("toasts.saveFailed"));
             if (parsed.fieldErrors && Object.keys(parsed.fieldErrors).length > 0) {
                 setFieldErrors((prev) => ({ ...prev, ...parsed.fieldErrors }));
                 const { tab, firstInvalidWaypointId } = determineActiveTabFromErrors(
@@ -326,10 +326,10 @@ export function MissionEditor({
 
     const pageTitle =
         mode === "create"
-            ? "NEW MISSION"
+            ? t("editor.newTitle")
             : isReadOnly
-              ? `VIEW MISSION: ${initialData?.name || ""}`
-              : `EDIT MISSION: ${initialData?.name || ""}`;
+              ? t("editor.viewTitle", { name: initialData?.name || "" })
+              : t("editor.editTitle", { name: initialData?.name || "" });
 
     return (
         <>
@@ -353,7 +353,7 @@ export function MissionEditor({
                             disabled={submitting}
                         >
                             <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-                            <span>{isReadOnly ? "Back" : "Cancel"}</span>
+                            <span>{isReadOnly ? tCommon("back") : tCommon("cancel")}</span>
                         </ChamferButton>
 
                         {canExecute && (
@@ -366,7 +366,7 @@ export function MissionEditor({
                             >
                                 <Play className="w-3.5 h-3.5 text-slate-700" />
                                 <span>
-                                    {isReExecute ? "Re-Execute Mission" : "Execute Mission"}
+                                    {isReExecute ? t("actions.reExecute") : t("actions.execute")}
                                 </span>
                             </ChamferButton>
                         )}
@@ -384,7 +384,11 @@ export function MissionEditor({
                                 ) : (
                                     <Save className="w-4 h-4 text-white" />
                                 )}
-                                <span>{mode === "create" ? "Save Mission" : "Update Mission"}</span>
+                                <span>
+                                    {mode === "create"
+                                        ? t("editor.saveMission")
+                                        : t("editor.updateMission")}
+                                </span>
                             </ChamferButton>
                         )}
                     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import type { Hub } from "@/types";
 import { formatAltitude, formatCoordinates } from "@/utils";
@@ -11,6 +12,7 @@ export interface PinnedHubWaypointItemProps {
 }
 
 export function PinnedHubWaypointItem({ type, hub, sequence }: PinnedHubWaypointItemProps) {
+    const t = useTranslations("waypoints");
     const isDeparture = type === "departure";
     const lat = hub.location?.latitude;
     const lng = hub.location?.longitude;
@@ -18,7 +20,7 @@ export function PinnedHubWaypointItem({ type, hub, sequence }: PinnedHubWaypoint
         lat !== undefined && lng !== undefined ? formatCoordinates(hub.location) : null;
     const elevStr =
         hub.altitudeMsl !== undefined && hub.altitudeMsl !== null
-            ? `Elev ${formatAltitude(hub.altitudeMsl)}`
+            ? t("elev", { alt: formatAltitude(hub.altitudeMsl) })
             : null;
     const padMeta = [hub.code, elevStr, coordStr].filter(Boolean).join(" • ");
 
@@ -32,7 +34,7 @@ export function PinnedHubWaypointItem({ type, hub, sequence }: PinnedHubWaypoint
                     <span className="font-semibold text-[var(--color-text-primary)] block truncate">
                         {hub.name ||
                             hub.code ||
-                            (isDeparture ? "Departure Vertiport" : "Arrival Vertiport")}
+                            (isDeparture ? t("departureVertiport") : t("arrivalVertiport"))}
                     </span>
                     <span className="text-[var(--color-text-muted)] text-[11px] block mt-0.5 truncate">
                         {padMeta}
@@ -41,7 +43,7 @@ export function PinnedHubWaypointItem({ type, hub, sequence }: PinnedHubWaypoint
             </div>
             <div
                 className="flex items-center pr-1 text-[var(--color-text-muted)] shrink-0"
-                title={isDeparture ? "Origin Vertiport" : "Destination Vertiport"}
+                title={isDeparture ? t("originVertiport") : t("destinationVertiport")}
             >
                 {isDeparture ? (
                     <PlaneTakeoff className="w-4 h-4" />

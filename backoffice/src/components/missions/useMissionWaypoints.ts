@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
     STOPOVER_DEFAULT_GROUND_TIME,
@@ -31,6 +32,8 @@ export function useMissionWaypoints({
     arrivalHub,
     onClearWaypointErrors,
 }: UseMissionWaypointsOptions = {}) {
+    const t = useTranslations("missions");
+    const tWp = useTranslations("waypoints");
     const sanitizedInitial = useMemo(() => {
         return extractIntermediateWaypoints(initialWaypoints, departureHub, arrivalHub);
     }, [initialWaypoints, departureHub, arrivalHub]);
@@ -68,7 +71,7 @@ export function useMissionWaypoints({
             const newWp: Waypoint = {
                 tempId: `wp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 sequence: seqNum,
-                name: `Waypoint ${seqNum}`,
+                name: tWp("defaultWaypointName", { seq: seqNum }),
                 waypointType: WAYPOINT_TYPE.COORDINATE,
                 latitude: lat,
                 longitude: lng,
@@ -85,6 +88,7 @@ export function useMissionWaypoints({
             defaultAltitude,
             onClearWaypointErrors,
             setWaypoints,
+            tWp,
         ]
     );
 
@@ -92,7 +96,7 @@ export function useMissionWaypoints({
         (hub: Hub, stopoverType: StopoverType = STOPOVER_TYPE.RECHARGE) => {
             if (isReadOnly) return;
             if (hub.location?.latitude === undefined || hub.location?.longitude === undefined) {
-                toast.error("Selected hub does not have valid coordinates");
+                toast.error(t("toasts.hubMissingCoords"));
                 return;
             }
             const resolvedStopover =
@@ -101,7 +105,7 @@ export function useMissionWaypoints({
             const newWp: Waypoint = {
                 tempId: `wp-hub-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 sequence: seqNum,
-                name: hub.name || hub.code || `Hub Stopover ${seqNum}`,
+                name: hub.name || hub.code || tWp("defaultHubStopoverName", { seq: seqNum }),
                 waypointType: WAYPOINT_TYPE.HUB,
                 hubId: hub.id,
                 latitude: hub.location.latitude,
@@ -112,9 +116,9 @@ export function useMissionWaypoints({
             };
             setWaypoints((prev) => [...prev, newWp]);
             onClearWaypointErrors?.();
-            toast.success(`Added HUB stopover at ${hub.code || hub.name}`);
+            toast.success(t("toasts.addedHubStopover", { hub: hub.code || hub.name || "" }));
         },
-        [isReadOnly, departureHub, waypoints.length, onClearWaypointErrors, setWaypoints]
+        [isReadOnly, departureHub, waypoints.length, onClearWaypointErrors, setWaypoints, t, tWp]
     );
 
     const handleUpdateWaypoint = useCallback(
@@ -152,16 +156,19 @@ export function useMissionWaypoints({
     const handleGenerateHubToHub = useCallback(() => {
         if (isReadOnly) return;
         if (!departureHub?.location || !arrivalHub?.location) {
-            toast.error("Please select both Departure Hub and Arrival Hub first");
+            toast.error(t("toasts.selectBothHubsFirst"));
             return;
         }
 
         setWaypoints([]);
         onClearWaypointErrors?.();
         toast.success(
-            `Generated direct route from ${departureHub.code || departureHub.name} to ${arrivalHub.code || arrivalHub.name}`
+            t("toasts.generatedDirectRoute", {
+                from: departureHub.code || departureHub.name || "",
+                to: arrivalHub.code || arrivalHub.name || "",
+            })
         );
-    }, [isReadOnly, departureHub, arrivalHub, onClearWaypointErrors, setWaypoints]);
+    }, [isReadOnly, departureHub, arrivalHub, onClearWaypointErrors, setWaypoints, t]);
 
     return {
         waypoints,

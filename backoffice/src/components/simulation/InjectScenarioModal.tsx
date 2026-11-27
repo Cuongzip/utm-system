@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Modal, CustomSelect, FormInput } from "@/components/ui";
 import { simulationService } from "@/services/simulationService";
@@ -23,6 +24,9 @@ function InjectScenarioModalBody({
     sessionId,
     onSuccess,
 }: Omit<InjectScenarioModalProps, "isOpen">) {
+    const t = useTranslations("simulation.injectModal");
+    const tChaos = useTranslations("simulation.chaos");
+    const tScenarios = useTranslations("simulation.scenarios");
     const queryClient = useQueryClient();
     const [scenario, setScenario] = useState<InjectScenarioType>(SIMULATION_SCENARIO.GPS_FAILURE);
     const [durationSeconds, setDurationSeconds] = useState<string>("");
@@ -32,14 +36,14 @@ function InjectScenarioModalBody({
         mutationFn: (payload: InjectScenarioPayload) =>
             simulationService.injectScenario(sessionId, payload),
         onSuccess: () => {
-            toast.success(`Emergency scenario "${scenario}" injected successfully`);
+            toast.success(t("injectedToast", { scenario: tScenarios(`${scenario}.name`) }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationEvents(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             onSuccess();
             onClose();
         },
-        meta: { defaultErrorMessage: "Failed to inject emergency scenario" },
+        meta: { defaultErrorMessage: tChaos("injectError") },
     });
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -52,7 +56,7 @@ function InjectScenarioModalBody({
                 durationSeconds && !isNaN(dur) && dur > 0 ? { durationSeconds: dur } : undefined,
         });
         if (!validation.success) {
-            setError(validation.errors.scenario || "Please select a scenario to inject");
+            setError(validation.errors.scenario || t("selectScenarioError"));
             return;
         }
 
@@ -63,16 +67,16 @@ function InjectScenarioModalBody({
         <Modal
             isOpen
             onClose={onClose}
-            title="Inject Emergency Scenario"
+            title={t("title")}
             onSubmit={handleSubmit}
             loading={injectMutation.isPending}
-            submitText="Inject Scenario"
-            loadingText="Injecting..."
+            submitText={t("submitBtn")}
+            loadingText={t("loadingText")}
             maxWidth="480px"
         >
             <div className="form-group">
                 <label className="form-label" htmlFor="scenarioSelect">
-                    Scenario Type <span className="text-red-500">*</span>
+                    {t("scenarioTypeLabel")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     id="scenarioSelect"
@@ -83,10 +87,10 @@ function InjectScenarioModalBody({
                     }}
                     options={CHAOS_SCENARIOS.map((s) => ({
                         value: s.type,
-                        label: s.name,
-                        description: s.description,
+                        label: tScenarios(`${s.type}.name`),
+                        description: tScenarios(`${s.type}.desc`),
                     }))}
-                    placeholder="Select emergency scenario"
+                    placeholder={t("selectScenarioPlaceholder")}
                     error={Boolean(error)}
                 />
                 {error && <span className="form-error-msg">{error}</span>}
@@ -94,22 +98,19 @@ function InjectScenarioModalBody({
 
             <FormInput
                 id="durationSeconds"
-                label="Duration in Seconds (Optional)"
+                label={t("durationLabel")}
                 type="number"
                 min="1"
                 placeholder={
                     scenario === SIMULATION_SCENARIO.C2_LOST
-                        ? "e.g. 30 (10s warning alert, 25s emergency failsafe)"
-                        : "e.g. 30 (leave blank for persistent effect)"
+                        ? t("durationC2Placeholder")
+                        : t("durationDefaultPlaceholder")
                 }
                 value={durationSeconds}
                 onChange={(e) => setDurationSeconds(e.target.value)}
             />
             {scenario === SIMULATION_SCENARIO.C2_LOST && (
-                <p className="mt-1.5 text-xs text-slate-400">
-                    C2 Link Lost triggers a warning alert &amp; conflict after 10s, and escalates to
-                    a critical emergency with autonomous failsafe after 25s.
-                </p>
+                <p className="mt-1.5 text-xs text-slate-400">{t("c2Hint")}</p>
             )}
         </Modal>
     );

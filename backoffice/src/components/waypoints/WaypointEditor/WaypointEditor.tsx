@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
 import type { Hub } from "@/types";
 import type { WaypointItem } from "../types";
@@ -18,6 +20,7 @@ export interface WaypointEditorProps<T extends WaypointItem> {
     isReadOnly: boolean;
     fieldErrors: Record<string, string>;
     waypointIndex: number;
+    altWaypointIndex?: number;
     onClearFieldError: (field: string) => void;
 }
 
@@ -30,27 +33,98 @@ export function WaypointEditor<T extends WaypointItem>({
     isReadOnly,
     fieldErrors,
     waypointIndex,
+    altWaypointIndex,
     onClearFieldError,
 }: WaypointEditorProps<T>) {
+    const t = useTranslations("waypoints.editor.tabs");
     const [activeSubTab, setActiveSubTab] = useState<"position" | "actions" | "conditions">(
         "position"
     );
 
-    const prefix = waypointIndex >= 0 ? `waypoints.${waypointIndex}.` : "";
-    const nameError = prefix ? fieldErrors[`${prefix}name`] : undefined;
-    const latError = prefix ? fieldErrors[`${prefix}latitude`] : undefined;
-    const lngError = prefix ? fieldErrors[`${prefix}longitude`] : undefined;
-    const altError = prefix ? fieldErrors[`${prefix}altitude`] : undefined;
-    const actionsError = prefix ? fieldErrors[`${prefix}actions`] : undefined;
-    const conditionsError = prefix ? fieldErrors[`${prefix}conditions`] : undefined;
+    const primaryPrefix = waypointIndex >= 0 ? `waypoints.${waypointIndex}.` : "";
+    const secondaryPrefix =
+        altWaypointIndex !== undefined && altWaypointIndex >= 0
+            ? `waypoints.${altWaypointIndex}.`
+            : "";
 
-    const hasPositionErrors = Boolean(nameError || latError || lngError || altError);
+    const getWpError = (field: string): string | undefined => {
+        if (primaryPrefix && fieldErrors[`${primaryPrefix}${field}`]) {
+            return fieldErrors[`${primaryPrefix}${field}`];
+        }
+        if (secondaryPrefix && fieldErrors[`${secondaryPrefix}${field}`]) {
+            return fieldErrors[`${secondaryPrefix}${field}`];
+        }
+        return undefined;
+    };
+
+    const clearWpError = (field: string) => {
+        if (primaryPrefix) onClearFieldError?.(`${primaryPrefix}${field}`);
+        if (secondaryPrefix) onClearFieldError?.(`${secondaryPrefix}${field}`);
+    };
+
+    const nameError = getWpError("name");
+    const latError = getWpError("latitude");
+    const lngError = getWpError("longitude");
+    const altError = getWpError("altitude");
+    const hubIdError = getWpError("hubId");
+    const stopoverTypeError = getWpError("stopoverType");
+    const groundTimeError = getWpError("groundTimeMinutes");
+    const payloadDeltaError = getWpError("payloadDeltaKg");
+    const actionsError =
+        getWpError("actions") ||
+        getWpError("hoverDurationSec") ||
+        getWpError("waitForConfirmation");
+    const conditionsError =
+        getWpError("conditions") ||
+        getWpError("speedToWaypoint") ||
+        getWpError("headingAtWaypoint") ||
+        getWpError("turnRadius");
+
+    const allWaypointErrors = useMemo(() => {
+        const msgs = new Set<string>();
+        for (const [key, msg] of Object.entries(fieldErrors)) {
+            if (!msg) continue;
+            if (
+                (primaryPrefix && key.startsWith(primaryPrefix)) ||
+                (secondaryPrefix && key.startsWith(secondaryPrefix))
+            ) {
+                const fieldLabel = key.split(".").slice(2).join(".");
+                msgs.add(fieldLabel ? `${fieldLabel}: ${msg}` : msg);
+            }
+        }
+        return Array.from(msgs);
+    }, [fieldErrors, primaryPrefix, secondaryPrefix]);
+
+    const hasPositionErrors = Boolean(
+        nameError ||
+        latError ||
+        lngError ||
+        altError ||
+        hubIdError ||
+        stopoverTypeError ||
+        groundTimeError ||
+        payloadDeltaError
+    );
     const hasActionsErrors = Boolean(actionsError);
     const hasConditionsErrors = Boolean(conditionsError);
 
     return (
         <div className="space-y-3.5">
             <WaypointEditorHeader waypoint={waypoint} onClose={onClose} />
+
+            {allWaypointErrors.length > 0 && (
+                <div
+                    role="alert"
+                    className="p-2.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2"
+                >
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
+                    <div className="space-y-0.5 font-mono text-[11px]">
+                        {allWaypointErrors.map((errText) => (
+                            <div key={errText}>{errText}</div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-3 bg-[var(--color-surface-card)] p-1 rounded-md text-[11px] font-semibold text-center border border-[var(--color-border-default)]">
                 <button
@@ -64,7 +138,7 @@ export function WaypointEditor<T extends WaypointItem>({
                         hasPositionErrors && "text-red-600"
                     )}
                 >
-                    <span>Position</span>
+                    <span>{t("position")}</span>
                     {hasPositionErrors && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
                 </button>
                 <button
@@ -78,7 +152,7 @@ export function WaypointEditor<T extends WaypointItem>({
                         hasActionsErrors && "text-red-600"
                     )}
                 >
-                    <span>Actions</span>
+                    <span>{t("actions")}</span>
                     {hasActionsErrors && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
                 </button>
                 <button
@@ -92,7 +166,7 @@ export function WaypointEditor<T extends WaypointItem>({
                         hasConditionsErrors && "text-red-600"
                     )}
                 >
-                    <span>Conditions</span>
+                    <span>{t("conditions")}</span>
                     {hasConditionsErrors && (
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                     )}
@@ -111,18 +185,18 @@ export function WaypointEditor<T extends WaypointItem>({
                     latError={latError}
                     lngError={lngError}
                     altError={altError}
-                    onClearNameError={
-                        prefix ? () => onClearFieldError?.(`${prefix}name`) : undefined
-                    }
-                    onClearLatError={
-                        prefix ? () => onClearFieldError?.(`${prefix}latitude`) : undefined
-                    }
-                    onClearLngError={
-                        prefix ? () => onClearFieldError?.(`${prefix}longitude`) : undefined
-                    }
-                    onClearAltError={
-                        prefix ? () => onClearFieldError?.(`${prefix}altitude`) : undefined
-                    }
+                    hubIdError={hubIdError}
+                    stopoverTypeError={stopoverTypeError}
+                    groundTimeError={groundTimeError}
+                    payloadDeltaError={payloadDeltaError}
+                    onClearNameError={() => clearWpError("name")}
+                    onClearLatError={() => clearWpError("latitude")}
+                    onClearLngError={() => clearWpError("longitude")}
+                    onClearAltError={() => clearWpError("altitude")}
+                    onClearHubIdError={() => clearWpError("hubId")}
+                    onClearStopoverTypeError={() => clearWpError("stopoverType")}
+                    onClearGroundTimeError={() => clearWpError("groundTimeMinutes")}
+                    onClearPayloadDeltaError={() => clearWpError("payloadDeltaKg")}
                 />
             )}
 

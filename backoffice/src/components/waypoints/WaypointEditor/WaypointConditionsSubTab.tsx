@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { FormInput } from "@/components/ui";
 import { parseOptionalNumber, type WaypointItem } from "../types";
 
@@ -16,6 +17,7 @@ export function WaypointConditionsSubTab<T extends WaypointItem>({
     isReadOnly = false,
     error,
 }: WaypointConditionsSubTabProps<T>) {
+    const t = useTranslations("waypoints.conditions");
     const handleFieldChange = (field: string, val: string) => {
         const num = parseOptionalNumber(val);
         onUpdate({
@@ -34,20 +36,20 @@ export function WaypointConditionsSubTab<T extends WaypointItem>({
             <div className="form-row-2">
                 <FormInput
                     id="wpSpeed"
-                    label="Speed (m/s)"
+                    label={t("speed")}
                     type="number"
                     min="0"
-                    placeholder="Default"
+                    placeholder={t("defaultPlaceholder")}
                     value={(waypoint.conditions?.speed as number | undefined) ?? ""}
                     disabled={isReadOnly}
                     onChange={(e) => handleFieldChange("speed", e.target.value)}
                 />
                 <FormInput
                     id="wpTurnRadius"
-                    label="Turn Radius (m)"
+                    label={t("turnRadius")}
                     type="number"
                     min="0"
-                    placeholder="Default"
+                    placeholder={t("defaultPlaceholder")}
                     value={(waypoint.conditions?.turnRadius as number | undefined) ?? ""}
                     disabled={isReadOnly}
                     onChange={(e) => handleFieldChange("turnRadius", e.target.value)}
@@ -57,20 +59,20 @@ export function WaypointConditionsSubTab<T extends WaypointItem>({
             <div className="form-row-2">
                 <FormInput
                     id="wpWindSpeed"
-                    label="Max Wind Speed (m/s)"
+                    label={t("maxWindSpeed")}
                     type="number"
                     min="0"
-                    placeholder="e.g. 15"
+                    placeholder={t("windPlaceholder")}
                     value={(waypoint.conditions?.maxWindSpeed as number | undefined) ?? ""}
                     disabled={isReadOnly}
                     onChange={(e) => handleFieldChange("maxWindSpeed", e.target.value)}
                 />
                 <FormInput
                     id="wpMinVisibility"
-                    label="Min Visibility (m)"
+                    label={t("minVisibility")}
                     type="number"
                     min="0"
-                    placeholder="e.g. 5000"
+                    placeholder={t("visibilityPlaceholder")}
                     value={(waypoint.conditions?.minVisibility as number | undefined) ?? ""}
                     disabled={isReadOnly}
                     onChange={(e) => handleFieldChange("minVisibility", e.target.value)}

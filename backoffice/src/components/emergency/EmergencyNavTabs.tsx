@@ -1,19 +1,30 @@
 "use client";
 
+import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { UnderlineTabs } from "@/components/ui";
 
 type EmergencyRouteTab = "console" | "incidents" | "trends";
 
-const EMERGENCY_NAV_TABS = [
-    { id: "console", label: "Live Console", href: "/dashboard/emergency" },
-    { id: "incidents", label: "Incident History", href: "/dashboard/emergency/incidents" },
-    { id: "trends", label: "Trend Analysis", href: "/dashboard/emergency/trends" },
-] as const;
-
 export function EmergencyNavTabs() {
+    const t = useTranslations("emergency.nav");
     const pathname = usePathname() || "";
     const router = useRouter();
+
+    const navTabs = useMemo(
+        () =>
+            [
+                { id: "console", label: t("console"), href: "/dashboard/emergency" },
+                {
+                    id: "incidents",
+                    label: t("incidents"),
+                    href: "/dashboard/emergency/incidents",
+                },
+                { id: "trends", label: t("trends"), href: "/dashboard/emergency/trends" },
+            ] as const,
+        [t]
+    );
 
     const activeTab: EmergencyRouteTab = pathname.startsWith("/dashboard/emergency/trends")
         ? "trends"
@@ -23,15 +34,15 @@ export function EmergencyNavTabs() {
 
     return (
         <UnderlineTabs
-            tabs={EMERGENCY_NAV_TABS}
+            tabs={navTabs}
             activeTab={activeTab}
             onTabChange={(tabId) => {
-                const target = EMERGENCY_NAV_TABS.find((t) => t.id === tabId);
+                const target = navTabs.find((tab) => tab.id === tabId);
                 if (target && target.href !== pathname) {
                     router.push(target.href);
                 }
             }}
-            ariaLabel="Emergency navigation"
+            ariaLabel={t("ariaLabel")}
         />
     );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
 import { ChamferCard, ChamferButton } from "@/components/ui";
@@ -27,10 +28,13 @@ export function Modal({
     children,
     onSubmit,
     loading = false,
-    submitText = "Submit",
-    loadingText = "Saving...",
+    submitText,
+    loadingText,
     footer,
 }: ModalProps) {
+    const t = useTranslations("common");
+    const resolvedSubmitText = submitText ?? t("submit");
+    const resolvedLoadingText = loadingText ?? t("saving");
     const styleMaxWidth = typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth;
 
     const defaultSubmitFooter = (
@@ -43,16 +47,16 @@ export function Modal({
                 onClick={onClose}
                 disabled={loading}
             >
-                Cancel
+                {t("cancel")}
             </ChamferButton>
             <ChamferButton variant="dark" size="sm" clip="sm" type="submit" disabled={loading}>
                 {loading ? (
                     <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>{loadingText}</span>
+                        <span>{resolvedLoadingText}</span>
                     </>
                 ) : (
-                    <span>{submitText}</span>
+                    <span>{resolvedSubmitText}</span>
                 )}
             </ChamferButton>
         </>
@@ -98,7 +102,7 @@ export function Modal({
                                         <button
                                             type="button"
                                             className="w-7 h-7 rounded border border-transparent hover:border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-card)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors -mt-0.5 -mr-1 cursor-pointer shrink-0"
-                                            aria-label="Close modal"
+                                            aria-label={t("closeModal")}
                                         >
                                             <X className="w-4 h-4" aria-hidden="true" />
                                         </button>

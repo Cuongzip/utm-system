@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useForm, useWatch, Controller, type Resolver, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, MapPin, RotateCcw, X } from "lucide-react";
 import zod from "zod";
 import { ChamferCard, ChamferButton, CustomSelect, FormInput, AutoGenInput } from "@/components/ui";
 import { parseApiError } from "@/utils";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { createHubBody, updateHubBody } from "@/generated/hub";
 import {
     ACTIVE_HUB_STATUS,
@@ -22,56 +24,66 @@ import {
 const normalizeOptionalNumber = (v: unknown) =>
     v === "" || v === null || v === undefined || Number.isNaN(v) ? undefined : v;
 
-const hubBoundsRefinement = (
-    data: {
-        airspaceRadius?: number;
-        maxSimultaneousDrones?: number;
-        airspaceFloor?: number;
-        airspaceCeiling?: number;
-    },
-    ctx: zod.RefinementCtx
-) => {
-    if (data.airspaceRadius !== undefined && data.airspaceRadius <= 0) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["airspaceRadius"],
-            message: "Airspace radius must be > 0",
-        });
-    }
-    if (
-        data.maxSimultaneousDrones !== undefined &&
-        (!Number.isInteger(data.maxSimultaneousDrones) || data.maxSimultaneousDrones <= 0)
-    ) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["maxSimultaneousDrones"],
-            message: "Must be a positive whole number",
-        });
-    }
-    if (data.airspaceFloor !== undefined && data.airspaceFloor < 0) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["airspaceFloor"],
-            message: "Airspace floor must be >= 0",
-        });
-    }
-    if (data.airspaceCeiling !== undefined && data.airspaceCeiling <= 0) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["airspaceCeiling"],
-            message: "Airspace ceiling must be > 0",
-        });
-    }
-    const effectiveFloor = data.airspaceFloor ?? HUB_AIRSPACE_DEFAULTS.airspaceFloor;
-    const effectiveCeiling = data.airspaceCeiling ?? HUB_AIRSPACE_DEFAULTS.airspaceCeiling;
-    if (effectiveCeiling <= effectiveFloor) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["airspaceCeiling"],
-            message: "Ceiling must be greater than floor",
-        });
-    }
-};
+interface HubBoundsValidationMessages {
+    radiusPositive: string;
+    wholePositive: string;
+    floorNonNegative: string;
+    ceilingPositive: string;
+    ceilingAboveFloor: string;
+}
+
+const makeHubBoundsRefinement =
+    (messages: HubBoundsValidationMessages) =>
+    (
+        data: {
+            airspaceRadius?: number;
+            maxSimultaneousDrones?: number;
+            airspaceFloor?: number;
+            airspaceCeiling?: number;
+        },
+        ctx: zod.RefinementCtx
+    ) => {
+        if (data.airspaceRadius !== undefined && data.airspaceRadius <= 0) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["airspaceRadius"],
+                message: messages.radiusPositive,
+            });
+        }
+        if (
+            data.maxSimultaneousDrones !== undefined &&
+            (!Number.isInteger(data.maxSimultaneousDrones) || data.maxSimultaneousDrones <= 0)
+        ) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["maxSimultaneousDrones"],
+                message: messages.wholePositive,
+            });
+        }
+        if (data.airspaceFloor !== undefined && data.airspaceFloor < 0) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["airspaceFloor"],
+                message: messages.floorNonNegative,
+            });
+        }
+        if (data.airspaceCeiling !== undefined && data.airspaceCeiling <= 0) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["airspaceCeiling"],
+                message: messages.ceilingPositive,
+            });
+        }
+        const effectiveFloor = data.airspaceFloor ?? HUB_AIRSPACE_DEFAULTS.airspaceFloor;
+        const effectiveCeiling = data.airspaceCeiling ?? HUB_AIRSPACE_DEFAULTS.airspaceCeiling;
+        if (effectiveCeiling <= effectiveFloor) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["airspaceCeiling"],
+                message: messages.ceilingAboveFloor,
+            });
+        }
+    };
 
 const optionalNumberOverrides = {
     maxSimultaneousDrones: zod.preprocess(
@@ -81,14 +93,6 @@ const optionalNumberOverrides = {
     airspaceFloor: zod.preprocess(normalizeOptionalNumber, createHubBody.shape.airspaceFloor),
     airspaceCeiling: zod.preprocess(normalizeOptionalNumber, createHubBody.shape.airspaceCeiling),
 };
-
-const createHubFormSchema = createHubBody
-    .extend(optionalNumberOverrides)
-    .superRefine(hubBoundsRefinement);
-
-const updateHubFormSchema = updateHubBody
-    .extend(optionalNumberOverrides)
-    .superRefine(hubBoundsRefinement);
 
 export interface HubEditorPanelProps {
     hubToEdit: Hub | null;
@@ -107,12 +111,29 @@ export function HubEditorPanel({
     onClose,
     onSubmit,
 }: HubEditorPanelProps) {
+    const t = useTranslations("hubs.editor");
+    const tHubs = useTranslations("hubs");
+    const tCommon = useTranslations("common");
+    const locale = useLocale() as AppLocale;
     const [submitting, setSubmitting] = useState(false);
     const nameInputRef = useRef<HTMLInputElement | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const lastAppliedPickSeqRef = useRef<number>(0);
 
     const isEditMode = Boolean(hubToEdit);
+
+    const formSchema = useMemo(() => {
+        const refinement = makeHubBoundsRefinement({
+            radiusPositive: t("validation.radiusPositive"),
+            wholePositive: t("validation.wholePositive"),
+            floorNonNegative: t("validation.floorNonNegative"),
+            ceilingPositive: t("validation.ceilingPositive"),
+            ceilingAboveFloor: t("validation.ceilingAboveFloor"),
+        });
+        return isEditMode
+            ? updateHubBody.extend(optionalNumberOverrides).superRefine(refinement)
+            : createHubBody.extend(optionalNumberOverrides).superRefine(refinement);
+    }, [isEditMode, t]);
 
     const {
         register,
@@ -123,9 +144,7 @@ export function HubEditorPanel({
         setValue,
         formState: { errors },
     } = useForm<HubFormPayload>({
-        resolver: zodResolver(
-            isEditMode ? updateHubFormSchema : createHubFormSchema
-        ) as Resolver<HubFormPayload>,
+        resolver: zodResolver(formSchema) as Resolver<HubFormPayload>,
         defaultValues: {
             code: undefined,
             name: "",
@@ -278,7 +297,7 @@ export function HubEditorPanel({
             }
             onClose();
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to save hub");
+            const parsed = parseApiError(err, tHubs("saveError"));
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     if (field === "latitude" || field === "location.latitude") {
@@ -318,13 +337,13 @@ export function HubEditorPanel({
         <ChamferCard size="lg" className="w-full h-full flex flex-col min-h-0">
             <div className="px-5 py-3 border-b border-[var(--color-border-default)] flex items-center justify-between gap-3 shrink-0 bg-[var(--color-surface-panel)]">
                 <h2 className="text-[15px] font-bold text-[var(--color-text-primary)] tracking-tight">
-                    {isEditMode ? "Edit Vertiport Hub" : "Register Vertiport Hub"}
+                    {isEditMode ? t("editTitle") : t("registerTitle")}
                 </h2>
                 <button
                     type="button"
                     onClick={onClose}
                     className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors cursor-pointer"
-                    aria-label="Close hub editor"
+                    aria-label={t("closeAria")}
                 >
                     <X className="w-4 h-4" aria-hidden="true" />
                 </button>
@@ -343,7 +362,7 @@ export function HubEditorPanel({
                         {isEditMode ? (
                             <FormInput
                                 id="hubCode"
-                                label="Code"
+                                label={t("code")}
                                 value={hubToEdit?.code ?? ""}
                                 disabled
                                 readOnly
@@ -352,9 +371,9 @@ export function HubEditorPanel({
                         ) : (
                             <AutoGenInput
                                 id="hubCode"
-                                label="Code"
+                                label={t("code")}
                                 showAutoGen
-                                manualPlaceholder="e.g. HUB-SGN-01"
+                                manualPlaceholder={t("codePlaceholder")}
                                 spellCheck={false}
                                 autoComplete="off"
                                 required
@@ -365,10 +384,10 @@ export function HubEditorPanel({
 
                         <FormInput
                             id="hubName"
-                            label="Hub Name"
+                            label={t("hubName")}
                             required
                             autoComplete="off"
-                            placeholder="e.g. Saigon Central Vertiport"
+                            placeholder={t("hubNamePlaceholder")}
                             error={errors.name?.message}
                             {...nameRegistration}
                             ref={(el) => {
@@ -380,7 +399,7 @@ export function HubEditorPanel({
                         {isEditMode && (
                             <div className="form-group">
                                 <label className="form-label" htmlFor="hubStatus">
-                                    Operational Status
+                                    {t("operationalStatus")}
                                 </label>
                                 <Controller
                                     name="status"
@@ -392,7 +411,9 @@ export function HubEditorPanel({
                                             onValueChange={field.onChange}
                                             options={HUB_STATUSES.map((opt) => ({
                                                 value: opt,
-                                                label: opt.toUpperCase(),
+                                                label:
+                                                    translateStatusLabel(opt, locale) ??
+                                                    opt.toUpperCase(),
                                             }))}
                                             error={Boolean(errors.status)}
                                         />
@@ -408,7 +429,7 @@ export function HubEditorPanel({
                     <section className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
                         <div className="flex items-center justify-between gap-2">
                             <h3 className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
-                                Location
+                                {t("locationSection")}
                             </h3>
                             <div className="flex items-center gap-2.5">
                                 {hasMovedFromOriginal && (
@@ -418,12 +439,12 @@ export function HubEditorPanel({
                                         className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:text-slate-900 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded cursor-pointer"
                                     >
                                         <RotateCcw className="w-3 h-3" aria-hidden="true" />
-                                        <span>Reset</span>
+                                        <span>{t("resetLocation")}</span>
                                     </button>
                                 )}
                                 <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
                                     <MapPin className="w-3 h-3 text-slate-400" aria-hidden="true" />
-                                    <span>Click map to place</span>
+                                    <span>{t("clickMapHint")}</span>
                                 </span>
                             </div>
                         </div>
@@ -431,7 +452,7 @@ export function HubEditorPanel({
                         <div className="form-row-2">
                             <FormInput
                                 id="hubLatitude"
-                                label="Latitude"
+                                label={t("latitude")}
                                 required
                                 type="number"
                                 step="any"
@@ -442,7 +463,7 @@ export function HubEditorPanel({
                             />
                             <FormInput
                                 id="hubLongitude"
-                                label="Longitude"
+                                label={t("longitude")}
                                 required
                                 type="number"
                                 step="any"
@@ -455,7 +476,7 @@ export function HubEditorPanel({
 
                         <FormInput
                             id="altitudeMsl"
-                            label="Altitude MSL (m)"
+                            label={t("altitudeMsl")}
                             required
                             type="number"
                             step="any"
@@ -469,13 +490,13 @@ export function HubEditorPanel({
 
                     <section className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
                         <h3 className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
-                            Airspace &amp; Capacity
+                            {t("airspaceSection")}
                         </h3>
 
                         <div className="form-row-2">
                             <FormInput
                                 id="airspaceRadius"
-                                label="Protection Radius (m)"
+                                label={t("protectionRadiusM")}
                                 required
                                 type="number"
                                 step="any"
@@ -487,7 +508,7 @@ export function HubEditorPanel({
                             />
                             <FormInput
                                 id="maxSimultaneousDrones"
-                                label="Max Concurrent Drones"
+                                label={t("maxConcurrentDrones")}
                                 type="number"
                                 step={1}
                                 min={1}
@@ -501,7 +522,7 @@ export function HubEditorPanel({
                         <div className="form-row-2">
                             <FormInput
                                 id="airspaceFloor"
-                                label="Airspace Floor (m)"
+                                label={t("airspaceFloorM")}
                                 type="number"
                                 step="any"
                                 min={0}
@@ -512,7 +533,7 @@ export function HubEditorPanel({
                             />
                             <FormInput
                                 id="airspaceCeiling"
-                                label="Airspace Ceiling (m)"
+                                label={t("airspaceCeilingM")}
                                 type="number"
                                 step="any"
                                 min={1}
@@ -534,7 +555,7 @@ export function HubEditorPanel({
                         onClick={onClose}
                         disabled={submitting}
                     >
-                        Cancel
+                        {tCommon("cancel")}
                     </ChamferButton>
                     <ChamferButton
                         variant="dark"
@@ -546,10 +567,10 @@ export function HubEditorPanel({
                         {submitting ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                                <span>{isEditMode ? "Saving…" : "Creating…"}</span>
+                                <span>{isEditMode ? t("saving") : t("creating")}</span>
                             </>
                         ) : (
-                            <span>{isEditMode ? "Save Changes" : "Create Hub"}</span>
+                            <span>{isEditMode ? tCommon("saveChanges") : t("createHub")}</span>
                         )}
                     </ChamferButton>
                 </div>

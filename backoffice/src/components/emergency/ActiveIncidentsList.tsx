@@ -1,26 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-    AlertTriangle,
-    BatteryWarning,
-    WifiOff,
-    ShieldAlert,
-    ChevronRight,
-    ShieldCheck,
-    Check,
-    X,
-    Clock,
-} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { ChevronRight, ShieldCheck, Check, X, Clock } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/components/ui";
-import { formatRelativeTime } from "@/utils";
+import { useAppLocale } from "@/i18n";
+import { formatRelativeTime, localizeServerText } from "@/utils";
 import { useDronesAll, useFlightsAll } from "@/hooks";
 import {
     INCIDENT_STATUS,
-    DEFAULT_INCIDENT_STATUS,
-    EMERGENCY_SEVERITY,
+    EMERGENCY_TYPES,
     RESPONSE_ACTION,
     type EmergencyIncidentVm,
+    type EmergencyType,
     type PendingConfirmationVm,
 } from "@/types";
 
@@ -37,6 +29,9 @@ export function ActiveIncidentsList({
     onSelectIncident,
     onConfirmAction,
 }: ActiveIncidentsListProps) {
+    const t = useTranslations("emergency");
+    const tCommon = useTranslations("common");
+    const locale = useAppLocale();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
     const [nowMs, setNowMs] = useState(() => Date.now());
@@ -74,41 +69,39 @@ export function ActiveIncidentsList({
         [flights]
     );
 
-    const getIncidentIcon = (incident: EmergencyIncidentVm) => {
-        const type = incident.emergencyType || "";
-        if (type.startsWith("battery")) return BatteryWarning;
-        if (type.startsWith("signal") || type.startsWith("gps")) return WifiOff;
-        if (
-            incident.severity === EMERGENCY_SEVERITY.EMERGENCY ||
-            incident.severity === EMERGENCY_SEVERITY.CRITICAL
-        ) {
-            return ShieldAlert;
+    const getTypeLabel = (rawType?: string) => {
+        if (!rawType) return "";
+        if ((EMERGENCY_TYPES as readonly string[]).includes(rawType)) {
+            return t(`types.${rawType as EmergencyType}`);
         }
-        return AlertTriangle;
+        return rawType.replace(/_/g, " ");
     };
 
     return (
         <ChamferCard size="lg" className="w-full">
             <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
                 <h2 className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
-                    Active Emergency Incidents ({incidents.length})
+                    {t("activeList.heading", { count: incidents.length })}
                 </h2>
                 <StatusBadge
-                    status={incidents.length > 0 ? "critical" : "online"}
-                    label={incidents.length > 0 ? `${incidents.length} ACTIVE` : "NOMINAL"}
+                    status={incidents.length > 0 ? "critical" : "nominal"}
+                    label={
+                        incidents.length > 0
+                            ? t("activeList.activeBadge", { count: incidents.length })
+                            : undefined
+                    }
                 />
             </div>
 
             {incidents.length === 0 ? (
                 <EmptyState
                     icon={ShieldCheck}
-                    title="No Active Incidents"
-                    description="All monitored drone corridors and aircraft systems are operating within nominal parameters."
+                    title={t("activeList.emptyTitle")}
+                    description={t("activeList.emptyDesc")}
                 />
             ) : (
                 <div className="divide-y divide-slate-200">
                     {incidents.map((incident) => {
-                        const Icon = getIncidentIcon(incident);
                         const isAwaiting = incident.status === INCIDENT_STATUS.PENDING_CONFIRMATION;
 
                         const timeoutIso =
@@ -135,13 +128,21 @@ export function ActiveIncidentsList({
                               (effectiveDroneId.length > 12
                                   ? `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
                                   : effectiveDroneId)
-                            : "Unknown Drone";
+                            : t("activeList.unknownDrone");
+
+                        const typeTitle =
+                            getTypeLabel(incident.emergencyType) ||
+                            incident.incidentNumber ||
+                            droneRegText;
+                        const detailMessage = incident.message
+                            ? localizeServerText(incident.message, locale)
+                            : "";
 
                         return (
                             <div
                                 key={incident.id}
                                 onClick={() => onSelectIncident(incident)}
-                                className="px-4 py-3.5 hover:bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors cursor-pointer"
+                                className="group px-4 py-3.5 hover:bg-slate-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors cursor-pointer"
                             >
                                 <button
                                     type="button"
@@ -149,45 +150,40 @@ export function ActiveIncidentsList({
                                         e.stopPropagation();
                                         onSelectIncident(incident);
                                     }}
-                                    className="flex items-start sm:items-center gap-3 min-w-0 flex-1 text-left cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                    className="flex flex-col min-w-0 flex-1 text-left cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                                 >
-                                    <div className="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-700">
-                                        <Icon className="w-4 h-4" />
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                                        <span className="font-mono text-xs font-bold uppercase tracking-wide text-slate-900">
+                                            {typeTitle}
+                                        </span>
+                                        <StatusBadge status={incident.severity} />
+                                        <span className="text-slate-300 select-none">·</span>
+                                        <span className="font-mono text-xs font-semibold text-slate-700">
+                                            {droneRegText}
+                                        </span>
+                                        {flightNumText && (
+                                            <>
+                                                <span className="text-slate-300 select-none">
+                                                    ·
+                                                </span>
+                                                <span className="font-mono text-xs text-slate-500">
+                                                    {flightNumText}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
 
-                                    <div className="flex flex-col min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="font-semibold text-sm text-slate-900 truncate">
-                                                {incident.message ||
-                                                    incident.emergencyType?.replace(/_/g, " ")}
-                                            </span>
-                                            <StatusBadge
-                                                status={incident.severity}
-                                                label={incident.severity.toUpperCase()}
-                                            />
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs font-mono text-slate-500">
-                                            <span className="font-semibold text-slate-800">
-                                                Drone: {droneRegText}
-                                            </span>
-                                            {flightNumText && (
-                                                <>
-                                                    <span className="text-slate-300">·</span>
-                                                    <span className="text-slate-600">
-                                                        Flight: {flightNumText}
-                                                    </span>
-                                                </>
-                                            )}
-                                            <span className="text-slate-300">·</span>
-                                            <span>{formatRelativeTime(incident.detectedAt)}</span>
-                                        </div>
-                                    </div>
+                                    {detailMessage && (
+                                        <p className="mt-1 text-xs text-slate-600 truncate">
+                                            {detailMessage}
+                                        </p>
+                                    )}
                                 </button>
 
-                                <div className="flex items-center flex-wrap gap-2 self-end sm:self-center shrink-0">
+                                <div className="flex items-center flex-wrap gap-2.5 self-end sm:self-center shrink-0">
                                     {incident.responseAction &&
                                         incident.responseAction !== RESPONSE_ACTION.NONE && (
-                                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold rounded bg-slate-100 text-slate-700 border border-slate-300">
+                                            <span className="px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider rounded bg-slate-100 text-slate-700 border border-slate-200">
                                                 {incident.responseAction}
                                             </span>
                                         )}
@@ -199,12 +195,7 @@ export function ActiveIncidentsList({
                                         </span>
                                     )}
 
-                                    <StatusBadge
-                                        status={incident.status ?? DEFAULT_INCIDENT_STATUS}
-                                        label={isAwaiting ? "AWAITING CONFIRMATION" : undefined}
-                                    />
-
-                                    {isAwaiting && (
+                                    {isAwaiting ? (
                                         <div
                                             className="flex items-center gap-1.5"
                                             onClick={(e) => e.stopPropagation()}
@@ -213,24 +204,28 @@ export function ActiveIncidentsList({
                                                 size="xs"
                                                 variant="dark"
                                                 onClick={() => onConfirmAction(incident.id, true)}
-                                                title="Approve failsafe action"
+                                                title={t("activeList.approveTitle")}
                                             >
                                                 <Check className="w-3.5 h-3.5" />
-                                                <span>Confirm</span>
+                                                <span>{tCommon("confirm")}</span>
                                             </ChamferButton>
                                             <ChamferButton
                                                 size="xs"
                                                 variant="outline"
                                                 onClick={() => onConfirmAction(incident.id, false)}
-                                                title="Reject failsafe action"
+                                                title={t("activeList.rejectTitle")}
                                             >
                                                 <X className="w-3.5 h-3.5" />
-                                                <span>Reject</span>
+                                                <span>{t("activeList.reject")}</span>
                                             </ChamferButton>
                                         </div>
+                                    ) : (
+                                        <span className="text-[11px] font-mono text-slate-400 tabular-nums whitespace-nowrap">
+                                            {formatRelativeTime(incident.detectedAt)}
+                                        </span>
                                     )}
 
-                                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors shrink-0" />
                                 </div>
                             </div>
                         );

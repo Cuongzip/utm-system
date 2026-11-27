@@ -1,12 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { CustomSelect, FormInput } from "@/components/ui";
-import {
-    WAYPOINT_ACTION_OPTIONS,
-    DEFAULT_WAYPOINT_ACTION,
-    parseOptionalNumber,
-    type WaypointItem,
-} from "../types";
+import { WAYPOINT_ACTION_TYPES } from "@/types";
+import { DEFAULT_WAYPOINT_ACTION, parseOptionalNumber, type WaypointItem } from "../types";
 
 export interface WaypointActionsSubTabProps<T extends WaypointItem> {
     waypoint: T;
@@ -21,6 +19,15 @@ export function WaypointActionsSubTab<T extends WaypointItem>({
     isReadOnly = false,
     error,
 }: WaypointActionsSubTabProps<T>) {
+    const t = useTranslations("waypoints");
+    const actionOptions = useMemo(
+        () =>
+            WAYPOINT_ACTION_TYPES.map((action) => ({
+                value: action,
+                label: t(`actionTypes.${action}`),
+            })),
+        [t]
+    );
     const currentActionType =
         (waypoint.actions?.type as string | undefined) || DEFAULT_WAYPOINT_ACTION;
 
@@ -61,9 +68,9 @@ export function WaypointActionsSubTab<T extends WaypointItem>({
             {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
 
             <div className="form-group">
-                <label className="form-label">Action Type</label>
+                <label className="form-label">{t("actions.actionType")}</label>
                 <CustomSelect
-                    options={WAYPOINT_ACTION_OPTIONS}
+                    options={actionOptions}
                     value={currentActionType}
                     onValueChange={handleActionTypeChange}
                     disabled={isReadOnly}
@@ -72,7 +79,7 @@ export function WaypointActionsSubTab<T extends WaypointItem>({
 
             <FormInput
                 id="wpDuration"
-                label="Duration / Hold Time (s)"
+                label={t("actions.duration")}
                 type="number"
                 min="0"
                 max="3600"
@@ -99,7 +106,7 @@ export function WaypointActionsSubTab<T extends WaypointItem>({
                     htmlFor="waitConfirmation"
                     className="text-xs text-[var(--color-text-primary)] cursor-pointer font-medium"
                 >
-                    Wait for ATC confirmation before proceed
+                    {t("actions.waitConfirmation")}
                 </label>
             </div>
         </div>

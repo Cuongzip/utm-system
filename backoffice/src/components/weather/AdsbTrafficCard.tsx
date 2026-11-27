@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Plane } from "lucide-react";
 import {
     ChamferCard,
@@ -20,6 +21,7 @@ import { useAdsbAircraft } from "@/hooks";
 import { formatCoordinates, formatDateTime } from "@/utils";
 
 export function AdsbTrafficCard() {
+    const t = useTranslations("weather");
     const { data, isLoading } = useAdsbAircraft(true, 15000);
     const [search, setSearch] = useState("");
 
@@ -44,10 +46,10 @@ export function AdsbTrafficCard() {
             <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        Live Manned Traffic (ADS-B)
+                        {t("adsb.heading")}
                     </span>
                     <span className="text-[11px] font-mono text-slate-500">
-                        {aircraft.length} tracked
+                        {t("adsb.trackedCount", { count: aircraft.length })}
                         {data?.source ? ` · ${data.source}` : ""}
                         {data?.updatedAt ? ` · ${formatDateTime(data.updatedAt)}` : ""}
                     </span>
@@ -56,7 +58,7 @@ export function AdsbTrafficCard() {
                     <SearchInput
                         value={search}
                         onChange={setSearch}
-                        placeholder="Search callsign, ICAO hex..."
+                        placeholder={t("adsb.searchPlaceholder")}
                     />
                 </div>
             </div>
@@ -64,12 +66,8 @@ export function AdsbTrafficCard() {
             {!isLoading && filtered.length === 0 ? (
                 <EmptyState
                     icon={Plane}
-                    title={hasSearch ? "No Matching Aircraft" : "No Manned Aircraft Tracked"}
-                    description={
-                        hasSearch
-                            ? "No ADS-B targets match the search query."
-                            : "No live ADS-B targets within the monitored regional surveillance radius."
-                    }
+                    title={hasSearch ? t("adsb.emptyFilteredTitle") : t("adsb.emptyTitle")}
+                    description={hasSearch ? t("adsb.emptyFilteredDesc") : t("adsb.emptyDesc")}
                     action={
                         hasSearch ? (
                             <ChamferButton
@@ -77,7 +75,7 @@ export function AdsbTrafficCard() {
                                 size="sm"
                                 onClick={() => setSearch("")}
                             >
-                                Clear Search
+                                {t("adsb.clearSearch")}
                             </ChamferButton>
                         ) : undefined
                     }
@@ -87,22 +85,22 @@ export function AdsbTrafficCard() {
                     <Table fixed={false}>
                         <TableHeader className="sticky top-0 z-10 bg-slate-50">
                             <TableRow>
-                                <TableHead>Callsign / Hex</TableHead>
-                                <TableHead>Type / Reg</TableHead>
-                                <TableHead>Position</TableHead>
-                                <TableHead className="text-right">Altitude</TableHead>
-                                <TableHead className="text-right">Speed / HDG</TableHead>
-                                <TableHead>Squawk</TableHead>
-                                <TableHead>State</TableHead>
+                                <TableHead>{t("adsb.colCallsign")}</TableHead>
+                                <TableHead>{t("adsb.colTypeReg")}</TableHead>
+                                <TableHead>{t("adsb.colPosition")}</TableHead>
+                                <TableHead className="text-right">
+                                    {t("adsb.colAltitude")}
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    {t("adsb.colSpeedHdg")}
+                                </TableHead>
+                                <TableHead>{t("adsb.colSquawk")}</TableHead>
+                                <TableHead>{t("adsb.colState")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableLoading
-                                    colSpan={7}
-                                    rows={4}
-                                    message="Loading ADS-B traffic..."
-                                />
+                                <TableLoading colSpan={7} rows={4} message={t("adsb.loading")} />
                             ) : (
                                 filtered.map((a, idx) => (
                                     <TableRow key={a.hex ?? a.callsign ?? idx}>
@@ -144,7 +142,11 @@ export function AdsbTrafficCard() {
                                         <TableCell>
                                             <StatusBadge
                                                 status={a.onGround ? "idle" : "airborne"}
-                                                label={a.onGround ? "GROUND" : "AIRBORNE"}
+                                                label={
+                                                    a.onGround
+                                                        ? t("adsb.ground")
+                                                        : t("adsb.airborne")
+                                                }
                                             />
                                         </TableCell>
                                     </TableRow>

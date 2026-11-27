@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { Viewer } from "cesium";
 import { Compass } from "lucide-react";
 import { getCesium } from "./cesiumLoader";
@@ -17,6 +18,7 @@ export interface TacticalCompassControlsProps {
 }
 
 export function TacticalCompassControls({ viewer, is3D }: TacticalCompassControlsProps) {
+    const t = useTranslations("map");
     const needleRef = useRef<SVGSVGElement>(null);
     const [isTilted, setIsTilted] = useState(true);
 
@@ -131,8 +133,8 @@ export function TacticalCompassControls({ viewer, is3D }: TacticalCompassControl
             <button
                 type="button"
                 onClick={handleResetNorth}
-                aria-label="Reset map heading to North"
-                title="Reset North (0°)"
+                aria-label={t("resetNorthAria")}
+                title={t("resetNorthTitle")}
                 className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors shadow-sm cursor-pointer"
             >
                 <Compass
@@ -147,9 +149,9 @@ export function TacticalCompassControls({ viewer, is3D }: TacticalCompassControl
                     type="button"
                     onClick={handleToggleTilt}
                     aria-pressed={isTilted}
-                    aria-label="Toggle 3D camera tilt angle"
-                    title={isTilted ? "Switch to Top-Down (-90°)" : "Tilt 3D View (-48°)"}
-                    className={`h-8 px-2.5 inline-flex items-center justify-center rounded-md border text-[11px] leading-none font-mono font-semibold backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 shadow-sm cursor-pointer ${
+                    aria-label={t("toggleTiltAria")}
+                    title={isTilted ? t("topDownTitle") : t("tilt3dTitle")}
+                    className={`hidden sm:inline-flex h-8 px-2.5 items-center justify-center rounded-md border text-[11px] leading-none font-mono font-semibold backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 shadow-sm cursor-pointer ${
                         isTilted
                             ? "bg-slate-700 border-slate-500 text-white"
                             : "bg-slate-900/90 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800"

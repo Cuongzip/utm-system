@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useHubsAll, useDronesAll, useCurrentUser, QUERY_KEYS } from "@/hooks";
@@ -11,6 +12,7 @@ import type { CreateMissionPayload } from "@/types";
 
 export default function NewMissionPage() {
     const router = useRouter();
+    const t = useTranslations("missions");
     const queryClient = useQueryClient();
 
     const { data: currentUser } = useCurrentUser();
@@ -29,9 +31,7 @@ export default function NewMissionPage() {
             if (savedMissionId && droneId) {
                 const pilotId = currentUser?.username?.trim() || currentUser?.email?.trim();
                 if (!pilotId) {
-                    toast.warning(
-                        "Mission saved as draft — open Execute Mission to assign pilot and launch."
-                    );
+                    toast.warning(t("toasts.savedDraftNoPilot"));
                 } else {
                     try {
                         await missionService.executeMission(savedMissionId, {
@@ -39,7 +39,7 @@ export default function NewMissionPage() {
                             pilotId,
                         });
                     } catch (err) {
-                        showApiError(err, "Mission created, but failed to schedule execution");
+                        showApiError(err, t("toasts.createdExecFailed"));
                     }
                 }
             }
@@ -49,10 +49,10 @@ export default function NewMissionPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
-            toast.success("Mission created successfully");
+            toast.success(t("toasts.created"));
             router.push("/dashboard/missions");
         },
-        meta: { defaultErrorMessage: "Failed to create mission" },
+        meta: { defaultErrorMessage: t("toasts.createFailed") },
     });
 
     return (

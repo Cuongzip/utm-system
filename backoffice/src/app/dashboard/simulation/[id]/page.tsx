@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, AlertCircle } from "lucide-react";
@@ -29,6 +30,8 @@ interface SimulationDetailPageProps {
 
 export default function SimulationDetailPage({ params }: SimulationDetailPageProps) {
     const { id } = use(params);
+    const t = useTranslations("simulation.detail");
+    const tCards = useTranslations("simulation.telemetryCards");
     const router = useRouter();
     const { data: flights = [] } = useFlightsAll();
 
@@ -55,7 +58,7 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
             <div
                 role="status"
                 aria-busy="true"
-                aria-label="Loading simulation session"
+                aria-label={t("loadingAria")}
                 className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full"
             >
                 <div className="flex items-center justify-between">
@@ -65,10 +68,10 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
                 <KpiStrip
                     loading
                     items={[
-                        { id: "bat", label: "BATTERY", value: "—" },
-                        { id: "spd", label: "SPEED", value: "—" },
-                        { id: "alt", label: "ALTITUDE & HEADING", value: "—" },
-                        { id: "traj", label: "TRAJECTORY", value: "—" },
+                        { id: "bat", label: tCards("battery"), value: "—" },
+                        { id: "spd", label: tCards("groundSpeed"), value: "—" },
+                        { id: "alt", label: tCards("altitudeHeading"), value: "—" },
+                        { id: "traj", label: tCards("trajectory"), value: "—" },
                     ]}
                 />
                 <ChamferCard size="lg">
@@ -77,7 +80,7 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
                         <Skeleton className="h-48 w-full" />
                     </div>
                 </ChamferCard>
-                <span className="sr-only">Loading simulation session...</span>
+                <span className="sr-only">{t("loadingSr")}</span>
             </div>
         );
     }
@@ -87,10 +90,10 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
             <div className="flex items-center justify-center min-h-[60vh] p-4 sm:p-6 lg:p-8">
                 <EmptyState
                     icon={AlertCircle}
-                    title="Simulation Session Not Found"
-                    description="The requested simulation session does not exist or has been deleted."
+                    title={t("notFoundTitle")}
+                    description={t("notFoundDesc")}
                     action={{
-                        label: "Back to Simulations",
+                        label: t("backToSimulations"),
                         onClick: () => router.push("/dashboard/simulation"),
                         icon: ArrowLeft,
                         variant: "outline",
@@ -101,7 +104,7 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
     }
 
     const shortTag = `SIM-${session.id.slice(0, 6).toUpperCase()}`;
-    const headerTitle = flightNumber ? `SIMULATION · ${flightNumber}` : `SIMULATION · ${shortTag}`;
+    const headerTitle = t("headerTitle", { tag: flightNumber ?? shortTag });
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
@@ -119,7 +122,7 @@ export default function SimulationDetailPage({ params }: SimulationDetailPagePro
                 <SessionControlsPanel session={session} onRefresh={refetch} />
                 <ChamferButton href="/dashboard/simulation" variant="outline" size="sm" clip="xs">
                     <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Sessions</span>
+                    <span>{t("sessionsBtn")}</span>
                 </ChamferButton>
             </PageHeader>
 

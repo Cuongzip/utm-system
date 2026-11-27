@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Plus, Route } from "lucide-react";
 import { ACTIVE_HUB_STATUS, type Waypoint, type Hub } from "@/types";
 import { ChamferButton, CustomSelect } from "@/components/ui";
@@ -41,6 +42,7 @@ export function MissionWaypointsTab({
     fieldErrors = {},
     onClearFieldError,
 }: MissionWaypointsTabProps) {
+    const t = useTranslations("missions");
     const [selectedStopoverHubId, setSelectedStopoverHubId] = useState("");
     const activeHubs = hubs.filter((h) => h.status === ACTIVE_HUB_STATUS && h.location);
 
@@ -59,7 +61,7 @@ export function MissionWaypointsTab({
                 <div className="p-2.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] space-y-2">
                     <div className="flex items-center justify-between gap-2">
                         <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">
-                            Add Hub Stopover (Multi-Leg)
+                            {t("waypointsTab.addHubStopover")}
                         </span>
                         {onAutoPlanHubs && (
                             <ChamferButton
@@ -74,7 +76,11 @@ export function MissionWaypointsTab({
                                 ) : (
                                     <Route className="w-3 h-3 text-slate-600" />
                                 )}
-                                <span>{isAutoPlanning ? "Planning..." : "Auto-Plan"}</span>
+                                <span>
+                                    {isAutoPlanning
+                                        ? t("waypointsTab.planning")
+                                        : t("waypointsTab.autoPlan")}
+                                </span>
                             </ChamferButton>
                         )}
                     </div>
@@ -85,13 +91,13 @@ export function MissionWaypointsTab({
                                 value={selectedStopoverHubId}
                                 onValueChange={setSelectedStopoverHubId}
                                 options={[
-                                    { value: "", label: "Select active hub to insert..." },
+                                    { value: "", label: t("waypointsTab.selectHubToInsert") },
                                     ...activeHubs.map((h) => ({
                                         value: h.id,
                                         label: `${h.name}${h.code ? ` (${h.code})` : ""}`,
                                     })),
                                 ]}
-                                placeholder="Select active hub..."
+                                placeholder={t("waypointsTab.selectActiveHub")}
                             />
                         </div>
                         <ChamferButton
@@ -102,14 +108,14 @@ export function MissionWaypointsTab({
                             disabled={!selectedStopoverHubId}
                         >
                             <Plus className="w-3.5 h-3.5 text-white" />
-                            <span>Add Hub</span>
+                            <span>{t("waypointsTab.addHubBtn")}</span>
                         </ChamferButton>
                     </div>
                 </div>
             )}
 
             <WaypointRouteTab
-                title="Mission Route Checkpoints"
+                title={t("waypointsTab.routeCheckpoints")}
                 waypoints={waypoints}
                 selectedWaypoint={selectedWaypoint}
                 onSelectWaypoint={onSelectWaypoint}

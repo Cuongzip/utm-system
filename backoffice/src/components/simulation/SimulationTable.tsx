@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { PlayCircle, Pause, Play, Square, Trash2, Eye, AlertTriangle, Search } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
     type ActionMenuItem,
     ConfirmDialog,
     TableFilterBar,
+    type SelectOption,
     Table,
     TableHeader,
     TableBody,
@@ -22,7 +24,7 @@ import {
 } from "@/components/ui";
 import { InjectScenarioModal } from "./InjectScenarioModal";
 import { useFlightsAll, useDronesAll, usePagination } from "@/hooks";
-import { formatDistance, compareCreatedDesc } from "@/utils";
+import { formatDistance, createStatusOptions, compareCreatedDesc } from "@/utils";
 import {
     SIMULATION_STATUS,
     SIMULATION_SESSION_STATUSES,
@@ -40,14 +42,6 @@ interface SimulationTableProps {
     onRefresh: () => void;
 }
 
-const STATUS_OPTIONS = [
-    { value: "all", label: "All Statuses" },
-    ...SIMULATION_SESSION_STATUSES.map((s) => ({
-        value: s,
-        label: s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(),
-    })),
-];
-
 export function SimulationTable({
     sessions = [],
     loading = false,
@@ -57,6 +51,8 @@ export function SimulationTable({
     onDeleteSession,
     onRefresh,
 }: SimulationTableProps) {
+    const t = useTranslations("simulation.table");
+    const tCommon = useTranslations("common");
     const router = useRouter();
     const { data: flights = [] } = useFlightsAll();
     const { data: drones = [] } = useDronesAll();
@@ -64,6 +60,8 @@ export function SimulationTable({
     const [statusFilter, setStatusFilter] = useState("all");
     const [sessionToDelete, setSessionToDelete] = useState<SimulationSession | null>(null);
     const [sessionForInject, setSessionForInject] = useState<SimulationSession | null>(null);
+
+    const statusOptions: SelectOption[] = createStatusOptions(SIMULATION_SESSION_STATUSES);
 
     const flightMap = useMemo(
         () => new Map(flights.filter((f) => f.id).map((f) => [f.id, f])),
@@ -114,7 +112,7 @@ export function SimulationTable({
     const getActions = (session: SimulationSession): ActionMenuItem[] => {
         const items: ActionMenuItem[] = [
             {
-                label: "View Details",
+                label: t("viewDetails"),
                 icon: <Eye className="w-3.5 h-3.5 text-slate-600" />,
                 onClick: () => router.push(`/dashboard/simulation/${session.id}`),
             },
@@ -124,17 +122,17 @@ export function SimulationTable({
         if (normStatus === SIMULATION_STATUS.RUNNING) {
             items.push(
                 {
-                    label: "Inject Scenario",
+                    label: t("injectScenario"),
                     icon: <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => setSessionForInject(session),
                 },
                 {
-                    label: "Pause",
+                    label: t("pause"),
                     icon: <Pause className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onPauseSession(session.id),
                 },
                 {
-                    label: "Stop",
+                    label: t("stop"),
                     icon: <Square className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onStopSession(session.id),
                 }
@@ -142,12 +140,12 @@ export function SimulationTable({
         } else if (normStatus === SIMULATION_STATUS.PAUSED) {
             items.push(
                 {
-                    label: "Resume",
+                    label: t("resume"),
                     icon: <Play className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onResumeSession(session.id),
                 },
                 {
-                    label: "Stop",
+                    label: t("stop"),
                     icon: <Square className="w-3.5 h-3.5 text-slate-500" />,
                     onClick: () => onStopSession(session.id),
                 }
@@ -155,7 +153,7 @@ export function SimulationTable({
         }
 
         items.push({
-            label: "Delete",
+            label: tCommon("delete"),
             icon: <Trash2 className="w-3.5 h-3.5" />,
             danger: true,
             onClick: () => setSessionToDelete(session),
@@ -167,7 +165,7 @@ export function SimulationTable({
     return (
         <div className="flex flex-col gap-4 w-full">
             <TableFilterBar
-                searchPlaceholder="Search flight number, drone, or session..."
+                searchPlaceholder={t("searchPlaceholder")}
                 searchQuery={searchQuery}
                 onSearchChange={(val) => {
                     setSearchQuery(val);
@@ -178,39 +176,39 @@ export function SimulationTable({
                     setStatusFilter(val);
                     setCurrentPage(1);
                 }}
-                statusOptions={STATUS_OPTIONS}
+                statusOptions={statusOptions}
                 onClearFilters={hasActiveFilters ? clearFilters : undefined}
                 totalCount={sessions.length}
                 filteredCount={filteredSessions.length}
-                itemLabel="sessions"
+                itemLabel={t("itemLabel")}
             />
 
             <ChamferCard size="lg" className="w-full">
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>FLIGHT / SESSION</TableHead>
-                            <TableHead>DRONE</TableHead>
-                            <TableHead>STATUS</TableHead>
-                            <TableHead>SPEED & SCALE</TableHead>
-                            <TableHead>BATTERY</TableHead>
-                            <TableHead>PROGRESS</TableHead>
-                            <TableHead align="right">ACTIONS</TableHead>
+                            <TableHead>{t("colFlightSession")}</TableHead>
+                            <TableHead>{t("colDrone")}</TableHead>
+                            <TableHead>{t("colStatus")}</TableHead>
+                            <TableHead>{t("colSpeedScale")}</TableHead>
+                            <TableHead>{t("colBattery")}</TableHead>
+                            <TableHead>{t("colProgress")}</TableHead>
+                            <TableHead align="right">{t("colActions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={7} message="Loading simulation sessions..." />
+                            <TableLoading colSpan={7} message={t("loading")} />
                         ) : filteredSessions.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="py-10 text-center">
                                     {hasActiveFilters ? (
                                         <EmptyState
                                             icon={Search}
-                                            title="No matching simulation sessions"
-                                            description="Try adjusting your search query or status filter."
+                                            title={t("emptyFilteredTitle")}
+                                            description={t("emptyFilteredDesc")}
                                             action={{
-                                                label: "Clear Filters",
+                                                label: t("clearFilters"),
                                                 onClick: clearFilters,
                                                 variant: "outline",
                                             }}
@@ -218,8 +216,8 @@ export function SimulationTable({
                                     ) : (
                                         <EmptyState
                                             icon={PlayCircle}
-                                            title="No simulation sessions"
-                                            description="Launch a virtual simulation to test drone flight trajectory and telemetry generation"
+                                            title={t("emptyTitle")}
+                                            description={t("emptyDesc")}
                                         />
                                     )}
                                 </TableCell>
@@ -271,7 +269,10 @@ export function SimulationTable({
                                         <TableCell
                                             truncate
                                             className="max-w-[180px]"
-                                            tooltip={`Flight: ${flightNumText} · Session ID: ${session.id}`}
+                                            tooltip={t("rowTooltip", {
+                                                flight: flightNumText,
+                                                id: session.id,
+                                            })}
                                         >
                                             <div className="flex flex-col min-w-0">
                                                 <span className="font-mono font-bold text-slate-900 truncate">
@@ -339,7 +340,7 @@ export function SimulationTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="sessions"
+                    itemLabel={t("itemLabel")}
                 />
             </ChamferCard>
 
@@ -352,19 +353,19 @@ export function SimulationTable({
                         setSessionToDelete(null);
                     }
                 }}
-                title="Delete Simulation Session"
+                title={t("deleteTitle")}
                 description={
                     <span>
-                        Are you sure you want to stop and delete simulation session{" "}
+                        {t("deleteDescPrefix")}
                         <strong className="text-slate-900 font-mono">
                             {sessionToDelete?.id
                                 ? `SIM-${sessionToDelete.id.slice(0, 8).toUpperCase()}`
                                 : ""}
                         </strong>
-                        ? All telemetry playback data for this session will be removed.
+                        {t("deleteDescSuffix")}
                     </span>
                 }
-                confirmText="Delete Session"
+                confirmText={t("deleteConfirm")}
             />
 
             {sessionForInject && (

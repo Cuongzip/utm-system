@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Plus, RotateCw, ShieldCheck } from "lucide-react";
 import {
     ChamferButton,
@@ -14,18 +15,22 @@ import { AirspaceTable, AirspaceBriefingModal } from "@/components/airspace";
 import { airspaceService } from "@/services/airspaceService";
 import { useCrudList, useHubsAll, usePermissions, QUERY_KEYS } from "@/hooks";
 import { createStatusOptions, compareCreatedDesc } from "@/utils";
-import { AIRSPACE_ZONE_STATUSES, AIRSPACE_ZONE_STATUS_LABELS, type AirspaceZone } from "@/types";
-
-const STATUS_OPTIONS: SelectOption[] = createStatusOptions(
-    AIRSPACE_ZONE_STATUSES,
-    AIRSPACE_ZONE_STATUS_LABELS
-);
+import { AIRSPACE_ZONE_STATUSES, type AirspaceZone } from "@/types";
 
 export default function AirspacePage() {
     const router = useRouter();
+    const locale = useLocale();
+    const t = useTranslations("airspace");
+    const tCommon = useTranslations("common");
     const { canCreateAirspaceZone, canDeleteAirspaceZone } = usePermissions();
     const { data: hubs = [], refetch: fetchHubs } = useHubsAll();
     const [isBriefingOpen, setIsBriefingOpen] = useState(false);
+
+    const statusOptions: SelectOption[] = useMemo(
+        () => createStatusOptions(AIRSPACE_ZONE_STATUSES),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [locale]
+    );
 
     const fetchZones = useCallback(() => airspaceService.getZones({ limit: 0 }), []);
     const deleteZone = useCallback((id: string) => airspaceService.deleteZone(id), []);
@@ -41,7 +46,7 @@ export default function AirspacePage() {
         queryKey: QUERY_KEYS.airspace,
         fetchFn: fetchZones,
         deleteFn: deleteZone,
-        entityName: "Airspace zone",
+        entityName: t("entityName"),
     });
 
     const handleRefreshAll = useCallback(async () => {
@@ -91,7 +96,7 @@ export default function AirspacePage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="AIRSPACE & GEOFENCING">
+            <PageHeader title={t("title")}>
                 <ChamferButton
                     variant="outline"
                     size="sm"
@@ -99,12 +104,12 @@ export default function AirspacePage() {
                     onClick={() => setIsBriefingOpen(true)}
                 >
                     <ShieldCheck className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Pre-Flight Check</span>
+                    <span>{t("preFlightCheck")}</span>
                 </ChamferButton>
 
                 <ChamferButton variant="outline" size="sm" clip="xs" onClick={handleRefreshAll}>
                     <RotateCw className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Refresh</span>
+                    <span>{tCommon("refresh")}</span>
                 </ChamferButton>
 
                 {canCreateAirspaceZone && (
@@ -114,7 +119,7 @@ export default function AirspacePage() {
                         onClick={() => router.push("/dashboard/airspace/new")}
                     >
                         <Plus className="w-4 h-4 text-white" />
-                        <span>Add Zone</span>
+                        <span>{t("addZone")}</span>
                     </ChamferButton>
                 )}
             </PageHeader>
@@ -122,10 +127,10 @@ export default function AirspacePage() {
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Search zone code, name, or hub..."
+                searchPlaceholder={t("searchPlaceholder")}
                 statusFilter={statusFilter}
                 onStatusFilterChange={setStatusFilter}
-                statusOptions={STATUS_OPTIONS}
+                statusOptions={statusOptions}
                 onClearFilters={clearFilters}
                 totalCount={zones.length}
                 filteredCount={filteredZones.length}
@@ -133,8 +138,8 @@ export default function AirspacePage() {
 
             {isError && zones.length === 0 ? (
                 <ErrorState
-                    title="Unable to load airspace zones"
-                    description="The Airspace Service could not be reached. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={handleRefreshAll}
                 />
             ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Circle, Pentagon, Trash2, MapPin, AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
 import { formatCoordinates } from "@/utils";
@@ -32,6 +33,7 @@ export function AirspaceBoundaryTab({
     onClearPolygonPoints,
     fieldErrors = {},
 }: AirspaceBoundaryTabProps) {
+    const t = useTranslations("airspace");
     const [latStr, setLatStr] = useState(() => String(center.lat ?? ""));
     const [lngStr, setLngStr] = useState(() => String(center.lng ?? ""));
 
@@ -75,7 +77,7 @@ export function AirspaceBoundaryTab({
     return (
         <div className="space-y-4">
             <div className="form-group">
-                <label className="form-label">Boundary Method</label>
+                <label className="form-label">{t("boundary.methodLabel")}</label>
                 <div className="flex items-center gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
                     <button
                         type="button"
@@ -88,7 +90,7 @@ export function AirspaceBoundaryTab({
                         )}
                     >
                         <Circle className="w-3.5 h-3.5" />
-                        <span>Radius (Circle)</span>
+                        <span>{t("boundary.radiusCircle")}</span>
                     </button>
 
                     <button
@@ -102,7 +104,7 @@ export function AirspaceBoundaryTab({
                         )}
                     >
                         <Pentagon className="w-3.5 h-3.5" />
-                        <span>Polygon (Draw)</span>
+                        <span>{t("boundary.polygonDraw")}</span>
                     </button>
                 </div>
             </div>
@@ -118,13 +120,13 @@ export function AirspaceBoundaryTab({
                 <div className="space-y-4">
                     <div className="p-2.5 bg-[var(--color-surface-card)] rounded border border-[var(--color-border-default)] text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
-                        <span>Click anywhere on the map to place center point.</span>
+                        <span>{t("boundary.clickCenterHint")}</span>
                     </div>
 
                     <div className="form-row-2">
                         <FormInput
                             id="center-lat"
-                            label="Center Latitude"
+                            label={t("boundary.centerLat")}
                             type="text"
                             inputMode="decimal"
                             value={latStr}
@@ -135,7 +137,7 @@ export function AirspaceBoundaryTab({
                         />
                         <FormInput
                             id="center-lng"
-                            label="Center Longitude"
+                            label={t("boundary.centerLng")}
                             type="text"
                             inputMode="decimal"
                             value={lngStr}
@@ -148,7 +150,7 @@ export function AirspaceBoundaryTab({
 
                     <div className="form-group">
                         <div className="flex justify-between items-center">
-                            <label className="form-label text-xs">Radius</label>
+                            <label className="form-label text-xs">{t("boundary.radius")}</label>
                             <span className="font-mono text-xs font-bold text-[var(--color-text-primary)]">
                                 {radiusMeters} m
                             </span>
@@ -167,14 +169,14 @@ export function AirspaceBoundaryTab({
             ) : (
                 <div className="space-y-4">
                     <div className="p-2.5 bg-[var(--color-surface-card)] rounded border border-[var(--color-border-default)] text-xs text-[var(--color-text-secondary)] flex items-center justify-between">
-                        <span>Click on map to add boundary points.</span>
+                        <span>{t("boundary.clickPolygonHint")}</span>
                         {polygonPoints.length > 0 && (
                             <button
                                 type="button"
                                 onClick={onClearPolygonPoints}
                                 className="text-red-500 hover:text-red-600 text-xs font-medium cursor-pointer"
                             >
-                                Clear all
+                                {t("boundary.clearAll")}
                             </button>
                         )}
                     </div>
@@ -182,18 +184,18 @@ export function AirspaceBoundaryTab({
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-[var(--color-text-primary)]">
-                                Boundary Vertices ({polygonPoints.length})
+                                {t("boundary.verticesCount", { count: polygonPoints.length })}
                             </span>
                             {polygonPoints.length < 3 && (
                                 <span className="text-xs text-amber-600 font-mono">
-                                    Need {3 - polygonPoints.length} more
+                                    {t("boundary.needMore", { count: 3 - polygonPoints.length })}
                                 </span>
                             )}
                         </div>
 
                         {polygonPoints.length === 0 ? (
                             <div className="text-xs text-[var(--color-text-muted)] py-6 text-center border border-dashed border-[var(--color-border-default)] rounded bg-[var(--color-surface-card)]/50">
-                                No boundary points yet. Click on the map to begin drawing.
+                                {t("boundary.noPointsHint")}
                             </div>
                         ) : (
                             <div className="max-h-[220px] overflow-y-auto space-y-1.5 pr-1">
@@ -214,7 +216,8 @@ export function AirspaceBoundaryTab({
                                         <button
                                             type="button"
                                             onClick={() => onRemovePolygonPoint(idx)}
-                                            title="Delete vertex"
+                                            title={t("boundary.deleteVertex")}
+                                            aria-label={t("boundary.deleteVertex")}
                                             className="text-slate-400 hover:text-red-500 p-1 cursor-pointer transition-colors"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />

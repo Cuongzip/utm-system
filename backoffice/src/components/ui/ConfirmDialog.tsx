@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { ChamferCard, ChamferButton } from "@/components/ui";
@@ -24,6 +25,8 @@ export function ConfirmDialog({
     confirmText,
     loading = false,
 }: ConfirmDialogProps) {
+    const t = useTranslations("common");
+
     return (
         <AlertDialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <AlertDialogPrimitive.Portal>
@@ -60,7 +63,7 @@ export function ConfirmDialog({
                                                 onClick={onClose}
                                                 disabled={loading}
                                             >
-                                                Cancel
+                                                {t("cancel")}
                                             </ChamferButton>
                                         </AlertDialogPrimitive.Cancel>
 
@@ -78,7 +81,7 @@ export function ConfirmDialog({
                                                 {loading ? (
                                                     <>
                                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                        <span>Processing...</span>
+                                                        <span>{t("processing")}</span>
                                                     </>
                                                 ) : (
                                                     <span>{confirmText}</span>

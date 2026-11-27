@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
-import { showApiError } from "@/utils";
+import { configureZodErrors, showApiError } from "@/utils";
+
+configureZodErrors();
 
 declare module "@tanstack/react-query" {
     interface Register {

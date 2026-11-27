@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { FlightWaypoint, Hub } from "@/types";
 import { WaypointRouteTab } from "@/components/waypoints";
 
@@ -30,6 +31,7 @@ export function FlightRouteTab({
     fieldErrors = {},
     onClearFieldError,
 }: FlightRouteTabProps) {
+    const t = useTranslations("flights.waypointsTab");
     const routeError =
         fieldErrors.plannedRoute ||
         fieldErrors["plannedRoute.coordinates"] ||
@@ -38,7 +40,7 @@ export function FlightRouteTab({
 
     return (
         <WaypointRouteTab
-            title="Flight Route Checkpoints"
+            title={t("routeCheckpoints")}
             waypoints={waypoints}
             selectedWaypoint={selectedWaypoint}
             onSelectWaypoint={onSelectWaypoint}

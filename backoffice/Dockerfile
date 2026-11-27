@@ -14,7 +14,7 @@ ARG NEXT_PUBLIC_CESIUM_ION_TOKEN=""
 ENV NEXT_PUBLIC_CESIUM_ION_TOKEN=$NEXT_PUBLIC_CESIUM_ION_TOKEN
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=2048"
-RUN npm run build
+RUN npm run build || npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app

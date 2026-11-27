@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
     Activity,
     AlertTriangle,
@@ -26,22 +27,10 @@ import {
 } from "@/components/ui";
 import { EmergencyNavTabs } from "@/components/emergency/EmergencyNavTabs";
 import { useEmergencyStatsRange, useEmergencyTrendsRange, useDronesAll } from "@/hooks";
-import { EMERGENCY_SEVERITY } from "@/types";
+import { EMERGENCY_SEVERITY, EMERGENCY_TYPES, type EmergencyType } from "@/types";
 
 type TimeRangeKey = "7d" | "30d" | "90d";
 type IntervalKey = "day" | "week" | "month";
-
-const TIME_RANGE_OPTIONS: { value: TimeRangeKey; label: string }[] = [
-    { value: "7d", label: "Last 7 Days" },
-    { value: "30d", label: "Last 30 Days" },
-    { value: "90d", label: "Last 90 Days" },
-];
-
-const INTERVAL_OPTIONS: { value: IntervalKey; label: string }[] = [
-    { value: "day", label: "By Day" },
-    { value: "week", label: "By Week" },
-    { value: "month", label: "By Month" },
-];
 
 interface AutomatedInsight {
     tone: "info" | "warning" | "success";
@@ -72,8 +61,37 @@ function formatPeriodLabel(period: string | undefined, interval: IntervalKey): s
 }
 
 export default function EmergencyTrendsPage() {
+    const t = useTranslations("emergency");
     const [timeRange, setTimeRange] = useState<TimeRangeKey>("30d");
     const [interval, setInterval] = useState<IntervalKey>("day");
+
+    const timeRangeOptions = useMemo<{ value: TimeRangeKey; label: string }[]>(
+        () => [
+            { value: "7d", label: t("trends.range7d") },
+            { value: "30d", label: t("trends.range30d") },
+            { value: "90d", label: t("trends.range90d") },
+        ],
+        [t]
+    );
+
+    const intervalOptions = useMemo<{ value: IntervalKey; label: string }[]>(
+        () => [
+            { value: "day", label: t("trends.byDay") },
+            { value: "week", label: t("trends.byWeek") },
+            { value: "month", label: t("trends.byMonth") },
+        ],
+        [t]
+    );
+
+    const getTypeLabel = useMemo(
+        () => (rawType: string) => {
+            if ((EMERGENCY_TYPES as readonly string[]).includes(rawType)) {
+                return t(`types.${rawType as EmergencyType}`);
+            }
+            return rawType.replace(/_/g, " ");
+        },
+        [t]
+    );
 
     const dateWindow = useMemo(() => computeDateWindow(timeRange), [timeRange]);
 
@@ -154,12 +172,12 @@ export default function EmergencyTrendsPage() {
             if (pctChange > 20) {
                 list.push({
                     tone: "warning",
-                    message: `Incident frequency increased ${Math.round(pctChange)}% compared to earlier in this period.`,
+                    message: t("trends.insightIncreased", { pct: Math.round(pctChange) }),
                 });
             } else if (pctChange < -20) {
                 list.push({
                     tone: "success",
-                    message: `Incident frequency decreased ${Math.round(Math.abs(pctChange))}% compared to earlier in this period.`,
+                    message: t("trends.insightDecreased", { pct: Math.round(Math.abs(pctChange)) }),
                 });
             }
         }
@@ -168,7 +186,10 @@ export default function EmergencyTrendsPage() {
             const top = sortedTypes[0];
             list.push({
                 tone: "info",
-                message: `Most frequent incident category: ${top.type.replace(/_/g, " ")} (${top.count} incidents).`,
+                message: t("trends.insightTopType", {
+                    category: getTypeLabel(top.type),
+                    count: top.count,
+                }),
             });
         }
 
@@ -178,7 +199,7 @@ export default function EmergencyTrendsPage() {
             const label = info?.registration ?? `DRN-${topDrone.droneId.slice(0, 8).toUpperCase()}`;
             list.push({
                 tone: "warning",
-                message: `Aircraft ${label} logged ${topDrone.count} incidents in this window — inspect maintenance status.`,
+                message: t("trends.insightTopDrone", { label, count: topDrone.count }),
             });
         }
 
@@ -186,20 +207,20 @@ export default function EmergencyTrendsPage() {
         if (avgResp > 30) {
             list.push({
                 tone: "warning",
-                message: `Average response latency is ${Math.round(avgResp)}s — review Autonomous Failsafe thresholds.`,
+                message: t("trends.insightHighLatency", { sec: Math.round(avgResp) }),
             });
         } else if (avgResp > 0) {
             list.push({
                 tone: "success",
-                message: `Failsafe response latency averaging ${Math.round(avgResp)}s from detection to action.`,
+                message: t("trends.insightGoodLatency", { sec: Math.round(avgResp) }),
             });
         }
 
         return list;
-    }, [stats, trends, sortedTypes, sortedDrones, droneMap]);
+    }, [stats, trends, sortedTypes, sortedDrones, droneMap, t, getTypeLabel]);
 
     const maxTrendTotal = useMemo(
-        () => Math.max(...trends.map((t) => Number(t.total ?? 0)), 1),
+        () => Math.max(...trends.map((item) => Number(item.total ?? 0)), 1),
         [trends]
     );
 
@@ -213,53 +234,56 @@ export default function EmergencyTrendsPage() {
     const kpiItems: KpiItem[] = [
         {
             id: "total",
-            label: "Total Incidents",
+            label: t("trends.kpiTotal"),
             value: totals.total,
             subValue: timeRange.toUpperCase(),
             icon: Activity,
         },
         {
             id: "warnings",
-            label: "Warnings",
+            label: t("trends.kpiWarnings"),
             value: totals.warnings,
-            subValue: "Advisory",
+            subValue: t("trends.kpiAdvisory"),
             icon: AlertTriangle,
             iconClassName: totals.warnings > 0 ? "text-amber-500" : undefined,
         },
         {
             id: "critical",
-            label: "Critical",
+            label: t("trends.kpiCritical"),
             value: totals.critical,
-            subValue: "High priority",
+            subValue: t("trends.kpiHighPriority"),
             icon: ShieldAlert,
             iconClassName: totals.critical > 0 ? "text-amber-600" : undefined,
         },
         {
             id: "emergencies",
-            label: "Emergencies",
+            label: t("trends.kpiEmergencies"),
             value: totals.emergencies,
-            subValue: "Failsafe",
+            subValue: t("trends.kpiFailsafe"),
             icon: AlertOctagon,
             iconClassName: totals.emergencies > 0 ? "text-red-600" : undefined,
         },
         {
             id: "avg-response",
-            label: "Avg Response",
+            label: t("trends.kpiAvgResponse"),
             value:
                 stats?.avgResponseTimeSeconds != null && stats.avgResponseTimeSeconds > 0
                     ? `${Math.round(stats.avgResponseTimeSeconds)}s`
                     : "—",
-            subValue: "Latency",
+            subValue: t("trends.kpiLatency"),
             icon: Clock,
         },
         {
             id: "success-rate",
-            label: "Success Rate",
+            label: t("trends.kpiSuccessRate"),
             value: resolutionSummary.rate !== null ? `${resolutionSummary.rate.toFixed(1)}%` : "—",
             subValue:
                 resolutionSummary.total > 0
-                    ? `${resolutionSummary.successful}/${resolutionSummary.total} ok`
-                    : "No actions",
+                    ? t("trends.kpiOkRatio", {
+                          ok: resolutionSummary.successful,
+                          total: resolutionSummary.total,
+                      })
+                    : t("trends.kpiNoActions"),
             icon: CheckCircle2,
             iconClassName:
                 resolutionSummary.rate !== null && resolutionSummary.rate >= 90
@@ -270,24 +294,24 @@ export default function EmergencyTrendsPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="EMERGENCY RESPONSE">
+            <PageHeader title={t("title")}>
                 <div className="w-36">
                     <CustomSelect
                         id="trend-time-range"
-                        ariaLabel="Time range"
+                        ariaLabel={t("trends.timeRangeAria")}
                         value={timeRange}
                         onValueChange={(v) => setTimeRange(v as TimeRangeKey)}
-                        options={TIME_RANGE_OPTIONS}
+                        options={timeRangeOptions}
                     />
                 </div>
 
                 <div className="w-32">
                     <CustomSelect
                         id="trend-interval"
-                        ariaLabel="Grouping interval"
+                        ariaLabel={t("trends.intervalAria")}
                         value={interval}
                         onValueChange={(v) => setInterval(v as IntervalKey)}
-                        options={INTERVAL_OPTIONS}
+                        options={intervalOptions}
                     />
                 </div>
             </PageHeader>
@@ -296,8 +320,8 @@ export default function EmergencyTrendsPage() {
 
             {statsError && trendsError ? (
                 <ErrorState
-                    title="Unable to load trend analytics"
-                    description="Emergency statistics and time-series data could not be retrieved."
+                    title={t("trends.loadErrorTitle")}
+                    description={t("trends.loadErrorDesc")}
                     onRetry={() => {
                         refetchStats();
                         refetchTrends();
@@ -331,10 +355,12 @@ export default function EmergencyTrendsPage() {
                             <div className="p-5 flex flex-col gap-4 h-full">
                                 <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
-                                        INCIDENTS OVER TIME
+                                        {t("trends.overTimeHeading")}
                                     </span>
                                     <span className="text-[11px] font-mono text-slate-400">
-                                        {trends.length} {trends.length === 1 ? "period" : "periods"}
+                                        {trends.length === 1
+                                            ? t("trends.periodSingle")
+                                            : t("trends.periodPlural", { count: trends.length })}
                                     </span>
                                 </div>
 
@@ -342,20 +368,22 @@ export default function EmergencyTrendsPage() {
                                     <EmptyState
                                         compact
                                         icon={BarChart3}
-                                        title="No Time-Series Data"
-                                        description="No incidents recorded in the selected date window."
+                                        title={t("trends.noTimeSeriesTitle")}
+                                        description={t("trends.noTimeSeriesDesc")}
                                     />
                                 ) : trends.length === 1 ? (
                                     <div className="flex flex-col justify-center gap-3 py-4 flex-1">
                                         <div className="flex items-baseline justify-between font-mono">
                                             <span className="text-xs text-slate-600">
-                                                Period{" "}
+                                                {t("trends.periodLabel")}{" "}
                                                 <strong className="text-slate-900">
                                                     {formatPeriodLabel(trends[0].period, interval)}
                                                 </strong>
                                             </span>
                                             <span className="text-xl font-bold text-slate-900 tabular-nums">
-                                                {Number(trends[0].total ?? 0)} total
+                                                {t("trends.totalLabel", {
+                                                    total: Number(trends[0].total ?? 0),
+                                                })}
                                             </span>
                                         </div>
                                         <div className="grid grid-cols-3 divide-x divide-slate-200 border border-slate-200 rounded-md p-3 text-center font-mono text-xs">
@@ -364,7 +392,7 @@ export default function EmergencyTrendsPage() {
                                                     {Number(trends[0].warnings ?? 0)}
                                                 </div>
                                                 <div className="text-[10px] uppercase text-slate-500">
-                                                    Warning
+                                                    {t("trends.warning")}
                                                 </div>
                                             </div>
                                             <div>
@@ -372,7 +400,7 @@ export default function EmergencyTrendsPage() {
                                                     {Number(trends[0].critical ?? 0)}
                                                 </div>
                                                 <div className="text-[10px] uppercase text-slate-500">
-                                                    Critical
+                                                    {t("trends.critical")}
                                                 </div>
                                             </div>
                                             <div>
@@ -380,7 +408,7 @@ export default function EmergencyTrendsPage() {
                                                     {Number(trends[0].emergencies ?? 0)}
                                                 </div>
                                                 <div className="text-[10px] uppercase text-slate-500">
-                                                    Emergency
+                                                    {t("trends.emergency")}
                                                 </div>
                                             </div>
                                         </div>
@@ -407,7 +435,13 @@ export default function EmergencyTrendsPage() {
                                                     <div
                                                         key={`${bucket.period ?? idx}-${idx}`}
                                                         className="flex-1 flex flex-col items-center justify-end min-w-0 group"
-                                                        title={`${bucket.period ?? ""}: ${total} total (${emergencies} emergency, ${critical} critical, ${warnings} warning)`}
+                                                        title={t("trends.barTooltip", {
+                                                            period: bucket.period ?? "",
+                                                            total,
+                                                            emergencies,
+                                                            critical,
+                                                            warnings,
+                                                        })}
                                                     >
                                                         {total > 0 && (
                                                             <span className="text-[10px] font-mono text-slate-500 mb-1 tabular-nums">
@@ -462,15 +496,15 @@ export default function EmergencyTrendsPage() {
                                         <div className="flex items-center justify-center gap-5 pt-1 text-[11px] font-mono text-slate-600">
                                             <span className="inline-flex items-center gap-1.5">
                                                 <span className="w-2.5 h-2.5 rounded-xs bg-amber-400" />
-                                                <span>Warning</span>
+                                                <span>{t("trends.warning")}</span>
                                             </span>
                                             <span className="inline-flex items-center gap-1.5">
                                                 <span className="w-2.5 h-2.5 rounded-xs bg-amber-600" />
-                                                <span>Critical</span>
+                                                <span>{t("trends.critical")}</span>
                                             </span>
                                             <span className="inline-flex items-center gap-1.5">
                                                 <span className="w-2.5 h-2.5 rounded-xs bg-red-600" />
-                                                <span>Emergency</span>
+                                                <span>{t("trends.emergency")}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -482,11 +516,14 @@ export default function EmergencyTrendsPage() {
                             <div className="p-5 flex flex-col gap-4 h-full">
                                 <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
-                                        INCIDENTS BY TYPE
+                                        {t("trends.byTypeHeading")}
                                     </span>
                                     <span className="text-[11px] font-mono text-slate-400">
-                                        {sortedTypes.length}{" "}
-                                        {sortedTypes.length === 1 ? "category" : "categories"}
+                                        {sortedTypes.length === 1
+                                            ? t("trends.categorySingle")
+                                            : t("trends.categoryPlural", {
+                                                  count: sortedTypes.length,
+                                              })}
                                     </span>
                                 </div>
 
@@ -494,8 +531,8 @@ export default function EmergencyTrendsPage() {
                                     <EmptyState
                                         compact
                                         icon={PieChart}
-                                        title="No Type Breakdown"
-                                        description="No categorized incidents recorded for this window."
+                                        title={t("trends.noTypeTitle")}
+                                        description={t("trends.noTypeDesc")}
                                     />
                                 ) : (
                                     <div className="flex flex-col gap-3">
@@ -511,8 +548,8 @@ export default function EmergencyTrendsPage() {
                                                     className="flex flex-col gap-1"
                                                 >
                                                     <div className="flex items-center justify-between text-xs">
-                                                        <span className="font-medium text-slate-800 capitalize">
-                                                            {item.type.replace(/_/g, " ")}
+                                                        <span className="font-medium text-slate-800">
+                                                            {getTypeLabel(item.type)}
                                                         </span>
                                                         <span className="font-mono font-bold text-slate-900 tabular-nums">
                                                             {count}{" "}
@@ -539,10 +576,12 @@ export default function EmergencyTrendsPage() {
                     <ChamferCard size="lg" className="w-full">
                         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
                             <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
-                                AIRCRAFT WITH MOST INCIDENTS
+                                {t("trends.byAircraftHeading")}
                             </span>
                             <span className="text-[11px] font-mono text-slate-400">
-                                Top {Math.min(sortedDrones.length, 8)} units
+                                {t("trends.topUnits", {
+                                    count: Math.min(sortedDrones.length, 8),
+                                })}
                             </span>
                         </div>
 
@@ -550,8 +589,8 @@ export default function EmergencyTrendsPage() {
                             <EmptyState
                                 compact
                                 icon={Activity}
-                                title="No Aircraft Breakdown"
-                                description="No aircraft-specific incidents recorded for the selected period."
+                                title={t("trends.noAircraftTitle")}
+                                description={t("trends.noAircraftDesc")}
                             />
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--color-border-default)]">
@@ -580,7 +619,7 @@ export default function EmergencyTrendsPage() {
                                                     {entry.count}
                                                 </span>
                                                 <span className="text-[11px] font-mono text-slate-500 uppercase">
-                                                    incidents
+                                                    {t("trends.incidentsUnit")}
                                                 </span>
                                             </div>
                                         </div>

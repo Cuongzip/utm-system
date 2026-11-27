@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
     CustomSelect,
     FormInput,
@@ -32,16 +33,6 @@ export interface AirspaceDetailsTabProps {
     onClearFieldError: (field: string) => void;
 }
 
-const ZONE_TYPE_OPTIONS: SelectOption[] = AIRSPACE_ZONE_TYPES.map((type) => ({
-    value: type,
-    label: AIRSPACE_ZONE_TYPE_LABELS[type] || type,
-}));
-
-const ZONE_STATUS_OPTIONS: SelectOption[] = AIRSPACE_ZONE_STATUSES.map((status) => ({
-    value: status,
-    label: AIRSPACE_ZONE_STATUS_LABELS[status] || status,
-}));
-
 export function AirspaceDetailsTab({
     formData,
     onFormChange,
@@ -50,6 +41,30 @@ export function AirspaceDetailsTab({
     fieldErrors = {},
     onClearFieldError,
 }: AirspaceDetailsTabProps) {
+    const t = useTranslations("airspace");
+
+    const zoneTypeOptions: SelectOption[] = useMemo(
+        () =>
+            AIRSPACE_ZONE_TYPES.map((type) => ({
+                value: type,
+                label: t.has(`zoneTypes.${type}`)
+                    ? t(`zoneTypes.${type}`)
+                    : AIRSPACE_ZONE_TYPE_LABELS[type] || type,
+            })),
+        [t]
+    );
+
+    const zoneStatusOptions: SelectOption[] = useMemo(
+        () =>
+            AIRSPACE_ZONE_STATUSES.map((status) => ({
+                value: status,
+                label: t.has(`zoneStatuses.${status}`)
+                    ? t(`zoneStatuses.${status}`)
+                    : AIRSPACE_ZONE_STATUS_LABELS[status] || status,
+            })),
+        [t]
+    );
+
     const hubOptions: SelectOption[] = useMemo(() => {
         const sorted = [...hubs].sort((a, b) => {
             const aInact = (a.status || "").toLowerCase() === HUB_STATUS.INACTIVE ? 1 : 0;
@@ -58,23 +73,23 @@ export function AirspaceDetailsTab({
             return (a.code || "").localeCompare(b.code || "");
         });
         return [
-            { value: "", label: "None (General Airspace)" },
+            { value: "", label: t("editor.noneGeneral") },
             ...sorted.map((h) => ({
                 value: h.id,
                 label: h.name ? `${h.name} (${h.code || "HUB"})` : h.id,
             })),
         ];
-    }, [hubs]);
+    }, [hubs, t]);
 
     return (
         <div className="space-y-4">
             <AutoGenInput
                 id="airspaceCode"
-                label="Code"
+                label={t("editor.codeLabel")}
                 showAutoGen={!isEdit}
                 disabled={isEdit}
                 required={!isEdit}
-                manualPlaceholder="e.g. ASZ-SGN01"
+                manualPlaceholder={t("editor.codePlaceholder")}
                 value={formData.code ?? ""}
                 onChange={(e) => {
                     onFormChange("code", e.target.value);
@@ -85,9 +100,9 @@ export function AirspaceDetailsTab({
 
             <FormInput
                 id="airspaceName"
-                label="Zone Name"
+                label={t("editor.nameLabel")}
                 required
-                placeholder="e.g. SGN Airport Restricted Sector"
+                placeholder={t("editor.namePlaceholder")}
                 value={formData.name}
                 onChange={(e) => {
                     onFormChange("name", e.target.value);
@@ -98,7 +113,7 @@ export function AirspaceDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="airspaceZoneType">
-                    Classification Type <span className="text-red-500">*</span>
+                    {t("editor.typeLabel")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     id="airspaceZoneType"
@@ -107,13 +122,13 @@ export function AirspaceDetailsTab({
                         onFormChange("zoneType", val as AirspaceZoneType);
                         onClearFieldError("zoneType");
                     }}
-                    options={ZONE_TYPE_OPTIONS}
+                    options={zoneTypeOptions}
                 />
             </div>
 
             <div className="form-group">
                 <label className="form-label" htmlFor="airspaceStatus">
-                    Operational Status
+                    {t("editor.statusLabel")}
                 </label>
                 <CustomSelect
                     id="airspaceStatus"
@@ -122,13 +137,13 @@ export function AirspaceDetailsTab({
                         onFormChange("status", val as AirspaceZoneStatus);
                         onClearFieldError("status");
                     }}
-                    options={ZONE_STATUS_OPTIONS}
+                    options={zoneStatusOptions}
                 />
             </div>
 
             <div className="form-group">
                 <label className="form-label" htmlFor="airspaceHub">
-                    Associated Vertiport Hub
+                    {t("editor.hubLabel")}
                 </label>
                 <CustomSelect
                     id="airspaceHub"
@@ -144,7 +159,7 @@ export function AirspaceDetailsTab({
             <div className="form-row-2">
                 <FormInput
                     id="altitudeFloor"
-                    label="Floor (m)"
+                    label={t("editor.floorLabel")}
                     type="number"
                     min={0}
                     max={4999}
@@ -159,7 +174,7 @@ export function AirspaceDetailsTab({
 
                 <FormInput
                     id="altitudeCeiling"
-                    label="Ceiling (m)"
+                    label={t("editor.ceilingLabel")}
                     required
                     type="number"
                     min={10}
@@ -175,14 +190,14 @@ export function AirspaceDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Effective Start (Optional)</label>
+                <label className="form-label">{t("editor.startLabel")}</label>
                 <DateTimePicker
                     value={formData.effectiveStart ?? ""}
                     onChange={(val) => {
                         onFormChange("effectiveStart", val);
                         onClearFieldError("effectiveStart");
                     }}
-                    placeholder="Select start date & time..."
+                    placeholder={t("editor.startPlaceholder")}
                     error={Boolean(fieldErrors.effectiveStart)}
                 />
                 {fieldErrors.effectiveStart && (
@@ -191,14 +206,14 @@ export function AirspaceDetailsTab({
             </div>
 
             <div className="form-group">
-                <label className="form-label">Effective End (Optional)</label>
+                <label className="form-label">{t("editor.endLabel")}</label>
                 <DateTimePicker
                     value={formData.effectiveEnd ?? ""}
                     onChange={(val) => {
                         onFormChange("effectiveEnd", val);
                         onClearFieldError("effectiveEnd");
                     }}
-                    placeholder="Select end date & time..."
+                    placeholder={t("editor.endPlaceholder")}
                     error={Boolean(fieldErrors.effectiveEnd)}
                 />
                 {fieldErrors.effectiveEnd && (
@@ -208,7 +223,7 @@ export function AirspaceDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="zoneDesc">
-                    Description / Operational Notes
+                    {t("editor.descLabel")}
                 </label>
                 <textarea
                     id="zoneDesc"
@@ -218,7 +233,7 @@ export function AirspaceDetailsTab({
                         onFormChange("description", e.target.value);
                         onClearFieldError("description");
                     }}
-                    placeholder="Enter legal basis, operational constraints, or activation schedule..."
+                    placeholder={t("editor.descPlaceholder")}
                     className="form-input resize-none"
                 />
             </div>

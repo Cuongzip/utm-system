@@ -1,6 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib";
 import { Tooltip } from "./Tooltip";
 import { Skeleton } from "./Skeleton";
@@ -13,7 +14,7 @@ export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> 
 export const Table = forwardRef<HTMLTableElement, TableProps>(
     ({ fixed = true, wrapperClassName, className, children, ...props }, ref) => {
         return (
-            <div className={cn("w-full overflow-x-auto", wrapperClassName)}>
+            <div className={cn("w-full overflow-x-auto utm-scroll", wrapperClassName)}>
                 <table
                     ref={ref}
                     className={cn(
@@ -204,9 +205,11 @@ export interface TableLoadingProps {
     message?: string;
 }
 
-const SKELETON_WIDTHS = ["w-24", "w-32", "w-20", "w-28", "w-16", "w-24", "w-20", "w-14"];
+const SKELETON_WIDTHS = ["w-20", "w-24", "w-16", "w-24", "w-14", "w-20", "w-16", "w-12"];
 
-export function TableLoading({ colSpan = 1, rows = 5, message = "Loading..." }: TableLoadingProps) {
+export function TableLoading({ colSpan = 1, rows = 5, message }: TableLoadingProps) {
+    const t = useTranslations("common");
+    const resolvedMessage = message ?? t("loading");
     const columns = Math.max(1, colSpan);
     return (
         <>
@@ -220,9 +223,9 @@ export function TableLoading({ colSpan = 1, rows = 5, message = "Loading..." }: 
                         <td key={`cell-${rowIdx}-${colIdx}`} className="px-4 py-3.5">
                             <Skeleton
                                 className={cn(
-                                    "h-4",
+                                    "h-4 max-w-full",
                                     colIdx === columns - 1 && columns > 2
-                                        ? "w-12 ml-auto"
+                                        ? "w-10 ml-auto"
                                         : SKELETON_WIDTHS[
                                               (rowIdx + colIdx) % SKELETON_WIDTHS.length
                                           ]
@@ -233,7 +236,7 @@ export function TableLoading({ colSpan = 1, rows = 5, message = "Loading..." }: 
                 </tr>
             ))}
             <tr className="sr-only" role="status" aria-live="polite">
-                <td colSpan={columns}>{message}</td>
+                <td colSpan={columns}>{resolvedMessage}</td>
             </tr>
         </>
     );

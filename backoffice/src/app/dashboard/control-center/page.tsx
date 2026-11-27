@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/ui";
 import {
     LiveTelemetry,
@@ -78,6 +79,7 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
 }
 
 export default function ControlCenterPage() {
+    const t = useTranslations("controlCenter");
     const { data: allFlights = [] } = useFlightsAll();
     const { data: hubs = [] } = useHubsAll();
     const { data: drones = [] } = useDronesAll();
@@ -123,8 +125,8 @@ export default function ControlCenterPage() {
     const selectedTelemetry = selectedFlightId ? (telemetryMap[selectedFlightId] ?? null) : null;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-5">
-            <PageHeader title="LIVE OPERATIONS" />
+        <div className="p-4 sm:p-6 lg:p-8 space-y-5 shrink-0">
+            <PageHeader title={t("title")} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 <div className="lg:col-span-8 h-[520px]">
@@ -134,7 +136,7 @@ export default function ControlCenterPage() {
                         header={
                             <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)] z-10">
                                 <span className="text-xs font-bold font-mono tracking-wider text-[var(--color-text-primary)] uppercase">
-                                    OPERATIONS RADAR
+                                    {t("operationsRadar")}
                                 </span>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                     <button
@@ -148,7 +150,7 @@ export default function ControlCenterPage() {
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                         )}
                                     >
-                                        AIRSPACE
+                                        {t("layerAirspace")}
                                     </button>
                                     <button
                                         type="button"
@@ -161,7 +163,7 @@ export default function ControlCenterPage() {
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                         )}
                                     >
-                                        HUBS
+                                        {t("layerHubs")}
                                     </button>
                                     <button
                                         type="button"
@@ -174,7 +176,7 @@ export default function ControlCenterPage() {
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                         )}
                                     >
-                                        ADS-B
+                                        {t("layerAdsb")}
                                         {filterAdsb && adsbData?.aircraft
                                             ? ` (${adsbData.aircraft.length})`
                                             : ""}

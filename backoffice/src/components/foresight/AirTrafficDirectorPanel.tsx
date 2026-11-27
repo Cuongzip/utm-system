@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { X, Loader2, ShieldAlert, CheckCircle2, Eye, RefreshCw } from "lucide-react";
 import { intelligenceService } from "@/services";
@@ -23,9 +24,12 @@ export function AirTrafficDirectorPanel({
     onPreviewSimulated,
     onClose,
 }: AirTrafficDirectorPanelProps) {
+    const t = useTranslations("foresight");
+    const tCommon = useTranslations("common");
+
     const adviseMutation = useMutation({
         mutationFn: () => intelligenceService.adviseForesight({ conflict }),
-        meta: { defaultErrorMessage: "Failed to fetch Air Traffic Director advice" },
+        meta: { defaultErrorMessage: t("director.adviseFailed") },
     });
 
     const simulateMutation = useMutation({
@@ -43,7 +47,7 @@ export function AirTrafficDirectorPanel({
                 horizon: horizonSec,
                 step: 10,
             }),
-        meta: { defaultErrorMessage: "Failed to simulate resolution maneuver" },
+        meta: { defaultErrorMessage: t("director.simulateFailed") },
         onSuccess: (sim) => {
             onPreviewSimulated(sim);
         },
@@ -63,7 +67,7 @@ export function AirTrafficDirectorPanel({
                     <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
                     <div className="min-w-0">
                         <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-white truncate">
-                            Air Traffic Director
+                            {t("director.title")}
                         </div>
                         <div className="text-[10px] font-mono text-slate-400 truncate">
                             {conflict.primary?.label || "UAV-1"} ×{" "}
@@ -75,7 +79,7 @@ export function AirTrafficDirectorPanel({
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close Air Traffic Director"
+                    aria-label={t("director.closeAria")}
                     className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
                 >
                     <X className="w-4 h-4" />
@@ -87,7 +91,7 @@ export function AirTrafficDirectorPanel({
                     <div
                         role="status"
                         aria-busy="true"
-                        aria-label="Computing deconfliction vectors"
+                        aria-label={t("director.computingAria")}
                         className="flex flex-col gap-3 py-1"
                     >
                         <div className="flex flex-col gap-1.5">
@@ -104,7 +108,7 @@ export function AirTrafficDirectorPanel({
                                 <div className="h-7 w-24 rounded bg-slate-700/60 animate-pulse mt-1" />
                             </div>
                         ))}
-                        <span className="sr-only">Computing deconfliction vectors...</span>
+                        <span className="sr-only">{t("director.computingAria")}</span>
                     </div>
                 ) : advice ? (
                     <>
@@ -114,7 +118,7 @@ export function AirTrafficDirectorPanel({
                         {advice.cause && (
                             <div className="rounded bg-slate-800/80 border border-slate-700 px-2.5 py-2 text-[11px] text-slate-300">
                                 <span className="font-mono font-bold uppercase text-slate-400 block text-[10px] mb-0.5">
-                                    Root Cause
+                                    {t("director.rootCause")}
                                 </span>
                                 {advice.cause}
                             </div>
@@ -122,7 +126,7 @@ export function AirTrafficDirectorPanel({
 
                         <div className="flex flex-col gap-2">
                             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                                Ranked Resolution Options
+                                {t("director.rankedOptions")}
                             </span>
                             {(advice.options ?? []).map((opt, idx) => {
                                 const isRecommended = advice.recommendedIndex === idx;
@@ -137,12 +141,16 @@ export function AirTrafficDirectorPanel({
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <span className="font-mono text-[11px] font-bold text-white">
-                                                {opt.label || opt.kind || `Option ${idx + 1}`}
+                                                {opt.label ||
+                                                    opt.kind ||
+                                                    t("director.optionFallback", {
+                                                        index: idx + 1,
+                                                    })}
                                             </span>
                                             {isRecommended && (
                                                 <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-400">
                                                     <CheckCircle2 className="w-3 h-3" />
-                                                    REC
+                                                    {t("director.recBadge")}
                                                 </span>
                                             )}
                                         </div>
@@ -153,7 +161,7 @@ export function AirTrafficDirectorPanel({
                                         )}
                                         {opt.sideEffects && (
                                             <p className="text-[10px] text-amber-300/90">
-                                                Trade-off: {opt.sideEffects}
+                                                {t("director.tradeOff", { text: opt.sideEffects })}
                                             </p>
                                         )}
                                         <div className="flex justify-end pt-1">
@@ -168,7 +176,7 @@ export function AirTrafficDirectorPanel({
                                                 ) : (
                                                     <Eye className="w-3 h-3" />
                                                 )}
-                                                <span>Preview 4D</span>
+                                                <span>{t("director.preview4d")}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -178,14 +186,14 @@ export function AirTrafficDirectorPanel({
                     </>
                 ) : (
                     <div className="py-5 flex flex-col items-center gap-2.5 text-center text-slate-400 font-mono">
-                        <span>Unable to retrieve deconfliction options.</span>
+                        <span>{t("director.emptyError")}</span>
                         <button
                             type="button"
                             onClick={() => adviseMutation.mutate()}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-200 cursor-pointer"
                         >
                             <RefreshCw className="w-3 h-3" />
-                            <span>Retry</span>
+                            <span>{tCommon("retry")}</span>
                         </button>
                     </div>
                 )}

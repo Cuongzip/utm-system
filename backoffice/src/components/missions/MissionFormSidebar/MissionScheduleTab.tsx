@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Clock, Play } from "lucide-react";
 import { DateTimePicker } from "@/components/ui";
 import { cn } from "@/lib";
@@ -27,11 +28,12 @@ export function MissionScheduleTab({
     fieldErrors = {},
     onClearFieldError,
 }: MissionScheduleTabProps) {
+    const t = useTranslations("missions");
     const scheduleType = formData.scheduleType || DEFAULT_MISSION_SCHEDULE_TYPE;
 
     return (
         <div className="space-y-4">
-            <label className="form-label block">Schedule Type</label>
+            <label className="form-label block">{t("schedule.typeLabel")}</label>
 
             <div
                 onClick={() =>
@@ -57,10 +59,10 @@ export function MissionScheduleTab({
                 </div>
                 <div className="flex-1">
                     <span className="font-semibold text-xs text-[var(--color-text-primary)] block">
-                        Immediate / Manual Start
+                        {t("schedule.immediateTitle")}
                     </span>
                     <span className="text-xs text-[var(--color-text-secondary)] leading-relaxed block mt-0.5">
-                        Execute mission immediately or launch manually when ready
+                        {t("schedule.immediateDesc")}
                     </span>
                 </div>
             </div>
@@ -90,10 +92,10 @@ export function MissionScheduleTab({
                     </div>
                     <div className="flex-1">
                         <span className="font-semibold text-xs text-[var(--color-text-primary)] block">
-                            Scheduled Departure
+                            {t("schedule.scheduledTitle")}
                         </span>
                         <span className="text-xs text-[var(--color-text-secondary)] leading-relaxed block mt-0.5">
-                            Start at a specific planned date and time
+                            {t("schedule.scheduledDesc")}
                         </span>
                     </div>
                 </div>
@@ -104,7 +106,7 @@ export function MissionScheduleTab({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <label className="form-label block text-[11px] font-mono text-[var(--color-text-muted)] mb-1">
-                            DEPARTURE DATE & TIME
+                            {t("schedule.departureDateTime")}
                         </label>
                         <DateTimePicker
                             value={formData.scheduledAt || ""}
@@ -114,7 +116,7 @@ export function MissionScheduleTab({
                                 onClearFieldError("scheduledAt");
                             }}
                             error={Boolean(fieldErrors.scheduledAt)}
-                            placeholder="Select departure date & time"
+                            placeholder={t("schedule.selectDepartureDateTime")}
                         />
                         {fieldErrors.scheduledAt && (
                             <span className="form-error-msg">{fieldErrors.scheduledAt}</span>

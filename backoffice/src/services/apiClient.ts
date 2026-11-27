@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { getCurrentLocale, MESSAGES } from "@/i18n";
 
 export class ApiError extends Error {
     constructor(
@@ -41,9 +42,13 @@ export function normalizeList<T>(res: { items?: T[]; total?: number } | T[] | nu
 let isRedirectingToLogin = false;
 
 export async function apiClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const locale = getCurrentLocale();
     const headers = new Headers(options.headers);
     if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
         headers.set("Content-Type", "application/json");
+    }
+    if (!headers.has("Accept-Language")) {
+        headers.set("Accept-Language", locale);
     }
 
     const response = await fetch(endpoint, {
@@ -51,16 +56,18 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
         headers,
     });
 
+    const sessionExpiredMsg = MESSAGES[locale].errors.SESSION_EXPIRED_REDIRECT;
+
     if ((response.type === "cors" && response.redirected) || response.status === 401) {
         if (typeof window !== "undefined") {
             if (!isRedirectingToLogin) {
                 isRedirectingToLogin = true;
-                toast.error("Session expired. Redirecting to login...");
+                toast.error(sessionExpiredMsg);
                 setTimeout(() => {
                     window.location.href = response.url || "/";
                 }, 600);
             }
-            throw new ApiError(401, "Session expired. Redirecting to login...");
+            throw new ApiError(401, sessionExpiredMsg);
         }
     }
 
@@ -92,12 +99,12 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
         if (typeof window !== "undefined") {
             if (!isRedirectingToLogin) {
                 isRedirectingToLogin = true;
-                toast.error("Session expired. Redirecting to login...");
+                toast.error(sessionExpiredMsg);
                 setTimeout(() => {
                     window.location.href = response.url || "/";
                 }, 600);
             }
-            throw new ApiError(401, "Session expired. Redirecting to login...");
+            throw new ApiError(401, sessionExpiredMsg);
         }
     }
 

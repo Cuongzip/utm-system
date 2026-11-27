@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useId, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib";
@@ -30,14 +31,17 @@ export function CustomSelect({
     value,
     onValueChange,
     options,
-    placeholder = "Select an option…",
+    placeholder,
     disabled = false,
     className,
     error = false,
     ariaLabel,
     searchable,
-    searchPlaceholder = "Type to filter…",
+    searchPlaceholder,
 }: CustomSelectProps) {
+    const t = useTranslations("common");
+    const resolvedPlaceholder = placeholder ?? t("selectOption");
+    const resolvedSearchPlaceholder = searchPlaceholder ?? t("typeToFilter");
     const listboxId = useId();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
@@ -146,7 +150,7 @@ export function CustomSelect({
                             !selectedOption && "text-slate-400"
                         )}
                     >
-                        {selectedOption ? selectedOption.label : placeholder}
+                        {selectedOption ? selectedOption.label : resolvedPlaceholder}
                     </span>
                     <ChevronDown
                         className={cn(
@@ -188,8 +192,8 @@ export function CustomSelect({
                                     setQuery(e.target.value);
                                     setHighlightedIndex(0);
                                 }}
-                                placeholder={searchPlaceholder}
-                                aria-label="Filter options"
+                                placeholder={resolvedSearchPlaceholder}
+                                aria-label={resolvedSearchPlaceholder}
                                 className="w-full bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none"
                             />
                             {query && (
@@ -213,11 +217,11 @@ export function CustomSelect({
                         id={listboxId}
                         ref={listRef}
                         role="listbox"
-                        className="max-h-60 overflow-y-auto overscroll-contain p-1"
+                        className="max-h-60 overflow-y-auto overscroll-contain utm-scroll p-1"
                     >
                         {filteredOptions.length === 0 ? (
                             <div className="px-3 py-4 text-center text-xs font-mono text-slate-400">
-                                No matching options
+                                {t("noMatchingOptions")}
                             </div>
                         ) : (
                             filteredOptions.map((opt, idx) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { WAYPOINT_ACTION_TYPE, type Hub, type FlightWaypoint } from "@/types";
 import { useWaypointManager } from "@/hooks/useWaypointManager";
 import { extractIntermediateWaypoints } from "@/components/waypoints";
@@ -98,6 +99,7 @@ export function useFlightRoute({
     isReadOnly = false,
     onClearErrors,
 }: UseFlightRouteOptions) {
+    const t = useTranslations("waypoints");
     const parsedInitial = useMemo(() => {
         if (initialWaypoints && Array.isArray(initialWaypoints) && initialWaypoints.length > 0) {
             const list = initialWaypoints.map((wp, idx) => ({
@@ -155,7 +157,7 @@ export function useFlightRoute({
                 id: idStr,
                 tempId: idStr,
                 sequence: seq,
-                name: `Waypoint ${seq}`,
+                name: t("defaultWaypointName", { seq }),
                 latitude: lat,
                 longitude: lng,
                 altitude: altitude ?? cruisingAltitude,
@@ -173,6 +175,7 @@ export function useFlightRoute({
             onClearErrors,
             setWaypoints,
             setSelectedWaypointId,
+            t,
         ]
     );
 

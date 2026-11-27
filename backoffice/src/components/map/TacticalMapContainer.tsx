@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useSyncExternalStore, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import type { Viewer } from "cesium";
 import { Check, Globe, Map as MapIcon, Maximize2, Minimize2, Layers } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
@@ -24,7 +25,7 @@ export interface TacticalMapContainerProps {
     className?: string;
 }
 
-const VALID_IMAGERY_TYPES: readonly ImageryType[] = [
+export const VALID_IMAGERY_TYPES: readonly ImageryType[] = [
     "satellite-hybrid",
     "satellite",
     "tactical-dark",
@@ -32,7 +33,7 @@ const VALID_IMAGERY_TYPES: readonly ImageryType[] = [
     "street",
 ];
 
-const BASEMAP_OPTIONS: ReadonlyArray<{ id: ImageryType; label: string }> = [
+export const BASEMAP_OPTIONS: ReadonlyArray<{ id: ImageryType; label: string }> = [
     { id: "satellite-hybrid", label: "Satellite Hybrid" },
     { id: "satellite", label: "Satellite Clean" },
     { id: "tactical-dark", label: "Tactical Dark" },
@@ -100,6 +101,7 @@ export function TacticalMapContainer({
     hideBottomHud = false,
     className,
 }: TacticalMapContainerProps) {
+    const t = useTranslations("map");
     const mapMode = useSyncExternalStore(
         (cb) => subscribeStorageEvent("utm_map_mode_change", cb),
         getMapModeSnapshot,
@@ -205,34 +207,36 @@ export function TacticalMapContainer({
                     <div className="absolute top-3.5 right-3.5 z-30 flex flex-wrap items-center justify-end gap-1.5 pointer-events-none max-w-[calc(100%-2rem)]">
                         <div
                             role="group"
-                            aria-label="Map view mode"
+                            aria-label={t("viewModeAria")}
                             className="h-8 flex items-center rounded-md bg-slate-900/90 p-0.5 border border-slate-700/80 backdrop-blur-md shadow-sm pointer-events-auto"
                         >
                             <button
                                 type="button"
                                 aria-pressed={mapMode === "globe"}
                                 onClick={() => handleModeChange("globe")}
-                                className={`h-full flex items-center gap-1 rounded-[4px] px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer ${
+                                title={t("globe3dTitle")}
+                                className={`h-full flex items-center gap-1 rounded-[4px] px-2 sm:px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer ${
                                     mapMode === "globe"
                                         ? "bg-slate-700 text-white shadow-2xs"
                                         : "text-slate-400 hover:text-white"
                                 }`}
                             >
                                 <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-                                <span>3D</span>
+                                <span className="sr-only sm:not-sr-only">{t("mode3d")}</span>
                             </button>
                             <button
                                 type="button"
                                 aria-pressed={mapMode === "2d"}
                                 onClick={() => handleModeChange("2d")}
-                                className={`h-full flex items-center gap-1 rounded-[4px] px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer ${
+                                title={t("flat2dTitle")}
+                                className={`h-full flex items-center gap-1 rounded-[4px] px-2 sm:px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer ${
                                     mapMode === "2d"
                                         ? "bg-slate-700 text-white shadow-2xs"
                                         : "text-slate-400 hover:text-white"
                                 }`}
                             >
                                 <MapIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                                <span>2D</span>
+                                <span className="sr-only sm:not-sr-only">{t("mode2d")}</span>
                             </button>
                         </div>
 
@@ -242,7 +246,7 @@ export function TacticalMapContainer({
                             <button
                                 type="button"
                                 onClick={() => setIsLayersOpen(!isLayersOpen)}
-                                aria-label="Basemap Layers"
+                                aria-label={t("basemapLayers")}
                                 aria-expanded={isLayersOpen}
                                 aria-haspopup="menu"
                                 className={`h-8 w-8 inline-flex items-center justify-center rounded-md border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 shadow-sm cursor-pointer ${
@@ -250,7 +254,7 @@ export function TacticalMapContainer({
                                         ? "bg-slate-700 border-slate-500 text-white"
                                         : "bg-slate-900/90 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md"
                                 }`}
-                                title="Basemap Layers"
+                                title={t("basemapLayers")}
                             >
                                 <Layers className="h-3.5 w-3.5" aria-hidden="true" />
                             </button>
@@ -258,11 +262,11 @@ export function TacticalMapContainer({
                             {isLayersOpen && (
                                 <div
                                     role="menu"
-                                    aria-label="Basemap layer options"
-                                    className="absolute right-0 top-full mt-1.5 w-48 rounded-[6px] border border-slate-200 bg-white p-1 text-slate-800 shadow-xl z-50 text-xs font-mono"
+                                    aria-label={t("basemapOptionsAria")}
+                                    className="absolute right-0 top-full mt-1.5 w-48 rounded-md border border-slate-700/85 bg-slate-900/95 p-1 text-slate-200 shadow-xl backdrop-blur-md z-50 text-xs font-mono"
                                 >
-                                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-0.5">
-                                        Basemap
+                                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700/80 mb-0.5">
+                                        {t("basemap")}
                                     </div>
                                     {BASEMAP_OPTIONS.map((layer) => {
                                         const isSelected = imageryType === layer.id;
@@ -276,29 +280,29 @@ export function TacticalMapContainer({
                                                     handleLayerChange(layer.id);
                                                     setIsLayersOpen(false);
                                                 }}
-                                                className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-100 focus-visible:outline-none cursor-pointer ${
+                                                className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
                                                     isSelected
-                                                        ? "bg-slate-100 text-slate-900 font-bold"
-                                                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                                        ? "bg-slate-700/90 text-white font-bold"
+                                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
                                                 }`}
                                             >
                                                 <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                                                     {isSelected && (
                                                         <Check
-                                                            className="h-3.5 w-3.5 text-slate-900 stroke-[2.5]"
+                                                            className="h-3.5 w-3.5 text-white stroke-[2.5]"
                                                             aria-hidden="true"
                                                         />
                                                     )}
                                                 </span>
-                                                <span>{layer.label}</span>
+                                                <span>{t(`basemaps.${layer.id}`)}</span>
                                             </button>
                                         );
                                     })}
 
                                     {mapMode === "globe" && hasIonToken && (
-                                        <div className="mt-1 pt-1 border-t border-slate-100">
+                                        <div className="mt-1 pt-1 border-t border-slate-700/80">
                                             <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                3D Environment
+                                                {t("env3d")}
                                             </div>
                                             <button
                                                 type="button"
@@ -311,17 +315,21 @@ export function TacticalMapContainer({
                                                         !enable3DBuildings
                                                     )
                                                 }
-                                                className="relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                                                className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
+                                                    enable3DBuildings
+                                                        ? "text-white font-semibold hover:bg-slate-800"
+                                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                }`}
                                             >
                                                 <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                                                     {enable3DBuildings && (
                                                         <Check
-                                                            className="h-3.5 w-3.5 text-slate-900 stroke-[2.5]"
+                                                            className="h-3.5 w-3.5 text-white stroke-[2.5]"
                                                             aria-hidden="true"
                                                         />
                                                     )}
                                                 </span>
-                                                <span>OSM 3D Buildings</span>
+                                                <span>{t("osmBuildings")}</span>
                                             </button>
                                             <button
                                                 type="button"
@@ -334,17 +342,21 @@ export function TacticalMapContainer({
                                                         !enable3DTerrain
                                                     )
                                                 }
-                                                className="relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                                                className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
+                                                    enable3DTerrain
+                                                        ? "text-white font-semibold hover:bg-slate-800"
+                                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                }`}
                                             >
                                                 <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                                                     {enable3DTerrain && (
                                                         <Check
-                                                            className="h-3.5 w-3.5 text-slate-900 stroke-[2.5]"
+                                                            className="h-3.5 w-3.5 text-white stroke-[2.5]"
                                                             aria-hidden="true"
                                                         />
                                                     )}
                                                 </span>
-                                                <span>World Terrain</span>
+                                                <span>{t("worldTerrain")}</span>
                                             </button>
                                         </div>
                                     )}
@@ -355,10 +367,10 @@ export function TacticalMapContainer({
                         <button
                             type="button"
                             onClick={() => setIsFullscreen(!isFullscreen)}
-                            aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                            aria-label={isFullscreen ? t("exitFullscreen") : t("fullscreen")}
                             aria-pressed={isFullscreen}
                             className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors shadow-sm pointer-events-auto cursor-pointer"
-                            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                            title={isFullscreen ? t("exitFullscreen") : t("fullscreen")}
                         >
                             {isFullscreen ? (
                                 <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />

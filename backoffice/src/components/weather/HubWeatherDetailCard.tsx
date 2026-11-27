@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, CloudSun } from "lucide-react";
 import {
     ChamferCard,
@@ -17,7 +18,8 @@ import {
     TableLoading,
 } from "@/components/ui";
 import { useHubCurrentWeather, useHubWeatherForecast, useHubWeatherAlerts } from "@/hooks";
-import { formatDateTime } from "@/utils";
+import type { AppLocale } from "@/i18n";
+import { formatDateTime, localizeServerText } from "@/utils";
 import type { Hub } from "@/types";
 
 interface HubWeatherDetailCardProps {
@@ -25,6 +27,8 @@ interface HubWeatherDetailCardProps {
 }
 
 export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
+    const locale = useLocale() as AppLocale;
+    const t = useTranslations("weather");
     const hubId = hub?.id ?? "";
     const { data: current, isLoading: currentLoading } = useHubCurrentWeather(
         hubId,
@@ -46,8 +50,8 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
             <ChamferCard size="md">
                 <EmptyState
                     icon={CloudSun}
-                    title="Select a Vertiport Hub"
-                    description="Choose a hub above to view real-time meteorological telemetry and 24-hour forecast."
+                    title={t("hubDetail.selectTitle")}
+                    description={t("hubDetail.selectDesc")}
                 />
             </ChamferCard>
         );
@@ -56,7 +60,9 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
     const hourlyRows = (forecast?.hourly ?? []).slice(0, 24);
     const subtitleParts = [
         current?.conditionSummary,
-        current?.observedAt ? `Observed ${formatDateTime(current.observedAt)}` : undefined,
+        current?.observedAt
+            ? t("hubDetail.observedAt", { time: formatDateTime(current.observedAt) })
+            : undefined,
     ].filter(Boolean);
 
     return (
@@ -105,7 +111,7 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                         <dl className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden">
                             <div className="bg-[var(--color-surface-panel)] px-3.5 py-3">
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                                    Temperature
+                                    {t("hubDetail.temperature")}
                                 </dt>
                                 <dd className="font-mono text-xl font-bold text-slate-900 tabular-nums mt-0.5">
                                     {current?.temperatureC != null
@@ -114,14 +120,16 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                                 </dd>
                                 {current?.apparentTemperatureC != null && (
                                     <div className="text-[10px] font-mono text-slate-500">
-                                        Feels {current.apparentTemperatureC.toFixed(1)}°C
+                                        {t("hubDetail.feelsLike", {
+                                            temp: current.apparentTemperatureC.toFixed(1),
+                                        })}
                                     </div>
                                 )}
                             </div>
 
                             <div className="bg-[var(--color-surface-panel)] px-3.5 py-3">
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                                    Wind / Gust
+                                    {t("hubDetail.windGust")}
                                 </dt>
                                 <dd className="font-mono text-xl font-bold text-slate-900 tabular-nums mt-0.5">
                                     {current?.windSpeedMs != null
@@ -140,7 +148,7 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
 
                             <div className="bg-[var(--color-surface-panel)] px-3.5 py-3">
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                                    Visibility
+                                    {t("hubDetail.visibility")}
                                 </dt>
                                 <dd className="font-mono text-xl font-bold text-slate-900 tabular-nums mt-0.5">
                                     {current?.visibilityM != null
@@ -148,13 +156,13 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                                         : "—"}
                                 </dd>
                                 <div className="text-[10px] font-mono text-slate-500">
-                                    Cloud {current?.cloudCoverPct ?? 0}%
+                                    {t("hubDetail.cloudPct", { pct: current?.cloudCoverPct ?? 0 })}
                                 </div>
                             </div>
 
                             <div className="bg-[var(--color-surface-panel)] px-3.5 py-3">
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                                    Humidity
+                                    {t("hubDetail.humidity")}
                                 </dt>
                                 <dd className="font-mono text-xl font-bold text-slate-900 tabular-nums mt-0.5">
                                     {current?.humidityPct != null
@@ -165,7 +173,7 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
 
                             <div className="bg-[var(--color-surface-panel)] px-3.5 py-3">
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                                    Precip
+                                    {t("hubDetail.precip")}
                                 </dt>
                                 <dd className="font-mono text-xl font-bold text-slate-900 tabular-nums mt-0.5">
                                     {current?.precipitationMm != null
@@ -176,7 +184,7 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
 
                             <div className="bg-[var(--color-surface-panel)] px-3.5 py-3">
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                                    Pressure
+                                    {t("hubDetail.pressure")}
                                 </dt>
                                 <dd className="font-mono text-xl font-bold text-slate-900 tabular-nums mt-0.5">
                                     {current?.pressureHpa != null
@@ -190,7 +198,9 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                     {actionableAlerts.length > 0 && (
                         <div className="flex flex-col gap-2 pt-0.5">
                             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
-                                Threshold Advisories ({actionableAlerts.length})
+                                {t("hubDetail.thresholdAdvisories", {
+                                    count: actionableAlerts.length,
+                                })}
                             </span>
                             <div className="flex flex-col gap-2">
                                 {actionableAlerts.map((alert, idx) => {
@@ -205,7 +215,11 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                                             tone={isCrit ? "critical" : "warning"}
                                             icon={AlertTriangle}
                                             title={alert.title || alert.type}
-                                            description={alert.message}
+                                            description={
+                                                alert.message
+                                                    ? localizeServerText(alert.message, locale)
+                                                    : undefined
+                                            }
                                             rightSlot={
                                                 <div className="flex items-center gap-2.5">
                                                     {hasThreshold && (
@@ -232,31 +246,39 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
             <ChamferCard size="md">
                 <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700">
-                        24-Hour Operational Forecast — {hub.code}
+                        {t("hubDetail.forecastHeading", { code: hub.code || hub.name || "HUB" })}
                     </span>
                     <span className="text-[11px] font-mono text-slate-400">
-                        {hourlyRows.length} hourly slots
+                        {t("hubDetail.hourlySlots", { count: hourlyRows.length })}
                     </span>
                 </div>
 
                 {!forecastLoading && hourlyRows.length === 0 ? (
                     <EmptyState
                         icon={CloudSun}
-                        title="No Forecast Available"
-                        description="Hourly forecast data is currently unavailable for this vertiport."
+                        title={t("hubDetail.noForecastTitle")}
+                        description={t("hubDetail.noForecastDesc")}
                     />
                 ) : (
-                    <div className="max-h-[380px] overflow-y-auto">
+                    <div className="max-h-[380px] overflow-y-auto utm-scroll">
                         <Table fixed={false}>
                             <TableHeader className="sticky top-0 z-10 bg-slate-50">
                                 <TableRow>
-                                    <TableHead>Time</TableHead>
-                                    <TableHead>Condition</TableHead>
-                                    <TableHead className="text-right">Temp</TableHead>
-                                    <TableHead className="text-right">Wind / Gust</TableHead>
-                                    <TableHead className="text-right">Precip</TableHead>
-                                    <TableHead className="text-right">Visibility</TableHead>
-                                    <TableHead>Flight Ops</TableHead>
+                                    <TableHead>{t("hubDetail.colTime")}</TableHead>
+                                    <TableHead>{t("hubDetail.colCondition")}</TableHead>
+                                    <TableHead className="text-right">
+                                        {t("hubDetail.colTemp")}
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        {t("hubDetail.colWindGust")}
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        {t("hubDetail.colPrecip")}
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        {t("hubDetail.colVisibility")}
+                                    </TableHead>
+                                    <TableHead>{t("hubDetail.colFlightOps")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -264,7 +286,7 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                                     <TableLoading
                                         colSpan={7}
                                         rows={4}
-                                        message="Loading forecast..."
+                                        message={t("hubDetail.loadingForecast")}
                                     />
                                 ) : (
                                     hourlyRows.map((slot, idx) => (

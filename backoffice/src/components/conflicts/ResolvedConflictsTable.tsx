@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
     Table,
     TableHeader,
@@ -15,7 +16,13 @@ import {
     Pagination,
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
-import { formatDateTime, createStatusOptions, compareCreatedDesc } from "@/utils";
+import type { AppLocale } from "@/i18n";
+import {
+    formatDateTime,
+    createStatusOptions,
+    compareCreatedDesc,
+    localizeServerText,
+} from "@/utils";
 import { CONFLICT_SEVERITIES, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
 export interface ResolvedConflictsTableProps {
@@ -23,14 +30,19 @@ export interface ResolvedConflictsTableProps {
     isLoading: boolean;
 }
 
-const SEVERITY_OPTIONS = createStatusOptions(CONFLICT_SEVERITIES, undefined, "All Severities");
-
 export function ResolvedConflictsTable({
     conflicts,
     isLoading = false,
 }: ResolvedConflictsTableProps) {
+    const locale = useLocale() as AppLocale;
+    const t = useTranslations("conflicts");
     const [searchQuery, setSearchQuery] = useState("");
     const [severityFilter, setSeverityFilter] = useState("all");
+
+    const severityOptions = useMemo(
+        () => createStatusOptions(CONFLICT_SEVERITIES, undefined, t("history.allSeverities")),
+        [t]
+    );
 
     const filtered = useMemo(() => {
         const query = searchQuery.toLowerCase().trim();
@@ -58,48 +70,59 @@ export function ResolvedConflictsTable({
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Search resolved conflicts..."
+                searchPlaceholder={t("history.searchPlaceholder")}
                 statusFilter={severityFilter}
                 onStatusFilterChange={setSeverityFilter}
-                statusOptions={SEVERITY_OPTIONS}
-                statusPlaceholder="All Severities"
+                statusOptions={severityOptions}
+                statusPlaceholder={t("history.allSeverities")}
             />
 
             <ChamferCard size="lg" className="w-full">
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>TYPE</TableHead>
-                            <TableHead>SEVERITY</TableHead>
-                            <TableHead>DESCRIPTION</TableHead>
-                            <TableHead>STRATEGY</TableHead>
-                            <TableHead>RESOLVED AT</TableHead>
+                            <TableHead>{t("history.colType")}</TableHead>
+                            <TableHead>{t("history.colSeverity")}</TableHead>
+                            <TableHead>{t("history.colDescription")}</TableHead>
+                            <TableHead>{t("history.colStrategy")}</TableHead>
+                            <TableHead>{t("history.colResolvedAt")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableLoading colSpan={5} message="Loading conflict history..." />
+                            <TableLoading colSpan={5} message={t("history.loading")} />
                         ) : paginatedItems.length === 0 ? (
                             <TableRow>
                                 <TableCell
                                     colSpan={5}
                                     className="py-8 text-center text-slate-400 text-xs"
                                 >
-                                    No resolved conflicts found.
+                                    {t("history.empty")}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             paginatedItems.map((item) => {
-                                const formattedType = item.conflictType
-                                    ? item.conflictType.replace(/_/g, " ").toUpperCase()
-                                    : "CONFLICT";
+                                const formattedType =
+                                    item.conflictType && t.has(`types.${item.conflictType}`)
+                                        ? t(`types.${item.conflictType}`)
+                                        : item.conflictType
+                                          ? item.conflictType.replace(/_/g, " ").toUpperCase()
+                                          : t("fallbackShortType");
 
                                 const formattedStrategy = item.resolutionStrategy
-                                    ? item.resolutionStrategy.replace(/_/g, " ").toUpperCase()
+                                    ? t.has(`strategies.${item.resolutionStrategy}`)
+                                        ? t(`strategies.${item.resolutionStrategy}`)
+                                        : item.resolutionStrategy.replace(/_/g, " ").toUpperCase()
                                     : "—";
 
+                                const localizedDesc = item.description
+                                    ? localizeServerText(item.description, locale)
+                                    : "";
+
                                 const timeTooltip = item.detectedAt
-                                    ? `Detected: ${formatDateTime(item.detectedAt)}`
+                                    ? t("history.detectedTooltip", {
+                                          time: formatDateTime(item.detectedAt),
+                                      })
                                     : undefined;
 
                                 return (
@@ -116,10 +139,10 @@ export function ResolvedConflictsTable({
                                         </TableCell>
                                         <TableCell
                                             truncate
-                                            tooltip={item.description || undefined}
+                                            tooltip={localizedDesc || undefined}
                                             className="max-w-[340px] text-xs text-slate-700 font-normal"
                                         >
-                                            {item.description || "—"}
+                                            {localizedDesc || "—"}
                                         </TableCell>
                                         <TableCell>
                                             <span className="inline-block font-mono text-[11px] font-semibold text-slate-700">
@@ -147,7 +170,7 @@ export function ResolvedConflictsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="conflicts"
+                    itemLabel={t("history.itemLabel")}
                 />
             </ChamferCard>
         </div>

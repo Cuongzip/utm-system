@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { MousePointer, Plus } from "lucide-react";
 import {
     TacticalMapContainer,
@@ -48,6 +49,7 @@ export function FlightMapEditor({
     isReadOnly = false,
     className = "",
 }: FlightMapEditorProps) {
+    const t = useTranslations("flights.map");
     const [mode, setMode] = useState<FlightEditorMode>(isReadOnly ? "select" : "add");
     const [altDraft, setAltDraft] = useState<string | null>(null);
     const [showZones, setShowZones] = useState(false);
@@ -115,7 +117,7 @@ export function FlightMapEditor({
                     {isReadOnly ? (
                         <div className="inline-flex items-center h-[34px] gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            <span>READ-ONLY VIEW</span>
+                            <span>{t("readOnly")}</span>
                         </div>
                     ) : (
                         <div className="flex items-center h-[34px] gap-1 bg-[var(--color-surface-card)] p-1 rounded border border-[var(--color-border-default)]">
@@ -129,10 +131,10 @@ export function FlightMapEditor({
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
-                                title="Select or drag waypoints"
+                                title={t("selectTooltip")}
                             >
                                 <MousePointer className="w-3.5 h-3.5" />
-                                <span>Select</span>
+                                <span>{t("select")}</span>
                             </button>
 
                             <button
@@ -145,10 +147,10 @@ export function FlightMapEditor({
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
-                                title="Click on map to add waypoint"
+                                title={t("addPointTooltip")}
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span>Add Point</span>
+                                <span>{t("addPoint")}</span>
                             </button>
                         </div>
                     )}
@@ -164,11 +166,11 @@ export function FlightMapEditor({
 
                                 <div className="flex items-center h-[34px] gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-card)] px-2.5 py-1 rounded border border-[var(--color-border-default)]">
                                     <span className="text-[11px] font-mono uppercase text-[var(--color-text-muted)]">
-                                        Alt:
+                                        {t("altLabel")}
                                     </span>
                                     <input
                                         type="number"
-                                        aria-label="Cruising altitude in meters"
+                                        aria-label={t("cruisingAltAria")}
                                         min="10"
                                         max="1000"
                                         value={altDraft ?? String(cruisingAltitude)}
@@ -193,7 +195,7 @@ export function FlightMapEditor({
                 !isReadOnly && mode === "add" ? (
                     <div className="absolute bottom-3 left-3 z-20 bg-[var(--color-tactical-panel)] text-white text-[11px] font-mono px-3 py-1.5 chamfer-sm backdrop-blur-xs shadow-md flex items-center gap-2 pointer-events-none border border-[var(--color-tactical-border)]">
                         <Plus className="w-3.5 h-3.5 text-white" />
-                        <span>Click map to add · Drag point to move</span>
+                        <span>{t("mapHint")}</span>
                     </div>
                 ) : null
             }

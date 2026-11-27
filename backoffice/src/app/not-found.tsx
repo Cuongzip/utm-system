@@ -1,8 +1,13 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Home, Compass } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
 
 export default function NotFound() {
+    const t = useTranslations("errorPages");
+
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-primary)] p-4 select-none font-sans">
             <div className="relative z-10 w-full max-w-md">
@@ -17,12 +22,11 @@ export default function NotFound() {
                         </span>
 
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mb-2">
-                            Page Not Found
+                            {t("notFoundTitle")}
                         </h1>
 
                         <p className="text-xs sm:text-sm text-slate-500 max-w-sm mb-8 leading-relaxed">
-                            The coordinate or page you are looking for does not exist or has been
-                            moved within the UTM system.
+                            {t("notFoundDesc")}
                         </p>
 
                         <div className="flex flex-wrap items-center justify-center gap-3 w-full">
@@ -31,7 +35,7 @@ export default function NotFound() {
                                 className="inline-flex items-center justify-center gap-1.5 h-8 px-4 text-xs font-bold chamfer-sm bg-[var(--color-border-dark)] text-white hover:bg-[#1e293b] transition-colors"
                             >
                                 <Home className="w-3.5 h-3.5" />
-                                <span>Back to Dashboard</span>
+                                <span>{t("returnDashboard")}</span>
                             </Link>
                         </div>
                     </div>

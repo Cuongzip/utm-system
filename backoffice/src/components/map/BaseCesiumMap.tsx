@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { Cesium3DTileset, ScreenSpaceEventHandler, Viewer } from "cesium";
 import { CesiumContext } from "./CesiumContext";
 import { getCesium } from "./cesiumLoader";
@@ -50,6 +51,7 @@ export function BaseCesiumMap({
     pickMode = false,
     children,
 }: BaseCesiumMapProps) {
+    const t = useTranslations("map");
     const containerRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<Viewer | null>(null);
     const osmBuildingsRef = useRef<Cesium3DTileset | null>(null);
@@ -500,7 +502,7 @@ export function BaseCesiumMap({
                     <div
                         role="status"
                         aria-busy="true"
-                        aria-label="Loading map"
+                        aria-label={t("loadingMap")}
                         className="absolute inset-0 z-30 bg-slate-900/95 p-4 flex flex-col justify-between overflow-hidden"
                     >
                         <div className="flex items-center justify-between">
@@ -515,7 +517,7 @@ export function BaseCesiumMap({
                             <div className="h-5 w-32 rounded bg-slate-800 animate-pulse" />
                             <div className="h-5 w-24 rounded bg-slate-800 animate-pulse" />
                         </div>
-                        <span className="sr-only">Loading map...</span>
+                        <span className="sr-only">{t("loadingMap")}</span>
                     </div>
                 )}
 

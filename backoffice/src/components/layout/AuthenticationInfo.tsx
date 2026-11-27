@@ -1,19 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { User, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks";
 import { getPrimaryDisplayRole } from "@/utils";
+import { translateRoleLabel, type AppLocale } from "@/i18n";
 
 export function AuthenticationInfo() {
+    const t = useTranslations("common");
+    const locale = useLocale() as AppLocale;
     const { data: user } = useCurrentUser();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const handleLogout = () => {
         if (isLoggingOut) return;
         setIsLoggingOut(true);
-        toast.success("Logged out successfully. Redirecting…");
+        toast.success(t("loggedOutRedirect"));
         setTimeout(() => {
             window.location.href = "/logout";
         }, 600);
@@ -23,7 +27,7 @@ export function AuthenticationInfo() {
         return null;
     }
 
-    const primaryRole = getPrimaryDisplayRole(user.roles);
+    const primaryRole = translateRoleLabel(getPrimaryDisplayRole(user.roles), locale);
 
     return (
         <div className="px-3.5 py-3 border-t border-slate-200 bg-slate-50/70 text-xs">
@@ -37,8 +41,8 @@ export function AuthenticationInfo() {
                             {user.fullName || user.username}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            <span>{primaryRole}</span>
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="truncate">{primaryRole}</span>
                         </div>
                     </div>
                 </div>
@@ -47,8 +51,8 @@ export function AuthenticationInfo() {
                     type="button"
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    title="Sign Out"
-                    aria-label="Sign Out"
+                    title={t("signOut")}
+                    aria-label={t("signOut")}
                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
                 >
                     {isLoggingOut ? (

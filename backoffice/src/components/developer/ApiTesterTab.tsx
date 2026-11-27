@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Play, Loader2, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,6 +24,7 @@ interface TestResponse {
 }
 
 export function ApiTesterTab() {
+    const t = useTranslations("developer.tester");
     const { data: drones = [] } = useDronesAll();
     const defaultDroneReg = drones[0]?.registrationNumber || "VN-DRONE-001";
 
@@ -96,18 +98,18 @@ export function ApiTesterTab() {
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!apiKey.trim()) {
-            toast.error("Provide an X-API-Key header value to run a live test.");
+            toast.error(t("missingKeyToast"));
             return;
         }
         if (preset.method === "POST") {
             if (!bodyText.trim()) {
-                toast.error("Request body is required for POST endpoints.");
+                toast.error(t("missingBodyToast"));
                 return;
             }
             try {
                 JSON.parse(bodyText);
             } catch {
-                toast.error("Request body must be valid JSON.");
+                toast.error(t("invalidJsonToast"));
                 return;
             }
         }
@@ -131,11 +133,14 @@ export function ApiTesterTab() {
             } catch {
                 // keep raw text
             }
-            setResponse({ status: res.status, latencyMs, body: pretty || "(empty response)" });
+            setResponse({
+                status: res.status,
+                latencyMs,
+                body: pretty || t("emptyResponse"),
+            });
         } catch (err: unknown) {
             const latencyMs = Math.round(performance.now() - start);
-            const message =
-                err instanceof Error ? err.message : "Network error while contacting gateway";
+            const message = err instanceof Error ? err.message : t("networkError");
             toast.error(message);
             setResponse({
                 status: 0,
@@ -152,13 +157,13 @@ export function ApiTesterTab() {
             <ChamferCard size="md">
                 <div className="px-4 py-3 border-b border-slate-200">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        Request Builder
+                        {t("requestBuilder")}
                     </span>
                 </div>
                 <form onSubmit={handleSend} className="p-4 flex flex-col gap-3.5">
                     <div className="form-group">
                         <label className="form-label" htmlFor="tester-endpoint">
-                            Endpoint
+                            {t("endpointLabel")}
                         </label>
                         <CustomSelect
                             id="tester-endpoint"
@@ -173,20 +178,20 @@ export function ApiTesterTab() {
 
                     <FormInput
                         id="tester-api-key"
-                        label="X-API-Key Header"
+                        label={t("apiKeyHeaderLabel")}
                         required
                         type="password"
                         autoComplete="off"
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="Paste generated OEM API key"
+                        placeholder={t("apiKeyPlaceholder")}
                         className="font-mono"
                     />
 
                     {preset.method === "POST" && (
                         <div className="form-group">
                             <label className="form-label" htmlFor="tester-body">
-                                JSON Payload
+                                {t("jsonPayloadLabel")}
                             </label>
                             <textarea
                                 id="tester-body"
@@ -205,7 +210,7 @@ export function ApiTesterTab() {
                             ) : (
                                 <Play className="w-3.5 h-3.5" />
                             )}
-                            <span>{sending ? "Sending..." : "Send Request"}</span>
+                            <span>{sending ? t("sending") : t("sendRequest")}</span>
                         </ChamferButton>
                     </div>
                 </form>
@@ -214,7 +219,7 @@ export function ApiTesterTab() {
             <ChamferCard size="md">
                 <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        Live Response
+                        {t("liveResponse")}
                     </span>
                     {response && (
                         <div className="flex items-center gap-3">
@@ -227,7 +232,9 @@ export function ApiTesterTab() {
                                           : "warning"
                                 }
                                 label={
-                                    response.status === 0 ? "NET ERROR" : `HTTP ${response.status}`
+                                    response.status === 0
+                                        ? t("netErrorBadge")
+                                        : `HTTP ${response.status}`
                                 }
                             />
                             <span className="text-[11px] font-mono text-slate-500 tabular-nums">
@@ -245,8 +252,8 @@ export function ApiTesterTab() {
                         <EmptyState
                             compact
                             icon={Terminal}
-                            title="Ready to Dispatch"
-                            description="Send a request to inspect HTTP status, latency, and JSON payload."
+                            title={t("readyTitle")}
+                            description={t("readyDesc")}
                         />
                     )}
                 </div>

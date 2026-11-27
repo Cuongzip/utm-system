@@ -3,6 +3,7 @@
 import React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib";
 
 export interface ActionMenuItem {
@@ -18,7 +19,9 @@ interface ActionMenuProps {
     ariaLabel?: string;
 }
 
-export function ActionMenu({ items, ariaLabel = "Actions" }: ActionMenuProps) {
+export function ActionMenu({ items, ariaLabel }: ActionMenuProps) {
+    const t = useTranslations("common");
+    const resolvedAriaLabel = ariaLabel ?? t("actions");
     return (
         <DropdownMenuPrimitive.Root>
             <DropdownMenuPrimitive.Trigger asChild>
@@ -26,7 +29,7 @@ export function ActionMenu({ items, ariaLabel = "Actions" }: ActionMenuProps) {
                     type="button"
                     onClick={(e) => e.stopPropagation()}
                     className="w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
-                    aria-label={ariaLabel}
+                    aria-label={resolvedAriaLabel}
                 >
                     <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
                 </button>

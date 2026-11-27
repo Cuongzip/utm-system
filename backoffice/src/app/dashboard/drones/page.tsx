@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
+import { useTranslations } from "next-intl";
 import {
     ChamferButton,
     PageHeader,
@@ -22,13 +23,14 @@ import {
     type UpdateDronePayload,
 } from "@/types";
 
-const STATUS_OPTIONS: SelectOption[] = createStatusOptions(DRONE_STATUSES);
-
 export default function DronesPage() {
+    const t = useTranslations("drones");
     const queryClient = useQueryClient();
     const { canCreateDrone, canEditDrone, canDeleteDrone } = usePermissions();
     const fetchDrones = useCallback(() => droneService.getDrones(), []);
     const deleteDrone = useCallback((id: string) => droneService.deleteDrone(id), []);
+
+    const statusOptions: SelectOption[] = createStatusOptions(DRONE_STATUSES);
 
     const {
         items: drones,
@@ -45,7 +47,7 @@ export default function DronesPage() {
         queryKey: QUERY_KEYS.drones,
         fetchFn: fetchDrones,
         deleteFn: deleteDrone,
-        entityName: "Drone",
+        entityName: t("entityName"),
     });
 
     const saveDroneMutation = useMutation({
@@ -60,13 +62,11 @@ export default function DronesPage() {
                 ? droneService.updateDrone(id, payload as UpdateDronePayload)
                 : droneService.createDrone(payload as CreateDronePayload),
         onSuccess: (_data, variables) => {
-            toast.success(
-                variables.id ? "Drone updated successfully" : "Drone registered successfully"
-            );
+            toast.success(variables.id ? t("updatedToast") : t("registeredToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dronesAll });
         },
-        meta: { defaultErrorMessage: "Failed to save drone" },
+        meta: { defaultErrorMessage: t("saveError") },
     });
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -102,11 +102,11 @@ export default function DronesPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="DRONES">
+            <PageHeader title={t("title")}>
                 {canCreateDrone && (
                     <ChamferButton variant="dark" size="sm" onClick={openCreateModal}>
                         <Plus className="w-4 h-4 text-white" />
-                        <span>Register Drone</span>
+                        <span>{t("registerDrone")}</span>
                     </ChamferButton>
                 )}
             </PageHeader>
@@ -114,19 +114,20 @@ export default function DronesPage() {
             <TableFilterBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Search registration, model, or hub..."
+                searchPlaceholder={t("searchPlaceholder")}
                 statusFilter={statusFilter}
                 onStatusFilterChange={setStatusFilter}
-                statusOptions={STATUS_OPTIONS}
+                statusOptions={statusOptions}
                 onClearFilters={clearFilters}
                 totalCount={drones.length}
                 filteredCount={filteredDrones.length}
+                itemLabel={t("itemLabel")}
             />
 
             {isError && drones.length === 0 ? (
                 <ErrorState
-                    title="Unable to load drone fleet"
-                    description="The Drone Service could not be reached. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={refresh}
                 />
             ) : (

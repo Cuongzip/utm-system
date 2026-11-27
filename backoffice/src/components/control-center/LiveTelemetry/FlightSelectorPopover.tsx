@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useId, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { StatusBadge, Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { cn } from "@/lib";
-import { DEFAULT_FLIGHT_STATUS, FLIGHT_STATUS, type Flight, type TelemetryRecord } from "@/types";
+import { DEFAULT_FLIGHT_STATUS, type Flight, type TelemetryRecord } from "@/types";
 
 export interface FlightSelectorPopoverProps {
     isOpen: boolean;
@@ -20,10 +21,6 @@ export interface FlightSelectorPopoverProps {
     uavId: string;
 }
 
-function formatStatusLabel(status: string): string | undefined {
-    return status === FLIGHT_STATUS.EMERGENCY_LANDING ? "EMERG LAND" : undefined;
-}
-
 export function FlightSelectorPopover({
     isOpen,
     onOpenChange,
@@ -37,6 +34,8 @@ export function FlightSelectorPopover({
     droneRegistration = "—",
     uavId = "STANDBY",
 }: FlightSelectorPopoverProps) {
+    const t = useTranslations("controlCenter");
+    const tc = useTranslations("common");
     const listboxId = useId();
     const [query, setQuery] = useState("");
     const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -48,14 +47,14 @@ export function FlightSelectorPopover({
     const enrichedFlights = useMemo(() => {
         return flights.map((item) => {
             const reg = item.droneId
-                ? droneRegMap?.get(item.droneId) || "Assigned UAV"
-                : "Unassigned";
+                ? droneRegMap?.get(item.droneId) || t("assignedUav")
+                : t("unassigned");
             const status = item.status ?? DEFAULT_FLIGHT_STATUS;
             const code = item.flightNumber || "Flight";
             const hasLive = Boolean(telemetryMap[item.id]);
             return { item, reg, status, code, hasLive };
         });
-    }, [flights, droneRegMap, telemetryMap]);
+    }, [flights, droneRegMap, telemetryMap, t]);
 
     const filteredFlights = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -127,7 +126,7 @@ export function FlightSelectorPopover({
                     role="combobox"
                     aria-expanded={isOpen}
                     aria-controls={listboxId}
-                    aria-label="Select active flight"
+                    aria-label={t("selectActiveFlight")}
                     className="w-full min-w-0 max-w-full overflow-hidden rounded-[6px] border border-slate-300 bg-white hover:border-slate-400 px-3 py-2 flex items-center justify-between gap-2 text-left shadow-2xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:border-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300"
                 >
                     <div className="min-w-0 flex-1">
@@ -135,10 +134,10 @@ export function FlightSelectorPopover({
                             <span className="text-xs font-bold font-mono text-slate-900 truncate">
                                 {uavId}
                             </span>
-                            {hasAlert && <StatusBadge status="alert" label="LOW BAT" />}
+                            {hasAlert && <StatusBadge status="alert" label={t("lowBat")} />}
                         </div>
                         <div className="text-[11px] text-slate-500 font-mono truncate">
-                            {flight ? droneRegistration : "No active flight"}
+                            {flight ? droneRegistration : t("noActiveFlight")}
                         </div>
                     </div>
                     <ChevronDown
@@ -179,8 +178,8 @@ export function FlightSelectorPopover({
                                 setQuery(e.target.value);
                                 setHighlightedIndex(0);
                             }}
-                            placeholder="Filter flight or aircraft…"
-                            aria-label="Filter active flights"
+                            placeholder={t("filterFlightsPlaceholder")}
+                            aria-label={t("filterFlightsPlaceholder")}
                             className="w-full bg-transparent text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none"
                         />
                         {query && (
@@ -191,7 +190,7 @@ export function FlightSelectorPopover({
                                     setHighlightedIndex(0);
                                     inputRef.current?.focus();
                                 }}
-                                aria-label="Clear filter"
+                                aria-label={tc("clearSearch")}
                                 className="text-slate-400 hover:text-slate-700 cursor-pointer shrink-0"
                             >
                                 <X className="w-3.5 h-3.5" />
@@ -208,7 +207,7 @@ export function FlightSelectorPopover({
                 >
                     {filteredFlights.length === 0 ? (
                         <div className="px-3 py-5 text-center text-xs font-mono text-slate-400">
-                            {flights.length === 0 ? "No active flights" : "No matching flights"}
+                            {flights.length === 0 ? t("noActiveFlights") : t("noMatchingFlights")}
                         </div>
                     ) : (
                         filteredFlights.map(({ item, reg, status, code, hasLive }, idx) => {
@@ -233,7 +232,7 @@ export function FlightSelectorPopover({
                                 >
                                     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                                         {isSelected && (
-                                            <Check className="h-3.5 w-3.5 text-slate-800 stroke-[2.5]" />
+                                            <Check className="h-3.5 h-3.5 text-slate-800 stroke-[2.5]" />
                                         )}
                                     </span>
 
@@ -249,15 +248,11 @@ export function FlightSelectorPopover({
                                             {code}
                                         </div>
                                         <div className="text-[11px] font-mono text-slate-500 truncate">
-                                            {hasLive ? `${reg} · Live` : reg}
+                                            {hasLive ? `${reg} · ${t("liveTag")}` : reg}
                                         </div>
                                     </div>
 
-                                    <StatusBadge
-                                        status={status}
-                                        label={formatStatusLabel(status)}
-                                        className="shrink-0"
-                                    />
+                                    <StatusBadge status={status} className="shrink-0" />
                                 </button>
                             );
                         })

@@ -1,3 +1,5 @@
+import { humanizeValidationMessage } from "./humanizeValidationMessage";
+
 export type ValidationResult<T = unknown> =
     { success: true; data: T } | { success: false; errors: Record<string, string> };
 
@@ -28,7 +30,7 @@ export function validateSchema<T = unknown>(
         for (const issue of result.error.issues) {
             const path = issue.path.map(String).join(".");
             if (path && !errors[path]) {
-                errors[path] = issue.message;
+                errors[path] = humanizeValidationMessage(issue.message);
             }
         }
     }

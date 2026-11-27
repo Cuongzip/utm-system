@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, RotateCw, Home } from "lucide-react";
 import { ChamferCard, ChamferButton } from "@/components/ui";
@@ -11,6 +12,7 @@ interface ErrorProps {
 }
 
 export default function ErrorBoundary({ error, reset }: ErrorProps) {
+    const t = useTranslations("errorPages");
     const router = useRouter();
 
     useEffect(() => {
@@ -31,12 +33,11 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                         </span>
 
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mb-2">
-                            Something Went Wrong
+                            {t("errorTitle")}
                         </h1>
 
                         <p className="text-xs sm:text-sm text-slate-500 max-w-sm mb-6 leading-relaxed">
-                            An unexpected error occurred while rendering this view. Try again or
-                            return to the Operations Center.
+                            {t("errorDesc")}
                         </p>
 
                         {(error.message || error.digest) && (
@@ -60,7 +61,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                         <div className="flex flex-wrap items-center justify-center gap-3 w-full">
                             <ChamferButton size="sm" variant="dark" onClick={() => reset()}>
                                 <RotateCw className="w-3.5 h-3.5" />
-                                <span>Try Again</span>
+                                <span>{t("tryAgain")}</span>
                             </ChamferButton>
 
                             <ChamferButton
@@ -70,7 +71,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
                                 onClick={() => router.push("/dashboard")}
                             >
                                 <Home className="w-3.5 h-3.5" />
-                                <span>Back to Dashboard</span>
+                                <span>{t("returnDashboard")}</span>
                             </ChamferButton>
                         </div>
                     </div>

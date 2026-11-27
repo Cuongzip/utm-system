@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useForm, Controller, useWatch, type Resolver, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Modal, CustomSelect, FormInput, AutoGenInput } from "@/components/ui";
 import { useHubsAll, useOrganizationsAll } from "@/hooks";
 import { parseApiError } from "@/utils";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { createDroneBody, updateDroneBody } from "@/generated/drone";
 import {
     DRONE_PHYSICS_DEFAULTS,
@@ -32,6 +34,10 @@ export interface AddDroneModalProps {
 }
 
 export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDroneModalProps) {
+    const t = useTranslations("drones.form");
+    const tDrones = useTranslations("drones");
+    const tCommon = useTranslations("common");
+    const locale = useLocale() as AppLocale;
     const { data: hubs = [] } = useHubsAll();
     const { data: organizations = [] } = useOrganizationsAll(isOpen);
     const [loading, setLoading] = useState(false);
@@ -146,7 +152,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             }
             handleCloseModal();
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to register drone");
+            const parsed = parseApiError(err, tDrones("registerError"));
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as Path<DroneFormPayload>, { message: msg });
@@ -161,19 +167,19 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
         <Modal
             isOpen={isOpen}
             onClose={handleCloseModal}
-            title={droneToEdit ? "Edit Drone" : "Register Drone"}
+            title={droneToEdit ? tDrones("editDrone") : tDrones("registerDrone")}
             maxWidth="520px"
             onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
-            submitText={droneToEdit ? "Save Changes" : "Register Drone"}
-            loadingText="Saving..."
+            submitText={droneToEdit ? tCommon("saveChanges") : tDrones("registerDrone")}
+            loadingText={tCommon("saving")}
         >
             <AutoGenInput
                 id="registrationNumber"
-                label="Registration Number"
+                label={t("registrationNumber")}
                 showAutoGen={!droneToEdit}
                 disabled={Boolean(droneToEdit)}
-                manualPlaceholder="e.g. VN-UAV-001"
+                manualPlaceholder={t("registrationPlaceholder")}
                 error={errors.registrationNumber?.message}
                 {...register("registrationNumber")}
             />
@@ -181,20 +187,20 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             <div className="form-row-2">
                 <FormInput
                     id="manufacturer"
-                    label="Manufacturer"
+                    label={t("manufacturer")}
                     required={!droneToEdit}
                     disabled={Boolean(droneToEdit)}
-                    placeholder="e.g. DJI"
+                    placeholder={t("manufacturerPlaceholder")}
                     error={errors.manufacturer?.message}
                     {...register("manufacturer")}
                 />
 
                 <FormInput
                     id="model"
-                    label="Model"
+                    label={t("model")}
                     required={!droneToEdit}
                     disabled={Boolean(droneToEdit)}
-                    placeholder="e.g. Matrice 350 RTK"
+                    placeholder={t("modelPlaceholder")}
                     error={errors.model?.message}
                     {...register("model")}
                 />
@@ -203,7 +209,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             <div className="form-row-2">
                 <div className="form-group">
                     <label className="form-label" htmlFor="homeHub">
-                        Home Hub
+                        {t("homeHub")}
                     </label>
                     <Controller
                         name="homeHubId"
@@ -214,13 +220,13 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                                 value={field.value || ""}
                                 onValueChange={(val: string) => field.onChange(val || undefined)}
                                 options={[
-                                    { label: "No Home Hub Assigned", value: "" },
+                                    { label: t("noHomeHub"), value: "" },
                                     ...hubs.map((hub) => ({
                                         label: `${hub.name} (${hub.code || "HUB"})`,
                                         value: hub.id,
                                     })),
                                 ]}
-                                placeholder="Select a home hub"
+                                placeholder={t("homeHubPlaceholder")}
                             />
                         )}
                     />
@@ -229,7 +235,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                 {droneToEdit ? (
                     <div className="form-group">
                         <label className="form-label" htmlFor="droneStatus">
-                            Status
+                            {t("status")}
                         </label>
                         <Controller
                             name="status"
@@ -241,7 +247,9 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                                     onValueChange={field.onChange}
                                     options={DRONE_STATUSES.map((s) => ({
                                         value: s,
-                                        label: s.replace(/_/g, " ").toUpperCase(),
+                                        label:
+                                            translateStatusLabel(s, locale) ??
+                                            s.replace(/_/g, " ").toUpperCase(),
                                     }))}
                                     error={Boolean(errors.status)}
                                 />
@@ -254,7 +262,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                 ) : (
                     <div className="form-group">
                         <label className="form-label" htmlFor="ownerId">
-                            Organization
+                            {t("organization")}
                         </label>
                         <Controller
                             name="ownerId"
@@ -267,13 +275,13 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                                         field.onChange(val || undefined)
                                     }
                                     options={[
-                                        { label: "Default Organization", value: "" },
+                                        { label: t("defaultOrganization"), value: "" },
                                         ...organizations.map((org) => ({
                                             label: org.name,
                                             value: org.id,
                                         })),
                                     ]}
-                                    placeholder="Select organization (optional)"
+                                    placeholder={t("organizationPlaceholder")}
                                 />
                             )}
                         />
@@ -284,24 +292,24 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
             <div className="form-row-2">
                 <FormInput
                     id="batteryCapacityWh"
-                    label="Battery Capacity (Wh)"
+                    label={t("batteryCapacityWh")}
                     type="number"
                     step="any"
                     min={1}
                     required
-                    placeholder="e.g. 400"
+                    placeholder={t("batteryCapacityPlaceholder")}
                     error={errors.batteryCapacityWh?.message}
                     {...register("batteryCapacityWh", { valueAsNumber: true })}
                 />
 
                 <FormInput
                     id="maxPayload"
-                    label="Max Payload (kg)"
+                    label={t("maxPayloadKg")}
                     type="number"
                     step="any"
                     min={0}
                     required
-                    placeholder="e.g. 2.5"
+                    placeholder={t("maxPayloadPlaceholder")}
                     error={errors.maxPayload?.message}
                     {...register("maxPayload", { valueAsNumber: true })}
                 />
@@ -314,7 +322,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                     className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left rounded-md hover:bg-[var(--color-surface-card)]/70 transition-colors cursor-pointer"
                 >
                     <span className="text-[13px] font-semibold text-[var(--color-text-primary)]">
-                        Advanced Energy &amp; Performance
+                        {t("advancedTitle")}
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
                         <span className="px-2 py-0.5 rounded bg-white border border-[var(--color-border-default)] text-[11px] font-mono text-slate-600">
@@ -333,7 +341,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                         <div className="form-row-2">
                             <FormInput
                                 id="hoverPowerW"
-                                label="Hover Power (W)"
+                                label={t("hoverPowerW")}
                                 type="number"
                                 step="any"
                                 min={1}
@@ -343,7 +351,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                             />
                             <FormInput
                                 id="cruisePowerW"
-                                label="Cruise Power (W)"
+                                label={t("cruisePowerW")}
                                 type="number"
                                 step="any"
                                 min={1}
@@ -356,7 +364,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                         <div className="form-row-2">
                             <FormInput
                                 id="cruiseSpeedMs"
-                                label="Cruise Speed (m/s)"
+                                label={t("cruiseSpeedMs")}
                                 type="number"
                                 step="any"
                                 min={1}
@@ -368,7 +376,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                             />
                             <FormInput
                                 id="windToleranceMs"
-                                label="Wind Tolerance (m/s)"
+                                label={t("windToleranceMs")}
                                 type="number"
                                 step="any"
                                 min={1}
@@ -383,7 +391,7 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
                         <div className="form-row-2">
                             <FormInput
                                 id="batteryHealthPct"
-                                label="Battery Health (%)"
+                                label={t("batteryHealthPct")}
                                 type="number"
                                 step="any"
                                 min={1}

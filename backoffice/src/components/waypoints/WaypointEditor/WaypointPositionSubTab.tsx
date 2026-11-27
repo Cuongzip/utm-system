@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { CustomSelect, FormInput } from "@/components/ui";
 import {
     ACTIVE_HUB_STATUS,
     STOPOVER_TYPES,
     STOPOVER_TYPE,
-    STOPOVER_TYPE_LABELS,
     STOPOVER_DEFAULT_GROUND_TIME,
     WAYPOINT_TYPE,
     type Hub,
@@ -24,16 +24,19 @@ export interface WaypointPositionSubTabProps<T extends WaypointItem> {
     latError?: string;
     lngError?: string;
     altError?: string;
+    hubIdError?: string;
+    stopoverTypeError?: string;
+    groundTimeError?: string;
+    payloadDeltaError?: string;
     onClearNameError?: () => void;
     onClearLatError?: () => void;
     onClearLngError?: () => void;
     onClearAltError?: () => void;
+    onClearHubIdError?: () => void;
+    onClearStopoverTypeError?: () => void;
+    onClearGroundTimeError?: () => void;
+    onClearPayloadDeltaError?: () => void;
 }
-
-const STOPOVER_OPTIONS = STOPOVER_TYPES.map((type) => ({
-    value: type,
-    label: STOPOVER_TYPE_LABELS[type],
-}));
 
 export function WaypointPositionSubTab<T extends WaypointItem>({
     waypoint,
@@ -45,11 +48,28 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
     latError,
     lngError,
     altError,
+    hubIdError,
+    stopoverTypeError,
+    groundTimeError,
+    payloadDeltaError,
     onClearNameError,
     onClearLatError,
     onClearLngError,
     onClearAltError,
+    onClearHubIdError,
+    onClearStopoverTypeError,
+    onClearGroundTimeError,
+    onClearPayloadDeltaError,
 }: WaypointPositionSubTabProps<T>) {
+    const t = useTranslations("waypoints");
+    const stopoverOptions = useMemo(
+        () =>
+            STOPOVER_TYPES.map((type) => ({
+                value: type,
+                label: t(`stopoverTypes.${type}`),
+            })),
+        [t]
+    );
     const [latStr, setLatStr] = useState(() => String(waypoint.latitude ?? ""));
     const [lngStr, setLngStr] = useState(() => String(waypoint.longitude ?? ""));
     const [altStr, setAltStr] = useState(() => String(waypoint.altitude ?? defaultAltitude));
@@ -117,6 +137,7 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
     };
 
     const handleStopoverTypeChange = (val: string) => {
+        onClearStopoverTypeError?.();
         const nextType = val as StopoverType;
         if (nextType === STOPOVER_TYPE.NONE) {
             const restoredAlt = (waypoint.altitude ?? 0) <= 0 ? defaultAltitude : waypoint.altitude;
@@ -145,6 +166,7 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
     };
 
     const handleStopoverHubChange = (hubId: string) => {
+        onClearHubIdError?.();
         if (!hubId) {
             onUpdate({ ...waypoint, hubId: undefined });
             return;
@@ -178,8 +200,8 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
         <div className="space-y-3 pt-1">
             <FormInput
                 id="wpName"
-                label="Waypoint Name"
-                placeholder="e.g. Waypoint 1, Turnpoint Alpha"
+                label={t("position.name")}
+                placeholder={t("position.namePlaceholder")}
                 value={waypoint.name || ""}
                 disabled={isReadOnly}
                 onChange={(e) => {
@@ -192,7 +214,7 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
             <div className="form-row-2">
                 <FormInput
                     id="wpLat"
-                    label={isHubLocked ? "Latitude (Hub-locked)" : "Latitude"}
+                    label={isHubLocked ? t("position.latitudeLocked") : t("position.latitude")}
                     required
                     type="number"
                     step="0.000001"
@@ -204,7 +226,7 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                 />
                 <FormInput
                     id="wpLng"
-                    label={isHubLocked ? "Longitude (Hub-locked)" : "Longitude"}
+                    label={isHubLocked ? t("position.longitudeLocked") : t("position.longitude")}
                     required
                     type="number"
                     step="0.000001"
@@ -218,7 +240,7 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
 
             <FormInput
                 id="wpAlt"
-                label={isHubLocked ? "Pad Altitude (m AGL, 0 = Ground Pad)" : "Altitude (m AGL)"}
+                label={isHubLocked ? t("position.padAltitude") : t("position.altitude")}
                 type="number"
                 min={isHubLocked ? "0" : "1"}
                 max="1000"
@@ -233,22 +255,26 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                 <div className="pt-2 border-t border-[var(--color-border-subtle)] space-y-3">
                     <div className="form-group">
                         <label className="form-label" htmlFor="wpStopoverType">
-                            Stopover at Hub (Multi-Leg Split)
+                            {t("position.stopoverLabel")}
                         </label>
                         <CustomSelect
                             value={activeStopover}
                             disabled={isReadOnly}
                             onValueChange={handleStopoverTypeChange}
-                            options={STOPOVER_OPTIONS}
-                            placeholder="None (Fly-Through)"
+                            options={stopoverOptions}
+                            placeholder={t("stopoverTypes.none")}
+                            error={Boolean(stopoverTypeError)}
                         />
+                        {stopoverTypeError && (
+                            <span className="form-error-msg">{stopoverTypeError}</span>
+                        )}
                     </div>
 
                     {isStopover && (
                         <>
                             <div className="form-group">
                                 <label className="form-label" htmlFor="wpStopoverHub">
-                                    Stopover Hub
+                                    {t("position.stopoverHub")}
                                 </label>
                                 <CustomSelect
                                     value={waypoint.hubId || ""}
@@ -257,21 +283,23 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                                     options={[
                                         {
                                             value: "",
-                                            label: "Select active hub (auto-fills coords)...",
+                                            label: t("position.selectActiveHubAutoCoords"),
                                         },
                                         ...(selectableHubs ?? []).map((h) => ({
                                             value: h.id,
                                             label: `${h.name}${h.code ? ` (${h.code})` : ""}`,
                                         })),
                                     ]}
-                                    placeholder="Select intermediate hub"
+                                    placeholder={t("position.selectIntermediateHub")}
+                                    error={Boolean(hubIdError)}
                                 />
+                                {hubIdError && <span className="form-error-msg">{hubIdError}</span>}
                             </div>
 
                             <div className={isPayloadStopover ? "form-row-2" : ""}>
                                 <FormInput
                                     id="wpGroundTime"
-                                    label="Ground Time (min)"
+                                    label={t("position.groundTime")}
                                     type="number"
                                     min={0}
                                     step={1}
@@ -280,7 +308,9 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                                         STOPOVER_DEFAULT_GROUND_TIME[activeStopover]
                                     }
                                     disabled={isReadOnly}
+                                    error={groundTimeError}
                                     onChange={(e) => {
+                                        onClearGroundTimeError?.();
                                         const raw = e.target.value;
                                         const parsed = Number.parseInt(raw, 10);
                                         onUpdate({
@@ -296,7 +326,7 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                                 {isPayloadStopover && (
                                     <FormInput
                                         id="wpPayloadDelta"
-                                        label="Payload Delta (kg)"
+                                        label={t("position.payloadDelta")}
                                         type="number"
                                         step="0.1"
                                         placeholder={
@@ -306,7 +336,9 @@ export function WaypointPositionSubTab<T extends WaypointItem>({
                                         }
                                         value={waypoint.payloadDeltaKg ?? ""}
                                         disabled={isReadOnly}
+                                        error={payloadDeltaError}
                                         onChange={(e) => {
+                                            onClearPayloadDeltaError?.();
                                             const raw = e.target.value;
                                             const parsed = Number.parseFloat(raw);
                                             onUpdate({

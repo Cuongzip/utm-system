@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useHubsAll, useAirspaceAll, QUERY_KEYS } from "@/hooks";
@@ -10,6 +11,7 @@ import type { CreateAirspaceZonePayload } from "@/types";
 
 export default function NewAirspacePage() {
     const router = useRouter();
+    const t = useTranslations("airspace");
     const queryClient = useQueryClient();
 
     const { data: hubs = [], isLoading: hubsLoading } = useHubsAll();
@@ -19,10 +21,10 @@ export default function NewAirspacePage() {
         mutationFn: (payload: CreateAirspaceZonePayload) => airspaceService.createZone(payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.airspace });
-            toast.success("Airspace zone created successfully");
+            toast.success(t("createdToast"));
             router.push("/dashboard/airspace");
         },
-        meta: { defaultErrorMessage: "Failed to create airspace zone" },
+        meta: { defaultErrorMessage: t("createFailed") },
     });
 
     return (

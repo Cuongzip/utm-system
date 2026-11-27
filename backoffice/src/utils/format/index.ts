@@ -14,3 +14,4 @@ export * from "./formatHubName";
 export * from "./formatMissionSchedule";
 export * from "./createStatusOptions";
 export * from "./compareCreatedDesc";
+export * from "./localizeServerText";

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -50,28 +51,26 @@ import {
     useFlightsAll,
 } from "@/hooks";
 import { emergencyService } from "@/services/emergencyService";
+import { translateStatusLabel, useAppLocale } from "@/i18n";
 import {
     formatDateTime,
     formatTime,
     formatCoordinates,
     formatAltitude,
     formatSpeed,
+    localizeServerText,
 } from "@/utils";
 import {
     INCIDENT_STATUS,
     CLOSED_INCIDENT_STATUSES,
+    EMERGENCY_TYPES,
     ROOT_CAUSES,
     ROOT_CAUSE,
-    ROOT_CAUSE_LABELS,
     RESPONSE_ACTION,
     type EmergencyIncidentVm,
+    type EmergencyType,
     type RootCause,
 } from "@/types";
-
-const ROOT_CAUSE_OPTIONS = ROOT_CAUSES.map((cause) => ({
-    value: cause,
-    label: ROOT_CAUSE_LABELS[cause],
-}));
 
 const PLAYBACK_SPEED_OPTIONS = [
     { value: "0.5", label: "0.5x" },
@@ -95,10 +94,21 @@ interface RootCauseFormProps {
 }
 
 function RootCauseInvestigationCard({ incident }: RootCauseFormProps) {
+    const t = useTranslations("emergency");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const [rootCause, setRootCause] = useState<RootCause>(incident.rootCause ?? ROOT_CAUSE.UNKNOWN);
     const [notes, setNotes] = useState(incident.rootCauseNotes ?? "");
     const [lessonsLearned, setLessonsLearned] = useState(incident.lessonsLearned ?? "");
+
+    const rootCauseOptions = useMemo(
+        () =>
+            ROOT_CAUSES.map((cause) => ({
+                value: cause,
+                label: t(`rootCauses.${cause}`),
+            })),
+        [t]
+    );
 
     const saveMutation = useMutation({
         mutationFn: () =>
@@ -108,14 +118,14 @@ function RootCauseInvestigationCard({ incident }: RootCauseFormProps) {
                 lessonsLearned: lessonsLearned.trim() || undefined,
             }),
         onSuccess: () => {
-            toast.success("Post-incident investigation report saved");
+            toast.success(t("detail.investigationSavedToast"));
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.emergencyIncidentDetail(incident.id),
             });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
         },
-        meta: { defaultErrorMessage: "Failed to save root cause investigation" },
+        meta: { defaultErrorMessage: t("detail.investigationSaveFailed") },
     });
 
     return (
@@ -123,46 +133,46 @@ function RootCauseInvestigationCard({ incident }: RootCauseFormProps) {
             <div className="p-5 flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
                     <FileText className="w-4 h-4 text-slate-600" />
-                    <span>POST-INCIDENT INVESTIGATION</span>
+                    <span>{t("detail.investigationHeading")}</span>
                 </div>
 
                 <div className="form-group">
                     <label className="form-label" htmlFor="detail-root-cause">
-                        Root Cause Category
+                        {t("detail.rootCauseLabel")}
                     </label>
                     <CustomSelect
                         id="detail-root-cause"
                         value={rootCause}
                         onValueChange={(val) => setRootCause(val as RootCause)}
-                        options={ROOT_CAUSE_OPTIONS}
-                        placeholder="Select root cause..."
+                        options={rootCauseOptions}
+                        placeholder={t("detail.rootCausePlaceholder")}
                     />
                 </div>
 
                 <div className="form-group">
                     <label className="form-label" htmlFor="detail-root-cause-notes">
-                        Investigation Notes
+                        {t("detail.notesLabel")}
                     </label>
                     <textarea
                         id="detail-root-cause-notes"
                         rows={3}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Document technical findings, environmental factors, or anomalies..."
+                        placeholder={t("detail.notesPlaceholder")}
                         className="form-input resize-none"
                     />
                 </div>
 
                 <div className="form-group">
                     <label className="form-label" htmlFor="detail-lessons-learned">
-                        Lessons Learned / Corrective Actions
+                        {t("detail.lessonsLabel")}
                     </label>
                     <textarea
                         id="detail-lessons-learned"
                         rows={3}
                         value={lessonsLearned}
                         onChange={(e) => setLessonsLearned(e.target.value)}
-                        placeholder="Preventive SOP updates, firmware fixes, or corridor adjustments..."
+                        placeholder={t("detail.lessonsPlaceholder")}
                         className="form-input resize-none"
                     />
                 </div>
@@ -175,7 +185,11 @@ function RootCauseInvestigationCard({ incident }: RootCauseFormProps) {
                         onClick={() => saveMutation.mutate()}
                     >
                         <Save className="w-3.5 h-3.5" />
-                        <span>{saveMutation.isPending ? "Saving..." : "Save Investigation"}</span>
+                        <span>
+                            {saveMutation.isPending
+                                ? tCommon("saving")
+                                : t("detail.saveInvestigation")}
+                        </span>
                     </ChamferButton>
                 </div>
             </div>
@@ -189,6 +203,8 @@ interface IncidentDetailPageProps {
 
 export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPageProps) {
     const { id } = use(params);
+    const t = useTranslations("emergency");
+    const locale = useAppLocale();
     const queryClient = useQueryClient();
 
     const { data: incident, isLoading: incidentLoading } = useEmergencyIncidentDetail(id);
@@ -224,31 +240,27 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
     const confirmMutation = useMutation({
         mutationFn: (approved: boolean) => emergencyService.confirmIncident(id, { approved }),
         onSuccess: (_, approved) => {
-            toast.success(
-                approved
-                    ? "Failsafe action confirmed and dispatched"
-                    : "Failsafe action rejected and incident closed"
-            );
+            toast.success(approved ? t("actionConfirmedToast") : t("actionRejectedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidentDetail(id) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyPending });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
         },
-        meta: { defaultErrorMessage: "Failed to process emergency confirmation" },
+        meta: { defaultErrorMessage: t("confirmFailed") },
     });
 
     const resolveMutation = useMutation({
         mutationFn: () => emergencyService.resolveIncident(id, {}),
         onSuccess: () => {
-            toast.success("Emergency incident marked resolved");
+            toast.success(t("resolvedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidentDetail(id) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyActive });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyPending });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
         },
-        meta: { defaultErrorMessage: "Failed to resolve emergency incident" },
+        meta: { defaultErrorMessage: t("resolveFailed") },
     });
 
     const droneMap = useMemo(
@@ -271,7 +283,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
             <div
                 role="status"
                 aria-busy="true"
-                aria-label="Loading incident telemetry"
+                aria-label={t("detail.loadingAria")}
                 className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full"
             >
                 <div className="flex items-center justify-between gap-4">
@@ -281,10 +293,10 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                 <KpiStrip
                     loading
                     items={[
-                        { id: "detected", label: "DETECTED AT", value: "—" },
-                        { id: "aircraft", label: "AIRCRAFT", value: "—" },
-                        { id: "action", label: "RESPONSE ACTION", value: "—" },
-                        { id: "outcome", label: "ACTION OUTCOME", value: "—" },
+                        { id: "detected", label: t("detail.kpiDetectedAt"), value: "—" },
+                        { id: "aircraft", label: t("detail.kpiAircraft"), value: "—" },
+                        { id: "action", label: t("detail.kpiResponseAction"), value: "—" },
+                        { id: "outcome", label: t("detail.kpiOutcome"), value: "—" },
                     ]}
                 />
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -306,7 +318,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         </ChamferCard>
                     </div>
                 </div>
-                <span className="sr-only">Loading incident telemetry...</span>
+                <span className="sr-only">{t("detail.loadingAria")}</span>
             </div>
         );
     }
@@ -314,21 +326,21 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
     if (!incident) {
         return (
             <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
-                <PageHeader title="INCIDENT INVESTIGATION">
+                <PageHeader title={t("detail.pageTitle")}>
                     <ChamferButton
                         href="/dashboard/emergency/incidents"
                         variant="outline"
                         size="sm"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
-                        <span>Incident History</span>
+                        <span>{t("nav.incidents")}</span>
                     </ChamferButton>
                 </PageHeader>
                 <ChamferCard size="lg">
                     <EmptyState
                         icon={AlertTriangle}
-                        title="Incident Not Found"
-                        description="The requested emergency incident record could not be loaded."
+                        title={t("detail.notFoundTitle")}
+                        description={t("detail.notFoundDesc")}
                     />
                 </ChamferCard>
             </div>
@@ -347,7 +359,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
           (effectiveDroneId.length > 12
               ? `DRN-${effectiveDroneId.slice(0, 8).toUpperCase()}`
               : effectiveDroneId)
-        : "Unknown";
+        : t("detail.unknown");
 
     const incidentCode = incident.incidentNumber || `INC-${incident.id.slice(0, 8).toUpperCase()}`;
     const currentFrame = blackboxEntries[safeIndex] ?? null;
@@ -363,10 +375,16 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
 
     const outcomeValue =
         incident.actionSuccess === true
-            ? "SUCCESS"
+            ? t("detail.outcomeSuccess")
             : incident.actionSuccess === false
-              ? "FAILED"
-              : "PENDING";
+              ? t("detail.outcomeFailed")
+              : t("detail.outcomePending");
+
+    const typeLabel =
+        incident.emergencyType &&
+        (EMERGENCY_TYPES as readonly string[]).includes(incident.emergencyType)
+            ? t(`types.${incident.emergencyType as EmergencyType}`)
+            : incident.emergencyType.replace(/_/g, " ");
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
@@ -374,18 +392,14 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                 title={incidentCode}
                 badges={
                     <div className="flex items-center gap-2">
-                        <StatusBadge
-                            status={incident.severity}
-                            label={incident.severity.toUpperCase()}
-                            dotShape="circle"
-                        />
+                        <StatusBadge status={incident.severity} dotShape="circle" />
                         <StatusBadge status={incident.status} dotShape="circle" />
                     </div>
                 }
             >
                 <ChamferButton href="/dashboard/emergency/incidents" variant="outline" size="sm">
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Incident History</span>
+                    <span>{t("nav.incidents")}</span>
                 </ChamferButton>
 
                 {isAwaiting && (
@@ -397,7 +411,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             onClick={() => confirmMutation.mutate(false)}
                         >
                             <X className="w-3.5 h-3.5" />
-                            <span>Reject</span>
+                            <span>{t("activeList.reject")}</span>
                         </ChamferButton>
                         <ChamferButton
                             variant="dark"
@@ -406,7 +420,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             onClick={() => confirmMutation.mutate(true)}
                         >
                             <Check className="w-3.5 h-3.5" />
-                            <span>Confirm Action</span>
+                            <span>{t("activeList.confirmAction")}</span>
                         </ChamferButton>
                     </>
                 )}
@@ -419,7 +433,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         onClick={() => resolveMutation.mutate()}
                     >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Resolve Incident</span>
+                        <span>{t("activeList.resolveIncident")}</span>
                     </ChamferButton>
                 )}
             </PageHeader>
@@ -428,34 +442,40 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                 items={[
                     {
                         id: "detected",
-                        label: "DETECTED AT",
+                        label: t("detail.kpiDetectedAt"),
                         value: formatTime(incident.detectedAt),
                         subValue: formatDateTime(incident.detectedAt),
                         icon: Clock,
                     },
                     {
                         id: "aircraft",
-                        label: "AIRCRAFT",
+                        label: t("detail.kpiAircraft"),
                         value: droneLabel,
-                        subValue: flightLabel ? `FLIGHT ${flightLabel}` : "UNASSIGNED",
+                        subValue: flightLabel
+                            ? t("detail.flightSub", { flight: flightLabel })
+                            : t("detail.unassigned"),
                         icon: Navigation,
                     },
                     {
                         id: "action",
-                        label: "RESPONSE ACTION",
+                        label: t("detail.kpiResponseAction"),
                         value:
                             incident.responseAction &&
                             incident.responseAction !== RESPONSE_ACTION.NONE
                                 ? incident.responseAction
-                                : "NONE",
-                        subValue: incident.wasAutoExecuted ? "AUTO EXECUTED" : "SUPERVISED",
+                                : t("detail.noneAction"),
+                        subValue: incident.wasAutoExecuted
+                            ? t("detail.autoExecuted")
+                            : t("detail.supervised"),
                         icon: Gauge,
                     },
                     {
                         id: "outcome",
-                        label: "ACTION OUTCOME",
+                        label: t("detail.kpiOutcome"),
                         value: outcomeValue,
-                        subValue: incident.status.replace(/_/g, " ").toUpperCase(),
+                        subValue:
+                            translateStatusLabel(incident.status, locale) ??
+                            incident.status.replace(/_/g, " ").toUpperCase(),
                         icon: incident.actionSuccess ? CheckCircle2 : AlertTriangle,
                         iconClassName:
                             incident.actionSuccess === true
@@ -474,11 +494,14 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                                 <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
                                     <MapPin className="w-4 h-4 text-slate-600" />
-                                    <span>INCIDENT LOCATION & BLACKBOX REPLAY</span>
+                                    <span>{t("detail.replayHeading")}</span>
                                 </div>
                                 {frameCount > 0 && (
                                     <span className="text-xs font-mono text-slate-500 tabular-nums">
-                                        Frame {safeIndex + 1} / {frameCount}
+                                        {t("detail.frameProgress", {
+                                            current: safeIndex + 1,
+                                            total: frameCount,
+                                        })}
                                     </span>
                                 )}
                             </div>
@@ -500,8 +523,8 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 <EmptyState
                                     compact
                                     icon={MapPin}
-                                    title="No Geospatial Coordinates"
-                                    description="This incident record does not include GPS coordinates or blackbox position samples."
+                                    title={t("detail.noCoordsTitle")}
+                                    description={t("detail.noCoordsDesc")}
                                 />
                             )}
 
@@ -517,7 +540,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                                 setIsPlaying(false);
                                                 setPlaybackIndex(Number(e.target.value));
                                             }}
-                                            aria-label="Blackbox replay timeline"
+                                            aria-label={t("detail.timelineAria")}
                                             className="flex-1 accent-slate-800 cursor-pointer"
                                         />
                                         <span className="text-xs font-mono text-slate-600 tabular-nums shrink-0">
@@ -536,8 +559,8 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                                     setIsPlaying(false);
                                                     setPlaybackIndex(0);
                                                 }}
-                                                title="Jump to start"
-                                                aria-label="Jump to start"
+                                                title={t("detail.jumpStart")}
+                                                aria-label={t("detail.jumpStart")}
                                             >
                                                 <SkipBack className="w-3.5 h-3.5" />
                                             </ChamferButton>
@@ -554,12 +577,12 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                                 {isPlaying ? (
                                                     <>
                                                         <Pause className="w-3.5 h-3.5" />
-                                                        <span>Pause</span>
+                                                        <span>{t("detail.pause")}</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <Play className="w-3.5 h-3.5" />
-                                                        <span>Replay</span>
+                                                        <span>{t("detail.replay")}</span>
                                                     </>
                                                 )}
                                             </ChamferButton>
@@ -570,8 +593,8 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                                     setIsPlaying(false);
                                                     setPlaybackIndex(Math.max(0, frameCount - 1));
                                                 }}
-                                                title="Jump to end"
-                                                aria-label="Jump to end"
+                                                title={t("detail.jumpEnd")}
+                                                aria-label={t("detail.jumpEnd")}
                                             >
                                                 <SkipForward className="w-3.5 h-3.5" />
                                             </ChamferButton>
@@ -596,7 +619,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             items={[
                                 {
                                     id: "frame-battery",
-                                    label: "FRAME BATTERY",
+                                    label: t("detail.frameBattery"),
                                     value:
                                         currentFrame.batteryLevel != null
                                             ? `${Math.round(currentFrame.batteryLevel)}%`
@@ -609,7 +632,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 },
                                 {
                                     id: "frame-signal",
-                                    label: "FRAME SIGNAL",
+                                    label: t("detail.frameSignal"),
                                     value:
                                         currentFrame.signalStrength != null
                                             ? `${Math.round(currentFrame.signalStrength)}%`
@@ -622,7 +645,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 },
                                 {
                                     id: "frame-altitude",
-                                    label: "FRAME ALTITUDE",
+                                    label: t("detail.frameAltitude"),
                                     value:
                                         currentFrame.altitudeMsl != null
                                             ? `${Math.round(currentFrame.altitudeMsl)}m`
@@ -631,7 +654,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 },
                                 {
                                     id: "frame-speed",
-                                    label: "FRAME SPEED",
+                                    label: t("detail.frameSpeed"),
                                     value: formatSpeed(currentFrame.groundSpeed),
                                     icon: Gauge,
                                 },
@@ -643,30 +666,32 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
                                 <Activity className="w-4 h-4 text-slate-600" />
-                                <span>BLACKBOX RECORDING LOG</span>
+                                <span>{t("detail.blackboxHeading")}</span>
                             </div>
                             <span className="text-xs font-mono text-slate-400">
-                                {frameCount} {frameCount === 1 ? "frame" : "frames"}
+                                {frameCount === 1
+                                    ? t("detail.frameSingle")
+                                    : t("detail.framePlural", { count: frameCount })}
                             </span>
                         </div>
                         {!blackboxLoading && frameCount === 0 ? (
                             <EmptyState
                                 compact
                                 icon={Activity}
-                                title="No Blackbox Samples"
-                                description="No high-frequency telemetry samples were captured for this incident."
+                                title={t("detail.noBlackboxTitle")}
+                                description={t("detail.noBlackboxDesc")}
                             />
                         ) : (
                             <div className="max-h-72 overflow-y-auto">
                                 <Table fixed={false}>
                                     <TableHeader className="sticky top-0 z-10">
                                         <TableRow>
-                                            <TableHead>FRAME</TableHead>
-                                            <TableHead>TIME</TableHead>
-                                            <TableHead>ALT (M)</TableHead>
-                                            <TableHead>SPD</TableHead>
-                                            <TableHead>BAT</TableHead>
-                                            <TableHead>EVENT / CMD</TableHead>
+                                            <TableHead>{t("detail.colFrame")}</TableHead>
+                                            <TableHead>{t("detail.colTime")}</TableHead>
+                                            <TableHead>{t("detail.colAlt")}</TableHead>
+                                            <TableHead>{t("detail.colSpd")}</TableHead>
+                                            <TableHead>{t("detail.colBat")}</TableHead>
+                                            <TableHead>{t("detail.colEventCmd")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -674,7 +699,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                             <TableLoading
                                                 colSpan={6}
                                                 rows={4}
-                                                message="Loading blackbox recording..."
+                                                message={t("detail.loadingBlackbox")}
                                             />
                                         ) : (
                                             blackboxEntries.slice(0, 50).map((entry, idx) => {
@@ -737,26 +762,27 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         <div className="p-5 flex flex-col gap-3.5">
                             <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
                                 <AlertTriangle className="w-4 h-4 text-slate-600" />
-                                <span>INCIDENT BRIEFING</span>
+                                <span>{t("detail.briefingHeading")}</span>
                             </div>
 
                             <p className="text-sm font-semibold text-slate-900 leading-snug">
-                                {incident.message ||
-                                    incident.emergencyType.replace(/_/g, " ").toUpperCase()}
+                                {incident.message
+                                    ? localizeServerText(incident.message, locale)
+                                    : typeLabel}
                             </p>
 
                             <dl className="grid grid-cols-2 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden text-xs font-mono">
                                 <div className="bg-[var(--color-surface-panel)] p-3">
                                     <dt className="text-[10px] uppercase text-[var(--color-text-muted)]">
-                                        Emergency Type
+                                        {t("detail.emergencyType")}
                                     </dt>
-                                    <dd className="font-semibold text-[var(--color-text-primary)] capitalize mt-0.5">
-                                        {incident.emergencyType.replace(/_/g, " ")}
+                                    <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5">
+                                        {typeLabel}
                                     </dd>
                                 </div>
                                 <div className="bg-[var(--color-surface-panel)] p-3">
                                     <dt className="text-[10px] uppercase text-[var(--color-text-muted)]">
-                                        Coordinates
+                                        {t("detail.coordinates")}
                                     </dt>
                                     <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5">
                                         {formatCoordinates({
@@ -767,7 +793,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 </div>
                                 <div className="bg-[var(--color-surface-panel)] p-3">
                                     <dt className="text-[10px] uppercase text-[var(--color-text-muted)]">
-                                        Altitude MSL
+                                        {t("detail.altitudeMsl")}
                                     </dt>
                                     <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5">
                                         {formatAltitude(incident.altitude)}
@@ -775,7 +801,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 </div>
                                 <div className="bg-[var(--color-surface-panel)] p-3">
                                     <dt className="text-[10px] uppercase text-[var(--color-text-muted)]">
-                                        Resolved At
+                                        {t("detail.resolvedAt")}
                                     </dt>
                                     <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5">
                                         {incident.resolvedAt
@@ -788,7 +814,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             {incident.resolutionNotes && (
                                 <TacticalCallout
                                     tone="info"
-                                    title="Resolution Notes"
+                                    title={t("detail.resolutionNotes")}
                                     description={incident.resolutionNotes}
                                 />
                             )}
@@ -799,12 +825,12 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         <div className="p-5 flex flex-col gap-4">
                             <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
                                 <Clock className="w-4 h-4 text-slate-600" />
-                                <span>EVENT TIMELINE</span>
+                                <span>{t("detail.timelineHeading")}</span>
                             </div>
 
                             {!incident.timeline || incident.timeline.length === 0 ? (
                                 <p className="text-xs font-mono text-slate-400 py-2">
-                                    No timeline events recorded.
+                                    {t("detail.noTimeline")}
                                 </p>
                             ) : (
                                 <div className="flex flex-col gap-3">
@@ -818,8 +844,10 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                             </div>
                                             <div className="flex-1 pb-2 min-w-0">
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-xs font-semibold text-slate-900 capitalize">
-                                                        {(evt.event || "Event").replace(/_/g, " ")}
+                                                    <span className="text-xs font-semibold text-slate-900">
+                                                        {evt.event
+                                                            ? localizeServerText(evt.event, locale)
+                                                            : t("detail.eventFallback")}
                                                     </span>
                                                     <span className="text-[11px] font-mono text-slate-400 shrink-0 tabular-nums">
                                                         {formatTime(evt.timestamp)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Radio, Layers, ShieldAlert, RotateCcw } from "lucide-react";
@@ -33,6 +34,7 @@ import {
 } from "@/types";
 
 export default function ConflictsPage() {
+    const t = useTranslations("conflicts");
     const queryClient = useQueryClient();
     const { canResolveConflict } = usePermissions();
 
@@ -74,40 +76,43 @@ export default function ConflictsPage() {
     const acknowledgeMutation = useMutation({
         mutationFn: (id: string) => conflictService.acknowledge(id),
         onSuccess: () => {
-            toast.success("Conflict alert acknowledged");
+            toast.success(t("ackedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conflicts });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conflictsActive });
         },
-        meta: { defaultErrorMessage: "Failed to acknowledge conflict" },
+        meta: { defaultErrorMessage: t("ackFailed") },
     });
 
     const resolveMutation = useMutation({
         mutationFn: ({ id, payload }: { id: string; payload: ResolveConflictPayload }) =>
             conflictService.resolve(id, payload),
         onSuccess: () => {
-            toast.success("Conflict marked as resolved");
+            toast.success(t("resolvedToast"));
             setResolvingConflict(null);
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conflicts });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conflictsActive });
         },
-        meta: { defaultErrorMessage: "Failed to resolve conflict" },
+        meta: { defaultErrorMessage: t("resolveFailed") },
     });
 
     const evaluateMutation = useMutation({
         mutationFn: () => conflictService.evaluate(),
         onSuccess: (data) => {
             toast.success(
-                `Airspace scan completed: ${data.newConflictsDetected ?? 0} new, ${data.resolvedConflictsCount ?? 0} cleared`
+                t("scanCompletedToast", {
+                    newCount: data.newConflictsDetected ?? 0,
+                    clearedCount: data.resolvedConflictsCount ?? 0,
+                })
             );
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conflicts });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conflictsActive });
         },
-        meta: { defaultErrorMessage: "Failed to run conflict detection scan" },
+        meta: { defaultErrorMessage: t("scanFailed") },
     });
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
-            <PageHeader title="AIRSPACE CONFLICTS">
+            <PageHeader title={t("title")}>
                 <ChamferButton
                     variant="outline"
                     size="sm"
@@ -120,9 +125,7 @@ export default function ConflictsPage() {
                             evaluateMutation.isPending ? "animate-spin" : ""
                         }`}
                     />
-                    <span>
-                        {evaluateMutation.isPending ? "Scanning Airspace..." : "Run Airspace Scan"}
-                    </span>
+                    <span>{evaluateMutation.isPending ? t("scanning") : t("runScan")}</span>
                 </ChamferButton>
             </PageHeader>
 
@@ -142,7 +145,7 @@ export default function ConflictsPage() {
                             <div className="flex items-center gap-2">
                                 <ShieldAlert className="w-4 h-4 text-slate-600" />
                                 <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
-                                    TACTICAL CONFLICT RADAR & AIRSPACE
+                                    {t("radarHeader")}
                                 </span>
                             </div>
 
@@ -158,7 +161,7 @@ export default function ConflictsPage() {
                                     }`}
                                 >
                                     <Radio className="w-3.5 h-3.5" />
-                                    <span>LIVE TRAFFIC</span>
+                                    <span>{t("liveTraffic")}</span>
                                 </button>
 
                                 <button
@@ -172,7 +175,7 @@ export default function ConflictsPage() {
                                     }`}
                                 >
                                     <Layers className="w-3.5 h-3.5" />
-                                    <span>AIRSPACE</span>
+                                    <span>{t("airspaceLayer")}</span>
                                 </button>
                             </div>
                         </div>
@@ -199,11 +202,11 @@ export default function ConflictsPage() {
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">
                     <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        Active Conflicts
+                        {t("activeHeading")}
                     </h2>
                     {activeConflicts.length > 0 && (
                         <span className="text-xs font-mono text-slate-500 tabular-nums">
-                            {activeConflicts.length} active
+                            {t("activeCount", { count: activeConflicts.length })}
                         </span>
                     )}
                 </div>
@@ -211,8 +214,8 @@ export default function ConflictsPage() {
                 {isActiveError && activeConflicts.length === 0 ? (
                     <ErrorState
                         compact
-                        title="Unable to load active conflicts"
-                        description="The Conflict Service did not respond. Retry to check separation status."
+                        title={t("activeLoadErrorTitle")}
+                        description={t("activeLoadErrorDesc")}
                         onRetry={() => refetchActive()}
                     />
                 ) : (
@@ -231,11 +234,11 @@ export default function ConflictsPage() {
             <div className="flex flex-col gap-3 pt-1">
                 <div className="flex items-center justify-between gap-2">
                     <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        Resolved Conflict History
+                        {t("historyHeading")}
                     </h2>
                     {resolvedConflicts.length > 0 && (
                         <span className="text-xs font-mono text-slate-500 tabular-nums">
-                            {resolvedConflicts.length} resolved
+                            {t("resolvedCount", { count: resolvedConflicts.length })}
                         </span>
                     )}
                 </div>
@@ -243,7 +246,7 @@ export default function ConflictsPage() {
                 {isResolvedError && resolvedConflicts.length === 0 ? (
                     <ErrorState
                         compact
-                        title="Unable to load resolved conflict history"
+                        title={t("historyLoadErrorTitle")}
                         onRetry={() => refetchResolved()}
                     />
                 ) : (

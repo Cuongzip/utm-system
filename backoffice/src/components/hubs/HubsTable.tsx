@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Building2, Edit, MapPin, Power, PowerOff, Wrench, FilterX, Plus } from "lucide-react";
 import {
     ChamferCard,
@@ -66,6 +67,8 @@ export function HubsTable({
     onChangeStatus,
     onDeactivateHub,
 }: HubsTableProps) {
+    const t = useTranslations("hubs.table");
+    const tHubs = useTranslations("hubs");
     const [hubToDeactivate, setHubToDeactivate] = useState<Hub | null>(null);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(hubs);
@@ -74,7 +77,7 @@ export function HubsTable({
         const status = hub.status ?? ACTIVE_HUB_STATUS;
         const items: ActionMenuItem[] = [
             {
-                label: "Focus on Map",
+                label: t("focusOnMap"),
                 icon: <MapPin className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />,
                 onClick: () => onFocusOnMap(hub),
             },
@@ -82,20 +85,20 @@ export function HubsTable({
 
         if (canEditHubs) {
             items.push({
-                label: "Edit Specifications",
+                label: t("editSpecs"),
                 icon: <Edit className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />,
                 onClick: () => onEditHub(hub),
             });
 
             if (status === HUB_STATUS.ACTIVE) {
                 items.push({
-                    label: "Set Maintenance",
+                    label: t("setMaintenance"),
                     icon: <Wrench className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />,
                     onClick: () => onChangeStatus(hub, HUB_STATUS.MAINTENANCE),
                 });
             } else {
                 items.push({
-                    label: "Activate Hub",
+                    label: t("activateHub"),
                     icon: <Power className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />,
                     onClick: () => onChangeStatus(hub, HUB_STATUS.ACTIVE),
                 });
@@ -104,7 +107,7 @@ export function HubsTable({
 
         if (canManageHubs && status !== HUB_STATUS.INACTIVE) {
             items.push({
-                label: "Deactivate Hub",
+                label: t("deactivateHub"),
                 icon: <PowerOff className="w-3.5 h-3.5" aria-hidden="true" />,
                 danger: true,
                 onClick: () => setHubToDeactivate(hub),
@@ -120,7 +123,7 @@ export function HubsTable({
     return (
         <div className="flex flex-col gap-3 w-full h-full min-h-0">
             <ChamferCard size="lg" className="w-full flex flex-col flex-1 min-h-0">
-                <div className="flex-1 min-h-0 overflow-auto">
+                <div className="flex-1 min-h-0 overflow-auto utm-scroll">
                     <Table fixed={false}>
                         <TableHeader className="sticky top-0 z-10">
                             <TableRow>
@@ -130,7 +133,7 @@ export function HubsTable({
                                         compactCellClass
                                     )}
                                 >
-                                    HUB
+                                    {t("colHub")}
                                 </TableHead>
                                 <TableHead
                                     className={cn(
@@ -138,10 +141,12 @@ export function HubsTable({
                                         compactCellClass
                                     )}
                                 >
-                                    STATUS
+                                    {t("colStatus")}
                                 </TableHead>
                                 {!compact && (
-                                    <TableHead className="w-[170px]">LOCATION / ALT</TableHead>
+                                    <TableHead className="w-[170px]">
+                                        {t("colLocationAlt")}
+                                    </TableHead>
                                 )}
                                 <TableHead
                                     className={cn(
@@ -149,7 +154,7 @@ export function HubsTable({
                                         compactCellClass
                                     )}
                                 >
-                                    LOAD / CAP
+                                    {t("colLoadCap")}
                                 </TableHead>
                                 <TableHead
                                     className={cn(
@@ -157,7 +162,7 @@ export function HubsTable({
                                         compactCellClass
                                     )}
                                 >
-                                    AIRSPACE
+                                    {t("colAirspace")}
                                 </TableHead>
                                 <TableHead
                                     className={cn(
@@ -166,7 +171,11 @@ export function HubsTable({
                                     )}
                                     align="right"
                                 >
-                                    {compact ? <span className="sr-only">Actions</span> : "ACTIONS"}
+                                    {compact ? (
+                                        <span className="sr-only">{t("actionsSr")}</span>
+                                    ) : (
+                                        t("colActions")
+                                    )}
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -193,10 +202,10 @@ export function HubsTable({
                                         {hasActiveFilters && totalHubsCount > 0 ? (
                                             <EmptyState
                                                 icon={FilterX}
-                                                title="No hubs match your filters"
-                                                description="Adjust the search query or status filter to see registered vertiport hubs."
+                                                title={t("emptyFilteredTitle")}
+                                                description={t("emptyFilteredDesc")}
                                                 action={{
-                                                    label: "Clear Filters",
+                                                    label: t("clearFilters"),
                                                     onClick: onClearFilters,
                                                     variant: "outline",
                                                 }}
@@ -204,12 +213,12 @@ export function HubsTable({
                                         ) : (
                                             <EmptyState
                                                 icon={Building2}
-                                                title="No vertiport hubs registered"
-                                                description="Register a vertiport hub to define takeoff/landing coordinates, capacity, and airspace protection bounds."
+                                                title={t("emptyTitle")}
+                                                description={t("emptyDesc")}
                                                 action={
                                                     canManageHubs && onAddHub
                                                         ? {
-                                                              label: "Add Hub",
+                                                              label: tHubs("addHub"),
                                                               onClick: onAddHub,
                                                               icon: Plus,
                                                               variant: "chamfer",
@@ -318,10 +327,13 @@ export function HubsTable({
                                                             {metrics.activeFlights}/{capacity}
                                                         </span>
                                                         <span className="text-[10px] text-slate-500">
-                                                            {metrics.stationedDrones}{" "}
                                                             {metrics.stationedDrones === 1
-                                                                ? "drone"
-                                                                : "drones"}
+                                                                ? t("droneSingular", {
+                                                                      count: metrics.stationedDrones,
+                                                                  })
+                                                                : t("dronePlural", {
+                                                                      count: metrics.stationedDrones,
+                                                                  })}
                                                         </span>
                                                     </div>
                                                     <div className="h-1.5 w-full rounded-full bg-slate-200/80 overflow-hidden">
@@ -354,7 +366,9 @@ export function HubsTable({
                                             >
                                                 <ActionMenu
                                                     items={getActions(hub)}
-                                                    ariaLabel={`Actions for ${hub.code || hub.name}`}
+                                                    ariaLabel={t("actionsForAria", {
+                                                        hub: hub.code || hub.name || hub.id,
+                                                    })}
                                                 />
                                             </TableCell>
                                         </TableRow>
@@ -369,7 +383,7 @@ export function HubsTable({
                     currentPage={currentPage}
                     totalPages={totalPages}
                     totalItems={totalItems}
-                    itemLabel="hubs"
+                    itemLabel={tHubs("itemLabel")}
                     onPageChange={setCurrentPage}
                 />
             </ChamferCard>
@@ -383,20 +397,19 @@ export function HubsTable({
                         setHubToDeactivate(null);
                     }
                 }}
-                title="Deactivate Vertiport Hub"
+                title={t("deactivateTitle")}
                 description={
                     <span>
-                        Switch{" "}
+                        {t("deactivateDescPrefix")}
                         <strong className="text-slate-900">
                             {hubToDeactivate?.name} ({hubToDeactivate?.code})
-                        </strong>{" "}
-                        to <strong className="text-slate-900">INACTIVE</strong>? The hub record and
-                        existing drone home assignments remain preserved, new departures and
-                        arrivals will be blocked, and deactivation is prevented if any flights are
-                        currently active at this hub.
+                        </strong>
+                        {t("deactivateDescMiddle")}
+                        <strong className="text-slate-900">{t("deactivateDescStatus")}</strong>
+                        {t("deactivateDescSuffix")}
                     </span>
                 }
-                confirmText="Deactivate Hub"
+                confirmText={t("deactivateHub")}
             />
         </div>
     );

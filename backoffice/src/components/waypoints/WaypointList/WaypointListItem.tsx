@@ -1,9 +1,10 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AlertCircle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib";
 import { formatAltitude, formatCoordinates } from "@/utils";
-import { STOPOVER_TYPE, STOPOVER_TYPE_LABELS, WAYPOINT_TYPE, type Hub } from "@/types";
+import { STOPOVER_TYPE, WAYPOINT_TYPE, type Hub } from "@/types";
 import type { WaypointItem } from "../types";
 
 export interface WaypointListItemProps<T extends WaypointItem> {
@@ -33,14 +34,15 @@ export function WaypointListItem<T extends WaypointItem>({
     onMoveDown,
     onDelete,
 }: WaypointListItemProps<T>) {
+    const t = useTranslations("waypoints");
     const isHubStop = waypoint.waypointType === WAYPOINT_TYPE.HUB || Boolean(waypoint.hubId);
     const displayName =
         (isHubStop ? matchedHub?.name || waypoint.name : waypoint.name) ||
-        `Waypoint ${displaySequence}`;
+        t("defaultWaypointName", { seq: displaySequence });
     const coordStr = formatCoordinates(waypoint);
     const stopoverText =
         waypoint.stopoverType && waypoint.stopoverType !== STOPOVER_TYPE.NONE
-            ? `${STOPOVER_TYPE_LABELS[waypoint.stopoverType].split(" ")[0]}${
+            ? `${t(`stopoverShort.${waypoint.stopoverType}`)}${
                   waypoint.groundTimeMinutes != null && waypoint.groundTimeMinutes > 0
                       ? ` ${waypoint.groundTimeMinutes}m`
                       : ""
@@ -48,7 +50,10 @@ export function WaypointListItem<T extends WaypointItem>({
             : null;
     const metaText = isHubStop
         ? [matchedHub?.code, stopoverText, coordStr].filter(Boolean).join(" • ")
-        : `Alt ${formatAltitude(waypoint.altitude ?? 50)} • ${coordStr}`;
+        : t("altMeta", {
+              alt: formatAltitude(waypoint.altitude ?? 50),
+              coords: coordStr,
+          });
 
     return (
         <div
@@ -89,7 +94,7 @@ export function WaypointListItem<T extends WaypointItem>({
                         {hasError && (
                             <span className="text-[10px] text-red-500 font-sans font-medium flex items-center gap-0.5 shrink-0">
                                 <AlertCircle className="w-3 h-3 text-red-500" />
-                                Invalid
+                                {t("invalid")}
                             </span>
                         )}
                     </div>
@@ -106,8 +111,8 @@ export function WaypointListItem<T extends WaypointItem>({
                         disabled={isFirst}
                         onClick={onMoveUp}
                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                        title="Move point up"
-                        aria-label="Move point up"
+                        title={t("moveUp")}
+                        aria-label={t("moveUp")}
                     >
                         <ChevronUp className="w-3.5 h-3.5" />
                     </button>
@@ -116,8 +121,8 @@ export function WaypointListItem<T extends WaypointItem>({
                         disabled={isLast}
                         onClick={onMoveDown}
                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-card)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                        title="Move point down"
-                        aria-label="Move point down"
+                        title={t("moveDown")}
+                        aria-label={t("moveDown")}
                     >
                         <ChevronDown className="w-3.5 h-3.5" />
                     </button>
@@ -125,8 +130,8 @@ export function WaypointListItem<T extends WaypointItem>({
                         type="button"
                         onClick={onDelete}
                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-tech-red)] hover:bg-red-50 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-                        title="Delete point"
-                        aria-label="Delete point"
+                        title={t("deletePoint")}
+                        aria-label={t("deletePoint")}
                     >
                         <Trash2 className="w-3.5 h-3.5" />
                     </button>

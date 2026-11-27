@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Clock, AlertCircle } from "lucide-react";
 import { DateTimePicker } from "@/components/ui";
 
@@ -22,9 +23,10 @@ export function FlightScheduleTab({
     isReadOnly = false,
     fieldErrors = {},
 }: FlightScheduleTabProps) {
+    const t = useTranslations("flights.schedule");
     return (
         <div className="space-y-4">
-            <label className="form-label block">Flight Operation Window</label>
+            <label className="form-label block">{t("windowLabel")}</label>
 
             <div className="p-4 rounded-md border border-[var(--color-border-dark)] bg-[var(--color-surface-card)] shadow-xs flex flex-col gap-3.5">
                 <div className="flex items-start gap-3.5">
@@ -33,10 +35,10 @@ export function FlightScheduleTab({
                     </div>
                     <div className="flex-1">
                         <span className="font-semibold text-xs text-[var(--color-text-primary)] block">
-                            Scheduled Flight Times
+                            {t("cardTitle")}
                         </span>
                         <span className="text-xs text-[var(--color-text-secondary)] leading-relaxed block mt-0.5">
-                            Defined 4D departure and arrival clearance window
+                            {t("cardDesc")}
                         </span>
                     </div>
                 </div>
@@ -44,14 +46,14 @@ export function FlightScheduleTab({
                 <div className="pt-2 border-t border-[var(--color-border-default)] space-y-3">
                     <div className="form-group">
                         <label className="form-label block text-[11px] font-mono text-[var(--color-text-muted)] mb-1">
-                            SCHEDULED DEPARTURE TIME <span className="text-red-500">*</span>
+                            {t("departureLabel")} <span className="text-red-500">*</span>
                         </label>
                         <DateTimePicker
                             value={scheduledDeparture}
                             onChange={onScheduledDepartureChange}
                             disabled={isReadOnly}
                             error={Boolean(fieldErrors.scheduledDeparture)}
-                            placeholder="Select departure date & time"
+                            placeholder={t("departurePlaceholder")}
                         />
                         {fieldErrors.scheduledDeparture && (
                             <span className="text-xs text-red-500 mt-1 block font-mono">
@@ -62,14 +64,14 @@ export function FlightScheduleTab({
 
                     <div className="form-group">
                         <label className="form-label block text-[11px] font-mono text-[var(--color-text-muted)] mb-1">
-                            SCHEDULED ARRIVAL TIME <span className="text-red-500">*</span>
+                            {t("arrivalLabel")} <span className="text-red-500">*</span>
                         </label>
                         <DateTimePicker
                             value={scheduledArrival}
                             onChange={onScheduledArrivalChange}
                             disabled={isReadOnly}
                             error={Boolean(fieldErrors.scheduledArrival)}
-                            placeholder="Select arrival date & time"
+                            placeholder={t("arrivalPlaceholder")}
                         />
                         {fieldErrors.scheduledArrival && (
                             <span className="text-xs text-red-500 mt-1 block font-mono">
@@ -81,12 +83,15 @@ export function FlightScheduleTab({
                     {durationMinutes !== null ? (
                         <div className="p-2.5 rounded bg-[var(--color-surface-panel)] border border-[var(--color-border-default)] flex items-center justify-between text-xs font-mono">
                             <span className="text-[var(--color-text-muted)]">
-                                ESTIMATED DURATION:
+                                {t("estimatedDuration")}
                             </span>
                             <span className="font-bold text-[var(--color-text-primary)]">
                                 {Math.floor(durationMinutes / 60) > 0
-                                    ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`
-                                    : `${durationMinutes} mins`}
+                                    ? t("durationHm", {
+                                          h: Math.floor(durationMinutes / 60),
+                                          m: durationMinutes % 60,
+                                      })
+                                    : t("durationMins", { m: durationMinutes })}
                             </span>
                         </div>
                     ) : (
@@ -94,7 +99,7 @@ export function FlightScheduleTab({
                         scheduledArrival && (
                             <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 flex items-center gap-1.5 font-mono">
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                <span>Arrival time must be later than departure time</span>
+                                <span>{t("invalidOrderWarning")}</span>
                             </div>
                         )
                     )}

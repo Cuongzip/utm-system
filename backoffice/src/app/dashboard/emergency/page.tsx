@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { PageHeader, Switch, ChamferButton, ErrorState } from "@/components/ui";
 import { ShieldCheck, Clock, Sliders } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ import {
 } from "@/types";
 
 export default function EmergencyResponsePage() {
+    const t = useTranslations("emergency");
     const queryClient = useQueryClient();
     const { canManageEmergencyProtocols } = usePermissions();
 
@@ -58,16 +60,12 @@ export default function EmergencyResponsePage() {
         onSuccess: (res) => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyConfig });
             if (res.mode === OPERATION_MODE.SUPERVISED) {
-                toast.success(
-                    "Supervised Mode enabled: Operator confirmation required for all critical flight actions"
-                );
+                toast.success(t("supervisedEnabledToast"));
             } else {
-                toast.warning(
-                    "Autonomous Safety Mode enabled: Emergency failsafes execute automatically"
-                );
+                toast.warning(t("autoEnabledToast"));
             }
         },
-        meta: { defaultErrorMessage: "Failed to update operation mode" },
+        meta: { defaultErrorMessage: t("modeUpdateFailed") },
     });
 
     const confirmMutation = useMutation({
@@ -79,12 +77,12 @@ export default function EmergencyResponsePage() {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
             if (variables.approved) {
-                toast.success("Failsafe action confirmed and dispatched to target drone");
+                toast.success(t("actionConfirmedToast"));
             } else {
-                toast.success("Failsafe action rejected and incident closed");
+                toast.success(t("actionRejectedToast"));
             }
         },
-        meta: { defaultErrorMessage: "Failed to process emergency incident action" },
+        meta: { defaultErrorMessage: t("confirmFailed") },
     });
 
     const resolveMutation = useMutation({
@@ -95,9 +93,9 @@ export default function EmergencyResponsePage() {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyPending });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyStats });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyIncidents() });
-            toast.success("Emergency incident resolved");
+            toast.success(t("resolvedToast"));
         },
-        meta: { defaultErrorMessage: "Failed to resolve emergency incident" },
+        meta: { defaultErrorMessage: t("resolveFailed") },
     });
 
     const handleToggleSupervisedMode = () => {
@@ -145,7 +143,7 @@ export default function EmergencyResponsePage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="EMERGENCY RESPONSE">
+            <PageHeader title={t("title")}>
                 {pendingConfirmations.length > 0 && (
                     <ChamferButton
                         variant="dark"
@@ -153,25 +151,25 @@ export default function EmergencyResponsePage() {
                         onClick={() => setManualConfirmationOpen(true)}
                     >
                         <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Review Pending ({pendingConfirmations.length})</span>
+                        <span>{t("reviewPending", { count: pendingConfirmations.length })}</span>
                     </ChamferButton>
                 )}
 
                 <ChamferButton variant="outline" size="sm" onClick={() => setProtocolsOpen(true)}>
                     <Sliders className="w-3.5 h-3.5" />
-                    <span>Protocols</span>
+                    <span>{t("protocols")}</span>
                 </ChamferButton>
 
                 <div
                     className="rounded-md flex items-center gap-3 px-3.5 py-1.5 bg-[var(--color-surface-panel)] border border-[var(--color-border-default)] select-none"
-                    title="Toggle Operator Supervised Mode"
+                    title={t("toggleSupervised")}
                 >
                     <div className="flex items-center gap-2">
                         <ShieldCheck
                             className={`w-4 h-4 ${isSupervisedMode ? "text-slate-700" : "text-slate-400"}`}
                         />
                         <span className="text-xs font-mono font-bold text-slate-800">
-                            Supervised Mode
+                            {t("supervisedMode")}
                         </span>
                     </div>
 
@@ -179,7 +177,7 @@ export default function EmergencyResponsePage() {
                         checked={isSupervisedMode}
                         disabled={!canManageEmergencyProtocols || setModeMutation.isPending}
                         onCheckedChange={() => handleToggleSupervisedMode()}
-                        aria-label="Toggle Operator Supervised Mode"
+                        aria-label={t("toggleSupervised")}
                     />
                 </div>
             </PageHeader>
@@ -196,8 +194,8 @@ export default function EmergencyResponsePage() {
 
             {isActiveError && activeIncidents.length === 0 ? (
                 <ErrorState
-                    title="Unable to load active emergency incidents"
-                    description="The Emergency Service did not respond. Retry immediately to restore safety monitoring."
+                    title={t("activeLoadErrorTitle")}
+                    description={t("activeLoadErrorDesc")}
                     onRetry={() => refetchActive()}
                 />
             ) : (

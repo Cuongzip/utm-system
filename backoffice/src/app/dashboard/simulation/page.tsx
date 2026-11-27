@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
     ChamferButton,
     PageHeader,
@@ -23,6 +24,7 @@ import {
 type SimulationTab = "sessions" | "devices";
 
 export default function SimulationPage() {
+    const t = useTranslations("simulation");
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<SimulationTab>("sessions");
 
@@ -42,7 +44,7 @@ export default function SimulationPage() {
         queryKey: QUERY_KEYS.simulation,
         fetchFn: fetchSessions,
         deleteFn: deleteSession,
-        entityName: "Simulation Session",
+        entityName: t("entityName"),
         refetchInterval: 3000,
     });
 
@@ -56,41 +58,41 @@ export default function SimulationPage() {
         mutationFn: (payload: CreateSimulationSessionPayload) =>
             simulationService.createSession(payload),
         onSuccess: () => {
-            toast.success("Simulation session launched successfully");
+            toast.success(t("launchedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
         },
-        meta: { defaultErrorMessage: "Failed to launch simulation session" },
+        meta: { defaultErrorMessage: t("launchError") },
     });
 
     const pauseSessionMutation = useMutation({
         mutationFn: (id: string) => simulationService.pauseSession(id),
         onSuccess: () => {
-            toast.success("Simulation paused");
+            toast.success(t("pausedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
         },
-        meta: { defaultErrorMessage: "Failed to pause simulation" },
+        meta: { defaultErrorMessage: t("pauseError") },
     });
 
     const resumeSessionMutation = useMutation({
         mutationFn: (id: string) => simulationService.resumeSession(id),
         onSuccess: () => {
-            toast.success("Simulation resumed");
+            toast.success(t("resumedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
         },
-        meta: { defaultErrorMessage: "Failed to resume simulation" },
+        meta: { defaultErrorMessage: t("resumeError") },
     });
 
     const stopSessionMutation = useMutation({
         mutationFn: (id: string) => simulationService.stopSession(id),
         onSuccess: () => {
-            toast.success("Simulation stopped");
+            toast.success(t("stoppedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.drones });
         },
-        meta: { defaultErrorMessage: "Failed to stop simulation" },
+        meta: { defaultErrorMessage: t("stopError") },
     });
 
     const handleOpenLaunchModal = useCallback(() => {
@@ -102,36 +104,36 @@ export default function SimulationPage() {
     const powerOnMutation = useMutation({
         mutationFn: (id: string) => simulationService.powerOnDevice(id),
         onSuccess: (_data, id) => {
-            toast.success(`Device ${id.slice(0, 8)} powered ON`);
+            toast.success(t("poweredOnToast", { id: id.slice(0, 8) }));
             refetchDevices();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
         },
-        meta: { defaultErrorMessage: "Failed to power ON device" },
+        meta: { defaultErrorMessage: t("powerOnError") },
     });
 
     const powerOffMutation = useMutation({
         mutationFn: (id: string) => simulationService.powerOffDevice(id),
         onSuccess: (_data, id) => {
-            toast.success(`Device ${id.slice(0, 8)} powered OFF`);
+            toast.success(t("poweredOffToast", { id: id.slice(0, 8) }));
             refetchDevices();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
         },
-        meta: { defaultErrorMessage: "Failed to power OFF device" },
+        meta: { defaultErrorMessage: t("powerOffError") },
     });
 
     const onlineCount = devices.filter((d) => d.connectionStatus === ONLINE_DEVICE_STATUS).length;
 
     const tabs: readonly UnderlineTabItem<SimulationTab>[] = [
-        { id: "sessions", label: "Flight Sessions", count: sessions.length },
-        { id: "devices", label: "Virtual Devices", count: devices.length },
+        { id: "sessions", label: t("tabSessions"), count: sessions.length },
+        { id: "devices", label: t("tabDevices"), count: devices.length },
     ];
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 w-full">
-            <PageHeader title="SIMULATION">
+            <PageHeader title={t("title")}>
                 <ChamferButton variant="dark" size="sm" onClick={handleOpenLaunchModal}>
                     <Plus className="w-4 h-4 text-white" />
-                    <span>Launch Simulation</span>
+                    <span>{t("launchBtn")}</span>
                 </ChamferButton>
             </PageHeader>
 
@@ -139,12 +141,12 @@ export default function SimulationPage() {
                 tabs={tabs}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                ariaLabel="Simulation views"
+                ariaLabel={t("viewsAria")}
                 rightSlot={
                     activeTab === "devices" && devices.length > 0 ? (
                         <span className="text-xs font-mono text-[var(--color-text-secondary)]">
                             <strong className="text-emerald-600 tabular-nums">{onlineCount}</strong>{" "}
-                            / {devices.length} Online
+                            / {devices.length} {t("onlineCountLabel")}
                         </span>
                     ) : undefined
                 }
@@ -153,8 +155,8 @@ export default function SimulationPage() {
             {activeTab === "sessions" ? (
                 isError && sessions.length === 0 ? (
                     <ErrorState
-                        title="Unable to load simulation sessions"
-                        description="The Simulation Service could not be reached. Please try again."
+                        title={t("loadErrorTitle")}
+                        description={t("loadErrorDesc")}
                         onRetry={refreshSessions}
                     />
                 ) : (

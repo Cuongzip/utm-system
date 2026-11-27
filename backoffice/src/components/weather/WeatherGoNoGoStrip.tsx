@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useQueries } from "@tanstack/react-query";
 import { CloudSun } from "lucide-react";
 import { ChamferCard, EmptyState, Skeleton, StatusBadge } from "@/components/ui";
 import { weatherAisService } from "@/services";
 import { QUERY_KEYS } from "@/hooks";
+import type { AppLocale } from "@/i18n";
+import { localizeServerText } from "@/utils";
 import { HUB_STATUS, type Hub, type HubGoNoGo } from "@/types";
 
 interface WeatherGoNoGoStripProps {
@@ -21,6 +24,8 @@ export function WeatherGoNoGoStrip({
     onSelectHub,
     loadingHubs,
 }: WeatherGoNoGoStripProps) {
+    const locale = useLocale() as AppLocale;
+    const t = useTranslations("weather");
     const [showInactive, setShowInactive] = useState(false);
 
     const { activeHubs, inactiveCount } = useMemo(() => {
@@ -69,8 +74,8 @@ export function WeatherGoNoGoStrip({
             <ChamferCard size="md">
                 <EmptyState
                     icon={CloudSun}
-                    title="No Vertiport Hubs Configured"
-                    description="Register a vertiport hub to evaluate weather status."
+                    title={t("matrix.noHubsTitle")}
+                    description={t("matrix.noHubsDesc")}
                 />
             </ChamferCard>
         );
@@ -80,7 +85,7 @@ export function WeatherGoNoGoStrip({
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
-                    Vertiport Go / No-Go Matrix ({visibleHubs.length})
+                    {t("matrix.heading", { count: visibleHubs.length })}
                 </span>
                 {inactiveCount > 0 && activeHubs.length > 0 && (
                     <button
@@ -89,8 +94,8 @@ export function WeatherGoNoGoStrip({
                         className="text-[11px] font-mono text-slate-500 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded px-1.5 py-0.5"
                     >
                         {showInactive
-                            ? `Hide inactive (${inactiveCount})`
-                            : `Show inactive (${inactiveCount})`}
+                            ? t("matrix.hideInactive", { count: inactiveCount })
+                            : t("matrix.showInactive", { count: inactiveCount })}
                     </button>
                 )}
             </div>
@@ -108,7 +113,7 @@ export function WeatherGoNoGoStrip({
                             : undefined;
                     const alertReason =
                         verdict !== "GO" && data?.reasons && data.reasons.length > 0
-                            ? data.reasons[0]
+                            ? localizeServerText(data.reasons[0], locale)
                             : undefined;
 
                     return (
@@ -135,10 +140,7 @@ export function WeatherGoNoGoStrip({
                                     ) : query?.isError ? (
                                         <StatusBadge status="offline" label="N/A" />
                                     ) : (
-                                        <StatusBadge
-                                            status={verdict}
-                                            label={verdict.replace(/_/g, " ")}
-                                        />
+                                        <StatusBadge status={verdict} />
                                     )}
                                 </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import {
@@ -104,6 +105,8 @@ export function DashboardTacticalMap({
     airspaceZones = [],
     telemetryMap = {},
 }: DashboardTacticalMapProps) {
+    const t = useTranslations("dashboard");
+    const tc = useTranslations("controlCenter");
     const [filterTraffic, setFilterTraffic] = useState(true);
     const [filterAirspace, setFilterAirspace] = useState(true);
     const [filterHubs, setFilterHubs] = useState(true);
@@ -155,7 +158,7 @@ export function DashboardTacticalMap({
 
     const handleReset = () => {
         setResetTrigger((prev) => prev + 1);
-        toast.info("Map perspective reset to tactical bounds");
+        toast.info(t("resetMapToast"));
     };
 
     const handleToggleForesight = () => {
@@ -178,7 +181,7 @@ export function DashboardTacticalMap({
             header={
                 <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)] z-10">
                     <span className="text-xs font-bold font-mono tracking-wider text-[var(--color-text-primary)] uppercase">
-                        TACTICAL MAP
+                        {t("tacticalMapTitle")}
                     </span>
 
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -193,7 +196,7 @@ export function DashboardTacticalMap({
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            LIVE TRAFFIC ({activeFlights.length})
+                            {t("liveTrafficCount", { count: activeFlights.length })}
                         </button>
                         <button
                             type="button"
@@ -206,7 +209,7 @@ export function DashboardTacticalMap({
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            AIRSPACE
+                            {tc("layerAirspace")}
                         </button>
                         <button
                             type="button"
@@ -219,7 +222,7 @@ export function DashboardTacticalMap({
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            HUBS
+                            {tc("layerHubs")}
                         </button>
                         <button
                             type="button"
@@ -232,7 +235,7 @@ export function DashboardTacticalMap({
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            ADS-B
+                            {tc("layerAdsb")}
                             {filterAdsb && adsbData?.aircraft
                                 ? ` (${adsbData.aircraft.length})`
                                 : ""}
@@ -248,7 +251,7 @@ export function DashboardTacticalMap({
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            4D FORESIGHT
+                            {t("foresightBtn")}
                         </button>
                     </div>
                 </div>
@@ -262,7 +265,7 @@ export function DashboardTacticalMap({
                             className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-sm text-[11px] font-mono font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                         >
                             <RotateCcw className="w-3.5 h-3.5 text-slate-300" aria-hidden="true" />
-                            <span>Reset</span>
+                            <span>{t("resetMap")}</span>
                         </button>
                     </div>
 
@@ -274,7 +277,9 @@ export function DashboardTacticalMap({
                                 setSimulatedPrediction(sim);
                                 setFrameIndex(0);
                                 toast.success(
-                                    `Resolution preview loaded (${sim.predictedConflicts?.length ?? 0} remaining conflicts).`
+                                    t("resolutionPreviewToast", {
+                                        count: sim.predictedConflicts?.length ?? 0,
+                                    })
                                 );
                             }}
                             onClose={() => setSelectedConflict(null)}

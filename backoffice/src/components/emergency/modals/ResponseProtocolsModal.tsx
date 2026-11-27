@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Sliders, Edit2 } from "lucide-react";
@@ -39,6 +40,8 @@ export function ResponseProtocolsModal({
     onClose,
     canManageProtocols = true,
 }: ResponseProtocolsModalProps) {
+    const t = useTranslations("emergency.modals.protocols");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const { data: protocolsData, isLoading: protocolsLoading } = useEmergencyProtocols(isOpen);
 
@@ -50,11 +53,11 @@ export function ResponseProtocolsModal({
         mutationFn: ({ id, payload }: { id: string; payload: UpdateEmergencyProtocolPayload }) =>
             emergencyService.updateProtocol(id, payload),
         onSuccess: () => {
-            toast.success("Emergency protocol updated");
+            toast.success(t("updatedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emergencyProtocols });
             setEditingId(null);
         },
-        meta: { defaultErrorMessage: "Failed to update response protocol" },
+        meta: { defaultErrorMessage: t("updateFailed") },
     });
 
     if (!isOpen) return null;
@@ -95,7 +98,7 @@ export function ResponseProtocolsModal({
 
     const footer = (
         <ChamferButton variant="outline" size="sm" clip="xs" type="button" onClick={handleClose}>
-            Close
+            {tCommon("close")}
         </ChamferButton>
     );
 
@@ -103,7 +106,7 @@ export function ResponseProtocolsModal({
         <Modal
             isOpen={isOpen}
             onClose={handleClose}
-            title="Response Protocols"
+            title={t("title")}
             maxWidth="560px"
             footer={footer}
         >
@@ -111,7 +114,7 @@ export function ResponseProtocolsModal({
                 <div
                     role="status"
                     aria-busy="true"
-                    aria-label="Loading configured protocols"
+                    aria-label={t("loadingAria")}
                     className="border border-[var(--color-border-default)] rounded-md divide-y divide-[var(--color-border-default)] bg-[var(--color-surface-panel)]"
                 >
                     {Array.from({ length: 3 }).map((_, idx) => (
@@ -123,14 +126,10 @@ export function ResponseProtocolsModal({
                             <Skeleton className="h-6 w-12 rounded-full" />
                         </div>
                     ))}
-                    <span className="sr-only">Loading configured protocols...</span>
+                    <span className="sr-only">{t("loadingAria")}</span>
                 </div>
             ) : protocols.length === 0 ? (
-                <EmptyState
-                    icon={Sliders}
-                    title="No Protocols Configured"
-                    description="No response protocols currently registered in the emergency controller."
-                />
+                <EmptyState icon={Sliders} title={t("emptyTitle")} description={t("emptyDesc")} />
             ) : (
                 <div className="border border-[var(--color-border-default)] rounded-md divide-y divide-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
                     {protocols.map((protocol) => {
@@ -144,15 +143,17 @@ export function ResponseProtocolsModal({
                                             {protocol.name}
                                         </div>
                                         <div className="text-xs font-mono text-[var(--color-text-muted)]">
-                                            Action:{" "}
+                                            {t("actionPrefix")}{" "}
                                             <span className="font-bold text-slate-800">
                                                 {protocol.responseAction}
                                             </span>
                                             {protocol.confirmationTimeoutSeconds != null && (
                                                 <span>
                                                     {" "}
-                                                    · Timeout: {protocol.confirmationTimeoutSeconds}
-                                                    s
+                                                    ·{" "}
+                                                    {t("timeoutPrefix", {
+                                                        sec: protocol.confirmationTimeoutSeconds,
+                                                    })}
                                                 </span>
                                             )}
                                         </div>
@@ -168,8 +169,8 @@ export function ResponseProtocolsModal({
                                                         : startEditing(protocol)
                                                 }
                                                 className="btn-icon"
-                                                title="Edit protocol action and timeout"
-                                                aria-label={`Edit ${protocol.name}`}
+                                                title={t("editTitle")}
+                                                aria-label={t("editAria", { name: protocol.name })}
                                             >
                                                 <Edit2 className="w-3.5 h-3.5" />
                                             </button>
@@ -183,7 +184,7 @@ export function ResponseProtocolsModal({
                                             onCheckedChange={(checked) =>
                                                 handleToggleActive(protocol, checked)
                                             }
-                                            aria-label={`Toggle ${protocol.name}`}
+                                            aria-label={t("toggleAria", { name: protocol.name })}
                                         />
                                     </div>
                                 </div>
@@ -196,7 +197,7 @@ export function ResponseProtocolsModal({
                                                     className="form-label"
                                                     htmlFor={actionSelectId}
                                                 >
-                                                    Response Action
+                                                    {t("responseActionLabel")}
                                                 </label>
                                                 <CustomSelect
                                                     id={actionSelectId}
@@ -209,7 +210,7 @@ export function ResponseProtocolsModal({
                                             </div>
                                             <FormInput
                                                 id={`timeout-${protocol.id}`}
-                                                label="Timeout (seconds)"
+                                                label={t("timeoutLabel")}
                                                 type="number"
                                                 min={0}
                                                 step={1}
@@ -225,7 +226,7 @@ export function ResponseProtocolsModal({
                                                 onClick={() => setEditingId(null)}
                                                 disabled={updateMutation.isPending}
                                             >
-                                                Cancel
+                                                {tCommon("cancel")}
                                             </ChamferButton>
                                             <ChamferButton
                                                 size="xs"
@@ -233,7 +234,7 @@ export function ResponseProtocolsModal({
                                                 disabled={updateMutation.isPending}
                                                 onClick={() => handleSaveInline(protocol)}
                                             >
-                                                Save
+                                                {tCommon("save")}
                                             </ChamferButton>
                                         </div>
                                     </div>

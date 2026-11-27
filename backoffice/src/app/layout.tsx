@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { LocaleProvider } from "@/providers/LocaleProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,11 +15,13 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" className="h-full antialiased">
+        <html lang="en" suppressHydrationWarning className="h-full antialiased">
             <body className="min-h-full flex flex-col">
                 <QueryProvider>
-                    {children}
-                    <Toaster />
+                    <LocaleProvider>
+                        {children}
+                        <Toaster />
+                    </LocaleProvider>
                 </QueryProvider>
             </body>
         </html>

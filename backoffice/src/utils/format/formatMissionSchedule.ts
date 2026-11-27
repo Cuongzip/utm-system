@@ -1,5 +1,7 @@
+import { getCurrentLocale, MESSAGES } from "@/i18n";
 import { MISSION_SCHEDULE_TYPE } from "@/types";
 
 export function formatMissionSchedule(scheduleType?: string | null): string {
-    return scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED ? "Scheduled" : "Immediate";
+    const common = MESSAGES[getCurrentLocale()].common;
+    return scheduleType === MISSION_SCHEDULE_TYPE.SCHEDULED ? common.scheduled : common.immediate;
 }

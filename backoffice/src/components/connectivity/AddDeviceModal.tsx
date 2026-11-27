@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useForm, Controller, type Path, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, CustomSelect, FormInput, AutoGenInput, type SelectOption } from "@/components/ui";
 import { useDronesAll } from "@/hooks";
 import { parseApiError } from "@/utils";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { registerDeviceBody } from "@/generated";
 import type { DeviceRegistrationPayload } from "@/types";
 
@@ -16,6 +18,9 @@ export interface AddDeviceModalProps {
 }
 
 export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProps) {
+    const t = useTranslations("connectivity.addModal");
+    const tConn = useTranslations("connectivity");
+    const locale = useLocale() as AppLocale;
     const { data: drones = [], isLoading: dronesLoading } = useDronesAll();
     const [loading, setLoading] = useState(false);
 
@@ -50,10 +55,12 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
             value: drone.id,
             label: drone.registrationNumber
                 ? `${drone.registrationNumber}${drone.model ? ` — ${drone.model}` : ""}`
-                : `${drone.model || "Drone"} (${drone.id.substring(0, 8)})`,
-            description: drone.status ? drone.status.toUpperCase() : undefined,
+                : `${drone.model || t("droneFallback")} (${drone.id.substring(0, 8)})`,
+            description: drone.status
+                ? (translateStatusLabel(drone.status, locale) ?? drone.status.toUpperCase())
+                : undefined,
         }));
-    }, [drones]);
+    }, [drones, locale, t]);
 
     const onFormSubmit = async (data: DeviceRegistrationPayload) => {
         try {
@@ -66,7 +73,7 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
             await onSubmit(payload);
             onClose();
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to register device");
+            const parsed = parseApiError(err, tConn("registerError"));
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 Object.entries(parsed.fieldErrors).forEach(([field, msg]) => {
                     setError(field as Path<DeviceRegistrationPayload>, { message: msg });
@@ -81,15 +88,16 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Register Drone Device"
+            title={t("title")}
             onSubmit={handleSubmit(onFormSubmit)}
             loading={loading}
-            submitText="Register Device"
-            loadingText="Registering..."
+            submitText={tConn("registerDevice")}
+            loadingText={t("loadingText")}
         >
             <div className="form-group">
                 <label className="form-label" htmlFor="droneId">
-                    Drone<span className="text-red-500">*</span>
+                    {t("droneLabel")}
+                    <span className="text-red-500">*</span>
                 </label>
                 <Controller
                     name="droneId"
@@ -101,9 +109,7 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
                             onValueChange={field.onChange}
                             options={droneOptions}
                             placeholder={
-                                dronesLoading
-                                    ? "Loading drones..."
-                                    : "Select drone by registration number..."
+                                dronesLoading ? t("loadingDrones") : t("selectDronePlaceholder")
                             }
                             disabled={loading || dronesLoading}
                             error={Boolean(errors.droneId)}
@@ -115,8 +121,8 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
 
             <AutoGenInput
                 id="deviceIdentifier"
-                label="Device Identifier"
-                manualPlaceholder="e.g. DEV-UTM-0091"
+                label={t("deviceIdLabel")}
+                manualPlaceholder={t("deviceIdPlaceholder")}
                 required
                 error={errors.deviceIdentifier?.message}
                 {...register("deviceIdentifier")}
@@ -124,8 +130,8 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
 
             <FormInput
                 id="certificateFingerprint"
-                label="Certificate Fingerprint (Optional)"
-                placeholder="e.g. SHA256:4a:5b:6c..."
+                label={t("fingerprintLabel")}
+                placeholder={t("fingerprintPlaceholder")}
                 error={errors.certificateFingerprint?.message}
                 {...register("certificateFingerprint")}
             />

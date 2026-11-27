@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { PageHeader, ChamferButton, ErrorState } from "@/components/ui";
 import { RotateCw, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +29,8 @@ import {
 } from "@/types";
 
 export default function ConnectivityPage() {
+    const t = useTranslations("connectivity");
+    const tCommon = useTranslations("common");
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
     const [certDevice, setCertDevice] = useState<DeviceRegistration | null>(null);
     const queryClient = useQueryClient();
@@ -65,31 +68,31 @@ export default function ConnectivityPage() {
         mutationFn: (payload: DeviceRegistrationPayload) =>
             connectivityService.registerDevice(payload),
         onSuccess: () => {
-            toast.success("Device registered successfully");
+            toast.success(t("registeredToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivityStatus });
         },
-        meta: { defaultErrorMessage: "Failed to register device" },
+        meta: { defaultErrorMessage: t("registerError") },
     });
 
     const heartbeatMutation = useMutation({
         mutationFn: (id: string) => connectivityService.sendHeartbeat(id),
         onSuccess: () => {
-            toast.success("Device heartbeat pinged successfully");
+            toast.success(t("heartbeatToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivityStatus });
         },
-        meta: { defaultErrorMessage: "Failed to ping device heartbeat" },
+        meta: { defaultErrorMessage: t("heartbeatError") },
     });
 
     const revokeDeviceMutation = useMutation({
         mutationFn: (id: string) => connectivityService.revokeDevice(id),
         onSuccess: () => {
-            toast.success("Device registration revoked");
+            toast.success(t("revokedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivityStatus });
         },
-        meta: { defaultErrorMessage: "Failed to revoke device registration" },
+        meta: { defaultErrorMessage: t("revokeError") },
     });
 
     const setTelemetryModeMutation = useMutation({
@@ -103,13 +106,15 @@ export default function ConnectivityPage() {
             reason?: string;
         }) => connectivityService.setDeviceTelemetryMode(deviceId, { mode, reason }),
         onSuccess: (res) => {
-            toast.success(
-                `Telemetry mode switched to ${(res.telemetryMode ?? "updated").toUpperCase()}${res.rateHz ? ` (${res.rateHz} Hz)` : ""}`
-            );
+            const modeLabel = res.telemetryMode
+                ? t(`modes.${res.telemetryMode}`).toUpperCase()
+                : t("modeUpdatedFallback");
+            const rateLabel = res.rateHz ? ` (${res.rateHz} Hz)` : "";
+            toast.success(t("modeSwitchedToast", { mode: modeLabel, rate: rateLabel }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivity });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivityStatus });
         },
-        meta: { defaultErrorMessage: "Failed to update device telemetry mode" },
+        meta: { defaultErrorMessage: t("modeUpdateError") },
     });
 
     const onlineCount = gatewayStatus?.onlineDevices ?? onlineDevices.length;
@@ -149,22 +154,22 @@ export default function ConnectivityPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="DEVICE CONNECTIVITY">
+            <PageHeader title={t("title")}>
                 <ChamferButton variant="outline" size="sm" clip="xs" onClick={refreshAll}>
                     <RotateCw className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Refresh</span>
+                    <span>{tCommon("refresh")}</span>
                 </ChamferButton>
 
                 <ChamferButton variant="dark" size="sm" onClick={() => setIsRegisterOpen(true)}>
                     <Plus className="w-4 h-4 text-white" />
-                    <span>Register Device</span>
+                    <span>{t("registerDevice")}</span>
                 </ChamferButton>
             </PageHeader>
 
             {hasError ? (
                 <ErrorState
-                    title="Unable to reach Connectivity Gateway"
-                    description="Device status and protocol telemetry could not be loaded. Please try again."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={refreshAll}
                 />
             ) : (
@@ -178,7 +183,7 @@ export default function ConnectivityPage() {
                     />
 
                     <TelemetryDistribution
-                        frequencyBand="ADAPTIVE"
+                        frequencyBand={t("distribution.adaptive")}
                         byMode={telemetryByMode}
                         modeConfigs={telemetryModeConfigs}
                     />

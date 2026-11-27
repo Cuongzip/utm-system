@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -10,7 +12,13 @@ import {
     StatusBadge,
     type SelectOption,
 } from "@/components/ui";
-import { QUERY_KEYS, useCurrentUser, useFlightConformance, useFlightFeasibility } from "@/hooks";
+import {
+    QUERY_KEYS,
+    useCurrentUser,
+    useFlightConformance,
+    useFlightFeasibility,
+    useFlightsAll,
+} from "@/hooks";
 import { flightService } from "@/services/flightService";
 import { cn } from "@/lib";
 import { FlightFeasibilityCard } from "../FlightFeasibilityCard";
@@ -56,9 +64,22 @@ export function FlightDetailsTab({
     fieldErrors = {},
     onClearFieldError,
 }: FlightDetailsTabProps) {
+    const t = useTranslations("flights");
     const queryClient = useQueryClient();
     const { data: currentUser } = useCurrentUser();
+    const { data: allFlights = [] } = useFlightsAll();
     const selectedDrone = drones.find((d) => d.id === formData.droneId) || null;
+
+    const myPilotId = currentUser?.username || "";
+    const pilotSuggestions = useMemo(() => {
+        const ids = new Set<string>();
+        if (myPilotId) ids.add(myPilotId);
+        for (const flight of allFlights) {
+            const pid = flight.pilotId?.trim();
+            if (pid) ids.add(pid);
+        }
+        return Array.from(ids).sort((a, b) => a.localeCompare(b));
+    }, [allFlights, myPilotId]);
     const { data: conformance } = useFlightConformance(
         flightId,
         mode === "edit" && Boolean(flightId)
@@ -88,14 +109,14 @@ export function FlightDetailsTab({
                 approvedBy: currentUser?.username || currentUser?.email || "atc-operator",
             }),
         onSuccess: () => {
-            toast.success("Feasibility override recorded and flight authorized");
+            toast.success(t("toasts.overrideAuthorized"));
             if (flightId) {
                 queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightDetail(flightId) });
                 queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightFeasibility(flightId) });
             }
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
         },
-        meta: { defaultErrorMessage: "Failed to override feasibility verdict" },
+        meta: { defaultErrorMessage: t("toasts.overrideFailed") },
     });
 
     const overrideReasonText = (formData.feasibilityOverride || "").trim();
@@ -115,11 +136,11 @@ export function FlightDetailsTab({
         <div className="space-y-4">
             <AutoGenInput
                 id="flightNumber"
-                label="Flight Number"
+                label={t("details.flightNumber")}
                 showAutoGen={mode !== "edit"}
                 disabled={mode === "edit" || isReadOnly}
                 required={mode !== "edit"}
-                manualPlaceholder="e.g. FL-2026-001"
+                manualPlaceholder={t("details.flightNumberPlaceholder")}
                 value={formData.flightNumber ?? ""}
                 onChange={(e) => {
                     onFormChange("flightNumber", e.target.value);
@@ -130,14 +151,14 @@ export function FlightDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="droneId">
-                    Assigned Drone <span className="text-red-500">*</span>
+                    {t("details.assignedDrone")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     value={formData.droneId}
                     disabled={isReadOnly}
                     onValueChange={(val) => onFormChange("droneId", val)}
                     options={droneOptions}
-                    placeholder="Select assigned drone"
+                    placeholder={t("details.selectDronePlaceholder")}
                     className={cn(fieldErrors.droneId && "form-input-error")}
                 />
                 {fieldErrors.droneId && (
@@ -149,14 +170,14 @@ export function FlightDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="departureHubId">
-                    Departure Vertiport <span className="text-red-500">*</span>
+                    {t("details.departureHub")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     value={formData.departureHubId}
                     disabled={isReadOnly}
                     onValueChange={(val) => onFormChange("departureHubId", val)}
                     options={hubOptions}
-                    placeholder="Select departure vertiport"
+                    placeholder={t("details.selectDeparturePlaceholder")}
                     className={cn(fieldErrors.departureHubId && "form-input-error")}
                 />
                 {fieldErrors.departureHubId && (
@@ -168,14 +189,14 @@ export function FlightDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="arrivalHubId">
-                    Arrival Vertiport <span className="text-red-500">*</span>
+                    {t("details.arrivalHub")} <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                     value={formData.arrivalHubId}
                     disabled={isReadOnly}
                     onValueChange={(val) => onFormChange("arrivalHubId", val)}
                     options={hubOptions}
-                    placeholder="Select arrival vertiport"
+                    placeholder={t("details.selectArrivalPlaceholder")}
                     className={cn(fieldErrors.arrivalHubId && "form-input-error")}
                 />
                 {fieldErrors.arrivalHubId && (
@@ -189,19 +210,44 @@ export function FlightDetailsTab({
                 <div className="form-group">
                     <FormInput
                         id="pilotId"
-                        label="Remote Pilot ID"
+                        label={t("details.pilotId")}
+                        list="pilot-id-options"
                         value={formData.pilotId || ""}
                         disabled={isReadOnly}
-                        onChange={(e) => onFormChange("pilotId", e.target.value)}
-                        placeholder="e.g. PILOT-VN-007"
+                        onChange={(e) => {
+                            onFormChange("pilotId", e.target.value);
+                            onClearFieldError("pilotId");
+                        }}
+                        placeholder={t("details.pilotPlaceholder")}
                         error={fieldErrors.pilotId}
+                        labelRight={
+                            !isReadOnly && myPilotId && formData.pilotId !== myPilotId ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onFormChange("pilotId", myPilotId);
+                                        onClearFieldError("pilotId");
+                                    }}
+                                    className="text-[11px] font-mono font-semibold text-slate-600 hover:text-slate-900 underline underline-offset-2 whitespace-nowrap shrink-0 mb-1.5 cursor-pointer"
+                                >
+                                    {t("details.useMine")}
+                                </button>
+                            ) : null
+                        }
                     />
+                    {pilotSuggestions.length > 0 && (
+                        <datalist id="pilot-id-options">
+                            {pilotSuggestions.map((pid) => (
+                                <option key={pid} value={pid} />
+                            ))}
+                        </datalist>
+                    )}
                 </div>
 
                 <div className="form-group">
                     <FormInput
                         id="cruisingAltitudeM"
-                        label="Cruising Alt. (m)"
+                        label={t("details.cruisingAlt")}
                         type="number"
                         min={10}
                         max={1000}
@@ -219,12 +265,12 @@ export function FlightDetailsTab({
 
             <div className="form-group">
                 <label className="form-label" htmlFor="flightNotes">
-                    Flight Remarks & Route Notes
+                    {t("details.notesLabel")}
                 </label>
                 <textarea
                     id="flightNotes"
                     rows={3}
-                    placeholder="Operational remarks, weather briefings, or cargo manifests..."
+                    placeholder={t("details.notesPlaceholder")}
                     value={formData.notes || ""}
                     disabled={isReadOnly}
                     onChange={(e) => onFormChange("notes", e.target.value)}
@@ -245,12 +291,16 @@ export function FlightDetailsTab({
                 <div className="px-3 py-2.5 border border-[var(--color-border-default)] rounded-md bg-[var(--color-surface-subtle)] flex items-center justify-between gap-2 text-xs">
                     <div className="font-mono min-w-0">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-800 block">
-                            4D Corridor
+                            {t("details.corridor4d")}
                         </span>
                         {(lateralErr != null || verticalErr != null) && (
                             <span className="text-[11px] text-slate-500 mt-0.5 block tabular-nums truncate">
-                                Lat {(lateralErr ?? 0).toFixed(1)}/{lateralLimit}m · Alt Δ{" "}
-                                {(verticalErr ?? 0).toFixed(1)}/{verticalLimit}m
+                                {t("details.corridorMetrics", {
+                                    lat: (lateralErr ?? 0).toFixed(1),
+                                    latLimit: lateralLimit,
+                                    vert: (verticalErr ?? 0).toFixed(1),
+                                    vertLimit: verticalLimit,
+                                })}
                             </span>
                         )}
                     </div>
@@ -258,7 +308,7 @@ export function FlightDetailsTab({
                         status={conformance.status!}
                         label={
                             conformance.status === CONFORMANCE_STATUS.NON_CONFORMING
-                                ? "BREACH"
+                                ? t("details.breach")
                                 : undefined
                         }
                     />
@@ -268,15 +318,19 @@ export function FlightDetailsTab({
             {effectiveIsWarning && !isReadOnly && (
                 <div className="form-group pt-1">
                     <label className="form-label" htmlFor="feasibilityOverride">
-                        Feasibility Override Reason (
-                        {effectiveVerdict === FEASIBILITY_VERDICT.NO_GO ? "No Go" : "Marginal"}){" "}
+                        {t("details.overrideReasonLabel", {
+                            verdict:
+                                effectiveVerdict === FEASIBILITY_VERDICT.NO_GO
+                                    ? t("feasibility.noGo")
+                                    : t("feasibility.marginal"),
+                        })}{" "}
                         <span className="text-red-500">*</span>
                     </label>
                     <textarea
                         id="feasibilityOverride"
                         rows={2}
                         value={formData.feasibilityOverride || ""}
-                        placeholder="Enter ATC justification (min 10 characters)..."
+                        placeholder={t("details.overrideReasonPlaceholder")}
                         onChange={(e) => {
                             onFormChange("feasibilityOverride", e.target.value);
                             onClearFieldError("feasibilityOverride");
@@ -298,8 +352,8 @@ export function FlightDetailsTab({
                                 onClick={() => overrideMutation.mutate(overrideReasonText)}
                             >
                                 {overrideMutation.isPending
-                                    ? "Authorizing..."
-                                    : "Authorize Override"}
+                                    ? t("details.authorizingOverride")
+                                    : t("details.authorizeOverride")}
                             </ChamferButton>
                         </div>
                     )}

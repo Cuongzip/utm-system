@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
     Bot,
     CheckCircle2,
@@ -17,6 +18,7 @@ interface FleetKpiStripProps {
 }
 
 export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
+    const t = useTranslations("fleet.kpi");
     const total = overview?.totalDrones ?? 0;
     const available = overview?.availableDrones ?? 0;
     const busy = overview?.busyDrones ?? 0;
@@ -35,51 +37,51 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
     const items: KpiItem[] = [
         {
             id: "total",
-            label: "Total Drones",
+            label: t("totalDrones"),
             value: total,
             subValue: overview?.activeMissions
-                ? `${overview.activeMissions} active msn`
-                : "Fleet wide",
+                ? t("activeMissions", { count: overview.activeMissions })
+                : t("fleetWide"),
             icon: Bot,
         },
         {
             id: "available",
-            label: "Available",
+            label: t("available"),
             value: available,
-            subValue: total > 0 ? `${availablePct}% ready` : "Standby",
+            subValue: total > 0 ? t("pctReady", { pct: availablePct }) : t("standby"),
             icon: CheckCircle2,
             iconClassName: "text-emerald-600",
         },
         {
             id: "in-flight",
-            label: "In Flight",
+            label: t("inFlight"),
             value: busy,
-            subValue: total > 0 ? `${busyPct}% active` : "Airborne",
+            subValue: total > 0 ? t("pctActive", { pct: busyPct }) : t("airborne"),
             icon: PlaneTakeoff,
         },
         {
             id: "charging",
-            label: "Charging / Maint",
+            label: t("chargingMaint"),
             value: charging,
-            subValue: `${maintenance} maint · ${offline} off`,
+            subValue: t("maintOffSub", { maint: maintenance, off: offline }),
             icon: BatteryCharging,
             iconClassName: charging > 0 ? "text-amber-500" : undefined,
         },
         {
             id: "hubs",
-            label: "Active Hubs",
+            label: t("activeHubs"),
             value: hubCount,
-            subValue: "Vertiports",
+            subValue: t("vertiports"),
             icon: Building2,
         },
         {
             id: "health",
-            label: "Fleet Health",
+            label: t("fleetHealth"),
             value: `${healthPct}%`,
             subValue:
                 overview?.averageFlightHours != null
-                    ? `${overview.averageFlightHours.toFixed(1)}h avg`
-                    : "Operational",
+                    ? t("avgHours", { hours: overview.averageFlightHours.toFixed(1) })
+                    : t("operational"),
             icon: Activity,
             iconClassName:
                 healthPct >= 80
@@ -97,40 +99,40 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
                     <div
                         className="bg-emerald-600 transition-all"
                         style={{ width: `${availablePct}%` }}
-                        title={`Available: ${availablePct}%`}
+                        title={t("barAvailableTooltip", { pct: availablePct })}
                     />
                     <div
                         className="bg-slate-800 transition-all"
                         style={{ width: `${busyPct}%` }}
-                        title={`In Flight: ${busyPct}%`}
+                        title={t("barInFlightTooltip", { pct: busyPct })}
                     />
                     <div
                         className="bg-amber-500 transition-all"
                         style={{ width: `${chargingPct}%` }}
-                        title={`Charging: ${chargingPct}%`}
+                        title={t("barChargingTooltip", { pct: chargingPct })}
                     />
                     <div
                         className="bg-slate-300 transition-all"
                         style={{ width: `${otherPct}%` }}
-                        title={`Maintenance / Offline: ${otherPct}%`}
+                        title={t("barMaintTooltip", { pct: otherPct })}
                     />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-slate-500">
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-xs bg-emerald-600" />
-                        Available ({availablePct}%)
+                        {t("barAvailableLegend", { pct: availablePct })}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-xs bg-slate-800" />
-                        In Flight ({busyPct}%)
+                        {t("barInFlightLegend", { pct: busyPct })}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-xs bg-amber-500" />
-                        Charging ({chargingPct}%)
+                        {t("barChargingLegend", { pct: chargingPct })}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-xs bg-slate-300" />
-                        Maint / Off ({otherPct}%)
+                        {t("barMaintLegend", { pct: otherPct })}
                     </span>
                 </div>
             </div>

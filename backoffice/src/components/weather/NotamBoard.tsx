@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { FileWarning } from "lucide-react";
 import {
     ChamferCard,
@@ -18,6 +19,8 @@ import { formatDateTime } from "@/utils";
 const PAGE_SIZE = 8;
 
 export function NotamBoard() {
+    const t = useTranslations("weather");
+    const tCommon = useTranslations("common");
     const { data, isLoading } = useWeatherNotams();
     const [search, setSearch] = useState("");
     const [icaoFilter, setIcaoFilter] = useState("all");
@@ -32,12 +35,12 @@ export function NotamBoard() {
             if (n.icao) set.add(n.icao);
         }
         return [
-            { value: "all", label: "All FIR / Aerodromes" },
+            { value: "all", label: t("notam.allFir") },
             ...Array.from(set)
                 .sort()
                 .map((code) => ({ value: code, label: code })),
         ];
-    }, [data?.icaos, notams]);
+    }, [data?.icaos, notams, t]);
 
     const hasFilters = Boolean(search.trim()) || icaoFilter !== "all" || severityFilter !== "all";
 
@@ -74,7 +77,7 @@ export function NotamBoard() {
             <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
-                        Active NOTAM Board ({filtered.length})
+                        {t("notam.heading", { count: filtered.length })}
                     </span>
                     {data?.source && (
                         <span className="text-[11px] font-mono text-slate-400">
@@ -91,12 +94,12 @@ export function NotamBoard() {
                                 setSearch(val);
                                 setPage(1);
                             }}
-                            placeholder="Search NOTAMs..."
+                            placeholder={t("notam.searchPlaceholder")}
                         />
                     </div>
                     <div className="w-full sm:w-44">
                         <CustomSelect
-                            ariaLabel="Filter by FIR or aerodrome"
+                            ariaLabel={t("notam.filterFirAria")}
                             value={icaoFilter}
                             onValueChange={(val) => {
                                 setIcaoFilter(val);
@@ -107,23 +110,23 @@ export function NotamBoard() {
                     </div>
                     <div className="w-full sm:w-36">
                         <CustomSelect
-                            ariaLabel="Filter by severity"
+                            ariaLabel={t("notam.filterSeverityAria")}
                             value={severityFilter}
                             onValueChange={(val) => {
                                 setSeverityFilter(val);
                                 setPage(1);
                             }}
                             options={[
-                                { value: "all", label: "All Severities" },
-                                { value: "critical", label: "Critical" },
-                                { value: "warning", label: "Warning" },
-                                { value: "info", label: "Advisory" },
+                                { value: "all", label: t("notam.allSeverities") },
+                                { value: "critical", label: t("notam.sevCritical") },
+                                { value: "warning", label: t("notam.sevWarning") },
+                                { value: "info", label: t("notam.sevAdvisory") },
                             ]}
                         />
                     </div>
                     {hasFilters && (
                         <ChamferButton variant="outline" size="xs" onClick={clearFilters}>
-                            Clear
+                            {tCommon("clear")}
                         </ChamferButton>
                     )}
                 </div>
@@ -145,22 +148,18 @@ export function NotamBoard() {
             ) : data?.enabled === false ? (
                 <EmptyState
                     icon={FileWarning}
-                    title="NOTAM Feed Disabled"
-                    description="External NOTAM ingestion is disabled in the weather-ais service configuration."
+                    title={t("notam.disabledTitle")}
+                    description={t("notam.disabledDesc")}
                 />
             ) : filtered.length === 0 ? (
                 <EmptyState
                     icon={FileWarning}
-                    title={hasFilters ? "No Matching NOTAMs" : "No Active NOTAMs"}
-                    description={
-                        hasFilters
-                            ? "No Notices to Air Missions match the active search or filter criteria."
-                            : "No active Notices to Air Missions reported in monitored FIRs."
-                    }
+                    title={hasFilters ? t("notam.emptyFilteredTitle") : t("notam.emptyTitle")}
+                    description={hasFilters ? t("notam.emptyFilteredDesc") : t("notam.emptyDesc")}
                     action={
                         hasFilters ? (
                             <ChamferButton variant="outline" size="sm" onClick={clearFilters}>
-                                Clear Filters
+                                {t("notam.clearFilters")}
                             </ChamferButton>
                         ) : undefined
                     }
@@ -199,16 +198,30 @@ export function NotamBoard() {
 
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-slate-500">
                                     <span>
-                                        ALT:{" "}
+                                        {t("notam.altLabel")}{" "}
                                         {n.lowerLimitM != null || n.upperLimitM != null
                                             ? `${n.lowerLimitM ?? 0}m – ${n.upperLimitM ?? "UNL"}m`
                                             : "SFC – UNL"}
                                     </span>
-                                    {n.radiusNm != null && <span>RADIUS: {n.radiusNm} NM</span>}
-                                    {n.validFrom && (
-                                        <span>FROM: {formatDateTime(n.validFrom)}</span>
+                                    {n.radiusNm != null && (
+                                        <span>
+                                            {t("notam.radiusLabel", { radius: n.radiusNm })}
+                                        </span>
                                     )}
-                                    {n.validTo && <span>TO: {formatDateTime(n.validTo)}</span>}
+                                    {n.validFrom && (
+                                        <span>
+                                            {t("notam.fromLabel", {
+                                                time: formatDateTime(n.validFrom),
+                                            })}
+                                        </span>
+                                    )}
+                                    {n.validTo && (
+                                        <span>
+                                            {t("notam.toLabel", {
+                                                time: formatDateTime(n.validTo),
+                                            })}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {n.text && (

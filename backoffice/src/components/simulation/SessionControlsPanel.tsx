@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, Pause, Square, Loader2, Trash2 } from "lucide-react";
@@ -18,6 +19,10 @@ export interface SessionControlsPanelProps {
 const TIME_SCALE_OPTIONS = [1, 2, 5, 10] as const;
 
 export function SessionControlsPanel({ session, onRefresh }: SessionControlsPanelProps) {
+    const t = useTranslations("simulation.controls");
+    const tTable = useTranslations("simulation.table");
+    const tSim = useTranslations("simulation");
+    const tCommon = useTranslations("common");
     const router = useRouter();
     const queryClient = useQueryClient();
     const sessionId = session.id;
@@ -34,55 +39,55 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
     const updateTimeScaleMutation = useMutation({
         mutationFn: (timeScale: number) => simulationService.updateTimeScale(sessionId, timeScale),
         onSuccess: (updated) => {
-            toast.success(`Time-scale updated to ${updated.timeScale ?? 1}x`);
+            toast.success(t("timeScaleToast", { scale: updated.timeScale ?? 1 }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             onRefresh();
         },
-        meta: { defaultErrorMessage: "Failed to update time-scale" },
+        meta: { defaultErrorMessage: t("timeScaleError") },
     });
 
     const pauseMutation = useMutation({
         mutationFn: () => simulationService.pauseSession(sessionId),
         onSuccess: () => {
-            toast.success("Simulation paused");
+            toast.success(tSim("pausedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             onRefresh();
         },
-        meta: { defaultErrorMessage: "Failed to pause simulation" },
+        meta: { defaultErrorMessage: tSim("pauseError") },
     });
 
     const resumeMutation = useMutation({
         mutationFn: () => simulationService.resumeSession(sessionId),
         onSuccess: () => {
-            toast.success("Simulation resumed");
+            toast.success(tSim("resumedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             onRefresh();
         },
-        meta: { defaultErrorMessage: "Failed to resume simulation" },
+        meta: { defaultErrorMessage: tSim("resumeError") },
     });
 
     const stopMutation = useMutation({
         mutationFn: () => simulationService.stopSession(sessionId),
         onSuccess: () => {
-            toast.success("Simulation stopped");
+            toast.success(tSim("stoppedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulationDetail(sessionId) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             onRefresh();
         },
-        meta: { defaultErrorMessage: "Failed to stop simulation" },
+        meta: { defaultErrorMessage: tSim("stopError") },
     });
 
     const deleteMutation = useMutation({
         mutationFn: () => simulationService.deleteSession(sessionId),
         onSuccess: () => {
-            toast.success("Simulation session deleted successfully");
+            toast.success(t("deletedToast"));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.simulation });
             router.push("/dashboard/simulation");
         },
-        meta: { defaultErrorMessage: "Failed to delete simulation session" },
+        meta: { defaultErrorMessage: t("deleteError") },
     });
 
     return (
@@ -90,7 +95,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
             <div className="flex flex-wrap items-center gap-2">
                 <div
                     role="group"
-                    aria-label="Simulation speed factor"
+                    aria-label={t("speedFactorAria")}
                     className="inline-flex items-center bg-[var(--color-surface-panel)] p-0.5 rounded-md border border-[var(--color-border-default)]"
                 >
                     {TIME_SCALE_OPTIONS.map((scale) => {
@@ -131,7 +136,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
                         ) : (
                             <Pause className="w-3.5 h-3.5" />
                         )}
-                        <span>Pause</span>
+                        <span>{tTable("pause")}</span>
                     </ChamferButton>
                 )}
 
@@ -148,7 +153,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
                         ) : (
                             <Play className="w-3.5 h-3.5" />
                         )}
-                        <span>Resume</span>
+                        <span>{tTable("resume")}</span>
                     </ChamferButton>
                 )}
 
@@ -165,7 +170,7 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
                         ) : (
                             <Square className="w-3.5 h-3.5" />
                         )}
-                        <span>Stop</span>
+                        <span>{tTable("stop")}</span>
                     </ChamferButton>
                 )}
 
@@ -175,14 +180,14 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
                     clip="xs"
                     disabled={deleteMutation.isPending}
                     onClick={() => setShowDeleteConfirm(true)}
-                    title="Delete simulation session"
+                    title={t("deleteTooltip")}
                 >
                     {deleteMutation.isPending ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                         <Trash2 className="w-3.5 h-3.5" />
                     )}
-                    <span>Delete</span>
+                    <span>{tCommon("delete")}</span>
                 </ChamferButton>
             </div>
 
@@ -190,9 +195,11 @@ export function SessionControlsPanel({ session, onRefresh }: SessionControlsPane
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
                 onConfirm={() => deleteMutation.mutate()}
-                title="Delete Simulation Session"
-                description={`Are you sure you want to permanently delete session SIM-${sessionId.slice(0, 8).toUpperCase()}? This will stop any active simulation and erase session history.`}
-                confirmText="Delete Session"
+                title={tTable("deleteTitle")}
+                description={t("deleteConfirmDesc", {
+                    tag: `SIM-${sessionId.slice(0, 8).toUpperCase()}`,
+                })}
+                confirmText={tTable("deleteConfirm")}
                 loading={deleteMutation.isPending}
             />
         </>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Plane, Building2, Bot, AlertTriangle } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
@@ -22,38 +23,40 @@ export function DashboardKpiStrip({
     activeTelemetryCount = 0,
     isLoading = false,
 }: DashboardKpiStripProps) {
+    const t = useTranslations("dashboard.kpi");
+
     const items: KpiItem[] = [
         {
             id: "active-flights",
-            label: "Active Flights",
+            label: t("activeFlights"),
             value: activeFlightsCount,
             subValue:
                 activeTelemetryCount > 0
-                    ? `${activeTelemetryCount} streaming`
+                    ? t("streamingCount", { count: activeTelemetryCount })
                     : activeFlightsCount > 0
-                      ? "Airborne"
-                      : "Standby",
+                      ? t("airborne")
+                      : t("standby"),
             icon: Plane,
         },
         {
             id: "hubs-online",
-            label: "Hubs Online",
+            label: t("hubsOnline"),
             value: hubsCount,
-            subValue: `of ${totalHubsCount} total`,
+            subValue: t("ofTotal", { total: totalHubsCount }),
             icon: Building2,
         },
         {
             id: "fleet",
-            label: "Registered Fleet",
+            label: t("registeredFleet"),
             value: fleetCount,
-            subValue: "UAV units",
+            subValue: t("uavUnits"),
             icon: Bot,
         },
         {
             id: "conflicts",
-            label: "Airspace Conflicts",
+            label: t("airspaceConflicts"),
             value: conflictsCount,
-            subValue: conflictsCount > 0 ? "Action required" : "Clear",
+            subValue: conflictsCount > 0 ? t("actionRequired") : t("clear"),
             icon: AlertTriangle,
             iconClassName: conflictsCount > 0 ? "text-red-600" : undefined,
             statusDot: conflictsCount > 0 ? "critical" : undefined,

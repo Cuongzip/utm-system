@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Building2, CheckCircle2, Wrench, Gauge } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
@@ -28,6 +29,7 @@ export function HubsKpiStrip({
     onFilterByStatus,
     isLoading,
 }: HubsKpiStripProps) {
+    const t = useTranslations("hubs.kpi");
     const offlineTotal = maintenanceHubs + inactiveHubs;
     const loadPct = totalCapacity > 0 ? Math.round((activeFlightsTotal / totalCapacity) * 100) : 0;
     const isHighLoad = loadPct >= 80;
@@ -36,19 +38,21 @@ export function HubsKpiStrip({
     const items: KpiItem[] = [
         {
             id: "all",
-            label: "Total Hubs",
+            label: t("totalHubs"),
             value: totalHubs,
-            subValue: "Vertiports",
+            subValue: t("vertiports"),
             icon: Building2,
             active: statusFilter === "all",
             onClick: () => onFilterByStatus("all"),
         },
         {
             id: "active",
-            label: "Active Hubs",
+            label: t("activeHubs"),
             value: activeHubs,
             subValue:
-                totalHubs > 0 ? `${Math.round((activeHubs / totalHubs) * 100)}% online` : "Standby",
+                totalHubs > 0
+                    ? t("pctOnline", { pct: Math.round((activeHubs / totalHubs) * 100) })
+                    : t("standby"),
             icon: CheckCircle2,
             iconClassName: activeHubs > 0 ? "text-emerald-600" : undefined,
             active: statusFilter === "active",
@@ -56,9 +60,9 @@ export function HubsKpiStrip({
         },
         {
             id: "offline",
-            label: "Maint / Inactive",
+            label: t("maintInactive"),
             value: offlineTotal,
-            subValue: `${maintenanceHubs} maint · ${inactiveHubs} off`,
+            subValue: t("maintOffSub", { maint: maintenanceHubs, off: inactiveHubs }),
             icon: Wrench,
             iconClassName: maintenanceHubs > 0 ? "text-amber-500" : undefined,
             active: statusFilter === "maintenance" || statusFilter === "inactive",
@@ -71,9 +75,9 @@ export function HubsKpiStrip({
         },
         {
             id: "capacity",
-            label: "Pad Load / Cap",
+            label: t("padLoadCap"),
             value: `${activeFlightsTotal}/${totalCapacity}`,
-            subValue: `${stationedDronesTotal} drones based`,
+            subValue: t("dronesBased", { count: stationedDronesTotal }),
             icon: Gauge,
             iconClassName: isHighLoad ? "text-amber-600" : undefined,
         },

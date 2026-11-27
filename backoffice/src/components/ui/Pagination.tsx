@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ChamferButton } from "./ChamferButton";
 
@@ -19,8 +20,11 @@ export function Pagination({
     totalItems,
     onPageChange,
     pageSize = 10,
-    itemLabel = "items",
+    itemLabel,
 }: PaginationProps) {
+    const t = useTranslations("common");
+    const resolvedItemLabel = itemLabel ?? t("items");
+
     const pageNumbers = useMemo(() => {
         if (totalPages <= 7) {
             return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -60,7 +64,12 @@ export function Pagination({
     return (
         <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2.5 bg-[var(--color-surface-panel)] border-t border-[var(--color-border-default)] select-none">
             <span className="text-[11px] font-mono tabular-nums text-[var(--color-text-secondary)]">
-                Showing {startIndex}–{endIndex} of {totalItems} {itemLabel}
+                {t("showingRange", {
+                    start: startIndex,
+                    end: endIndex,
+                    total: totalItems,
+                    label: resolvedItemLabel,
+                })}
             </span>
 
             {totalPages > 1 && (
@@ -71,11 +80,11 @@ export function Pagination({
                         clip="sm"
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage <= 1}
-                        aria-label="Previous Page"
+                        aria-label={t("previousPage")}
                         innerClassName="px-2.5 font-medium"
                     >
                         <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span className="hidden sm:inline">Prev</span>
+                        <span className="hidden sm:inline">{t("prev")}</span>
                     </ChamferButton>
 
                     <span className="sm:hidden px-2 text-xs font-mono font-semibold tabular-nums text-[var(--color-text-primary)]">
@@ -98,7 +107,7 @@ export function Pagination({
                                     size="xs"
                                     clip="sm"
                                     onClick={() => onPageChange(page)}
-                                    aria-label={`Page ${page}`}
+                                    aria-label={t("pageNumber", { page })}
                                     aria-current="page"
                                     className="w-7 px-0 font-mono tabular-nums"
                                 >
@@ -111,7 +120,7 @@ export function Pagination({
                                     size="xs"
                                     clip="sm"
                                     onClick={() => onPageChange(page)}
-                                    aria-label={`Page ${page}`}
+                                    aria-label={t("pageNumber", { page })}
                                     className="w-7"
                                     innerClassName="px-0 font-mono font-medium tabular-nums"
                                 >
@@ -127,10 +136,10 @@ export function Pagination({
                         clip="sm"
                         onClick={() => onPageChange(currentPage + 1)}
                         disabled={currentPage >= totalPages}
-                        aria-label="Next Page"
+                        aria-label={t("nextPage")}
                         innerClassName="px-2.5 font-medium"
                     >
-                        <span className="hidden sm:inline">Next</span>
+                        <span className="hidden sm:inline">{t("next")}</span>
                         <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                     </ChamferButton>
                 </div>

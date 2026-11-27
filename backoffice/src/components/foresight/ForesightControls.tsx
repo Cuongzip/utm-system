@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Play, Pause, RefreshCw, AlertTriangle, X } from "lucide-react";
 import type { ForesightPrediction, ForesightPredictedConflict } from "@/types";
 
@@ -36,6 +37,7 @@ export function ForesightControls({
     onClearSimulation,
     onClose,
 }: ForesightControlsProps) {
+    const t = useTranslations("foresight");
     const activeData = simulatedPrediction ?? prediction;
     const frames = activeData?.frames ?? [];
     const maxIndex = Math.max(frames.length - 1, 0);
@@ -48,11 +50,11 @@ export function ForesightControls({
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                     <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-white">
-                        4D Airspace Foresight
+                        {t("title")}
                     </span>
                     {simulatedPrediction ? (
                         <span className="px-1.5 py-0.5 rounded bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-mono font-bold">
-                            PREVIEW ({conflicts.length} CPA)
+                            {t("previewBadge", { count: conflicts.length })}
                         </span>
                     ) : (
                         <span
@@ -62,7 +64,9 @@ export function ForesightControls({
                                     : "bg-slate-800 border border-slate-700 text-slate-300"
                             }`}
                         >
-                            {loading ? "PREDICTING..." : `${conflicts.length} PREDICTED CPA`}
+                            {loading
+                                ? t("predicting")
+                                : t("predictedCount", { count: conflicts.length })}
                         </span>
                     )}
                 </div>
@@ -81,7 +85,7 @@ export function ForesightControls({
                                         : "text-slate-400 hover:text-white"
                                 }`}
                             >
-                                {h / 60}m
+                                {t("horizonMin", { min: h / 60 })}
                             </button>
                         ))}
                     </div>
@@ -92,7 +96,7 @@ export function ForesightControls({
                             onClick={onClearSimulation}
                             className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-mono font-semibold text-slate-200 cursor-pointer"
                         >
-                            Exit Preview
+                            {t("exitPreview")}
                         </button>
                     )}
 
@@ -101,8 +105,8 @@ export function ForesightControls({
                         onClick={onRefresh}
                         disabled={loading}
                         className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-                        title="Refresh prediction"
-                        aria-label="Refresh prediction"
+                        title={t("refreshPrediction")}
+                        aria-label={t("refreshPrediction")}
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
                     </button>
@@ -111,8 +115,8 @@ export function ForesightControls({
                         type="button"
                         onClick={onClose}
                         className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Close Foresight"
-                        aria-label="Close Foresight"
+                        title={t("closeForesight")}
+                        aria-label={t("closeForesight")}
                     >
                         <X className="w-3.5 h-3.5" />
                     </button>
@@ -124,7 +128,7 @@ export function ForesightControls({
                     type="button"
                     onClick={onTogglePlay}
                     disabled={maxIndex === 0}
-                    aria-label={isPlaying ? "Pause timeline" : "Play timeline"}
+                    aria-label={isPlaying ? t("pauseTimeline") : t("playTimeline")}
                     className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-white shrink-0 cursor-pointer disabled:opacity-40"
                 >
                     {isPlaying ? (
@@ -139,7 +143,7 @@ export function ForesightControls({
                     max={maxIndex}
                     value={safeIndex}
                     onChange={(e) => onFrameIndexChange(Number(e.target.value))}
-                    aria-label="4D prediction time horizon"
+                    aria-label={t("timelineAria")}
                     className="flex-1 accent-slate-300 cursor-pointer"
                 />
                 <span className="font-mono text-xs font-bold text-slate-200 w-14 text-right tabular-nums shrink-0">

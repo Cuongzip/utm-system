@@ -1,16 +1,25 @@
 import { createTranslator } from "next-intl";
 import enMessages from "@/messages/en.json";
+import viMessages from "@/messages/vi.json";
+import { getCurrentLocale, type AppLocale } from "@/i18n";
 
-const errorTranslator = createTranslator({
-    locale: "en",
-    messages: enMessages,
-});
+const translators: Record<AppLocale, ReturnType<typeof createTranslator<typeof enMessages>>> = {
+    en: createTranslator({
+        locale: "en",
+        messages: enMessages,
+    }),
+    vi: createTranslator({
+        locale: "vi",
+        messages: viMessages,
+    }),
+};
 
 type ErrorKey = `errors.${keyof typeof enMessages.errors}`;
 
 export function translateError(
     errorCode: string,
-    params: Record<string, unknown> = {}
+    params: Record<string, unknown> = {},
+    locale: AppLocale = getCurrentLocale()
 ): string | undefined {
     if (!(errorCode in enMessages.errors)) {
         return undefined;
@@ -27,7 +36,7 @@ export function translateError(
     }
 
     try {
-        return errorTranslator(key, sanitizedParams);
+        return translators[locale](key, sanitizedParams);
     } catch {
         return undefined;
     }

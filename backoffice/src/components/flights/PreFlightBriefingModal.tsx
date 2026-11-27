@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import {
     CloudSun,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui";
 import { useFlightBriefing } from "@/hooks";
 import { intelligenceService } from "@/services";
+import { translateStatusLabel, useAppLocale } from "@/i18n";
 import type { FlightAssessment } from "@/types";
 import { formatDateTime } from "@/utils";
 
@@ -48,6 +50,9 @@ export function PreFlightBriefingModal({
     flightNumber,
     onClose,
 }: PreFlightBriefingModalProps) {
+    const t = useTranslations("flights.briefing");
+    const tCommon = useTranslations("common");
+    const locale = useAppLocale();
     const {
         data: briefing,
         isLoading,
@@ -58,7 +63,7 @@ export function PreFlightBriefingModal({
 
     const assessMutation = useMutation({
         mutationFn: () => intelligenceService.assessFlight(flightId!),
-        meta: { defaultErrorMessage: "Failed to run pre-flight AI assessment" },
+        meta: { defaultErrorMessage: t("assessFailed") },
         onSuccess: (res) => setAssessment(res),
     });
 
@@ -90,16 +95,15 @@ export function PreFlightBriefingModal({
     const notamRelevant = readNum(nt, "relevantCount") ?? readNum(nt, "total") ?? 0;
     const notamCritical = readNum(nt, "criticalCount") ?? 0;
 
-    const decisionLabel = (
-        assessment?.ai?.decision ??
-        assessment?.deterministicVerdict ??
-        "UNKNOWN"
-    ).replace(/_/g, " ");
+    const rawDecisionCode =
+        assessment?.ai?.decision ?? assessment?.deterministicVerdict ?? "UNKNOWN";
+    const decisionCodeNorm = rawDecisionCode.replace(/_/g, " ");
+    const decisionLabel = translateStatusLabel(rawDecisionCode, locale);
 
     const assessmentTone =
-        decisionLabel.includes("NO GO") || decisionLabel.includes("REJECT")
+        decisionCodeNorm.includes("NO GO") || decisionCodeNorm.includes("REJECT")
             ? "critical"
-            : decisionLabel.includes("CAUTION") || decisionLabel.includes("MARGINAL")
+            : decisionCodeNorm.includes("CAUTION") || decisionCodeNorm.includes("MARGINAL")
               ? "warning"
               : "success";
 
@@ -107,7 +111,7 @@ export function PreFlightBriefingModal({
         <Modal
             isOpen={isOpen}
             onClose={handleClose}
-            title={`Pre-Flight Briefing${flightNumber ? ` — ${flightNumber}` : ""}`}
+            title={flightNumber ? t("titleWithNumber", { flight: flightNumber }) : t("title")}
             maxWidth={680}
             footer={
                 <div className="flex items-center justify-between w-full gap-2">
@@ -123,13 +127,11 @@ export function PreFlightBriefingModal({
                             <Sparkles className="w-3.5 h-3.5" />
                         )}
                         <span>
-                            {assessMutation.isPending
-                                ? "Assessing..."
-                                : "Run Authorization Assessment"}
+                            {assessMutation.isPending ? t("assessing") : t("runAssessment")}
                         </span>
                     </ChamferButton>
                     <ChamferButton variant="outline" size="sm" onClick={handleClose}>
-                        Close
+                        {tCommon("close")}
                     </ChamferButton>
                 </div>
             }
@@ -138,7 +140,7 @@ export function PreFlightBriefingModal({
                 <div
                     role="status"
                     aria-busy="true"
-                    aria-label="Loading pre-flight briefing"
+                    aria-label={t("loading")}
                     className="flex flex-col gap-4"
                 >
                     <div className="rounded border border-slate-200 bg-slate-50 p-3.5 flex items-center justify-between gap-3">
@@ -157,12 +159,12 @@ export function PreFlightBriefingModal({
                             </div>
                         ))}
                     </div>
-                    <span className="sr-only">Loading pre-flight briefing...</span>
+                    <span className="sr-only">{t("loading")}</span>
                 </div>
             ) : isError || !briefing ? (
                 <ErrorState
-                    title="Unable to load pre-flight briefing"
-                    description="Weather, airspace, and traffic checks could not be aggregated for this flight."
+                    title={t("loadErrorTitle")}
+                    description={t("loadErrorDesc")}
                     onRetry={() => refetch()}
                 />
             ) : (
@@ -170,12 +172,14 @@ export function PreFlightBriefingModal({
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-3.5 py-3 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-col gap-0.5">
                             <span className="text-xs font-mono font-bold text-slate-900">
-                                {briefing.route?.departureHub || "Origin"} →{" "}
-                                {briefing.route?.arrivalHub || "Destination"}
+                                {briefing.route?.departureHub || t("origin")} →{" "}
+                                {briefing.route?.arrivalHub || t("destination")}
                             </span>
                             <span className="text-[11px] font-mono text-slate-500 tabular-nums">
-                                Cruise {briefing.route?.altitudeM ?? "—"} m ·{" "}
-                                {briefing.route?.points?.length ?? 0} waypoints
+                                {t("cruiseSummary", {
+                                    alt: briefing.route?.altitudeM ?? "—",
+                                    count: briefing.route?.points?.length ?? 0,
+                                })}
                                 {briefing.generatedAt
                                     ? ` · ${formatDateTime(briefing.generatedAt)}`
                                     : ""}
@@ -183,7 +187,11 @@ export function PreFlightBriefingModal({
                         </div>
                         <StatusBadge
                             status={verdict}
-                            label={`VERDICT: ${verdict.replace(/_/g, " ")}`}
+                            label={t("verdictBadge", {
+                                verdict:
+                                    translateStatusLabel(verdict, locale) ??
+                                    verdict.replace(/_/g, " "),
+                            })}
                         />
                     </div>
 
@@ -192,20 +200,20 @@ export function PreFlightBriefingModal({
                             <div className="flex items-center justify-between gap-2">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800 uppercase">
                                     <CloudSun className="w-3.5 h-3.5 text-slate-600" />
-                                    Weather
+                                    {t("weather")}
                                 </span>
                                 {wxVerdict && <StatusBadge status={wxVerdict} />}
                             </div>
                             <div className="text-xs font-mono text-slate-700 space-y-0.5">
                                 <div>
-                                    Category:{" "}
+                                    {t("category")}{" "}
                                     <strong className="text-slate-900">{wxCat || "VFR"}</strong>
-                                    {wxIcao ? ` · Station ${wxIcao}` : ""}
+                                    {wxIcao ? ` · ${t("station", { icao: wxIcao })}` : ""}
                                 </div>
                                 <div className="text-[11px] text-slate-500 tabular-nums">
                                     {wxWind != null
-                                        ? `Sustained wind ${wxWind.toFixed(1)} m/s`
-                                        : "Meteorological conditions nominal"}
+                                        ? t("sustainedWind", { speed: wxWind.toFixed(1) })
+                                        : t("weatherNominal")}
                                 </div>
                             </div>
                         </div>
@@ -214,26 +222,26 @@ export function PreFlightBriefingModal({
                             <div className="flex items-center justify-between gap-2">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800 uppercase">
                                     <Shield className="w-3.5 h-3.5 text-slate-600" />
-                                    Airspace Sectors
+                                    {t("airspaceSectors")}
                                 </span>
                                 {airSafe !== undefined && (
                                     <StatusBadge
                                         status={airSafe ? "go" : "no_go"}
-                                        label={airSafe ? "CLEAR" : "VIOLATION"}
+                                        label={airSafe ? t("clear") : t("violation")}
                                     />
                                 )}
                             </div>
                             <div className="text-xs font-mono text-slate-700 space-y-0.5">
                                 <div>
-                                    Zone intersections:{" "}
+                                    {t("zoneIntersections")}{" "}
                                     <strong className="text-slate-900 tabular-nums">
                                         {breachCount}
                                     </strong>
                                 </div>
                                 <div className="text-[11px] text-slate-500">
                                     {breachCount === 0
-                                        ? "Trajectory clear of restricted & prohibited zones"
-                                        : `${breachCount} active sector conflict(s) along corridor`}
+                                        ? t("trajectoryClear")
+                                        : t("sectorConflicts", { count: breachCount })}
                                 </div>
                             </div>
                         </div>
@@ -242,7 +250,7 @@ export function PreFlightBriefingModal({
                             <div className="flex items-center justify-between gap-2">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800 uppercase">
                                     <Plane className="w-3.5 h-3.5 text-slate-600" />
-                                    ADS-B Traffic
+                                    {t("adsbTraffic")}
                                 </span>
                                 <StatusBadge
                                     status={
@@ -252,18 +260,18 @@ export function PreFlightBriefingModal({
                                               ? "warning"
                                               : "go"
                                     }
-                                    label={`${nearbyAircraft} NEARBY`}
+                                    label={t("nearbyBadge", { count: nearbyAircraft })}
                                 />
                             </div>
                             <div className="text-xs font-mono text-slate-700 space-y-0.5 tabular-nums">
                                 <div>
-                                    Warning contacts:{" "}
-                                    <strong className="text-slate-900">{warningContacts}</strong> ·
-                                    Caution:{" "}
+                                    {t("warningContacts")}{" "}
+                                    <strong className="text-slate-900">{warningContacts}</strong> ·{" "}
+                                    {t("cautionContacts")}{" "}
                                     <strong className="text-slate-900">{cautionContacts}</strong>
                                 </div>
                                 <div className="text-[11px] text-slate-500">
-                                    Low-altitude manned traffic surveillance
+                                    {t("adsbSubtitle")}
                                 </div>
                             </div>
                         </div>
@@ -272,22 +280,22 @@ export function PreFlightBriefingModal({
                             <div className="flex items-center justify-between gap-2">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800 uppercase">
                                     <FileWarning className="w-3.5 h-3.5 text-slate-600" />
-                                    NOTAM Advisories
+                                    {t("notamAdvisories")}
                                 </span>
                                 <StatusBadge
                                     status={notamCritical > 0 ? "warning" : "info"}
-                                    label={`${notamRelevant} ACTIVE`}
+                                    label={t("activeBadge", { count: notamRelevant })}
                                 />
                             </div>
                             <div className="text-xs font-mono text-slate-700 space-y-0.5 tabular-nums">
                                 <div>
-                                    Critical notices:{" "}
+                                    {t("criticalNotices")}{" "}
                                     <strong className="text-slate-900">{notamCritical}</strong>
                                 </div>
                                 <div className="text-[11px] text-slate-500">
                                     {notamRelevant === 0
-                                        ? "No route-relevant FIR NOTAMs"
-                                        : `${notamRelevant} active notice(s) in monitored FIR`}
+                                        ? t("noNotams")
+                                        : t("activeNotams", { count: notamRelevant })}
                                 </div>
                             </div>
                         </div>
@@ -299,7 +307,7 @@ export function PreFlightBriefingModal({
                             icon={Sparkles}
                             title={
                                 <span className="inline-flex items-center gap-2">
-                                    <span>Authorization Assessment</span>
+                                    <span>{t("assessmentTitle")}</span>
                                     {assessment.model && (
                                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-600">
                                             {assessment.model}
@@ -309,14 +317,7 @@ export function PreFlightBriefingModal({
                             }
                             description={assessment.ai?.humanSummary}
                             rightSlot={
-                                <StatusBadge
-                                    status={
-                                        assessment.ai?.decision ??
-                                        assessment.deterministicVerdict ??
-                                        "unknown"
-                                    }
-                                    label={decisionLabel}
-                                />
+                                <StatusBadge status={rawDecisionCode} label={decisionLabel} />
                             }
                         >
                             {assessment.ai?.blockingReasons &&
@@ -324,7 +325,7 @@ export function PreFlightBriefingModal({
                                     <div className="flex flex-col gap-1 pt-1">
                                         <span className="text-[10px] font-mono font-bold uppercase text-red-700 flex items-center gap-1">
                                             <AlertTriangle className="w-3 h-3" />
-                                            Blocking Reasons
+                                            {t("blockingReasons")}
                                         </span>
                                         <ul className="list-disc list-inside text-xs text-red-800 space-y-0.5">
                                             {assessment.ai.blockingReasons.map((r, i) => (
@@ -338,7 +339,7 @@ export function PreFlightBriefingModal({
                                 <div className="flex flex-col gap-1 pt-1">
                                     <span className="text-[10px] font-mono font-bold uppercase text-amber-700 flex items-center gap-1">
                                         <CheckCircle2 className="w-3 h-3" />
-                                        Operating Conditions
+                                        {t("operatingConditions")}
                                     </span>
                                     <ul className="list-disc list-inside text-xs text-slate-700 space-y-0.5">
                                         {assessment.ai.conditions.map((c, i) => (

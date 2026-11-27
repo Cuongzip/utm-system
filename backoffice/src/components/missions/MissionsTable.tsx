@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Compass, MapPin, Play, Copy, Trash2, CalendarClock, CalendarOff } from "lucide-react";
 import {
     ChamferCard,
@@ -58,6 +59,8 @@ export function MissionsTable({
     onNewMission,
     hubMap = new Map(),
 }: MissionsTableProps) {
+    const t = useTranslations("missions");
+    const tCommon = useTranslations("common");
     const [missionToDelete, setMissionToDelete] = useState<Mission | null>(null);
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(missions);
@@ -73,7 +76,7 @@ export function MissionsTable({
 
         const items: ActionMenuItem[] = [
             {
-                label: isDraft ? "Edit Mission" : "View Details",
+                label: isDraft ? t("actions.edit") : t("actions.viewDetails"),
                 icon: <Compass className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onSelectMission(mission),
             },
@@ -85,8 +88,8 @@ export function MissionsTable({
                     status === MISSION_STATUS.COMPLETED ||
                     status === MISSION_STATUS.ABORTED ||
                     status === MISSION_STATUS.FAILED
-                        ? "Re-Execute Mission"
-                        : "Execute Mission",
+                        ? t("actions.reExecute")
+                        : t("actions.execute"),
                 icon: <Play className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onExecuteMission(mission),
             });
@@ -94,7 +97,7 @@ export function MissionsTable({
 
         if (canSchedule) {
             items.push({
-                label: "Schedule Dispatch",
+                label: t("actions.scheduleDispatch"),
                 icon: <CalendarClock className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onScheduleMission(mission),
             });
@@ -102,21 +105,21 @@ export function MissionsTable({
 
         if (isScheduled) {
             items.push({
-                label: "Unschedule to Draft",
+                label: t("actions.unscheduleDraft"),
                 icon: <CalendarOff className="w-3.5 h-3.5 text-slate-500" />,
                 onClick: () => onUnscheduleMission(mission),
             });
         }
 
         items.push({
-            label: "Duplicate",
+            label: t("actions.duplicate"),
             icon: <Copy className="w-3.5 h-3.5 text-slate-500" />,
             onClick: () => onDuplicateMission(mission),
         });
 
         if (status !== MISSION_STATUS.EXECUTING && status !== MISSION_STATUS.PAUSED) {
             items.push({
-                label: "Delete",
+                label: tCommon("delete"),
                 icon: <Trash2 className="w-3.5 h-3.5" />,
                 danger: true,
                 onClick: () => setMissionToDelete(mission),
@@ -132,33 +135,29 @@ export function MissionsTable({
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>CODE</TableHead>
-                            <TableHead>MISSION</TableHead>
-                            <TableHead>STATUS</TableHead>
-                            <TableHead>ROUTE</TableHead>
-                            <TableHead>SCHEDULE</TableHead>
-                            <TableHead>WPS</TableHead>
-                            <TableHead>CREATED</TableHead>
-                            <TableHead align="right">ACTIONS</TableHead>
+                            <TableHead>{t("table.code")}</TableHead>
+                            <TableHead>{t("table.mission")}</TableHead>
+                            <TableHead>{t("table.status")}</TableHead>
+                            <TableHead>{t("table.route")}</TableHead>
+                            <TableHead>{t("table.schedule")}</TableHead>
+                            <TableHead>{t("table.wps")}</TableHead>
+                            <TableHead>{t("table.created")}</TableHead>
+                            <TableHead align="right">{t("table.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={8} message="Loading missions..." />
+                            <TableLoading colSpan={8} message={t("table.loading")} />
                         ) : missions.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} className="py-10 text-center">
                                     <EmptyState
                                         icon={Compass}
                                         title={
-                                            hasFilters
-                                                ? "No matching missions"
-                                                : "No missions found"
+                                            hasFilters ? t("empty.filteredTitle") : t("empty.title")
                                         }
                                         description={
-                                            hasFilters
-                                                ? "No mission templates match the active search or status filter."
-                                                : "Plan and automate flight routes across your vertiport network."
+                                            hasFilters ? t("empty.filteredDesc") : t("empty.desc")
                                         }
                                         action={
                                             hasFilters && onClearFilters ? (
@@ -167,11 +166,11 @@ export function MissionsTable({
                                                     size="sm"
                                                     onClick={onClearFilters}
                                                 >
-                                                    Clear Filters
+                                                    {t("empty.clearFilters")}
                                                 </ChamferButton>
                                             ) : (
                                                 {
-                                                    label: "Create First Mission",
+                                                    label: t("empty.createFirst"),
                                                     onClick: onNewMission,
                                                 }
                                             )
@@ -217,7 +216,7 @@ export function MissionsTable({
                                             tooltip={mission.name || mission.id}
                                         >
                                             <span className="font-semibold text-slate-900">
-                                                {mission.name || "Untitled Mission"}
+                                                {mission.name || t("untitledMission")}
                                             </span>
                                         </TableCell>
 
@@ -278,15 +277,15 @@ export function MissionsTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="missions"
+                    itemLabel={t("itemLabel")}
                 />
             </ChamferCard>
 
             <ConfirmDialog
                 isOpen={!!missionToDelete}
-                title="Delete Mission"
-                description={`Are you sure you want to delete mission "${missionToDelete?.name}"? All associated waypoints will be removed.`}
-                confirmText="Delete Mission"
+                title={t("deleteDialog.title")}
+                description={t("deleteDialog.desc", { name: missionToDelete?.name || "" })}
+                confirmText={t("deleteDialog.confirm")}
                 onConfirm={() => {
                     if (missionToDelete) {
                         onDeleteMission(missionToDelete);

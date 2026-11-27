@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Copy, Check, ExternalLink, ScrollText, Satellite } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ export interface SessionLiveFeedProps {
 type TabType = "telemetry" | "events" | "specs";
 
 export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
+    const t = useTranslations("simulation.liveFeed");
     const [activeTab, setActiveTab] = useState<TabType>("telemetry");
     const [wsRecords, setWsRecords] = useState<TelemetryRecord[]>([]);
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -100,11 +102,11 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
 
     const { data: events = [] } = useSimulationEvents(session.id, isRunning);
 
-    const handleCopy = (text: string, fieldName: string) => {
+    const handleCopy = (text: string, fieldKey: string, fieldLabel: string) => {
         if (!text) return;
         navigator.clipboard.writeText(text);
-        setCopiedField(fieldName);
-        toast.success(`Copied ${fieldName} to clipboard`);
+        setCopiedField(fieldKey);
+        toast.success(t("copiedToast", { field: fieldLabel }));
         setTimeout(() => setCopiedField(null), 1800);
     };
 
@@ -115,7 +117,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     const latLonText = formatCoordinates(
         { latitude: session.currentLat, longitude: session.currentLon },
         6,
-        "Awaiting GNSS fix"
+        t("awaitingGnss")
     );
 
     const resolvedFlight = useMemo(
@@ -134,9 +136,9 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     }, [drones, effectiveDroneId]);
 
     const tabs: readonly UnderlineTabItem<TabType>[] = [
-        { id: "telemetry", label: "Live Telemetry", count: records.length },
-        { id: "events", label: "Activity Log", count: events.length },
-        { id: "specs", label: "Session Specs" },
+        { id: "telemetry", label: t("tabTelemetry"), count: records.length },
+        { id: "events", label: t("tabEvents"), count: events.length },
+        { id: "specs", label: t("tabSpecs") },
     ];
 
     return (
@@ -145,7 +147,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                 tabs={tabs}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                ariaLabel="Simulation session data"
+                ariaLabel={t("tabsAria")}
             />
 
             <ChamferCard size="lg" className="w-full">
@@ -155,20 +157,20 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                             <EmptyState
                                 compact
                                 icon={Satellite}
-                                title="Awaiting Telemetry Packets"
-                                description="Live position, altitude, heading, and battery samples appear here while the simulation is running."
+                                title={t("emptyTelemetryTitle")}
+                                description={t("emptyTelemetryDesc")}
                             />
                         ) : (
                             <Table fixed={false} wrapperClassName="max-h-[420px] overflow-y-auto">
                                 <TableHeader className="sticky top-0 bg-slate-50 z-10 border-b border-slate-200">
                                     <TableRow>
-                                        <TableHead>TIME</TableHead>
-                                        <TableHead>COORDINATES (LAT, LON)</TableHead>
-                                        <TableHead>ALTITUDE</TableHead>
-                                        <TableHead>SPEED</TableHead>
-                                        <TableHead>HEADING</TableHead>
-                                        <TableHead>BATTERY</TableHead>
-                                        <TableHead align="right">STREAM</TableHead>
+                                        <TableHead>{t("colTime")}</TableHead>
+                                        <TableHead>{t("colCoords")}</TableHead>
+                                        <TableHead>{t("colAltitude")}</TableHead>
+                                        <TableHead>{t("colSpeed")}</TableHead>
+                                        <TableHead>{t("colHeading")}</TableHead>
+                                        <TableHead>{t("colBattery")}</TableHead>
+                                        <TableHead align="right">{t("colStream")}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody className="divide-y divide-slate-100 font-mono text-xs">
@@ -227,12 +229,11 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                     {isFirst ? (
                                                         <StatusBadge
                                                             status="live"
-                                                            label="LIVE"
                                                             dotShape="circle"
                                                         />
                                                     ) : (
                                                         <span className="text-[10px] font-mono text-slate-400">
-                                                            SAMPLE
+                                                            {t("sampleTag")}
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -251,8 +252,8 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                             <EmptyState
                                 compact
                                 icon={ScrollText}
-                                title="No Activity Events Recorded"
-                                description="Fault injections, warnings, and session lifecycle transitions appear here in real time."
+                                title={t("emptyEventsTitle")}
+                                description={t("emptyEventsDesc")}
                             />
                         ) : (
                             <div className="flex flex-col divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
@@ -277,7 +278,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                     </span>
                                                 )}
                                                 <span className="text-xs font-mono text-slate-800">
-                                                    {evt.message || evt.type || "Event"}
+                                                    {evt.message || evt.type || t("eventFallback")}
                                                 </span>
                                             </div>
 
@@ -298,7 +299,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                     <div className="p-4 flex flex-col divide-y divide-slate-100 font-mono text-xs">
                         <div className="py-2.5 first:pt-0 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                FLIGHT PLAN
+                                {t("flightPlan")}
                             </span>
                             <div className="flex items-center gap-2">
                                 {session.flightId ? (
@@ -317,13 +318,17 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                handleCopy(session.flightId || "", "Flight Plan ID")
+                                                handleCopy(
+                                                    session.flightId || "",
+                                                    "flightId",
+                                                    t("flightPlanIdField")
+                                                )
                                             }
                                             className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                            title="Copy Flight Plan UUID"
-                                            aria-label="Copy Flight Plan ID"
+                                            title={t("copyFlightPlanUuid")}
+                                            aria-label={t("copyFlightPlanUuid")}
                                         >
-                                            {copiedField === "Flight Plan ID" ? (
+                                            {copiedField === "flightId" ? (
                                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
                                             ) : (
                                                 <Copy className="w-3.5 h-3.5" />
@@ -338,7 +343,7 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
 
                         <div className="py-2.5 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                TARGET AIRCRAFT
+                                {t("targetAircraft")}
                             </span>
                             <div className="flex items-center gap-2">
                                 {effectiveDroneId ? (
@@ -353,12 +358,18 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                         </Link>
                                         <button
                                             type="button"
-                                            onClick={() => handleCopy(effectiveDroneId, "Drone ID")}
+                                            onClick={() =>
+                                                handleCopy(
+                                                    effectiveDroneId,
+                                                    "droneId",
+                                                    t("droneIdField")
+                                                )
+                                            }
                                             className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                            title="Copy Drone UUID"
-                                            aria-label="Copy Drone ID"
+                                            title={t("copyDroneUuid")}
+                                            aria-label={t("copyDroneUuid")}
                                         >
-                                            {copiedField === "Drone ID" ? (
+                                            {copiedField === "droneId" ? (
                                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
                                             ) : (
                                                 <Copy className="w-3.5 h-3.5" />
@@ -366,26 +377,28 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                         </button>
                                     </>
                                 ) : (
-                                    <span className="text-slate-400">Auto-assigned</span>
+                                    <span className="text-slate-400">{t("autoAssigned")}</span>
                                 )}
                             </div>
                         </div>
 
                         <div className="py-2.5 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                GNSS POSITION
+                                {t("gnssPosition")}
                             </span>
                             <div className="flex items-center gap-2">
                                 <span className="text-slate-700 font-medium">{latLonText}</span>
                                 {session.currentLat != null && session.currentLon != null && (
                                     <button
                                         type="button"
-                                        onClick={() => handleCopy(latLonText, "Coordinates")}
+                                        onClick={() =>
+                                            handleCopy(latLonText, "coords", t("coordsField"))
+                                        }
                                         className="p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                        title="Copy Coordinates"
-                                        aria-label="Copy Coordinates"
+                                        title={t("copyCoords")}
+                                        aria-label={t("copyCoords")}
                                     >
-                                        {copiedField === "Coordinates" ? (
+                                        {copiedField === "coords" ? (
                                             <Check className="w-3.5 h-3.5 text-emerald-600" />
                                         ) : (
                                             <Copy className="w-3.5 h-3.5" />
@@ -397,20 +410,20 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
 
                         <div className="py-2.5 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                CORRIDOR SEGMENT
+                                {t("corridorSegment")}
                             </span>
                             <span className="font-bold text-slate-800">
                                 {isCompleted
-                                    ? "Reached Destination"
+                                    ? t("reachedDestination")
                                     : session.currentSegment != null
-                                      ? `Active Segment #${session.currentSegment}`
-                                      : "Nominal Trajectory"}
+                                      ? t("activeSegment", { num: session.currentSegment })
+                                      : t("nominalTrajectory")}
                             </span>
                         </div>
 
                         <div className="py-2.5 last:pb-0 flex items-center justify-between gap-3">
                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                TIME SCALE
+                                {t("timeScale")}
                             </span>
                             <span className="font-bold text-slate-800">
                                 {session.timeScale != null ? `${session.timeScale}x` : "1.0x"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertCircle, ArrowLeft } from "lucide-react";
@@ -13,6 +14,7 @@ import type { UpdateMissionPayload } from "@/types";
 export default function EditMissionPage() {
     const router = useRouter();
     const params = useParams();
+    const t = useTranslations("missions");
     const queryClient = useQueryClient();
     const missionId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
 
@@ -26,13 +28,20 @@ export default function EditMissionPage() {
     } = useMissionDetail(missionId);
 
     const updateMutation = useMutation({
-        mutationFn: async ({ payload, waypoints, defaultAltitude }: MissionSaveData) => {
-            const depHub = hubs.find((h) => h.id === mission?.departureHubId) ?? null;
-            const arrHub = hubs.find((h) => h.id === mission?.arrivalHubId) ?? null;
+        mutationFn: async ({
+            payload,
+            waypoints,
+            persistedWaypoints,
+            defaultAltitude,
+        }: MissionSaveData) => {
+            const depHubId = payload.departureHubId || mission?.departureHubId;
+            const arrHubId = payload.arrivalHubId || mission?.arrivalHubId || depHubId;
+            const depHub = hubs.find((h) => h.id === depHubId) ?? null;
+            const arrHub = hubs.find((h) => h.id === arrHubId) ?? null;
             await missionService.updateMission(missionId, payload as UpdateMissionPayload);
             await syncMissionWaypoints(
                 missionId,
-                mission?.waypoints ?? [],
+                persistedWaypoints ?? mission?.waypoints ?? [],
                 waypoints,
                 defaultAltitude,
                 depHub,
@@ -41,10 +50,11 @@ export default function EditMissionPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
-            toast.success("Mission updated successfully");
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missionDetail(missionId) });
+            toast.success(t("toasts.updated"));
             router.push("/dashboard/missions");
         },
-        meta: { defaultErrorMessage: "Failed to save mission" },
+        meta: { defaultErrorMessage: t("toasts.saveFailed") },
     });
 
     if (missionLoading || hubsLoading || dronesLoading) {
@@ -56,14 +66,12 @@ export default function EditMissionPage() {
             <div className="flex items-center justify-center min-h-[60vh] p-8">
                 <EmptyState
                     icon={AlertCircle}
-                    title="Mission Not Found"
+                    title={t("notFoundTitle")}
                     description={
-                        missionError instanceof Error
-                            ? missionError.message
-                            : "The requested mission profile does not exist or may have been removed."
+                        missionError instanceof Error ? missionError.message : t("notFoundDesc")
                     }
                     action={{
-                        label: "Back to Missions Management",
+                        label: t("backToMissions"),
                         onClick: () => router.push("/dashboard/missions"),
                         icon: ArrowLeft,
                         variant: "chamfer",

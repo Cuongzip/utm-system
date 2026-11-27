@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useHubsAll, useDronesAll, QUERY_KEYS } from "@/hooks";
@@ -10,6 +11,7 @@ import type { CreateFlightPayload, UpdateFlightPayload } from "@/types";
 
 export default function NewFlightPage() {
     const router = useRouter();
+    const t = useTranslations("flights");
     const queryClient = useQueryClient();
 
     const { data: hubs = [], isLoading: hubsLoading } = useHubsAll();
@@ -18,11 +20,11 @@ export default function NewFlightPage() {
     const createMutation = useMutation({
         mutationFn: (payload: CreateFlightPayload) => flightService.createFlight(payload),
         onSuccess: (data) => {
-            toast.success(`Flight plan ${data.flightNumber || ""} registered successfully`);
+            toast.success(t("toasts.registered", { flight: data.flightNumber || "" }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
             router.push("/dashboard/flights");
         },
-        meta: { defaultErrorMessage: "Failed to create flight plan" },
+        meta: { defaultErrorMessage: t("toasts.createFailed") },
     });
 
     const handleSave = async (payload: CreateFlightPayload | UpdateFlightPayload) => {

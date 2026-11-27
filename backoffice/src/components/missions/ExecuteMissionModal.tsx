@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
@@ -12,12 +13,12 @@ import {
     useHubsAll,
     useMissionExecutionPlan,
 } from "@/hooks";
+import { useAppLocale, type AppLocale } from "@/i18n";
 import { missionService } from "@/services/missionService";
-import { formatDistance } from "@/utils";
+import { formatDistance, localizeServerText } from "@/utils";
 import {
     EXECUTION_MODE,
     EXECUTION_MODES,
-    EXECUTION_MODE_LABELS,
     FEASIBILITY_VERDICT,
     STOPOVER_TYPE,
     type ExecuteMissionPayload,
@@ -35,46 +36,53 @@ export interface ExecuteMissionModalProps {
     onExecuted?: () => void;
 }
 
-const DISPATCH_OPTIONS = [
-    { value: "auto", label: "Auto-Assign Best Drone" },
-    { value: "manual", label: "Manual Drone Selection" },
-];
+type MissionTranslator = ReturnType<typeof useTranslations<"missions">>;
 
-const EXECUTION_MODE_OPTIONS = EXECUTION_MODES.map((mode) => ({
-    value: mode,
-    label: EXECUTION_MODE_LABELS[mode],
-}));
-
-function formatCandidateLabel(c: ScoredDroneCandidate): string {
+function formatCandidateLabel(
+    c: ScoredDroneCandidate,
+    t: MissionTranslator,
+    locale: AppLocale
+): string {
     const name = c.registrationNumber || c.model || c.droneId.slice(0, 8);
-    const score = c.finalScore != null ? `${Math.round(c.finalScore)} pts` : "";
+    const score =
+        c.finalScore != null ? t("executeModal.pts", { score: Math.round(c.finalScore) }) : "";
     const margin =
         c.batteryMarginPct != null
-            ? `${c.batteryMarginPct >= 0 ? "+" : ""}${Math.round(c.batteryMarginPct)}% margin`
+            ? t("executeModal.marginPct", {
+                  sign: c.batteryMarginPct >= 0 ? "+" : "",
+                  pct: Math.round(c.batteryMarginPct),
+              })
             : "";
     const meta = [score, margin].filter(Boolean).join(" · ");
     if (c.eligible === false) {
-        return `${name} (Ineligible${c.ineligibilityReason ? `: ${c.ineligibilityReason}` : ""})`;
+        const ineligibleText = c.ineligibilityReason
+            ? t("executeModal.ineligibleReason", {
+                  reason: localizeServerText(c.ineligibilityReason, locale),
+              })
+            : t("executeModal.ineligible");
+        return `${name} (${ineligibleText})`;
     }
     return meta ? `${name} · ${meta}` : name;
 }
 
-function cleanAirspaceWarning(raw: string): string {
+function cleanAirspaceWarning(raw: string, t: MissionTranslator, locale: AppLocale): string {
     const withoutPrefix = raw.replace(/^\[[^\]]+\]\s*/, "").trim();
     const colonIdx = withoutPrefix.indexOf(":");
     if (colonIdx > 0) {
         const zoneName = withoutPrefix.slice(0, colonIdx).trim();
         const detail = withoutPrefix.slice(colonIdx + 1).trim();
         if (detail.toLowerCase().includes("intersects")) {
-            return `Restricted zone: ${zoneName}`;
+            return t("executeModal.restrictedZone", { zone: zoneName });
         }
         if (detail.toLowerCase().includes("below floor")) {
             const floorVal = detail.match(/\(([^)]+)\)/)?.[1];
-            return `Below corridor floor${floorVal ? ` (${floorVal})` : ""}: ${zoneName}`;
+            return floorVal
+                ? t("executeModal.belowFloorWithVal", { floor: floorVal, zone: zoneName })
+                : t("executeModal.belowFloor", { zone: zoneName });
         }
-        return `${zoneName}: ${detail}`;
+        return localizeServerText(`${zoneName}: ${detail}`, locale);
     }
-    return withoutPrefix;
+    return localizeServerText(withoutPrefix, locale);
 }
 
 function detectRangeShortfall(plan?: MissionExecutionPlan | null): boolean {
@@ -117,6 +125,8 @@ function ExecuteMissionModalBody({
     onClose,
     onExecuted,
 }: ExecuteMissionModalBodyProps) {
+    const t = useTranslations("missions");
+    const locale = useAppLocale();
     const queryClient = useQueryClient();
     const { data: currentUser } = useCurrentUser();
     const { data: drones = [] } = useDronesAll();
@@ -137,6 +147,23 @@ function ExecuteMissionModalBody({
     } = useMissionExecutionPlan(mission.id, Boolean(mission.id), autoSplitByRange);
 
     const plan = activePlan ?? basePlan;
+
+    const dispatchOptions = useMemo(
+        () => [
+            { value: "auto", label: t("executeModal.dispatchAuto") },
+            { value: "manual", label: t("executeModal.dispatchManual") },
+        ],
+        [t]
+    );
+
+    const executionModeOptions = useMemo(
+        () =>
+            EXECUTION_MODES.map((mode) => ({
+                value: mode,
+                label: t(`executeModal.modes.${mode}`),
+            })),
+        [t]
+    );
 
     const hubCodeMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -162,9 +189,11 @@ function ExecuteMissionModalBody({
 
     const globalSummaryWarnings = useMemo(() => {
         const list = plan?.warnings ?? [];
-        if (!isMultiLeg) return list;
-        return list.filter((w) => !/^Leg \d+ has restricted airspace violations$/i.test(w.trim()));
-    }, [plan?.warnings, isMultiLeg]);
+        const filtered = isMultiLeg
+            ? list.filter((w) => !/^Leg \d+ has restricted airspace violations$/i.test(w.trim()))
+            : list;
+        return filtered.map((w) => localizeServerText(w, locale));
+    }, [plan?.warnings, isMultiLeg, locale]);
 
     const primaryCandidates = useMemo(() => plan?.legs?.[0]?.candidateDrones ?? [], [plan]);
     const topCandidate = useMemo(
@@ -177,7 +206,7 @@ function ExecuteMissionModalBody({
             missionService.executeMission(mission.id, payload),
         onSuccess: (data) => {
             const legCount = data?.flights?.length || (data?.flight ? 1 : 0);
-            toast.success(`Mission launched with ${legCount} flight leg(s)`);
+            toast.success(t("toasts.launched", { count: legCount }));
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missions });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missionDetail(mission.id) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.missionExecutions(mission.id) });
@@ -186,7 +215,7 @@ function ExecuteMissionModalBody({
             onExecuted?.();
             onClose();
         },
-        meta: { defaultErrorMessage: "Failed to launch mission execution" },
+        meta: { defaultErrorMessage: t("toasts.launchFailed") },
     });
 
     const handleLaunch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -223,7 +252,7 @@ function ExecuteMissionModalBody({
         primaryCandidates.length > 0
             ? primaryCandidates.map((c) => ({
                   value: c.droneId,
-                  label: formatCandidateLabel(c),
+                  label: formatCandidateLabel(c, t, locale),
               }))
             : drones.map((d) => ({
                   value: d.id,
@@ -236,18 +265,22 @@ function ExecuteMissionModalBody({
         <Modal
             isOpen
             onClose={onClose}
-            title={`Execute Mission${mission.code ? `: ${mission.code}` : ""}`}
+            title={
+                mission.code
+                    ? t("executeModal.titleWithCode", { code: mission.code })
+                    : t("executeModal.title")
+            }
             maxWidth="540px"
             onSubmit={handleLaunch}
             loading={executeMutation.isPending}
-            submitText="Launch Mission"
-            loadingText="Launching..."
+            submitText={t("executeModal.submit")}
+            loadingText={t("executeModal.launching")}
         >
             {planLoading && !plan ? (
                 <div
                     role="status"
                     aria-busy="true"
-                    aria-label="Calculating execution plan"
+                    aria-label={t("executeModal.calculating")}
                     className="rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] p-3.5 space-y-3"
                 >
                     <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border-default)]">
@@ -262,18 +295,19 @@ function ExecuteMissionModalBody({
                             </div>
                         ))}
                     </div>
-                    <span className="sr-only">Calculating execution plan...</span>
+                    <span className="sr-only">{t("executeModal.calculating")}</span>
                 </div>
             ) : planError || !plan ? (
                 <div className="p-3 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] text-xs text-slate-600">
-                    Dry-run preview unavailable. Launch will proceed with server-side fleet
-                    dispatch.
+                    {t("executeModal.previewUnavailable")}
                 </div>
             ) : (
                 <div className="rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--color-border-default)]">
                         <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-800">
-                            EXECUTION PREVIEW · {plan.totalLegs} LEG{plan.totalLegs > 1 ? "S" : ""}
+                            {plan.totalLegs > 1
+                                ? t("executeModal.previewHeaderPlural", { count: plan.totalLegs })
+                                : t("executeModal.previewHeaderSingle", { count: plan.totalLegs })}
                         </span>
                         <StatusBadge
                             status={
@@ -281,14 +315,18 @@ function ExecuteMissionModalBody({
                                     ? FEASIBILITY_VERDICT.GO
                                     : FEASIBILITY_VERDICT.MARGINAL
                             }
-                            label={plan.feasible ? "FEASIBLE" : "REVIEW REQUIRED"}
+                            label={
+                                plan.feasible
+                                    ? t("executeModal.feasible")
+                                    : t("executeModal.reviewRequired")
+                            }
                         />
                     </div>
 
                     <div className="grid grid-cols-3 divide-x divide-[var(--color-border-default)] font-mono text-xs">
                         <div className="pr-3">
                             <span className="text-[10px] text-slate-500 uppercase block">
-                                Distance
+                                {t("executeModal.distance")}
                             </span>
                             <span className="font-bold text-slate-900 tabular-nums">
                                 {formatDistance(plan.totalDistanceMeters, 2)}
@@ -296,15 +334,15 @@ function ExecuteMissionModalBody({
                         </div>
                         <div className="px-3">
                             <span className="text-[10px] text-slate-500 uppercase block">
-                                Est. Duration
+                                {t("executeModal.estDuration")}
                             </span>
                             <span className="font-bold text-slate-900 tabular-nums">
-                                ~{durationMinutes} min
+                                {t("executeModal.minutesShort", { count: durationMinutes })}
                             </span>
                         </div>
                         <div className="pl-3">
                             <span className="text-[10px] text-slate-500 uppercase block">
-                                Est. Energy
+                                {t("executeModal.estEnergy")}
                             </span>
                             <span className="font-bold text-slate-900 tabular-nums">
                                 {Math.round(plan.totalEnergyWh)} Wh
@@ -325,20 +363,23 @@ function ExecuteMissionModalBody({
             <div className={isMultiLeg ? "form-row-2" : "space-y-3"}>
                 <div className="form-group">
                     <label className="form-label" htmlFor="dispatchMode">
-                        Drone Assignment
+                        {t("executeModal.droneAssignment")}
                     </label>
                     <CustomSelect
                         id="dispatchMode"
                         value={autoAssign ? "auto" : "manual"}
                         onValueChange={(val) => setAutoAssign(val === "auto")}
-                        options={DISPATCH_OPTIONS}
+                        options={dispatchOptions}
                     />
                     {autoAssign && topCandidate && !isRelayMode && (
                         <span className="text-[11px] font-mono text-slate-500 truncate">
-                            Best: {topCandidate.registrationNumber || topCandidate.model}
-                            {topCandidate.finalScore != null
-                                ? ` (${Math.round(topCandidate.finalScore)} pts)`
-                                : ""}
+                            {t("executeModal.bestCandidate", {
+                                name: `${topCandidate.registrationNumber || topCandidate.model || ""}${
+                                    topCandidate.finalScore != null
+                                        ? ` (${t("executeModal.pts", { score: Math.round(topCandidate.finalScore) })})`
+                                        : ""
+                                }`,
+                            })}
                         </span>
                     )}
                 </div>
@@ -346,13 +387,13 @@ function ExecuteMissionModalBody({
                 {isMultiLeg && (
                     <div className="form-group">
                         <label className="form-label" htmlFor="executionMode">
-                            Multi-Leg Mode
+                            {t("executeModal.multiLegMode")}
                         </label>
                         <CustomSelect
                             id="executionMode"
                             value={executionMode}
                             onValueChange={(val) => setExecutionModeOverride(val as ExecutionMode)}
-                            options={EXECUTION_MODE_OPTIONS}
+                            options={executionModeOptions}
                         />
                     </div>
                 )}
@@ -361,48 +402,50 @@ function ExecuteMissionModalBody({
             {!autoAssign && !isRelayMode && (
                 <div className="form-group">
                     <label className="form-label" htmlFor="executeDroneSelect">
-                        Assigned Drone <span className="text-red-500">*</span>
+                        {t("executeModal.assignedDrone")} <span className="text-red-500">*</span>
                     </label>
                     <CustomSelect
                         id="executeDroneSelect"
                         value={selectedDroneId}
                         onValueChange={setSelectedDroneId}
                         options={singleLegDroneOptions}
-                        placeholder="Select an available drone..."
+                        placeholder={t("executeModal.selectAvailableDrone")}
                     />
                 </div>
             )}
 
             <FormInput
                 id="executePilotId"
-                label="Remote Pilot ID"
+                label={t("executeModal.remotePilotId")}
                 required
                 value={pilotId}
                 onChange={(e) => setPilotIdOverride(e.target.value)}
-                placeholder="e.g. PILOT-VN-007"
+                placeholder={t("executeModal.pilotPlaceholder")}
             />
 
             {showAutoSplitToggle && (
                 <div className="px-3.5 py-2.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] flex items-center justify-between gap-3">
                     <div className="min-w-0">
                         <span className="text-xs font-semibold text-slate-900 block">
-                            Auto-Split via Active Charging Hubs
+                            {t("executeModal.autoSplitTitle")}
                         </span>
                         <span className="text-[11px] text-slate-500 block">
-                            Inserts charging stopovers when route exceeds battery range
+                            {t("executeModal.autoSplitDesc")}
                         </span>
                     </div>
                     <Switch
                         checked={autoSplitByRange}
                         onCheckedChange={setAutoSplitByRange}
-                        aria-label="Auto-split via charging hubs"
+                        aria-label={t("executeModal.autoSplitAria")}
                     />
                 </div>
             )}
 
             {plan?.legs && plan.legs.length > 0 && (isMultiLeg || !plan.legs[0].airspaceSafe) && (
                 <div className="form-group">
-                    <label className="form-label">Flight Legs ({plan.legs.length})</label>
+                    <label className="form-label">
+                        {t("executeModal.flightLegs", { count: plan.legs.length })}
+                    </label>
                     <div className="rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] divide-y divide-[var(--color-border-default)] max-h-48 overflow-y-auto">
                         {plan.legs.map((leg) => {
                             const depCode = leg.departureHubId
@@ -411,7 +454,11 @@ function ExecuteMissionModalBody({
                             const arrCode = leg.arrivalHubId
                                 ? hubCodeMap.get(leg.arrivalHubId)
                                 : null;
-                            const fullRouteTitle = `${leg.departureHubName || depCode || "Origin"} → ${leg.arrivalHubName || arrCode || "Destination"}`;
+                            const originLabel =
+                                leg.departureHubName || depCode || t("executeModal.origin");
+                            const destLabel =
+                                leg.arrivalHubName || arrCode || t("executeModal.destination");
+                            const fullRouteTitle = `${originLabel} → ${destLabel}`;
                             const stopoverSuffix =
                                 leg.stopoverType &&
                                 leg.stopoverType !== STOPOVER_TYPE.NONE &&
@@ -419,8 +466,8 @@ function ExecuteMissionModalBody({
                                 leg.groundTimeMinutes > 0
                                     ? ` · +${leg.groundTimeMinutes}m`
                                     : "";
-                            const legWarnings = (leg.airspaceWarnings ?? []).map(
-                                cleanAirspaceWarning
+                            const legWarnings = (leg.airspaceWarnings ?? []).map((w) =>
+                                cleanAirspaceWarning(w, t, locale)
                             );
 
                             return (
@@ -434,11 +481,11 @@ function ExecuteMissionModalBody({
                                                 L{leg.legIndex + 1}
                                             </span>
                                             <span className="font-semibold text-slate-900 truncate">
-                                                {depCode || leg.departureHubName || "Origin"}
+                                                {depCode || originLabel}
                                             </span>
                                             <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
                                             <span className="font-semibold text-slate-900 truncate">
-                                                {arrCode || leg.arrivalHubName || "Destination"}
+                                                {arrCode || destLabel}
                                             </span>
                                         </div>
                                         <span className="text-[11px] text-slate-500 shrink-0 whitespace-nowrap tabular-nums">
@@ -455,7 +502,7 @@ function ExecuteMissionModalBody({
                                                     <p key={wIdx}>• {w}</p>
                                                 ))
                                             ) : (
-                                                <p>• Restricted airspace violation</p>
+                                                <p>• {t("executeModal.restrictedViolation")}</p>
                                             )}
                                         </div>
                                     )}
@@ -472,12 +519,12 @@ function ExecuteMissionModalBody({
                                             options={[
                                                 {
                                                     value: "",
-                                                    label: "Auto-select best for this leg",
+                                                    label: t("executeModal.autoSelectLeg"),
                                                 },
                                                 ...(leg.candidateDrones?.length
                                                     ? leg.candidateDrones.map((c) => ({
                                                           value: c.droneId,
-                                                          label: formatCandidateLabel(c),
+                                                          label: formatCandidateLabel(c, t, locale),
                                                       }))
                                                     : drones.map((d) => ({
                                                           value: d.id,
@@ -487,7 +534,7 @@ function ExecuteMissionModalBody({
                                                               d.id,
                                                       }))),
                                             ]}
-                                            placeholder="Select drone for this leg..."
+                                            placeholder={t("executeModal.selectLegDrone")}
                                         />
                                     )}
                                 </div>

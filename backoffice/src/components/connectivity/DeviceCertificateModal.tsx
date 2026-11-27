@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ShieldCheck,
@@ -38,12 +39,6 @@ export interface DeviceCertificateModalProps {
 
 type PemTabId = "key" | "cert" | "ca";
 
-const PEM_TABS = [
-    { id: "key", label: "Private Key (One-Time)" },
-    { id: "cert", label: "Device Cert" },
-    { id: "ca", label: "Root CA" },
-] as const;
-
 function downloadPem(filename: string, content: string) {
     const blob = new Blob([content], { type: "application/x-pem-file" });
     const url = URL.createObjectURL(blob);
@@ -57,6 +52,7 @@ function downloadPem(filename: string, content: string) {
 }
 
 function PemBlock({ label, pem, filename }: { label: string; pem?: string; filename: string }) {
+    const t = useTranslations("connectivity.certModal");
     const [copied, setCopied] = useState(false);
 
     if (!pem) return null;
@@ -65,10 +61,10 @@ function PemBlock({ label, pem, filename }: { label: string; pem?: string; filen
         try {
             await navigator.clipboard.writeText(pem);
             setCopied(true);
-            toast.success(`${label} copied to clipboard`);
+            toast.success(t("copiedToast", { label }));
             setTimeout(() => setCopied(false), 1800);
         } catch {
-            toast.error("Failed to copy PEM to clipboard");
+            toast.error(t("copyErrorToast"));
         }
     };
 
@@ -89,7 +85,7 @@ function PemBlock({ label, pem, filename }: { label: string; pem?: string; filen
                         ) : (
                             <Copy className="w-3 h-3" />
                         )}
-                        <span>{copied ? "Copied" : "Copy"}</span>
+                        <span>{copied ? t("copied") : t("copy")}</span>
                     </button>
                     <button
                         type="button"
@@ -115,12 +111,24 @@ function DeviceCertificateModalBody({
     device: DeviceRegistration;
     onClose: () => void;
 }) {
+    const t = useTranslations("connectivity.certModal");
+    const tCommon = useTranslations("common");
     const queryClient = useQueryClient();
     const [issuedBundle, setIssuedBundle] = useState<IssuedCertificateBundle | null>(null);
     const [pemTab, setPemTab] = useState<PemTabId>("key");
     const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
     const [revokeReason, setRevokeReason] = useState("");
     const [hasFetchedAfterIssue, setHasFetchedAfterIssue] = useState(false);
+
+    const pemTabs = useMemo(
+        () =>
+            [
+                { id: "key", label: t("tabKey") },
+                { id: "cert", label: t("tabCert") },
+                { id: "ca", label: t("tabCa") },
+            ] as const,
+        [t]
+    );
 
     const shouldFetchCert = Boolean(device.certificateFingerprint) || hasFetchedAfterIssue;
 
@@ -146,13 +154,13 @@ function DeviceCertificateModalBody({
             setIssuedBundle(bundle);
             setPemTab("key");
             setHasFetchedAfterIssue(true);
-            toast.success("90-day RSA-2048 X.509 device certificate issued");
+            toast.success(t("issuedToast"));
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.connectivityDeviceCert(device.id),
             });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivityDevices });
         },
-        meta: { defaultErrorMessage: "Failed to issue device certificate" },
+        meta: { defaultErrorMessage: t("issueError") },
     });
 
     const revokeMutation = useMutation({
@@ -165,13 +173,13 @@ function DeviceCertificateModalBody({
             setIssuedBundle(null);
             setConfirmRevokeOpen(false);
             setRevokeReason("");
-            toast.success("Device X.509 certificate revoked");
+            toast.success(t("revokedToast"));
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.connectivityDeviceCert(device.id),
             });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectivityDevices });
         },
-        meta: { defaultErrorMessage: "Failed to revoke device certificate" },
+        meta: { defaultErrorMessage: t("revokeError") },
     });
 
     const activeCert = cert && !cert.revokedAt ? cert : null;
@@ -182,7 +190,7 @@ function DeviceCertificateModalBody({
             <Modal
                 isOpen
                 onClose={onClose}
-                title={`X.509 mTLS Certificate — ${device.deviceIdentifier || device.id.slice(0, 8)}`}
+                title={t("title", { id: device.deviceIdentifier || device.id.slice(0, 8) })}
                 maxWidth={640}
                 footer={
                     <div className="flex items-center justify-between w-full gap-2">
@@ -199,9 +207,7 @@ function DeviceCertificateModalBody({
                                     <RefreshCw className="w-3.5 h-3.5" />
                                 )}
                                 <span>
-                                    {activeCert || issuedBundle
-                                        ? "Rotate Certificate (90d)"
-                                        : "Issue 90-Day Certificate"}
+                                    {activeCert || issuedBundle ? t("rotateBtn") : t("issueBtn")}
                                 </span>
                             </ChamferButton>
 
@@ -214,13 +220,13 @@ function DeviceCertificateModalBody({
                                     onClick={() => setConfirmRevokeOpen(true)}
                                 >
                                     <ShieldOff className="w-3.5 h-3.5 text-red-600" />
-                                    <span className="text-red-700">Revoke</span>
+                                    <span className="text-red-700">{t("revokeBtn")}</span>
                                 </ChamferButton>
                             )}
                         </div>
 
                         <ChamferButton variant="outline" size="sm" clip="xs" onClick={onClose}>
-                            Close
+                            {tCommon("close")}
                         </ChamferButton>
                     </div>
                 }
@@ -231,34 +237,34 @@ function DeviceCertificateModalBody({
                             <TacticalCallout
                                 tone="warning"
                                 icon={AlertTriangle}
-                                title="Save the private key now — shown once only"
-                                description="Store the PKCS#8 RSA-2048 private key securely on the edge drone or gateway. Closing this dialog clears it permanently."
+                                title={t("saveKeyWarningTitle")}
+                                description={t("saveKeyWarningDesc")}
                             />
 
                             <UnderlineTabs
-                                tabs={PEM_TABS}
+                                tabs={pemTabs}
                                 activeTab={pemTab}
                                 onTabChange={setPemTab}
-                                ariaLabel="Issued PEM artifacts"
+                                ariaLabel={t("pemTabsAria")}
                             />
 
                             {pemTab === "key" && (
                                 <PemBlock
-                                    label="Private Key (PKCS#8 PEM)"
+                                    label={t("privateKeyPemLabel")}
                                     pem={issuedBundle.privateKeyPem}
                                     filename={`${slug}.key.pem`}
                                 />
                             )}
                             {pemTab === "cert" && (
                                 <PemBlock
-                                    label="Device Certificate (X.509 PEM)"
+                                    label={t("deviceCertPemLabel")}
                                     pem={issuedBundle.certificatePem}
                                     filename={`${slug}.crt.pem`}
                                 />
                             )}
                             {pemTab === "ca" && (
                                 <PemBlock
-                                    label="UTM Root CA Certificate (PEM)"
+                                    label={t("rootCaPemLabel")}
                                     pem={issuedBundle.caCertificatePem}
                                     filename="utm-root-ca.crt.pem"
                                 />
@@ -270,7 +276,7 @@ function DeviceCertificateModalBody({
                         <div
                             role="status"
                             aria-busy="true"
-                            aria-label="Loading X.509 certificate metadata"
+                            aria-label={t("loadingAria")}
                             className="rounded border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3"
                         >
                             <div className="flex items-center justify-between">
@@ -285,7 +291,7 @@ function DeviceCertificateModalBody({
                                     </div>
                                 ))}
                             </div>
-                            <span className="sr-only">Loading X.509 certificate metadata...</span>
+                            <span className="sr-only">{t("loadingSr")}</span>
                         </div>
                     ) : activeCert ? (
                         <div className="flex flex-col gap-3">
@@ -293,15 +299,15 @@ function DeviceCertificateModalBody({
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-900 uppercase">
                                         <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                                        <span>Active Device Certificate</span>
+                                        <span>{t("activeCertHeading")}</span>
                                     </div>
-                                    <StatusBadge status="active" label="VALID" />
+                                    <StatusBadge status="active" label={t("validBadge")} />
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
                                     <div>
                                         <span className="text-[10px] text-slate-400 uppercase block">
-                                            Common Name (CN)
+                                            {t("commonName")}
                                         </span>
                                         <span className="text-slate-900 font-semibold break-all">
                                             {activeCert.commonName || "—"}
@@ -309,7 +315,7 @@ function DeviceCertificateModalBody({
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-slate-400 uppercase block">
-                                            Serial Number
+                                            {t("serialNumber")}
                                         </span>
                                         <span className="text-slate-900 break-all">
                                             {activeCert.serialNumber || "—"}
@@ -317,7 +323,7 @@ function DeviceCertificateModalBody({
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-slate-400 uppercase block">
-                                            Issued At
+                                            {t("issuedAt")}
                                         </span>
                                         <span className="text-slate-700">
                                             {activeCert.issuedAt
@@ -327,7 +333,7 @@ function DeviceCertificateModalBody({
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-slate-400 uppercase block">
-                                            Expires At
+                                            {t("expiresAt")}
                                         </span>
                                         <span className="text-slate-700">
                                             {activeCert.expiresAt
@@ -340,7 +346,7 @@ function DeviceCertificateModalBody({
                                 {activeCert.fingerprint && (
                                     <div className="pt-2 border-t border-slate-200">
                                         <span className="text-[10px] font-mono text-slate-400 uppercase block">
-                                            SHA-256 Fingerprint
+                                            {t("sha256Fingerprint")}
                                         </span>
                                         <span className="text-[11px] font-mono text-slate-700 break-all">
                                             {activeCert.fingerprint}
@@ -351,7 +357,7 @@ function DeviceCertificateModalBody({
 
                             {!issuedBundle && (
                                 <PemBlock
-                                    label="Public Certificate (X.509 PEM)"
+                                    label={t("publicCertPemLabel")}
                                     pem={activeCert.certificatePem}
                                     filename={`${slug}.crt.pem`}
                                 />
@@ -362,12 +368,9 @@ function DeviceCertificateModalBody({
                             <div className="rounded border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center flex flex-col items-center gap-2">
                                 <KeyRound className="w-7 h-7 text-slate-400" />
                                 <p className="text-sm font-semibold text-slate-800">
-                                    No Active X.509 Certificate
+                                    {t("noCertTitle")}
                                 </p>
-                                <p className="text-xs text-slate-500 max-w-md">
-                                    Issue a 90-day RSA-2048 X.509 v3 certificate signed by the UTM
-                                    Root CA to authenticate this device over mutual TLS.
-                                </p>
+                                <p className="text-xs text-slate-500 max-w-md">{t("noCertDesc")}</p>
                             </div>
                         )
                     )}
@@ -378,23 +381,23 @@ function DeviceCertificateModalBody({
                 isOpen={confirmRevokeOpen}
                 onClose={() => setConfirmRevokeOpen(false)}
                 onConfirm={() => revokeMutation.mutate()}
-                title="Revoke X.509 Certificate"
-                confirmText="Revoke Certificate"
+                title={t("revokeModalTitle")}
+                confirmText={t("revokeModalConfirm")}
                 description={
                     <div className="flex flex-col gap-3">
                         <p>
-                            Revoking the active certificate for{" "}
+                            {t("revokeDescPrefix")}
                             <strong className="font-mono text-slate-900">
                                 {device.deviceIdentifier || device.id}
-                            </strong>{" "}
-                            immediately invalidates its mTLS credentials.
+                            </strong>
+                            {t("revokeDescSuffix")}
                         </p>
                         <FormInput
                             id="certRevokeReason"
-                            label="Revocation Reason (optional)"
+                            label={t("revokeReasonLabel")}
                             value={revokeReason}
                             onChange={(e) => setRevokeReason(e.target.value)}
-                            placeholder="e.g. Hardware decommissioned or key compromised"
+                            placeholder={t("revokeReasonPlaceholder")}
                         />
                     </div>
                 }

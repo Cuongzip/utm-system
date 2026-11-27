@@ -1,6 +1,8 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { cn } from "@/lib";
+import { translateStatusLabel, type AppLocale } from "@/i18n";
 
 export type StatusType =
     | "online"
@@ -145,9 +147,13 @@ export function StatusBadge({
     tone = "light",
     className,
 }: StatusBadgeProps) {
+    const locale = useLocale() as AppLocale;
     const normalized = (status || "").toLowerCase().replace(/[-\s]/g, "_");
     const displayLabel =
-        label !== undefined ? label : (status || "UNKNOWN").replace(/_/g, " ").toUpperCase();
+        label !== undefined
+            ? label
+            : (translateStatusLabel(status, locale) ??
+              (status || "UNKNOWN").replace(/_/g, " ").toUpperCase());
 
     const dotShapeClass =
         dotShape === "diamond" ? "rounded-[1px] rotate-45" : "rounded-full rotate-0";

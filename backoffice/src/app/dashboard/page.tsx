@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { ChamferButton, PageHeader, StatusBadge, TacticalCallout } from "@/components/ui";
 import {
@@ -21,6 +22,7 @@ import {
 import { ACTIVE_FLIGHT_STATUSES, ACTIVE_HUB_STATUS, ALERT_STATUS } from "@/types";
 
 export default function DashboardPage() {
+    const t = useTranslations("dashboard");
     const {
         data: allFlights = [],
         isLoading: isLoadingFlights,
@@ -58,21 +60,24 @@ export default function DashboardPage() {
 
     const headerBadge = useMemo(() => {
         if (isLoadingFlights || isLoadingHubs || isLoadingDrones) {
-            return { status: "pending" as const, label: "SYNCING" };
+            return { status: "syncing" as const, label: undefined };
         }
         if (isErrorFlights && isErrorHubs) {
-            return { status: "offline" as const, label: "API OFFLINE" };
+            return { status: "offline" as const, label: undefined };
         }
         if (isErrorFlights || isErrorHubs || isErrorDrones || isErrorAlerts || isErrorZones) {
-            return { status: "warning" as const, label: "DEGRADED" };
+            return { status: "degraded" as const, label: undefined };
         }
         if (activeTelemetryCount > 0) {
-            return { status: "live" as const, label: `${activeTelemetryCount} LIVE WS` };
+            return {
+                status: "live" as const,
+                label: t("liveWsCount", { count: activeTelemetryCount }),
+            };
         }
         if (isSocketConnected) {
-            return { status: "online" as const, label: "ONLINE" };
+            return { status: "online" as const, label: undefined };
         }
-        return { status: "standby" as const, label: "STANDBY" };
+        return { status: "standby" as const, label: undefined };
     }, [
         isLoadingFlights,
         isLoadingHubs,
@@ -84,6 +89,7 @@ export default function DashboardPage() {
         isErrorZones,
         activeTelemetryCount,
         isSocketConnected,
+        t,
     ]);
 
     const showAlertColumn = activeConflicts.length > 0 || actionableAlertsCount > 0;
@@ -91,7 +97,7 @@ export default function DashboardPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-5 w-full shrink-0">
             <PageHeader
-                title="OPERATIONS CENTER"
+                title={t("title")}
                 badges={<StatusBadge status={headerBadge.status} label={headerBadge.label} />}
             />
 
@@ -110,11 +116,13 @@ export default function DashboardPage() {
                     tone="critical"
                     title={
                         <span className="inline-flex flex-wrap items-center gap-2.5">
-                            <StatusBadge status="critical" label="CONFLICT" />
+                            <StatusBadge status="critical" label={t("conflictBadge")} />
                             <span>
-                                {activeConflicts.length} active separation conflict
-                                {activeConflicts.length > 1 ? "s" : ""} detected in monitored
-                                airspace
+                                {activeConflicts.length === 1
+                                    ? t("conflictCalloutSingle")
+                                    : t("conflictCalloutPlural", {
+                                          count: activeConflicts.length,
+                                      })}
                             </span>
                         </span>
                     }
@@ -126,7 +134,7 @@ export default function DashboardPage() {
                             href="/dashboard/conflicts"
                             innerClassName="font-mono uppercase tracking-wider text-[11px]"
                         >
-                            <span>Resolve</span>
+                            <span>{t("resolveAction")}</span>
                             <ArrowRight className="w-3 h-3" aria-hidden="true" />
                         </ChamferButton>
                     }
@@ -143,7 +151,7 @@ export default function DashboardPage() {
             <div
                 className={
                     showAlertColumn
-                        ? "grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-stretch"
+                        ? "grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start"
                         : "w-full"
                 }
             >

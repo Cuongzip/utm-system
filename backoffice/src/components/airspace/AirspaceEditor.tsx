@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Save, Trash2, Loader2 } from "lucide-react";
 import { SplitMapLayout, ChamferButton, StatusBadge, ConfirmDialog } from "@/components/ui";
 import { validateSchema, clearFieldError as clearFields, parseApiError } from "@/utils";
@@ -38,6 +39,8 @@ export function AirspaceEditor({
     loading = false,
 }: AirspaceEditorProps) {
     const router = useRouter();
+    const t = useTranslations("airspace");
+    const tCommon = useTranslations("common");
 
     const [submitting, setSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -123,7 +126,7 @@ export function AirspaceEditor({
         try {
             await onSave(validation.data as CreateAirspaceZonePayload | UpdateAirspaceZonePayload);
         } catch (err: unknown) {
-            const parsed = parseApiError(err, "Failed to save airspace zone");
+            const parsed = parseApiError(err, t("saveFailed"));
             if (Object.keys(parsed.fieldErrors).length > 0) {
                 setFieldErrors((prev) => ({ ...prev, ...parsed.fieldErrors }));
                 if (parsed.fieldErrors.geometry || parsed.fieldErrors["geometry.coordinates"]) {
@@ -149,7 +152,9 @@ export function AirspaceEditor({
     };
 
     const pageTitle =
-        mode === "create" ? "NEW AIRSPACE ZONE" : `EDIT ZONE: ${initialData?.name || "AIRSPACE"}`;
+        mode === "create"
+            ? t("editor.newTitle")
+            : t("editor.editTitle", { name: initialData?.name || t("editor.fallbackZone") });
 
     return (
         <>
@@ -170,7 +175,7 @@ export function AirspaceEditor({
                             disabled={submitting || isDeleting}
                         >
                             <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
-                            <span>Cancel</span>
+                            <span>{tCommon("cancel")}</span>
                         </ChamferButton>
 
                         {mode === "edit" && onDelete && (
@@ -182,7 +187,7 @@ export function AirspaceEditor({
                                 disabled={submitting || isDeleting}
                             >
                                 <Trash2 className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Delete</span>
+                                <span>{tCommon("delete")}</span>
                             </ChamferButton>
                         )}
 
@@ -198,7 +203,9 @@ export function AirspaceEditor({
                             ) : (
                                 <Save className="w-4 h-4 text-white" />
                             )}
-                            <span>{mode === "create" ? "Save Airspace Zone" : "Update Zone"}</span>
+                            <span>
+                                {mode === "create" ? t("editor.saveCreate") : t("editor.saveEdit")}
+                            </span>
                         </ChamferButton>
                     </div>
                 }
@@ -262,9 +269,11 @@ export function AirspaceEditor({
 
             <ConfirmDialog
                 isOpen={showDeleteConfirm}
-                title="Delete Airspace Zone"
-                description={`Are you sure you want to delete zone "${formData.name}"? This action will deactivate and remove this airspace sector.`}
-                confirmText="Delete Zone"
+                title={t("editor.deleteTitle")}
+                description={t("editor.deleteDesc", {
+                    name: formData.name || t("editor.fallbackZone"),
+                })}
+                confirmText={t("editor.deleteConfirm")}
                 loading={isDeleting}
                 onConfirm={handleDelete}
                 onClose={() => setShowDeleteConfirm(false)}

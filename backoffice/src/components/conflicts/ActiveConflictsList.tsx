@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { ShieldCheck, Check, ArrowLeftRight } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/components/ui";
 import { cn } from "@/lib";
-import { formatDateTime, formatDistance, formatAltitude } from "@/utils";
+import type { AppLocale } from "@/i18n";
+import { formatDateTime, formatDistance, formatAltitude, localizeServerText } from "@/utils";
 import { useFlightsAll } from "@/hooks";
 import { CONFLICT_STATUS, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
@@ -27,6 +29,8 @@ export function ActiveConflictsList({
     isAcknowledging = false,
     canResolve = true,
 }: ActiveConflictsListProps) {
+    const locale = useLocale() as AppLocale;
+    const t = useTranslations("conflicts");
     const { data: flights = [] } = useFlightsAll();
     const [referenceNowMs, setReferenceNowMs] = useState<number | null>(null);
 
@@ -56,8 +60,8 @@ export function ActiveConflictsList({
                 <EmptyState
                     compact
                     icon={ShieldCheck}
-                    title="Airspace Clean & Clear"
-                    description="No active separation breaches or airspace boundary violations detected."
+                    title={t("cleanTitle")}
+                    description={t("cleanDesc")}
                 />
             </ChamferCard>
         );
@@ -84,9 +88,12 @@ export function ActiveConflictsList({
                       `FLT-${conflict.secondaryFlightId.slice(0, 8).toUpperCase()}`
                     : null;
 
-                const formattedType = conflict.conflictType
-                    ? conflict.conflictType.replace(/_/g, " ").toUpperCase()
-                    : "AIRSPACE CONFLICT";
+                const formattedType =
+                    conflict.conflictType && t.has(`types.${conflict.conflictType}`)
+                        ? t(`types.${conflict.conflictType}`)
+                        : conflict.conflictType
+                          ? conflict.conflictType.replace(/_/g, " ").toUpperCase()
+                          : t("fallbackType");
 
                 const recommendationSummary =
                     conflict.resolutionActions &&
@@ -99,7 +106,8 @@ export function ActiveConflictsList({
                     ? conflict.description.replace(/\s*Closest point of approach:.*$/i, "").trim()
                     : null;
 
-                const advisoryText = recommendationSummary || cleanDescription;
+                const rawAdvisory = recommendationSummary || cleanDescription;
+                const advisoryText = rawAdvisory ? localizeServerText(rawAdvisory, locale) : null;
 
                 const detectedMs = conflict.detectedAt
                     ? new Date(conflict.detectedAt).getTime()
@@ -134,7 +142,7 @@ export function ActiveConflictsList({
                                                 {primaryFlightLabel && secondaryFlightLabel && (
                                                     <ArrowLeftRight
                                                         className="w-3.5 h-3.5 text-slate-400"
-                                                        aria-label="in conflict with"
+                                                        aria-label={t("inConflictWith")}
                                                     />
                                                 )}
                                                 {secondaryFlightLabel && (
@@ -167,12 +175,12 @@ export function ActiveConflictsList({
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-slate-500">
                                     {isAcknowledged && (
                                         <span className="text-slate-600 font-semibold">
-                                            Acknowledged
+                                            {t("acknowledgedLabel")}
                                         </span>
                                     )}
                                     {isResolving && (
                                         <span className="text-slate-700 font-semibold">
-                                            Resolving
+                                            {t("resolvingLabel")}
                                         </span>
                                     )}
                                     {conflict.separationDistance != null && (
@@ -210,7 +218,9 @@ export function ActiveConflictsList({
                                         )}
                                     {conflict.detectedAt && (
                                         <div>
-                                            <span className="text-slate-400">Detected: </span>
+                                            <span className="text-slate-400">
+                                                {t("detectedLabel")}
+                                            </span>
                                             <span className="text-slate-700 tabular-nums">
                                                 {formatDateTime(conflict.detectedAt)}
                                             </span>
@@ -229,7 +239,7 @@ export function ActiveConflictsList({
                                                 disabled={isAcknowledging}
                                             >
                                                 <Check className="w-3.5 h-3.5 text-slate-600" />
-                                                <span>Acknowledge</span>
+                                                <span>{t("acknowledgeBtn")}</span>
                                             </ChamferButton>
                                         )}
 
@@ -240,7 +250,7 @@ export function ActiveConflictsList({
                                             onClick={() => onResolve(conflict)}
                                         >
                                             <ShieldCheck className="w-3.5 h-3.5" />
-                                            <span>Resolve</span>
+                                            <span>{t("resolveBtn")}</span>
                                         </ChamferButton>
                                     </div>
                                 )}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ChamferCard, type SelectOption } from "@/components/ui";
+import { translateStatusLabel, useAppLocale } from "@/i18n";
 import { cn } from "@/lib";
 import {
     DEFAULT_DRONE_STATUS,
@@ -67,25 +69,28 @@ export function FlightFormSidebar({
     onClearFieldError,
     isReadOnly = false,
 }: FlightFormSidebarProps) {
+    const t = useTranslations("flights");
+    const locale = useAppLocale();
+
     const droneOptions: SelectOption[] = useMemo(() => {
         return [
-            { value: "", label: "Select assigned drone..." },
+            { value: "", label: t("details.selectAssignedDrone") },
             ...drones.map((d) => ({
                 value: d.id,
-                label: `${d.registrationNumber || d.model || d.id} (${(d.status ?? DEFAULT_DRONE_STATUS).toUpperCase()})`,
+                label: `${d.registrationNumber || d.model || d.id} (${translateStatusLabel(d.status ?? DEFAULT_DRONE_STATUS, locale)})`,
             })),
         ];
-    }, [drones]);
+    }, [drones, t, locale]);
 
     const hubOptions: SelectOption[] = useMemo(() => {
         return [
-            { value: "", label: "Select vertiport / hub..." },
+            { value: "", label: t("details.selectVertiport") },
             ...hubs.map((h) => ({
                 value: h.id,
                 label: `${h.name} (${h.code || "HUB"})`,
             })),
         ];
-    }, [hubs]);
+    }, [hubs, t]);
 
     const durationMinutes = useMemo(() => {
         if (!formData.scheduledDeparture || !formData.scheduledArrival) return null;
@@ -132,7 +137,7 @@ export function FlightFormSidebar({
                             hasDetailsErrors && "text-red-600"
                         )}
                     >
-                        <span>Details</span>
+                        <span>{t("tabs.details")}</span>
                         {hasDetailsErrors && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}
@@ -149,7 +154,9 @@ export function FlightFormSidebar({
                             hasRouteErrors && "text-red-600"
                         )}
                     >
-                        <span>Waypoints {totalPoints > 0 && `(${totalPoints})`}</span>
+                        <span>
+                            {t("tabs.waypoints")} {totalPoints > 0 && `(${totalPoints})`}
+                        </span>
                         {hasRouteErrors && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
                     </button>
 
@@ -164,7 +171,7 @@ export function FlightFormSidebar({
                             hasScheduleErrors && "text-red-600"
                         )}
                     >
-                        <span>Schedule</span>
+                        <span>{t("tabs.schedule")}</span>
                         {hasScheduleErrors && (
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                         )}

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Filter, RefreshCw, ShieldCheck, ChevronRight, X } from "lucide-react";
 import {
     PageHeader,
@@ -23,7 +24,8 @@ import {
 } from "@/components/ui";
 import { EmergencyNavTabs } from "@/components/emergency/EmergencyNavTabs";
 import { useEmergencyIncidents, useDronesAll, useFlightsAll } from "@/hooks";
-import { formatDateTime } from "@/utils";
+import { translateStatusLabel, useAppLocale } from "@/i18n";
+import { formatDateTime, localizeServerText } from "@/utils";
 import {
     EMERGENCY_SEVERITIES,
     EMERGENCY_TYPES,
@@ -44,6 +46,9 @@ function formatLabel(value: string) {
 
 export default function EmergencyIncidentsPage() {
     const router = useRouter();
+    const t = useTranslations("emergency");
+    const tCommon = useTranslations("common");
+    const locale = useAppLocale();
     const [statusFilter, setStatusFilter] = useState<string>(ALL_VALUE);
     const [severityFilter, setSeverityFilter] = useState<string>(ALL_VALUE);
     const [typeFilter, setTypeFilter] = useState<string>(ALL_VALUE);
@@ -91,28 +96,45 @@ export default function EmergencyIncidentsPage() {
         [flights]
     );
 
+    const getTypeLabel = useMemo(
+        () => (rawType?: string) => {
+            if (!rawType) return "";
+            if ((EMERGENCY_TYPES as readonly string[]).includes(rawType)) {
+                return t(`types.${rawType as EmergencyType}`);
+            }
+            return formatLabel(rawType);
+        },
+        [t]
+    );
+
     const statusOptions = useMemo(
         () => [
-            { value: ALL_VALUE, label: "All Statuses" },
-            ...INCIDENT_STATUSES.map((s) => ({ value: s, label: formatLabel(s) })),
+            { value: ALL_VALUE, label: tCommon("allStatuses") },
+            ...INCIDENT_STATUSES.map((s) => ({
+                value: s,
+                label: translateStatusLabel(s, locale) ?? formatLabel(s),
+            })),
         ],
-        []
+        [tCommon, locale]
     );
 
     const severityOptions = useMemo(
         () => [
-            { value: ALL_VALUE, label: "All Severities" },
-            ...EMERGENCY_SEVERITIES.map((s) => ({ value: s, label: formatLabel(s) })),
+            { value: ALL_VALUE, label: t("incidentsPage.allSeverities") },
+            ...EMERGENCY_SEVERITIES.map((s) => ({
+                value: s,
+                label: translateStatusLabel(s, locale) ?? formatLabel(s),
+            })),
         ],
-        []
+        [t, locale]
     );
 
     const typeOptions = useMemo(
         () => [
-            { value: ALL_VALUE, label: "All Types" },
-            ...EMERGENCY_TYPES.map((t) => ({ value: t, label: formatLabel(t) })),
+            { value: ALL_VALUE, label: t("incidentsPage.allTypes") },
+            ...EMERGENCY_TYPES.map((tp) => ({ value: tp, label: t(`types.${tp}`) })),
         ],
-        []
+        [t]
     );
 
     const incidents = incidentPage?.data ?? [];
@@ -130,7 +152,7 @@ export default function EmergencyIncidentsPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-5 w-full">
-            <PageHeader title="EMERGENCY RESPONSE">
+            <PageHeader title={t("title")}>
                 <ChamferButton
                     variant="outline"
                     size="sm"
@@ -138,7 +160,7 @@ export default function EmergencyIncidentsPage() {
                     disabled={isFetching}
                 >
                     <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
-                    <span>Refresh</span>
+                    <span>{tCommon("refresh")}</span>
                 </ChamferButton>
             </PageHeader>
 
@@ -148,60 +170,62 @@ export default function EmergencyIncidentsPage() {
                 <div className="p-3.5 flex flex-wrap items-center gap-2.5">
                     <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-600 mr-1">
                         <Filter className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Filters</span>
+                        <span>{t("incidentsPage.filters")}</span>
                     </div>
 
                     <div className="w-full sm:w-44">
                         <CustomSelect
                             id="filter-incident-status"
-                            ariaLabel="Filter by status"
+                            ariaLabel={t("incidentsPage.filterStatusAria")}
                             value={statusFilter}
                             onValueChange={(v) => {
                                 setStatusFilter(v);
                                 setPage(1);
                             }}
                             options={statusOptions}
-                            placeholder="Status"
+                            placeholder={tCommon("status")}
                         />
                     </div>
 
                     <div className="w-full sm:w-40">
                         <CustomSelect
                             id="filter-incident-severity"
-                            ariaLabel="Filter by severity"
+                            ariaLabel={t("incidentsPage.filterSeverityAria")}
                             value={severityFilter}
                             onValueChange={(v) => {
                                 setSeverityFilter(v);
                                 setPage(1);
                             }}
                             options={severityOptions}
-                            placeholder="Severity"
+                            placeholder={t("incidentsPage.severityPlaceholder")}
                         />
                     </div>
 
                     <div className="w-full sm:w-52">
                         <CustomSelect
                             id="filter-incident-type"
-                            ariaLabel="Filter by emergency type"
+                            ariaLabel={t("incidentsPage.filterTypeAria")}
                             value={typeFilter}
                             onValueChange={(v) => {
                                 setTypeFilter(v);
                                 setPage(1);
                             }}
                             options={typeOptions}
-                            placeholder="Emergency Type"
+                            placeholder={t("incidentsPage.typePlaceholder")}
                         />
                     </div>
 
                     {hasActiveFilters && (
                         <ChamferButton variant="outline" size="xs" onClick={handleResetFilters}>
                             <X className="w-3.5 h-3.5" />
-                            <span>Clear</span>
+                            <span>{tCommon("clear")}</span>
                         </ChamferButton>
                     )}
 
                     <div className="sm:ml-auto text-xs font-mono text-slate-500 tabular-nums">
-                        {totalItems} {totalItems === 1 ? "incident" : "incidents"}
+                        {totalItems === 1
+                            ? t("incidentsPage.countSingle")
+                            : t("incidentsPage.countPlural", { count: totalItems })}
                     </div>
                 </div>
             </ChamferCard>
@@ -210,19 +234,23 @@ export default function EmergencyIncidentsPage() {
                 {isError && incidents.length === 0 ? (
                     <ErrorState
                         wrapped={false}
-                        title="Unable to load incident history"
-                        description="The Emergency Service did not respond. Please try again."
+                        title={t("incidentsPage.loadErrorTitle")}
+                        description={t("incidentsPage.loadErrorDesc")}
                         onRetry={() => refetch()}
                         retrying={isFetching}
                     />
                 ) : !isLoading && incidents.length === 0 ? (
                     <EmptyState
                         icon={ShieldCheck}
-                        title={hasActiveFilters ? "No Matching Incidents" : "No Incidents Logged"}
+                        title={
+                            hasActiveFilters
+                                ? t("incidentsPage.emptyFilteredTitle")
+                                : t("incidentsPage.emptyTitle")
+                        }
                         description={
                             hasActiveFilters
-                                ? "Try clearing or broadening your active filter criteria."
-                                : "No emergency incidents have been logged yet."
+                                ? t("incidentsPage.emptyFilteredDesc")
+                                : t("incidentsPage.emptyDesc")
                         }
                         action={
                             hasActiveFilters ? (
@@ -231,7 +259,7 @@ export default function EmergencyIncidentsPage() {
                                     size="sm"
                                     onClick={handleResetFilters}
                                 >
-                                    Clear Filters
+                                    {t("incidentsPage.clearFilters")}
                                 </ChamferButton>
                             ) : undefined
                         }
@@ -241,13 +269,27 @@ export default function EmergencyIncidentsPage() {
                         <Table fixed={false}>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="px-3">INCIDENT</TableHead>
-                                    <TableHead className="px-3">TYPE / SUMMARY</TableHead>
-                                    <TableHead className="px-3">AIRCRAFT</TableHead>
-                                    <TableHead className="px-3">SEVERITY</TableHead>
-                                    <TableHead className="px-3">ACTION</TableHead>
-                                    <TableHead className="px-3">STATUS</TableHead>
-                                    <TableHead className="px-3">DETECTED</TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colIncident")}
+                                    </TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colTypeSummary")}
+                                    </TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colAircraft")}
+                                    </TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colSeverity")}
+                                    </TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colAction")}
+                                    </TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colStatus")}
+                                    </TableHead>
+                                    <TableHead className="px-3">
+                                        {t("incidentsPage.colDetected")}
+                                    </TableHead>
                                     <TableHead className="px-3 text-right"> </TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -255,7 +297,7 @@ export default function EmergencyIncidentsPage() {
                                 {isLoading ? (
                                     <TableLoading
                                         colSpan={8}
-                                        message="Loading incident records..."
+                                        message={t("incidentsPage.loading")}
                                     />
                                 ) : (
                                     incidents.map((incident) => {
@@ -273,8 +315,10 @@ export default function EmergencyIncidentsPage() {
                                         const incidentCode =
                                             incident.incidentNumber ||
                                             `INC-${incident.id.slice(0, 8).toUpperCase()}`;
-                                        const summary =
-                                            incident.message || formatLabel(incident.emergencyType);
+                                        const typeLabel = getTypeLabel(incident.emergencyType);
+                                        const summary = incident.message
+                                            ? localizeServerText(incident.message, locale)
+                                            : typeLabel;
 
                                         return (
                                             <TableRow
@@ -303,7 +347,7 @@ export default function EmergencyIncidentsPage() {
                                                             {summary}
                                                         </span>
                                                         <span className="text-[11px] font-mono text-slate-500 truncate">
-                                                            {formatLabel(incident.emergencyType)}
+                                                            {typeLabel}
                                                         </span>
                                                     </div>
                                                 </TableCell>
@@ -315,10 +359,7 @@ export default function EmergencyIncidentsPage() {
                                                     {droneLabel}
                                                 </TableCell>
                                                 <TableCell className="px-3 whitespace-nowrap">
-                                                    <StatusBadge
-                                                        status={incident.severity}
-                                                        label={incident.severity.toUpperCase()}
-                                                    />
+                                                    <StatusBadge status={incident.severity} />
                                                 </TableCell>
                                                 <TableCell mono className="px-3 whitespace-nowrap">
                                                     {incident.responseAction &&
@@ -345,7 +386,9 @@ export default function EmergencyIncidentsPage() {
                                                     <Link
                                                         href={`/dashboard/emergency/incidents/${incident.id}`}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        aria-label={`Inspect ${incidentCode}`}
+                                                        aria-label={t("incidentsPage.inspectAria", {
+                                                            code: incidentCode,
+                                                        })}
                                                         className="inline-flex items-center justify-end text-slate-500 hover:text-slate-900"
                                                     >
                                                         <ChevronRight className="w-4 h-4" />
@@ -364,7 +407,7 @@ export default function EmergencyIncidentsPage() {
                             totalItems={totalItems}
                             onPageChange={setPage}
                             pageSize={PAGE_SIZE}
-                            itemLabel="incidents"
+                            itemLabel={t("incidentsPage.itemLabel")}
                         />
                     </>
                 )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Activity, Trash2, Radio, ShieldCheck, Gauge, Plus } from "lucide-react";
 import {
     ChamferCard,
@@ -41,14 +42,9 @@ import {
     compareCreatedDesc,
 } from "@/utils";
 
-const DEVICE_STATUS_OPTIONS: SelectOption[] = createStatusOptions(DEVICE_CONNECTION_STATUSES);
-
-const DEFAULT_MODE_LABELS: Record<string, string> = {
-    idle: "Idle (0.033 Hz · 30s)",
-    normal: "Normal (0.5 Hz · 2s)",
-    enhanced: "Enhanced (2 Hz · 500ms)",
-    emergency: "Emergency (10 Hz · 100ms)",
-};
+function isKnownMode(val: string): val is TelemetryMode {
+    return (TELEMETRY_MODES as readonly string[]).includes(val);
+}
 
 export interface RegisteredDevicesTableProps {
     devices: DeviceRegistration[];
@@ -73,6 +69,10 @@ export function RegisteredDevicesTable({
     isUpdatingMode = false,
     onRegisterDevice,
 }: RegisteredDevicesTableProps) {
+    const t = useTranslations("connectivity.table");
+    const tModes = useTranslations("connectivity.modes");
+    const tConn = useTranslations("connectivity");
+    const tCommon = useTranslations("common");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | DeviceConnectionStatus>("all");
     const [deviceToRevoke, setDeviceToRevoke] = useState<DeviceRegistration | null>(null);
@@ -80,23 +80,24 @@ export function RegisteredDevicesTable({
     const [selectedMode, setSelectedMode] = useState<TelemetryMode>("normal");
     const [modeReason, setModeReason] = useState("");
 
+    const deviceStatusOptions: SelectOption[] = createStatusOptions(DEVICE_CONNECTION_STATUSES);
+
     const telemetryModeOptions: SelectOption[] = useMemo(() => {
         const cfgMap = new Map(modeConfigs.filter((c) => Boolean(c.mode)).map((c) => [c.mode!, c]));
         return TELEMETRY_MODES.map((mode) => {
             const cfg = cfgMap.get(mode);
             if (cfg && cfg.rateHz != null) {
-                const title = mode.charAt(0).toUpperCase() + mode.slice(1);
                 return {
                     value: mode,
-                    label: `${title} (${cfg.rateHz} Hz${cfg.intervalMs ? ` · ${cfg.intervalMs}ms` : ""})`,
+                    label: `${tModes(mode)} (${cfg.rateHz} Hz${cfg.intervalMs ? ` · ${cfg.intervalMs}ms` : ""})`,
                 };
             }
             return {
                 value: mode,
-                label: DEFAULT_MODE_LABELS[mode] ?? mode.toUpperCase(),
+                label: tModes(`${mode}Full`),
             };
         });
-    }, [modeConfigs]);
+    }, [modeConfigs, tModes]);
 
     const sortedDevices = useMemo(() => {
         return [...devices].sort(compareCreatedDesc);
@@ -138,22 +139,22 @@ export function RegisteredDevicesTable({
 
     const getActions = (device: DeviceRegistration): ActionMenuItem[] => [
         {
-            label: "Ping Heartbeat",
+            label: t("pingHeartbeat"),
             icon: <Activity className="w-3.5 h-3.5 text-emerald-600" />,
             onClick: () => onHeartbeat(device.id),
         },
         {
-            label: "X.509 Certificate",
+            label: t("x509Certificate"),
             icon: <ShieldCheck className="w-3.5 h-3.5 text-slate-600" />,
             onClick: () => onManageCertificate(device),
         },
         {
-            label: "Telemetry Mode",
+            label: t("telemetryMode"),
             icon: <Gauge className="w-3.5 h-3.5 text-slate-600" />,
             onClick: () => openModeModal(device),
         },
         {
-            label: "Revoke Device",
+            label: t("revokeDevice"),
             icon: <Trash2 className="w-3.5 h-3.5 text-red-500" />,
             danger: true,
             onClick: () => setDeviceToRevoke(device),
@@ -168,48 +169,45 @@ export function RegisteredDevicesTable({
                     setSearch(val);
                     setCurrentPage(1);
                 }}
-                searchPlaceholder="Search device ID, drone registration, or socket..."
+                searchPlaceholder={t("searchPlaceholder")}
                 statusFilter={statusFilter}
                 onStatusFilterChange={(val) => {
                     setStatusFilter(val as "all" | DeviceConnectionStatus);
                     setCurrentPage(1);
                 }}
-                statusOptions={DEVICE_STATUS_OPTIONS}
+                statusOptions={deviceStatusOptions}
                 onClearFilters={clearFilters}
                 totalCount={devices.length}
                 filteredCount={filteredDevices.length}
+                itemLabel={t("itemLabel")}
             />
 
             <ChamferCard size="lg" className="w-full">
                 <Table fixed={false}>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>DEVICE IDENTIFIER</TableHead>
-                            <TableHead>DRONE / MODEL</TableHead>
-                            <TableHead>STATUS</TableHead>
-                            <TableHead>TELEMETRY</TableHead>
-                            <TableHead>SOCKET ID</TableHead>
-                            <TableHead>LAST SEEN</TableHead>
-                            <TableHead align="right">ACTIONS</TableHead>
+                            <TableHead>{t("colDeviceId")}</TableHead>
+                            <TableHead>{t("colDroneModel")}</TableHead>
+                            <TableHead>{t("colStatus")}</TableHead>
+                            <TableHead>{t("colTelemetry")}</TableHead>
+                            <TableHead>{t("colSocket")}</TableHead>
+                            <TableHead>{t("colLastSeen")}</TableHead>
+                            <TableHead align="right">{t("colActions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableLoading colSpan={7} message="Loading registered devices..." />
+                            <TableLoading colSpan={7} message={t("loading")} />
                         ) : filteredDevices.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="py-10 text-center">
                                     <EmptyState
                                         icon={Radio}
                                         title={
-                                            hasFilters
-                                                ? "No matching devices"
-                                                : "No registered devices"
+                                            hasFilters ? t("emptyFilteredTitle") : t("emptyTitle")
                                         }
                                         description={
-                                            hasFilters
-                                                ? "No devices match your current search or connection filter."
-                                                : "Register an onboard drone telemetry unit or edge gateway to begin streaming."
+                                            hasFilters ? t("emptyFilteredDesc") : t("emptyDesc")
                                         }
                                         action={
                                             hasFilters ? (
@@ -218,7 +216,7 @@ export function RegisteredDevicesTable({
                                                     size="sm"
                                                     onClick={clearFilters}
                                                 >
-                                                    Clear Filters
+                                                    {t("clearFilters")}
                                                 </ChamferButton>
                                             ) : onRegisterDevice ? (
                                                 <ChamferButton
@@ -227,7 +225,7 @@ export function RegisteredDevicesTable({
                                                     onClick={onRegisterDevice}
                                                 >
                                                     <Plus className="w-4 h-4" />
-                                                    <span>Register Device</span>
+                                                    <span>{tConn("registerDevice")}</span>
                                                 </ChamferButton>
                                             ) : undefined
                                         }
@@ -239,6 +237,9 @@ export function RegisteredDevicesTable({
                                 const currentStatus =
                                     device.connectionStatus ?? OFFLINE_DEVICE_STATUS;
                                 const activeMode = device.telemetryMode ?? "idle";
+                                const modeDisplay = isKnownMode(activeMode)
+                                    ? tModes(activeMode)
+                                    : activeMode;
                                 const droneTooltip =
                                     [
                                         device.droneRegistrationNumber,
@@ -267,7 +268,8 @@ export function RegisteredDevicesTable({
                                         >
                                             <div className="flex flex-col min-w-0">
                                                 <span className="font-semibold text-[var(--color-text-primary)] truncate">
-                                                    {device.droneRegistrationNumber || "Unlinked"}
+                                                    {device.droneRegistrationNumber ||
+                                                        t("unlinked")}
                                                 </span>
                                                 {device.droneModel && (
                                                     <span className="text-[11px] text-[var(--color-text-muted)] truncate">
@@ -277,14 +279,11 @@ export function RegisteredDevicesTable({
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <StatusBadge
-                                                status={currentStatus}
-                                                label={currentStatus.toUpperCase()}
-                                            />
+                                            <StatusBadge status={currentStatus} />
                                         </TableCell>
                                         <TableCell>
                                             <span className="inline-flex items-center px-2 py-0.5 rounded border border-slate-200 bg-slate-50 font-mono text-[10px] font-bold uppercase text-slate-700">
-                                                {activeMode}
+                                                {modeDisplay}
                                             </span>
                                         </TableCell>
                                         <TableCell
@@ -311,7 +310,7 @@ export function RegisteredDevicesTable({
                                         >
                                             {device.lastSeenAt
                                                 ? formatRelativeTime(device.lastSeenAt)
-                                                : "Never"}
+                                                : tCommon("never")}
                                         </TableCell>
                                         <TableCell
                                             align="right"
@@ -330,14 +329,14 @@ export function RegisteredDevicesTable({
                     totalPages={totalPages}
                     totalItems={totalItems}
                     onPageChange={setCurrentPage}
-                    itemLabel="devices"
+                    itemLabel={t("itemLabel")}
                 />
             </ChamferCard>
 
             <Modal
                 isOpen={Boolean(modeTargetDevice)}
                 onClose={() => setModeTargetDevice(null)}
-                title={`Adaptive Telemetry Mode — ${modeTargetDevice?.deviceIdentifier || ""}`}
+                title={t("modeModalTitle", { id: modeTargetDevice?.deviceIdentifier || "" })}
                 maxWidth={440}
                 footer={
                     <>
@@ -347,7 +346,7 @@ export function RegisteredDevicesTable({
                             clip="xs"
                             onClick={() => setModeTargetDevice(null)}
                         >
-                            Cancel
+                            {tCommon("cancel")}
                         </ChamferButton>
                         <ChamferButton
                             variant="dark"
@@ -364,7 +363,7 @@ export function RegisteredDevicesTable({
                                 }
                             }}
                         >
-                            Apply Mode
+                            {t("applyMode")}
                         </ChamferButton>
                     </>
                 }
@@ -372,7 +371,7 @@ export function RegisteredDevicesTable({
                 <div className="flex flex-col gap-4">
                     <div className="form-group">
                         <label htmlFor="deviceTelemetryMode" className="form-label">
-                            Telemetry Rate Mode
+                            {t("rateModeLabel")}
                         </label>
                         <CustomSelect
                             id="deviceTelemetryMode"
@@ -383,10 +382,10 @@ export function RegisteredDevicesTable({
                     </div>
                     <FormInput
                         id="deviceTelemetryModeReason"
-                        label="Operator Reason (optional)"
+                        label={t("reasonLabel")}
                         value={modeReason}
                         onChange={(e) => setModeReason(e.target.value)}
-                        placeholder="e.g. Terminal corridor high-precision tracking"
+                        placeholder={t("reasonPlaceholder")}
                     />
                 </div>
             </Modal>
@@ -400,17 +399,17 @@ export function RegisteredDevicesTable({
                         setDeviceToRevoke(null);
                     }
                 }}
-                title="Revoke Device Registration"
+                title={t("revokeTitle")}
                 description={
                     <span>
-                        Are you sure you want to revoke device{" "}
+                        {t("revokeDescPrefix")}
                         <strong className="text-slate-900 font-mono">
-                            {deviceToRevoke?.deviceIdentifier || "this device"}
+                            {deviceToRevoke?.deviceIdentifier || t("revokeDescFallback")}
                         </strong>
-                        ? The device socket connection will be terminated immediately.
+                        {t("revokeDescSuffix")}
                     </span>
                 }
-                confirmText="Revoke Device"
+                confirmText={t("revokeDevice")}
             />
         </div>
     );

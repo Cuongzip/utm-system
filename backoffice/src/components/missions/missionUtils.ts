@@ -1,4 +1,5 @@
 import { addWaypointBody } from "@/generated/mission";
+import { getCurrentLocale, MESSAGES } from "@/i18n";
 import { isDuplicateCoord } from "@/utils/geo";
 import { extractIntermediateWaypoints } from "@/components/waypoints";
 import {
@@ -13,27 +14,28 @@ import { missionService } from "@/services/missionService";
 import zod from "zod";
 
 const missionWaypointBody = addWaypointBody.superRefine((wp, ctx) => {
+    const v = MESSAGES[getCurrentLocale()].waypoints.validation;
     const isHub = wp.waypointType === WAYPOINT_TYPE.HUB || Boolean(wp.hubId);
     if (isHub) {
         if (!wp.hubId) {
             ctx.addIssue({
                 code: "custom",
                 path: ["hubId"],
-                message: "Stopover hub is required for HUB waypoints",
+                message: v.hubRequired,
             });
         }
         if (!wp.stopoverType || wp.stopoverType === STOPOVER_TYPE.NONE) {
             ctx.addIssue({
                 code: "custom",
                 path: ["stopoverType"],
-                message: "HUB waypoint requires a non-NONE stopover type",
+                message: v.stopoverTypeRequired,
             });
         }
     } else if (wp.altitude !== undefined && wp.altitude <= 0) {
         ctx.addIssue({
             code: "custom",
             path: ["altitude"],
-            message: "Altitude must be greater than 0m AGL for coordinate waypoints",
+            message: v.positiveAltitude,
         });
     }
 });
@@ -42,17 +44,24 @@ export const waypointsValidationSchema = zod.object({
     waypoints: zod.array(missionWaypointBody),
 });
 
+const optFiniteNumber = (val: unknown): number | undefined =>
+    typeof val === "number" && Number.isFinite(val) ? val : undefined;
+
+const optBoolean = (val: unknown): boolean | undefined =>
+    typeof val === "boolean" ? val : undefined;
+
 export function sanitizeWaypointForApi(
     wp: Partial<Waypoint>,
     defaultAltitude = 50
 ): AddWaypointPayload {
     const isStopover = Boolean(wp.stopoverType && wp.stopoverType !== STOPOVER_TYPE.NONE);
     const isHub = wp.waypointType === WAYPOINT_TYPE.HUB || (isStopover && Boolean(wp.hubId));
-    const resolvedAltitude = Number.isFinite(wp.altitude)
-        ? Number(wp.altitude)
-        : isHub
-          ? 0
-          : defaultAltitude;
+    const resolvedAltitude =
+        typeof wp.altitude === "number" && Number.isFinite(wp.altitude)
+            ? wp.altitude
+            : isHub
+              ? 0
+              : defaultAltitude;
     return {
         name: wp.name?.trim() || undefined,
         waypointType: isHub ? WAYPOINT_TYPE.HUB : WAYPOINT_TYPE.COORDINATE,
@@ -65,13 +74,13 @@ export function sanitizeWaypointForApi(
                 ? wp.stopoverType
                 : STOPOVER_TYPE.RECHARGE
             : STOPOVER_TYPE.NONE,
-        groundTimeMinutes: isHub ? wp.groundTimeMinutes : undefined,
-        payloadDeltaKg: isHub ? wp.payloadDeltaKg : undefined,
-        hoverDurationSec: wp.hoverDurationSec,
-        speedToWaypoint: wp.speedToWaypoint,
-        headingAtWaypoint: wp.headingAtWaypoint,
-        turnRadius: wp.turnRadius,
-        waitForConfirmation: wp.waitForConfirmation,
+        groundTimeMinutes: isHub ? optFiniteNumber(wp.groundTimeMinutes) : undefined,
+        payloadDeltaKg: isHub ? optFiniteNumber(wp.payloadDeltaKg) : undefined,
+        hoverDurationSec: optFiniteNumber(wp.hoverDurationSec),
+        speedToWaypoint: optFiniteNumber(wp.speedToWaypoint),
+        headingAtWaypoint: optFiniteNumber(wp.headingAtWaypoint),
+        turnRadius: optFiniteNumber(wp.turnRadius),
+        waitForConfirmation: optBoolean(wp.waitForConfirmation),
         actions:
             wp.actions && typeof wp.actions === "object" && Object.keys(wp.actions).length > 0
                 ? wp.actions

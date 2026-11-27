@@ -123,7 +123,8 @@ export function parseApiError(err: unknown, defaultMessage = "An error occurred"
     if (translated) {
         cleanMessage = translated;
     } else if (errorCode?.endsWith("_NOT_FOUND")) {
-        cleanMessage = "The requested resource was not found.";
+        cleanMessage =
+            translateError("RESOURCE_NOT_FOUND") || "The requested resource was not found.";
     } else if (statusCode === 401) {
         cleanMessage = translateError("UNAUTHORIZED") || "Session expired. Please log in again.";
     } else if (statusCode === 403) {
@@ -131,7 +132,8 @@ export function parseApiError(err: unknown, defaultMessage = "An error occurred"
             translateError("ACCESS_DENIED") ||
             "Access denied. You do not have permission to perform this action.";
     } else if (statusCode === 404) {
-        cleanMessage = "The requested resource was not found.";
+        cleanMessage =
+            translateError("RESOURCE_NOT_FOUND") || "The requested resource was not found.";
     } else if (statusCode && statusCode >= 500) {
         cleanMessage =
             translateError("INTERNAL_SERVER_ERROR") ||
