@@ -1,6 +1,7 @@
 package com.utm.commonlibrary.config;
 
 import com.utm.commonlibrary.service.SystemTokenService;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -51,6 +52,9 @@ public class CommonRestClientConfig {
                                         request.getURI());
                             }
                         }
+                    }
+                    if (request.getHeaders().getFirst(HttpHeaders.ACCEPT_LANGUAGE) == null) {
+                        request.getHeaders().set(HttpHeaders.ACCEPT_LANGUAGE, LocaleUtils.currentLanguageTag());
                     }
                     return execution.execute(request, body);
                 })

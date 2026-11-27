@@ -1,5 +1,7 @@
 package com.utm.flight.service;
 
+import com.utm.commonlibrary.utils.LocaleUtils;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.flight.config.FeasibilityConfig;
 import com.utm.flight.model.enumeration.SolutionKind;
 import com.utm.flight.model.enumeration.Verdict;
@@ -116,48 +118,66 @@ public class EnergyModelServiceImpl implements EnergyModelService {
             confidence = "HIGH";
         }
 
+        boolean vi = LocaleUtils.isVietnamese();
         List<FeasibilitySolutionVm> solutions = new ArrayList<>();
         if (verdict != Verdict.GO) {
             if (payloadKg > 0) {
                 solutions.add(new FeasibilitySolutionVm(
                         SolutionKind.REDUCE_PAYLOAD,
-                        "Reduce Payload",
-                        String.format(Locale.ROOT, "Reduce payload from %.1f kg to below %.1f kg to meet energy margin threshold",
-                                payloadKg, Math.max(0.0, payloadKg * 0.7))
+                        vi ? "Giảm tải trọng mang theo" : "Reduce Payload",
+                        vi
+                                ? String.format(Locale.ROOT, "Giảm tải trọng từ %.1f kg xuống dưới %.1f kg để đạt ngưỡng dự phòng năng lượng",
+                                        payloadKg, Math.max(0.0, payloadKg * 0.7))
+                                : String.format(Locale.ROOT, "Reduce payload from %.1f kg to below %.1f kg to meet energy margin threshold",
+                                        payloadKg, Math.max(0.0, payloadKg * 0.7))
                 ));
             }
             if (distanceM > 3000.0) {
                 solutions.add(new FeasibilitySolutionVm(
                         SolutionKind.CHARGING_STOP,
-                        "Plan Intermediate Charging Stop",
-                        "Insert an intermediate vertiport waypoint for mid-mission battery recharging"
+                        vi ? "Bổ sung điểm dừng sạc trung gian" : "Plan Intermediate Charging Stop",
+                        vi
+                                ? "Chèn thêm điểm hành trình tại Hub/Vertiport trung gian để sạc pin giữa chặng"
+                                : "Insert an intermediate vertiport waypoint for mid-mission battery recharging"
                 ));
             }
             solutions.add(new FeasibilitySolutionVm(
                     SolutionKind.OTHER_DRONE,
-                    "Assign Higher-Capacity Drone",
-                    "Switch to an airframe model with larger battery capacity or greater wind tolerance"
+                    vi ? "Phân công Drone dung lượng cao hơn" : "Assign Higher-Capacity Drone",
+                    vi
+                            ? "Chuyển sang mẫu Drone có dung lượng pin lớn hơn hoặc khả năng chịu gió cao hơn"
+                            : "Switch to an airframe model with larger battery capacity or greater wind tolerance"
             ));
             if (windSpeedMs != null && windSpeedMs > (windToleranceMs * 0.7)) {
                 solutions.add(new FeasibilitySolutionVm(
                         SolutionKind.AWAIT_WIND,
-                        "Await Favorable Wind Conditions",
-                        String.format(Locale.ROOT, "Postpone mission until sustained wind drops below %.1f m/s (currently %.1f m/s)",
-                                windToleranceMs * 0.7, windSpeedMs)
+                        vi ? "Chờ điều kiện gió thuận lợi" : "Await Favorable Wind Conditions",
+                        vi
+                                ? String.format(Locale.ROOT, "Hoãn nhiệm vụ cho đến khi gió duy trì giảm xuống dưới %.1f m/s (hiện tại %.1f m/s)",
+                                        windToleranceMs * 0.7, windSpeedMs)
+                                : String.format(Locale.ROOT, "Postpone mission until sustained wind drops below %.1f m/s (currently %.1f m/s)",
+                                        windToleranceMs * 0.7, windSpeedMs)
                 ));
             }
         }
 
-        StringBuilder explanation = new StringBuilder(String.format(Locale.ROOT,
-                "Usable battery: %.1f Wh (reserve 20%%), Required: %.1f Wh (cruise: %.1f Wh, hover: %.1f Wh, climb: %.1f Wh). Net margin: %.1f%%. Verdict: %s.",
-                usableWh, requiredWh, cruiseWh, hoverWh, climbWh, marginPct, verdict.name()
-        ));
+        StringBuilder explanation = new StringBuilder(vi
+                ? String.format(Locale.ROOT,
+                        "Pin khả dụng: %.1f Wh (dự phòng 20%%), Cần thiết: %.1f Wh (bay bằng: %.1f Wh, treo tại chỗ: %.1f Wh, lấy độ cao: %.1f Wh). Biên độ ròng: %.1f%%. Kết luận: %s.",
+                        usableWh, requiredWh, cruiseWh, hoverWh, climbWh, marginPct, verdict.name())
+                : String.format(Locale.ROOT,
+                        "Usable battery: %.1f Wh (reserve 20%%), Required: %.1f Wh (cruise: %.1f Wh, hover: %.1f Wh, climb: %.1f Wh). Net margin: %.1f%%. Verdict: %s.",
+                        usableWh, requiredWh, cruiseWh, hoverWh, climbWh, marginPct, verdict.name()));
 
         if (windExceeded) {
-            explanation.append(String.format(Locale.ROOT, " Sustained wind speed of %.1f m/s exceeds airframe limit (%.1f m/s).", windSpeedMs, windToleranceMs));
+            explanation.append(vi
+                    ? String.format(Locale.ROOT, " Tốc độ gió duy trì %.1f m/s vượt giới hạn chịu gió của khung thân (%.1f m/s).", windSpeedMs, windToleranceMs)
+                    : String.format(Locale.ROOT, " Sustained wind speed of %.1f m/s exceeds airframe limit (%.1f m/s).", windSpeedMs, windToleranceMs));
         }
         if (payloadExceeded) {
-            explanation.append(String.format(Locale.ROOT, " Payload weight %.1f kg exceeds max airframe payload (%.1f kg).", payloadKg, maxPayloadKg));
+            explanation.append(vi
+                    ? String.format(Locale.ROOT, " Khối lượng tải trọng %.1f kg vượt tải trọng tối đa của Drone (%.1f kg).", payloadKg, maxPayloadKg)
+                    : String.format(Locale.ROOT, " Payload weight %.1f kg exceeds max airframe payload (%.1f kg).", payloadKg, maxPayloadKg));
         }
 
         return new EnergyCalculationResultVm(

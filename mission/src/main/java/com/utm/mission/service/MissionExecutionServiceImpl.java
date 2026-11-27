@@ -6,6 +6,7 @@ import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.commonlibrary.generator.BusinessCodeGenerator;
 import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.commonlibrary.kafka.event.FlightLifecycleEvent;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.mission.mapper.MissionExecutionMapper;
 import com.utm.mission.model.Mission;
 import com.utm.mission.model.MissionExecution;
@@ -57,6 +58,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -137,6 +139,7 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
         }
         List<MissionLegUtils.PlannedLegSpec> legSpecs = MissionLegUtils.decomposeIntoLegs(mission, waypoints, hubMap);
 
+        boolean vi = LocaleUtils.isVietnamese();
         List<PlannedLegVm> plannedLegs = new ArrayList<>();
         List<String> globalWarnings = new ArrayList<>();
         double totalDistance = 0.0;
@@ -149,9 +152,13 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                 MissionLegUtils.calculateCumulativeBatterySegments(legSpecs, null, 1.0);
         for (MissionLegUtils.BatteryCycleSegment seg : batterySegments) {
             if (seg.legIndices().size() > 1 && seg.cumulativeEnergyWh() > DEFAULT_USABLE_WH) {
-                globalWarnings.add(String.format(
-                        "Consecutive non-charging legs %d-%d require %.1f Wh cumulative (> %.1f Wh default usable); add a RECHARGE/BATTERY_SWAP hub stopover or call /waypoints/auto-plan-hubs",
-                        seg.startLegIndex() + 1, seg.endLegIndex() + 1, seg.cumulativeEnergyWh(), DEFAULT_USABLE_WH));
+                globalWarnings.add(vi
+                        ? String.format(Locale.US,
+                                "Các chặng liên tiếp không sạc %d-%d cần tích lũy %.1f Wh (> %.1f Wh khả dụng mặc định); hãy thêm điểm dừng Hub RECHARGE/BATTERY_SWAP hoặc gọi /waypoints/auto-plan-hubs",
+                                seg.startLegIndex() + 1, seg.endLegIndex() + 1, seg.cumulativeEnergyWh(), DEFAULT_USABLE_WH)
+                        : String.format(
+                                "Consecutive non-charging legs %d-%d require %.1f Wh cumulative (> %.1f Wh default usable); add a RECHARGE/BATTERY_SWAP hub stopover or call /waypoints/auto-plan-hubs",
+                                seg.startLegIndex() + 1, seg.endLegIndex() + 1, seg.cumulativeEnergyWh(), DEFAULT_USABLE_WH));
             }
         }
 
@@ -169,7 +176,9 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
             boolean airspaceSafe = airspaceWarnings.isEmpty();
             if (!airspaceSafe) {
                 allFeasible = false;
-                globalWarnings.add("Leg " + (leg.legIndex() + 1) + " has restricted airspace violations");
+                globalWarnings.add(vi
+                        ? "Chặng " + (leg.legIndex() + 1) + " vi phạm vùng không phận hạn chế"
+                        : "Leg " + (leg.legIndex() + 1) + " has restricted airspace violations");
             }
 
             List<ScoredDroneCandidateVm> candidates = fleetScoringService.scoreCandidateDronesForLeg(leg);
@@ -187,8 +196,11 @@ public class MissionExecutionServiceImpl implements MissionExecutionService {
                     recommendedChargingHubs = MissionLegUtils.findRecommendedChargingHubs(
                             depHub, arrHub, leg.payloadWeightKg(), DEFAULT_USABLE_WH, activeHubs);
                 }
-                globalWarnings.add("Leg " + (leg.legIndex() + 1)
-                        + " exceeds single-charge battery range; call POST /waypoints/auto-plan-hubs or enable autoSplitByRange");
+                globalWarnings.add(vi
+                        ? "Chặng " + (leg.legIndex() + 1)
+                                + " vượt quá tầm bay một lần sạc; hãy gọi POST /waypoints/auto-plan-hubs hoặc bật autoSplitByRange"
+                        : "Leg " + (leg.legIndex() + 1)
+                                + " exceeds single-charge battery range; call POST /waypoints/auto-plan-hubs or enable autoSplitByRange");
             }
             if (!hasEligibleDrone) {
                 allFeasible = false;

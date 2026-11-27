@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.weatherais.service.client.HubClientService;
 import com.utm.weatherais.viewmodel.client.HubBriefVm;
 import com.utm.weatherais.viewmodel.weather.CurrentWeatherVm;
@@ -112,7 +113,7 @@ public class WeatherServiceImpl implements WeatherService {
     public CurrentWeatherVm getCurrentWeather(String hubId) {
         HubBriefVm hub = requireHubWithCoordinates(hubId);
         return currentCache.getOrLoad(
-                "current:" + hub.id(),
+                "current:" + hub.id() + ":" + LocaleUtils.currentLanguageTag(),
                 () -> fetchOpenMeteoCurrent(hub),
                 () -> buildFallbackCurrentWeather(hub));
     }
@@ -121,7 +122,7 @@ public class WeatherServiceImpl implements WeatherService {
     public WeatherForecastVm getForecast(String hubId) {
         HubBriefVm hub = requireHubWithCoordinates(hubId);
         return forecastCache.getOrLoad(
-                "forecast:" + hub.id(),
+                "forecast:" + hub.id() + ":" + LocaleUtils.currentLanguageTag(),
                 () -> fetchOpenMeteoForecast(hub),
                 () -> new WeatherForecastVm(hub.id(), hub.name(), hub.location().lat(), hub.location().lng(), ZonedDateTime.now(ZoneOffset.UTC), List.of()));
     }
@@ -129,52 +130,92 @@ public class WeatherServiceImpl implements WeatherService {
     @Override
     public List<WeatherAlertVm> getAlerts(String hubId) {
         CurrentWeatherVm current = getCurrentWeather(hubId);
+        boolean vi = LocaleUtils.isVietnamese();
         List<WeatherAlertVm> alerts = new ArrayList<>();
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
         if (current.windSpeedMs() != null) {
             if (current.windSpeedMs() > 12.0) {
-                alerts.add(new WeatherAlertVm("HIGH_WIND", "critical", "Excessive Wind Speed",
-                        String.format(Locale.US, "Sustained wind %.1f m/s exceeds 12.0 m/s drone limit", current.windSpeedMs()),
+                alerts.add(new WeatherAlertVm(
+                        "HIGH_WIND",
+                        "critical",
+                        vi ? "Tốc độ gió vượt ngưỡng" : "Excessive Wind Speed",
+                        vi
+                                ? String.format(Locale.US, "Gió duy trì %.1f m/s vượt giới hạn an toàn Drone 12.0 m/s", current.windSpeedMs())
+                                : String.format(Locale.US, "Sustained wind %.1f m/s exceeds 12.0 m/s drone limit", current.windSpeedMs()),
                         current.windSpeedMs(), 12.0, "m/s", now));
             } else if (current.windSpeedMs() > 9.0) {
-                alerts.add(new WeatherAlertVm("HIGH_WIND", "warning", "Elevated Wind Speed",
-                        String.format(Locale.US, "Sustained wind %.1f m/s exceeds 9.0 m/s caution threshold", current.windSpeedMs()),
+                alerts.add(new WeatherAlertVm(
+                        "HIGH_WIND",
+                        "warning",
+                        vi ? "Tốc độ gió cao" : "Elevated Wind Speed",
+                        vi
+                                ? String.format(Locale.US, "Gió duy trì %.1f m/s vượt ngưỡng cảnh báo 9.0 m/s", current.windSpeedMs())
+                                : String.format(Locale.US, "Sustained wind %.1f m/s exceeds 9.0 m/s caution threshold", current.windSpeedMs()),
                         current.windSpeedMs(), 9.0, "m/s", now));
             }
         }
 
         if (current.windGustMs() != null) {
             if (current.windGustMs() > 15.0) {
-                alerts.add(new WeatherAlertVm("WIND_GUST", "critical", "Severe Wind Gusts",
-                        String.format(Locale.US, "Wind gusts %.1f m/s exceed 15.0 m/s safety ceiling", current.windGustMs()),
+                alerts.add(new WeatherAlertVm(
+                        "WIND_GUST",
+                        "critical",
+                        vi ? "Gió giật mạnh nguy hiểm" : "Severe Wind Gusts",
+                        vi
+                                ? String.format(Locale.US, "Gió giật %.1f m/s vượt trần an toàn 15.0 m/s", current.windGustMs())
+                                : String.format(Locale.US, "Wind gusts %.1f m/s exceed 15.0 m/s safety ceiling", current.windGustMs()),
                         current.windGustMs(), 15.0, "m/s", now));
             } else if (current.windGustMs() > 12.0) {
-                alerts.add(new WeatherAlertVm("WIND_GUST", "warning", "Moderate Wind Gusts",
-                        String.format(Locale.US, "Wind gusts %.1f m/s exceed 12.0 m/s caution threshold", current.windGustMs()),
+                alerts.add(new WeatherAlertVm(
+                        "WIND_GUST",
+                        "warning",
+                        vi ? "Gió giật trung bình" : "Moderate Wind Gusts",
+                        vi
+                                ? String.format(Locale.US, "Gió giật %.1f m/s vượt ngưỡng cảnh báo 12.0 m/s", current.windGustMs())
+                                : String.format(Locale.US, "Wind gusts %.1f m/s exceed 12.0 m/s caution threshold", current.windGustMs()),
                         current.windGustMs(), 12.0, "m/s", now));
             }
         }
 
         if (current.visibilityM() != null) {
             if (current.visibilityM() < 1500.0) {
-                alerts.add(new WeatherAlertVm("LOW_VISIBILITY", "critical", "Poor Visibility",
-                        String.format(Locale.US, "Visibility %.0f m is below 1500 m VLOS minimum", current.visibilityM()),
+                alerts.add(new WeatherAlertVm(
+                        "LOW_VISIBILITY",
+                        "critical",
+                        vi ? "Tầm nhìn kém" : "Poor Visibility",
+                        vi
+                                ? String.format(Locale.US, "Tầm nhìn %.0f m thấp hơn mức tối thiểu VLOS 1500 m", current.visibilityM())
+                                : String.format(Locale.US, "Visibility %.0f m is below 1500 m VLOS minimum", current.visibilityM()),
                         current.visibilityM(), 1500.0, "m", now));
             } else if (current.visibilityM() < 5000.0) {
-                alerts.add(new WeatherAlertVm("LOW_VISIBILITY", "warning", "Reduced Visibility",
-                        String.format(Locale.US, "Visibility %.0f m is below 5000 m VFR standard", current.visibilityM()),
+                alerts.add(new WeatherAlertVm(
+                        "LOW_VISIBILITY",
+                        "warning",
+                        vi ? "Tầm nhìn suy giảm" : "Reduced Visibility",
+                        vi
+                                ? String.format(Locale.US, "Tầm nhìn %.0f m thấp hơn tiêu chuẩn VFR 5000 m", current.visibilityM())
+                                : String.format(Locale.US, "Visibility %.0f m is below 5000 m VFR standard", current.visibilityM()),
                         current.visibilityM(), 5000.0, "m", now));
             }
         }
 
         int code = current.weatherCode() != null ? current.weatherCode() : 0;
         if (code >= 95) {
-            alerts.add(new WeatherAlertVm("THUNDERSTORM", "critical", "Thunderstorm Activity",
-                    "Active thunderstorm reported at hub coordinates", (double) code, 95.0, "WMO", now));
+            alerts.add(new WeatherAlertVm(
+                    "THUNDERSTORM",
+                    "critical",
+                    vi ? "Hoạt động giông bão" : "Thunderstorm Activity",
+                    vi ? "Ghi nhận giông bão đang hoạt động tại tọa độ Hub" : "Active thunderstorm reported at hub coordinates",
+                    (double) code, 95.0, "WMO", now));
         } else if (code >= 63 && code <= 67) {
-            alerts.add(new WeatherAlertVm("RAIN", "warning", "Moderate to Heavy Rain",
-                    "Precipitation may degrade optical sensors and propulsion efficiency",
+            alerts.add(new WeatherAlertVm(
+                    "RAIN",
+                    "warning",
+                    vi ? "Mưa vừa đến mưa to" : "Moderate to Heavy Rain",
+                    vi
+                            ? "Lượng mưa có thể làm suy giảm cảm biến quang học và hiệu suất lực đẩy"
+                            : "Precipitation may degrade optical sensors and propulsion efficiency",
                     current.precipitationMm(), 2.5, "mm", now));
         }
 
@@ -237,53 +278,78 @@ public class WeatherServiceImpl implements WeatherService {
                 metar != null ? metar.flightCategory() : null,
                 current.flightCategory());
 
+        boolean vi = LocaleUtils.isVietnamese();
         List<String> noGoReasons = new ArrayList<>();
         List<String> cautionReasons = new ArrayList<>();
 
         if (windMs != null) {
             if (windMs > 12.0) {
-                noGoReasons.add(String.format(Locale.US, "Sustained wind %.1f m/s exceeds 12.0 m/s limit (%s)", windMs, windSource));
+                noGoReasons.add(vi
+                        ? String.format(Locale.US, "Gió duy trì %.1f m/s vượt giới hạn 12.0 m/s (%s)", windMs, windSource)
+                        : String.format(Locale.US, "Sustained wind %.1f m/s exceeds 12.0 m/s limit (%s)", windMs, windSource));
             } else if (windMs > 9.0) {
-                cautionReasons.add(String.format(Locale.US, "Sustained wind %.1f m/s exceeds 9.0 m/s caution threshold (%s)", windMs, windSource));
+                cautionReasons.add(vi
+                        ? String.format(Locale.US, "Gió duy trì %.1f m/s vượt ngưỡng cảnh báo 9.0 m/s (%s)", windMs, windSource)
+                        : String.format(Locale.US, "Sustained wind %.1f m/s exceeds 9.0 m/s caution threshold (%s)", windMs, windSource));
             }
         }
 
         if (gustMs != null) {
             if (gustMs > 15.0) {
-                noGoReasons.add(String.format(Locale.US, "Wind gusts %.1f m/s exceed 15.0 m/s limit", gustMs));
+                noGoReasons.add(vi
+                        ? String.format(Locale.US, "Gió giật %.1f m/s vượt giới hạn 15.0 m/s", gustMs)
+                        : String.format(Locale.US, "Wind gusts %.1f m/s exceed 15.0 m/s limit", gustMs));
             } else if (gustMs > 12.0) {
-                cautionReasons.add(String.format(Locale.US, "Wind gusts %.1f m/s exceed 12.0 m/s caution threshold", gustMs));
+                cautionReasons.add(vi
+                        ? String.format(Locale.US, "Gió giật %.1f m/s vượt ngưỡng cảnh báo 12.0 m/s", gustMs)
+                        : String.format(Locale.US, "Wind gusts %.1f m/s exceed 12.0 m/s caution threshold", gustMs));
             }
         }
 
         if (visibilityM != null) {
             if (visibilityM < 1500.0) {
-                noGoReasons.add(String.format(Locale.US, "Visibility %.0f m is below 1500 m minimum", visibilityM));
+                noGoReasons.add(vi
+                        ? String.format(Locale.US, "Tầm nhìn %.0f m thấp hơn mức tối thiểu 1500 m", visibilityM)
+                        : String.format(Locale.US, "Visibility %.0f m is below 1500 m minimum", visibilityM));
             } else if (visibilityM < 5000.0) {
-                cautionReasons.add(String.format(Locale.US, "Visibility %.0f m is below 5000 m VFR standard", visibilityM));
+                cautionReasons.add(vi
+                        ? String.format(Locale.US, "Tầm nhìn %.0f m thấp hơn tiêu chuẩn VFR 5000 m", visibilityM)
+                        : String.format(Locale.US, "Visibility %.0f m is below 5000 m VFR standard", visibilityM));
             }
         }
 
         if ("IFR".equalsIgnoreCase(flightCategory) || "LIFR".equalsIgnoreCase(flightCategory)) {
-            noGoReasons.add("Aerodrome flight category is " + flightCategory);
+            noGoReasons.add(vi
+                    ? "Phân loại điều kiện bay tại sân bay là " + flightCategory
+                    : "Aerodrome flight category is " + flightCategory);
         } else if ("MVFR".equalsIgnoreCase(flightCategory)) {
-            cautionReasons.add("Aerodrome flight category is MVFR");
+            cautionReasons.add(vi
+                    ? "Phân loại điều kiện bay tại sân bay là MVFR"
+                    : "Aerodrome flight category is MVFR");
         }
 
         if (current.weatherCode() != null) {
             if (current.weatherCode() >= 95) {
-                noGoReasons.add("Thunderstorm activity detected (WMO code " + current.weatherCode() + ")");
+                noGoReasons.add(vi
+                        ? "Phát hiện hoạt động giông bão (mã WMO " + current.weatherCode() + ")"
+                        : "Thunderstorm activity detected (WMO code " + current.weatherCode() + ")");
             } else if (current.weatherCode() >= 61) {
-                cautionReasons.add("Active precipitation at hub (" + describeWmoCode(current.weatherCode()) + ")");
+                cautionReasons.add(vi
+                        ? "Đang có mưa tại khu vực Hub (" + describeWmoCode(current.weatherCode(), true) + ")"
+                        : "Active precipitation at hub (" + describeWmoCode(current.weatherCode(), false) + ")");
             }
         }
 
         for (SigmetReportVm sigmet : sigmets) {
             String hazard = sigmet.hazard() != null ? sigmet.hazard().toUpperCase(Locale.ROOT) : "SIGMET";
             if (hazard.contains("TS") || hazard.contains("SEV") || hazard.contains("TC") || hazard.contains("VA")) {
-                noGoReasons.add("Active severe SIGMET in FIR " + sigmet.firId() + " (" + hazard + ")");
+                noGoReasons.add(vi
+                        ? "SIGMET nguy hiểm đang hiệu lực trong FIR " + sigmet.firId() + " (" + hazard + ")"
+                        : "Active severe SIGMET in FIR " + sigmet.firId() + " (" + hazard + ")");
             } else {
-                cautionReasons.add("Active SIGMET advisory in FIR " + sigmet.firId() + " (" + hazard + ")");
+                cautionReasons.add(vi
+                        ? "Khuyến cáo SIGMET đang hiệu lực trong FIR " + sigmet.firId() + " (" + hazard + ")"
+                        : "Active SIGMET advisory in FIR " + sigmet.firId() + " (" + hazard + ")");
             }
         }
 
@@ -570,6 +636,7 @@ public class WeatherServiceImpl implements WeatherService {
     }
 
     private CurrentWeatherVm buildFallbackCurrentWeather(HubBriefVm hub) {
+        boolean vi = LocaleUtils.isVietnamese();
         return new CurrentWeatherVm(
                 hub.id(),
                 hub.name(),
@@ -586,7 +653,7 @@ public class WeatherServiceImpl implements WeatherService {
                 1012.0,
                 0.0,
                 1,
-                "Mainly clear (fallback)",
+                vi ? "Trời quang đến ít mây (dự phòng)" : "Mainly clear (fallback)",
                 "VFR",
                 "OPTIMAL",
                 ZonedDateTime.now(ZoneOffset.UTC)
@@ -669,7 +736,26 @@ public class WeatherServiceImpl implements WeatherService {
     }
 
     private static String describeWmoCode(Integer code) {
-        if (code == null) return "Unknown";
+        return describeWmoCode(code, LocaleUtils.isVietnamese());
+    }
+
+    private static String describeWmoCode(Integer code, boolean vi) {
+        if (code == null) {
+            return vi ? "Không xác định" : "Unknown";
+        }
+        if (vi) {
+            return switch (code) {
+                case 0 -> "Trời quang";
+                case 1, 2, 3 -> "Ít mây đến có mây";
+                case 45, 48 -> "Sương mù";
+                case 51, 53, 55 -> "Mưa phùn";
+                case 61, 63, 65 -> "Mưa";
+                case 71, 73, 75 -> "Tuyết rơi";
+                case 80, 81, 82 -> "Mưa rào";
+                case 95, 96, 99 -> "Giông bão";
+                default -> "Mã thời tiết " + code;
+            };
+        }
         return switch (code) {
             case 0 -> "Clear sky";
             case 1, 2, 3 -> "Partly cloudy";

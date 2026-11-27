@@ -9,6 +9,7 @@ import com.utm.commonlibrary.generator.BusinessCodeGenerator;
 import com.utm.commonlibrary.generator.CodePatternRule;
 import com.utm.commonlibrary.kafka.event.FlightLifecycleEvent;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.flight.config.FeasibilityConfig;
 import com.utm.flight.kafka.FlightEventPublisher;
 import com.utm.flight.mapper.FeasibilityMapper;
@@ -294,7 +295,9 @@ public class FeasibilityServiceImpl implements FeasibilityService {
         if (deterministic == null || llmReasoningClient == null || !llmReasoningClient.isEnabled()) {
             return deterministic;
         }
-        String systemPrompt = "You are a UTM pre-flight safety analyst. Explain the deterministic energy feasibility outcome concisely in 2 sentences without altering numbers or verdict.";
+        boolean vi = LocaleUtils.isVietnamese();
+        String systemPrompt = "You are a UTM pre-flight safety analyst. Explain the deterministic energy feasibility outcome concisely in 2 sentences without altering numbers or verdict."
+                + (vi ? " Reply in concise, professional civil-aviation Vietnamese (Tiếng Việt)." : "");
         String userPrompt = String.format(
                 "Drone=%s, Distance=%.0fm, Hover=%.0fs, Payload=%.2fkg, Wind=%.1fm/s (%s), Usable=%.1fWh, Required=%.1fWh, Margin=%.1f%%, Verdict=%s.",
                 droneId, profile.distanceM(), profile.hoverTimeS(), profile.payloadKg(),

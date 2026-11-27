@@ -1,6 +1,7 @@
 package com.utm.intelligence.service;
 
 import com.utm.commonlibrary.ai.LlmReasoningClient;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.intelligence.service.client.IntelligenceInteropClientService;
 import com.utm.intelligence.viewmodel.IntelligenceDtos.AdsbAircraftClientVm;
 import com.utm.intelligence.viewmodel.IntelligenceDtos.DemoStateVm;
@@ -159,11 +160,12 @@ public class ForesightService {
     }
 
     public DirectorAdviceVm advise(PredictedConflictVm conflict) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (conflict == null || conflict.location() == null
                 || conflict.primary() == null || conflict.secondary() == null) {
             return new DirectorAdviceVm(
-                    "No valid predicted conflict was provided.",
-                    "The request did not include a conflict to assess.",
+                    vi ? "Không có dữ liệu xung đột dự báo hợp lệ." : "No valid predicted conflict was provided.",
+                    vi ? "Yêu cầu không bao gồm thông tin xung đột cần đánh giá." : "The request did not include a conflict to assess.",
                     List.of(),
                     0,
                     "deterministic");
@@ -174,7 +176,10 @@ public class ForesightService {
                     + "Given a predicted conflict (<150m horizontal AND <30m vertical), return JSON with keys: "
                     + "summary, cause, recommendedIndex (0..2), and options (array of 3 objects with kind=hold|altitude|lateral, "
                     + "label, objectId, delaySec, altitudeDeltaM, lateralOffsetM, rationale, sideEffects). "
-                    + "Size maneuvers so separation is completely cleared: altitude >= 40m change, hold >= 120s, lateral >= 300m.";
+                    + "Size maneuvers so separation is completely cleared: altitude >= 40m change, hold >= 120s, lateral >= 300m."
+                    + (vi
+                            ? " Write summary, cause, and each option's label, rationale, and sideEffects in concise, professional civil-aviation Vietnamese (Tiếng Việt), while keeping each option's kind strictly equal to hold, altitude, or lateral."
+                            : "");
             String user = String.format(Locale.US,
                     "Conflict between %s (%s) and %s (%s) in %ds, minSep=%dm at lat=%.4f, lon=%.4f, alt=%dm.",
                     conflict.primary().label(), conflict.primary().id(),
@@ -197,40 +202,66 @@ public class ForesightService {
         List<DirectorOptionVm> options = List.of(
                 new DirectorOptionVm(
                         "hold",
-                        "Hold " + conflict.secondary().label() + " for 120s",
+                        vi
+                                ? "Giữ chờ " + conflict.secondary().label() + " trong 120 giây"
+                                : "Hold " + conflict.secondary().label() + " for 120s",
                         120,
                         null,
                         null,
                         conflict.secondary().id(),
-                        "Delaying " + conflict.secondary().label() + " by 120s lets " + conflict.primary().label()
-                                + " clear the crossing point first with >150m horizontal buffer.",
-                        "Adds 120s delay to " + conflict.secondary().label() + "."),
+                        vi
+                                ? "Trì hoãn " + conflict.secondary().label() + " 120 giây giúp " + conflict.primary().label()
+                                        + " thoát qua điểm giao cắt trước với giãn cách ngang >150m."
+                                : "Delaying " + conflict.secondary().label() + " by 120s lets " + conflict.primary().label()
+                                        + " clear the crossing point first with >150m horizontal buffer.",
+                        vi
+                                ? "Tăng thời gian trễ 120 giây cho " + conflict.secondary().label() + "."
+                                : "Adds 120s delay to " + conflict.secondary().label() + "."),
                 new DirectorOptionVm(
                         "altitude",
-                        "Descend " + conflict.primary().label() + " by 50m",
+                        vi
+                                ? "Hạ độ cao " + conflict.primary().label() + " thêm 50m"
+                                : "Descend " + conflict.primary().label() + " by 50m",
                         null,
                         -50.0,
                         null,
                         conflict.primary().id(),
-                        "A 50m vertical separation change restores >30m vertical clearance at CPA (predicted "
-                                + conflict.minSeparationM() + "m horizontal).",
-                        "Zero arrival delay; maintains safe AGL clearance."),
+                        vi
+                                ? "Thay đổi phân cách cao độ 50m khôi phục giãn cách đứng >30m tại điểm tiếp cận gần nhất CPA (dự báo ngang "
+                                        + conflict.minSeparationM() + "m)."
+                                : "A 50m vertical separation change restores >30m vertical clearance at CPA (predicted "
+                                        + conflict.minSeparationM() + "m horizontal).",
+                        vi
+                                ? "Không gây trễ giờ đến; vẫn đảm bảo độ cao an toàn so với mặt đất (AGL)."
+                                : "Zero arrival delay; maintains safe AGL clearance."),
                 new DirectorOptionVm(
                         "lateral",
-                        "Offset " + conflict.secondary().label() + " 500m laterally",
+                        vi
+                                ? "Dịch ngang lộ trình " + conflict.secondary().label() + " 500m"
+                                : "Offset " + conflict.secondary().label() + " 500m laterally",
                         null,
                         null,
                         500.0,
                         conflict.secondary().id(),
-                        "A 500m perpendicular lateral offset opens horizontal CPA well beyond the 150m threshold.",
-                        "Slightly longer path for " + conflict.secondary().label() + ".")
+                        vi
+                                ? "Dịch ngang vuông góc 500m mở rộng khoảng cách CPA ngang vượt xa ngưỡng an toàn 150m."
+                                : "A 500m perpendicular lateral offset opens horizontal CPA well beyond the 150m threshold.",
+                        vi
+                                ? "Quãng đường bay của " + conflict.secondary().label() + " dài hơn nhẹ."
+                                : "Slightly longer path for " + conflict.secondary().label() + ".")
         );
 
         return new DirectorAdviceVm(
-                String.format("Predicted loss of separation (%dm) between %s and %s in %ds.",
-                        conflict.minSeparationM(), conflict.primary().label(),
-                        conflict.secondary().label(), conflict.timeToConflictSec()),
-                conflict.secondary().label() + " converging with " + conflict.primary().label() + " near the crossing point.",
+                vi
+                        ? String.format(Locale.US, "Dự báo mất phân cách an toàn (%dm) giữa %s và %s sau %d giây.",
+                                conflict.minSeparationM(), conflict.primary().label(),
+                                conflict.secondary().label(), conflict.timeToConflictSec())
+                        : String.format("Predicted loss of separation (%dm) between %s and %s in %ds.",
+                                conflict.minSeparationM(), conflict.primary().label(),
+                                conflict.secondary().label(), conflict.timeToConflictSec()),
+                vi
+                        ? conflict.secondary().label() + " hội tụ quỹ đạo với " + conflict.primary().label() + " gần điểm giao cắt."
+                        : conflict.secondary().label() + " converging with " + conflict.primary().label() + " near the crossing point.",
                 options,
                 1,
                 "deterministic");

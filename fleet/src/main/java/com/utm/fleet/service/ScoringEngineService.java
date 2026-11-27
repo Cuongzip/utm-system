@@ -1,5 +1,6 @@
 package com.utm.fleet.service;
 
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.fleet.viewmodel.FleetDtos.AlternativeDroneVm;
 import com.utm.fleet.viewmodel.FleetDtos.DroneClientVm;
 import com.utm.fleet.viewmodel.FleetDtos.DroneScoreVm;
@@ -88,8 +89,18 @@ public class ScoringEngineService {
                         + maintenance * w.maintenance());
 
         if (battery <= 0 || capability <= 0) {
-            return new ScoredDrone(drone, scores, 0.0, false,
-                    battery <= 0 ? "Insufficient battery level for mission reserve" : "Missing required drone capabilities");
+            boolean vi = LocaleUtils.isVietnamese();
+            String reason;
+            if (battery <= 0) {
+                reason = vi
+                        ? "Mức pin không đủ cho ngưỡng dự phòng nhiệm vụ"
+                        : "Insufficient battery level for mission reserve";
+            } else {
+                reason = vi
+                        ? "Thiếu năng lực thiết bị bắt buộc của Drone"
+                        : "Missing required drone capabilities";
+            }
+            return new ScoredDrone(drone, scores, 0.0, false, reason);
         }
         return new ScoredDrone(drone, scores, finalScore, true, null);
     }
@@ -107,23 +118,28 @@ public class ScoringEngineService {
     }
 
     private String checkIneligibilityReason(DroneClientVm drone, MissionRequirements req) {
+        boolean vi = LocaleUtils.isVietnamese();
         String status = drone.status() != null ? drone.status().toLowerCase(Locale.ROOT) : "";
         if (!"available".equals(status) && !"standby".equals(status)) {
-            return "Drone status is " + drone.status();
+            return vi ? "Trạng thái Drone hiện là " + drone.status() : "Drone status is " + drone.status();
         }
         String hubId = effectiveHubId(drone);
         if (hubId == null || hubId.isBlank()) {
-            return "Drone is not stationed at a hub";
+            return vi ? "Drone hiện không đỗ tại Hub nào" : "Drone is not stationed at a hub";
         }
         if (req.requiredPayloadKg() != null && req.requiredPayloadKg() > 0) {
             double maxPayload = drone.maxPayloadKg() != null ? drone.maxPayloadKg() : 0.0;
             if (maxPayload < req.requiredPayloadKg()) {
-                return String.format("Insufficient payload capacity (%.2fkg < %.2fkg)", maxPayload, req.requiredPayloadKg());
+                return vi
+                        ? String.format(Locale.US, "Tải trọng tối đa không đủ (%.2fkg < %.2fkg)", maxPayload, req.requiredPayloadKg())
+                        : String.format("Insufficient payload capacity (%.2fkg < %.2fkg)", maxPayload, req.requiredPayloadKg());
             }
         }
         if (req.estimatedDistanceM() != null && req.estimatedDistanceM() > 0 && drone.maxRangeM() != null && drone.maxRangeM() > 0) {
             if (drone.maxRangeM() < req.estimatedDistanceM()) {
-                return String.format("Insufficient range (%.0fm < %.0fm)", drone.maxRangeM(), req.estimatedDistanceM());
+                return vi
+                        ? String.format(Locale.US, "Tầm bay tối đa không đủ (%.0fm < %.0fm)", drone.maxRangeM(), req.estimatedDistanceM())
+                        : String.format("Insufficient range (%.0fm < %.0fm)", drone.maxRangeM(), req.estimatedDistanceM());
             }
         }
         return null;

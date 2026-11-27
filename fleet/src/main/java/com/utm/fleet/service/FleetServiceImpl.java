@@ -7,6 +7,7 @@ import com.utm.commonlibrary.exception.DuplicatedException;
 import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.commonlibrary.kafka.event.FlightLifecycleEvent;
 import com.utm.commonlibrary.utils.AuthenticationUtils;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.fleet.mapper.FleetMapper;
 import com.utm.fleet.model.FleetAssignment;
 import com.utm.fleet.model.FleetConfiguration;
@@ -162,10 +163,16 @@ public class FleetServiceImpl implements FleetService {
         MissionClientVm mission = interopClient.getMissionById(postVm.missionId())
                 .orElseThrow(() -> new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", postVm.missionId()));
 
+        boolean vi = LocaleUtils.isVietnamese();
         HubClientVm depHub = interopClient.getHubById(mission.departureHubId())
                 .orElse(null);
         if (depHub == null) {
-            return new AssignmentResultVm(false, null, null, List.of(), "Departure hub not found");
+            return new AssignmentResultVm(
+                    false,
+                    null,
+                    null,
+                    List.of(),
+                    vi ? "Không tìm thấy Hub khởi hành" : "Departure hub not found");
         }
 
         FleetConfiguration config = ensureActiveConfig();
@@ -178,7 +185,12 @@ public class FleetServiceImpl implements FleetService {
                 .toList();
 
         if (candidatePool.isEmpty()) {
-            return new AssignmentResultVm(false, null, null, List.of(), "No unassigned drones available in fleet");
+            return new AssignmentResultVm(
+                    false,
+                    null,
+                    null,
+                    List.of(),
+                    vi ? "Không có Drone chưa phân công nào sẵn sàng trong đội bay" : "No unassigned drones available in fleet");
         }
 
         Map<String, HubClientVm> hubMap = interopClient.getAllHubs().stream()
@@ -202,8 +214,10 @@ public class FleetServiceImpl implements FleetService {
         List<ScoredDrone> eligible = scored.stream().filter(ScoredDrone::eligible).toList();
 
         if (eligible.isEmpty()) {
-            String reason = "No eligible drones found. "
-                    + (scored.isEmpty() || scored.get(0).ineligibilityReason() == null ? "" : scored.get(0).ineligibilityReason());
+            String detail = scored.isEmpty() || scored.get(0).ineligibilityReason() == null
+                    ? ""
+                    : scored.get(0).ineligibilityReason();
+            String reason = (vi ? "Không tìm thấy Drone đủ điều kiện. " : "No eligible drones found. ") + detail;
             return new AssignmentResultVm(false, null, null, scoringEngine.formatAlternatives(scored, 5), reason.trim());
         }
 
@@ -220,7 +234,7 @@ public class FleetServiceImpl implements FleetService {
                         null,
                         null,
                         scoringEngine.formatAlternatives(eligible, 5),
-                        "Operator-selected drone is not eligible");
+                        vi ? "Drone do điều phái viên chọn không đủ điều kiện" : "Operator-selected drone is not eligible");
             }
             selected = overrideMatch.get();
         } else {
@@ -360,8 +374,11 @@ public class FleetServiceImpl implements FleetService {
 
                 int priority = (needy.availableDrones() == 0 ? 100 : (needy.availableDrones() == 1 ? 50 : 25))
                         + (donor.availableDrones() > 5 ? 10 : 0);
-                String reason = String.format("Hub %s has %d available drones (minimum: %d)",
-                        needy.hubName(), needy.availableDrones(), thresholds.minDronesPerHub());
+                String reason = LocaleUtils.isVietnamese()
+                        ? String.format("Hub %s hiện có %d Drone sẵn sàng (tối thiểu: %d)",
+                                needy.hubName(), needy.availableDrones(), thresholds.minDronesPerHub())
+                        : String.format("Hub %s has %d available drones (minimum: %d)",
+                                needy.hubName(), needy.availableDrones(), thresholds.minDronesPerHub());
 
                 recommendations.add(new RebalancingRecommendationVm(
                         donor,

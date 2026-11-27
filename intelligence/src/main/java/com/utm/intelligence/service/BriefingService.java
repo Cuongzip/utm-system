@@ -3,6 +3,7 @@ package com.utm.intelligence.service;
 import com.utm.commonlibrary.ai.LlmReasoningClient;
 import com.utm.commonlibrary.constants.MessageCode;
 import com.utm.commonlibrary.exception.NotFoundException;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.intelligence.service.client.IntelligenceInteropClientService;
 import com.utm.intelligence.viewmodel.IntelligenceDtos.AdsbAircraftClientVm;
 import com.utm.intelligence.viewmodel.IntelligenceDtos.AiAssessmentDecisionVm;
@@ -60,16 +61,17 @@ public class BriefingService {
         List<RoutePointVm> routePoints = extractRoutePoints(flight, depHub, arrHub, altM);
 
         SecurityContext callerContext = SecurityContextHolder.getContext();
+        Locale callerLocale = LocaleUtils.currentLocale();
         CompletableFuture<Optional<WeatherGoNoGoClientVm>> weatherFuture = CompletableFuture.supplyAsync(
-                withSecurityContext(callerContext,
+                withExecutionContext(callerContext, callerLocale,
                         () -> flight.departureHubId() != null ? interopClient.getWeatherGoNoGo(flight.departureHubId()) : Optional.empty()));
         CompletableFuture<Optional<AirspaceCheckPathClientVm>> airspaceFuture = CompletableFuture.supplyAsync(
-                withSecurityContext(callerContext,
+                withExecutionContext(callerContext, callerLocale,
                         () -> routePoints.isEmpty() ? Optional.empty() : interopClient.checkAirspacePath(routePoints)));
         CompletableFuture<List<AdsbAircraftClientVm>> adsbFuture = CompletableFuture.supplyAsync(
-                withSecurityContext(callerContext, interopClient::getAdsbAircraft));
+                withExecutionContext(callerContext, callerLocale, interopClient::getAdsbAircraft));
         CompletableFuture<List<NotamItemClientVm>> notamFuture = CompletableFuture.supplyAsync(
-                withSecurityContext(callerContext, interopClient::getNotams));
+                withExecutionContext(callerContext, callerLocale, interopClient::getNotams));
 
         CompletableFuture.allOf(weatherFuture, airspaceFuture, adsbFuture, notamFuture).join();
 
@@ -98,6 +100,7 @@ public class BriefingService {
     public FlightAssessmentVm assessFlight(String flightId) {
         FlightBriefingVm briefing = getFlightBriefing(flightId);
         boolean aiEnabled = llmReasoningClient != null && llmReasoningClient.isEnabled();
+        boolean vi = LocaleUtils.isVietnamese();
 
         AiAssessmentDecisionVm decision = null;
         if (aiEnabled) {
@@ -105,7 +108,10 @@ public class BriefingService {
                     + "Reason over the deterministic evidence and return JSON with keys: "
                     + "decision (GO | GO_WITH_CONDITIONS | NO_GO), confidence (low | medium | high), "
                     + "blockingReasons (array of strings), conditions (array of strings), humanSummary (1-3 sentences). "
-                    + "Any RED deterministic verdict, prohibited airspace breach, or NO_GO weather MUST be NO_GO.";
+                    + "Any RED deterministic verdict, prohibited airspace breach, or NO_GO weather MUST be NO_GO."
+                    + (vi
+                            ? " Write blockingReasons, conditions, and humanSummary in concise, professional civil-aviation Vietnamese (Tiếng Việt), while keeping decision (GO | GO_WITH_CONDITIONS | NO_GO) and confidence (low | medium | high) enum values strictly in English."
+                            : "");
             String user = String.format(
                     "Flight=%s, DeterministicVerdict=%s, Weather=%s, Airspace=%s, Traffic=%s, NOTAM=%s",
                     briefing.flightNumber(),
@@ -134,32 +140,45 @@ public class BriefingService {
     }
 
     private AiAssessmentDecisionVm buildDeterministicAssessment(FlightBriefingVm briefing) {
+        boolean vi = LocaleUtils.isVietnamese();
         List<String> blocking = new ArrayList<>();
         List<String> conditions = new ArrayList<>();
 
         Map<String, Object> wx = briefing.sections().weather();
         if ("NO_GO".equalsIgnoreCase(String.valueOf(wx.get("verdict")))) {
-            blocking.add("Weather verdict at station " + wx.get("icao") + " is NO_GO (wind " + wx.get("windMs") + " m/s).");
+            blocking.add(vi
+                    ? "Kết luận thời tiết tại trạm " + wx.get("icao") + " là NO_GO (gió " + wx.get("windMs") + " m/s)."
+                    : "Weather verdict at station " + wx.get("icao") + " is NO_GO (wind " + wx.get("windMs") + " m/s).");
         } else if ("CAUTION".equalsIgnoreCase(String.valueOf(wx.get("verdict"))) || !"ok".equals(wx.get("status"))) {
-            conditions.add("Monitor local surface winds and visibility updates along departure corridor.");
+            conditions.add(vi
+                    ? "Theo dõi chặt chẽ tốc độ gió bề mặt và cập nhật tầm nhìn dọc hành lang khởi hành."
+                    : "Monitor local surface winds and visibility updates along departure corridor.");
         }
 
         Map<String, Object> air = briefing.sections().airspace();
         int breachCount = air.get("breachCount") instanceof Number n ? n.intValue() : 0;
         String worst = String.valueOf(air.get("worstSeverity"));
         if ("critical".equalsIgnoreCase(worst)) {
-            blocking.add("Flight path intersects " + breachCount + " critical prohibited/no-fly airspace zone(s).");
+            blocking.add(vi
+                    ? "Lộ trình bay cắt qua " + breachCount + " vùng không phận cấm/hạn chế bay nghiêm trọng."
+                    : "Flight path intersects " + breachCount + " critical prohibited/no-fly airspace zone(s).");
         } else if (breachCount > 0) {
-            conditions.add("Coordinate ATC clearance through " + breachCount + " restricted/advisory zone(s).");
+            conditions.add(vi
+                    ? "Phối hợp huấn lệnh ATC khi bay qua " + breachCount + " vùng không phận hạn chế/khuyến cáo."
+                    : "Coordinate ATC clearance through " + breachCount + " restricted/advisory zone(s).");
         }
 
         Map<String, Object> traffic = briefing.sections().traffic();
         int warnTraffic = traffic.get("warningCount") instanceof Number n ? n.intValue() : 0;
         int cautTraffic = traffic.get("cautionCount") instanceof Number n ? n.intValue() : 0;
         if (warnTraffic > 0) {
-            blocking.add(warnTraffic + " low-altitude manned aircraft within 1.5 NM of planned route.");
+            blocking.add(vi
+                    ? "Có " + warnTraffic + " tàu bay có người lái tầm thấp trong phạm vi 1.5 NM quanh lộ trình dự kiến."
+                    : warnTraffic + " low-altitude manned aircraft within 1.5 NM of planned route.");
         } else if (cautTraffic > 0) {
-            conditions.add(cautTraffic + " manned aircraft within 3.0 NM; maintain active ADS-B monitoring.");
+            conditions.add(vi
+                    ? "Có " + cautTraffic + " tàu bay có người lái trong phạm vi 3.0 NM; duy trì giám sát ADS-B liên tục."
+                    : cautTraffic + " manned aircraft within 3.0 NM; maintain active ADS-B monitoring.");
         }
 
         if ("RED".equals(briefing.verdict()) || !blocking.isEmpty()) {
@@ -168,7 +187,9 @@ public class BriefingService {
                     "high",
                     blocking,
                     conditions,
-                    "Pre-flight safety gates blocked authorization for " + briefing.flightNumber() + ": " + String.join(" ", blocking));
+                    vi
+                            ? "Chốt chặn an toàn trước chuyến bay từ chối cấp phép cho " + briefing.flightNumber() + ": " + String.join(" ", blocking)
+                            : "Pre-flight safety gates blocked authorization for " + briefing.flightNumber() + ": " + String.join(" ", blocking));
         }
         if ("AMBER".equals(briefing.verdict()) || !conditions.isEmpty()) {
             return new AiAssessmentDecisionVm(
@@ -176,14 +197,18 @@ public class BriefingService {
                     "high",
                     List.of(),
                     conditions,
-                    "Flight " + briefing.flightNumber() + " may proceed with operational mitigations: " + String.join(" ", conditions));
+                    vi
+                            ? "Chuyến bay " + briefing.flightNumber() + " có thể thực hiện kèm biện pháp giảm thiểu rủi ro vận hành: " + String.join(" ", conditions)
+                            : "Flight " + briefing.flightNumber() + " may proceed with operational mitigations: " + String.join(" ", conditions));
         }
         return new AiAssessmentDecisionVm(
                 "GO",
                 "high",
                 List.of(),
                 List.of(),
-                "All weather, airspace geofence, ADS-B traffic, and NOTAM checks are clear for flight " + briefing.flightNumber() + ".");
+                vi
+                        ? "Tất cả kiểm tra thời tiết, hàng rào địa lý không phận, lưu lượng ADS-B và NOTAM đều an toàn cho chuyến bay " + briefing.flightNumber() + "."
+                        : "All weather, airspace geofence, ADS-B traffic, and NOTAM checks are clear for flight " + briefing.flightNumber() + ".");
     }
 
     private List<RoutePointVm> extractRoutePoints(FlightClientVm flight, HubClientVm dep, HubClientVm arr, double altM) {
@@ -350,6 +375,7 @@ public class BriefingService {
             return m;
         }).toList();
 
+        boolean vi = LocaleUtils.isVietnamese();
         Map<String, Object> section = new LinkedHashMap<>();
         section.put("status", "ok");
         section.put("total", notams.size());
@@ -357,11 +383,23 @@ public class BriefingService {
         section.put("criticalCount", criticalCount);
         section.put("warningCount", warningCount);
         section.put("items", items);
-        section.put("message", relevant.isEmpty()
-                ? "No active NOTAMs affecting this route"
-                : relevant.size() + " active NOTAM(s) on route"
-                        + (criticalCount > 0 ? ", " + criticalCount + " restricted/danger area" : ""));
+        if (vi) {
+            section.put("message", relevant.isEmpty()
+                    ? "Không có NOTAM hiệu lực ảnh hưởng đến lộ trình này"
+                    : "Có " + relevant.size() + " NOTAM hiệu lực trên lộ trình"
+                            + (criticalCount > 0 ? ", " + criticalCount + " khu vực cấm/nguy hiểm" : ""));
+        } else {
+            section.put("message", relevant.isEmpty()
+                    ? "No active NOTAMs affecting this route"
+                    : relevant.size() + " active NOTAM(s) on route"
+                            + (criticalCount > 0 ? ", " + criticalCount + " restricted/danger area" : ""));
+        }
         return section;
+    }
+
+    private static <T> Supplier<T> withExecutionContext(
+            SecurityContext securityContext, Locale locale, Supplier<T> delegate) {
+        return LocaleUtils.withLocale(locale, withSecurityContext(securityContext, delegate));
     }
 
     private static <T> Supplier<T> withSecurityContext(SecurityContext context, Supplier<T> delegate) {

@@ -3,6 +3,7 @@ package com.utm.intelligence.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.ai.LlmReasoningClient;
+import com.utm.commonlibrary.utils.LocaleUtils;
 import com.utm.intelligence.service.client.IntelligenceInteropClientService;
 import com.utm.intelligence.viewmodel.IntelligenceDtos.AdsbAircraftClientVm;
 import com.utm.intelligence.viewmodel.IntelligenceDtos.ChatMessageVm;
@@ -50,12 +51,15 @@ public class CopilotService {
     public CopilotChatResponseVm chat(CopilotChatPostVm request) {
         List<ChatMessageVm> incoming = request != null && request.messages() != null ? request.messages() : List.of();
         boolean aiEnabled = llmReasoningClient != null && llmReasoningClient.isEnabled();
+        boolean vi = LocaleUtils.isVietnamese();
         String modelName = llmReasoningClient != null ? llmReasoningClient.getDefaultModel() : "deterministic-copilot";
 
         if (incoming.isEmpty()) {
             return new CopilotChatResponseVm(
                     aiEnabled,
-                    "Hello! Ask me about active flights, fleet status, hub weather go/no-go, ADS-B traffic, conflicts, or emergencies.",
+                    vi
+                            ? "Xin chào! Hãy hỏi tôi về chuyến bay đang hoạt động, trạng thái đội bay, điều kiện thời tiết cất/hạ cánh tại Hub, lưu lượng ADS-B, xung đột không phận hoặc sự cố khẩn cấp."
+                            : "Hello! Ask me about active flights, fleet status, hub weather go/no-go, ADS-B traffic, conflicts, or emergencies.",
                     List.of(),
                     List.of(),
                     modelName);
@@ -73,6 +77,11 @@ public class CopilotService {
 
     @SuppressWarnings("unchecked")
     private Optional<CopilotChatResponseVm> runToolUseLoop(List<ChatMessageVm> incoming, String modelName) {
+        boolean vi = LocaleUtils.isVietnamese();
+        String systemPrompt = vi
+                ? SYSTEM_PROMPT + " Operator UI language is Vietnamese (Tiếng Việt); reply in concise, professional aviation Vietnamese unless the operator explicitly writes in English."
+                : SYSTEM_PROMPT;
+
         List<Map<String, Object>> conversation = new ArrayList<>();
         for (ChatMessageVm m : incoming) {
             String role = "assistant".equalsIgnoreCase(m.role()) ? "assistant" : "user";
@@ -85,7 +94,7 @@ public class CopilotService {
 
         for (int iter = 0; iter < 6; iter++) {
             Optional<JsonNode> rootOpt = llmReasoningClient.sendMessagesWithTools(
-                    SYSTEM_PROMPT, conversation, tools, 1500);
+                    systemPrompt, conversation, tools, 1500);
             if (rootOpt.isEmpty()) {
                 return Optional.empty();
             }
@@ -211,18 +220,23 @@ public class CopilotService {
             trace.add(new ToolTraceItemVm("get_notams", Map.of(), notamOut.result()));
             summaryParts.add(formatNotamSummary(notamOut.result()));
         }
+        boolean vi = LocaleUtils.isVietnamese();
         if (lower.contains("authorize") || lower.contains("cấp phép")) {
             List<FlightClientVm> scheduled = interopClient.getFlights("scheduled", null);
             FlightClientVm target = findMatchingFlightInPrompt(lower, scheduled);
             if (target != null) {
                 Map<String, Object> in = Map.of(
                         "flightId", target.id(),
-                        "rationale", "Requested by operator via Copilot after pre-flight status check.");
+                        "rationale", vi
+                                ? "Được điều phái viên yêu cầu qua Copilot sau khi kiểm tra trạng thái trước chuyến bay."
+                                : "Requested by operator via Copilot after pre-flight status check.");
                 DispatchOutcome prop = dispatchTool("propose_authorize_flight", in);
                 trace.add(new ToolTraceItemVm("propose_authorize_flight", in, prop.result()));
                 if (prop.proposal() != null) {
                     proposals.add(prop.proposal());
-                    summaryParts.add("- Proposed action: Authorize flight " + target.flightNumber() + " (confirm below).");
+                    summaryParts.add(vi
+                            ? "- Đề xuất thao tác: Cấp phép chuyến bay " + target.flightNumber() + " (xác nhận bên dưới)."
+                            : "- Proposed action: Authorize flight " + target.flightNumber() + " (confirm below).");
                 }
             }
         }
@@ -232,12 +246,16 @@ public class CopilotService {
             if (target != null) {
                 Map<String, Object> in = Map.of(
                         "flightId", target.id(),
-                        "rationale", "Operator requested immediate flight abort via Copilot.");
+                        "rationale", vi
+                                ? "Điều phái viên yêu cầu hủy chuyến bay khẩn cấp qua Copilot."
+                                : "Operator requested immediate flight abort via Copilot.");
                 DispatchOutcome prop = dispatchTool("propose_abort_flight", in);
                 trace.add(new ToolTraceItemVm("propose_abort_flight", in, prop.result()));
                 if (prop.proposal() != null) {
                     proposals.add(prop.proposal());
-                    summaryParts.add("- Proposed action: Abort flight " + target.flightNumber() + " (confirm below).");
+                    summaryParts.add(vi
+                            ? "- Đề xuất thao tác: Hủy chuyến bay " + target.flightNumber() + " (xác nhận bên dưới)."
+                            : "- Proposed action: Abort flight " + target.flightNumber() + " (confirm below).");
                 }
             }
         }
@@ -258,6 +276,7 @@ public class CopilotService {
 
     @SuppressWarnings("unchecked")
     private String formatFleetSummary(Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof Map<?, ?> map) {
             Object total = map.getOrDefault("totalDrones", null);
             Object available = map.getOrDefault("availableDrones", null);
@@ -265,6 +284,15 @@ public class CopilotService {
             Object charging = map.getOrDefault("chargingDrones", null);
             Object health = map.getOrDefault("fleetHealthScore", null);
             if (total != null) {
+                if (vi) {
+                    return String.format(Locale.US,
+                            "- Sẵn sàng đội bay: %s Drone (%s sẵn sàng, %s đang bay, %s đang sạc)%s",
+                            total,
+                            available != null ? available : 0,
+                            inFlight != null ? inFlight : 0,
+                            charging != null ? charging : 0,
+                            health != null ? " · Sức khỏe đội bay " + health + "%" : "");
+                }
                 return String.format(Locale.US,
                         "- Fleet Readiness: %s drones (%s available, %s active, %s charging)%s",
                         total,
@@ -274,10 +302,13 @@ public class CopilotService {
                         health != null ? " · Health " + health + "%" : "");
             }
         }
-        return "- Fleet Readiness: No live fleet telemetry available.";
+        return vi
+                ? "- Sẵn sàng đội bay: Chưa có dữ liệu giám sát đội bay trực tiếp."
+                : "- Fleet Readiness: No live fleet telemetry available.";
     }
 
     private String formatWeatherSummary(String hubName, Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof WeatherGoNoGoClientVm wx) {
             String vis = wx.visibilityM() != null
                     ? String.format(Locale.US, "%.1f km", wx.visibilityM() / 1000.0)
@@ -285,6 +316,15 @@ public class CopilotService {
             String wind = wx.windSpeedMs() != null
                     ? String.format(Locale.US, "%.1f m/s", wx.windSpeedMs())
                     : "N/A";
+            if (vi) {
+                return String.format(Locale.US,
+                        "- Thời tiết (%s): %s · %s (gió %s, tầm nhìn %s)",
+                        hubName,
+                        wx.verdict() != null ? wx.verdict() : "UNKNOWN",
+                        wx.flightCategory() != null ? wx.flightCategory() : "VFR",
+                        wind,
+                        vis);
+            }
             return String.format(Locale.US,
                     "- Weather (%s): %s · %s (wind %s, visibility %s)",
                     hubName,
@@ -293,54 +333,89 @@ public class CopilotService {
                     wind,
                     vis);
         }
-        return "- Weather (" + hubName + "): Briefing currently unavailable.";
+        return vi
+                ? "- Thời tiết (" + hubName + "): Hiện chưa có bản tin khí tượng."
+                : "- Weather (" + hubName + "): Briefing currently unavailable.";
     }
 
     private String formatConflictsSummary(Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof List<?> list) {
             if (list.isEmpty()) {
-                return "- Airspace Conflicts: 0 active separation conflicts.";
+                return vi
+                        ? "- Xung đột không phận: 0 xung đột phân cách đang hoạt động."
+                        : "- Airspace Conflicts: 0 active separation conflicts.";
             }
-            return "- Airspace Conflicts: " + list.size() + " active separation conflict(s) detected.";
+            return vi
+                    ? "- Xung đột không phận: Phát hiện " + list.size() + " xung đột phân cách đang hoạt động."
+                    : "- Airspace Conflicts: " + list.size() + " active separation conflict(s) detected.";
         }
-        return "- Airspace Conflicts: Status unavailable.";
+        return vi
+                ? "- Xung đột không phận: Trạng thái không khả dụng."
+                : "- Airspace Conflicts: Status unavailable.";
     }
 
     private String formatEmergenciesSummary(Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof List<?> list) {
             if (list.isEmpty()) {
-                return "- Emergency Console: 0 active emergency incidents.";
+                return vi
+                        ? "- Trung tâm khẩn cấp: 0 sự cố khẩn cấp đang hoạt động."
+                        : "- Emergency Console: 0 active emergency incidents.";
             }
-            return "- Emergency Console: " + list.size() + " active incident(s) requiring attention.";
+            return vi
+                    ? "- Trung tâm khẩn cấp: Có " + list.size() + " sự cố đang hoạt động cần xử lý."
+                    : "- Emergency Console: " + list.size() + " active incident(s) requiring attention.";
         }
-        return "- Emergency Console: Status unavailable.";
+        return vi
+                ? "- Trung tâm khẩn cấp: Trạng thái không khả dụng."
+                : "- Emergency Console: Status unavailable.";
     }
 
     private String formatTrafficSummary(Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof Map<?, ?> map) {
             Object total = map.get("total");
             Object low = map.get("lowAltitudeCount");
+            if (vi) {
+                return String.format(Locale.US,
+                        "- Lưu lượng ADS-B trực tiếp: Đang theo dõi %s tàu bay (%s dưới 5.000 ft).",
+                        total != null ? total : 0,
+                        low != null ? low : 0);
+            }
             return String.format(Locale.US,
                     "- Live ADS-B Traffic: %s aircraft tracked (%s below 5,000 ft).",
                     total != null ? total : 0,
                     low != null ? low : 0);
         }
-        return "- Live ADS-B Traffic: Feed unavailable.";
+        return vi
+                ? "- Lưu lượng ADS-B trực tiếp: Nguồn dữ liệu không khả dụng."
+                : "- Live ADS-B Traffic: Feed unavailable.";
     }
 
     private String formatNotamSummary(Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof Map<?, ?> map) {
             Object count = map.get("count");
             Object critical = map.get("critical");
+            if (vi) {
+                return String.format(Locale.US,
+                        "- NOTAM hiệu lực: %s điện văn đang hiệu lực (%s mức nghiêm trọng).",
+                        count != null ? count : 0,
+                        critical != null ? critical : 0);
+            }
             return String.format(Locale.US,
                     "- Active NOTAMs: %s active notice(s) (%s critical).",
                     count != null ? count : 0,
                     critical != null ? critical : 0);
         }
-        return "- Active NOTAMs: Feed unavailable.";
+        return vi
+                ? "- NOTAM hiệu lực: Nguồn dữ liệu không khả dụng."
+                : "- Active NOTAMs: Feed unavailable.";
     }
 
     private String formatFlightsSummary(Object raw) {
+        boolean vi = LocaleUtils.isVietnamese();
         if (raw instanceof List<?> list) {
             long active = list.stream()
                     .filter(it -> it instanceof Map<?, ?> m && "active".equalsIgnoreCase(String.valueOf(m.get("status"))))
@@ -348,11 +423,18 @@ public class CopilotService {
             long scheduled = list.stream()
                     .filter(it -> it instanceof Map<?, ?> m && "scheduled".equalsIgnoreCase(String.valueOf(m.get("status"))))
                     .count();
+            if (vi) {
+                return String.format(Locale.US,
+                        "- Tổng quan chuyến bay: %d chuyến bay (%d đang bay, %d đã lên lịch).",
+                        list.size(), active, scheduled);
+            }
             return String.format(Locale.US,
                     "- Flights Snapshot: %d total flight(s) (%d active, %d scheduled).",
                     list.size(), active, scheduled);
         }
-        return "- Flights Snapshot: No flights returned.";
+        return vi
+                ? "- Tổng quan chuyến bay: Không có dữ liệu chuyến bay."
+                : "- Flights Snapshot: No flights returned.";
     }
 
     public DispatchOutcome dispatchTool(String name, Map<String, Object> input) {
@@ -462,13 +544,14 @@ public class CopilotService {
                 yield new DispatchOutcome(b, null);
             }
             case "propose_authorize_flight" -> {
+                boolean vi = LocaleUtils.isVietnamese();
                 FlightClientVm f = resolveFlight(String.valueOf(input.getOrDefault("flightId", ""))).orElse(null);
                 if (f == null) {
                     yield new DispatchOutcome(Map.of("error", "Flight not found"), null);
                 }
                 ProposedActionVm proposal = new ProposedActionVm(
                         "authorize_flight",
-                        "Authorize flight " + f.flightNumber(),
+                        vi ? "Cấp phép chuyến bay " + f.flightNumber() : "Authorize flight " + f.flightNumber(),
                         "POST",
                         "/api/v1/flights/" + f.id() + "/authorize",
                         null,
@@ -476,14 +559,17 @@ public class CopilotService {
                 yield new DispatchOutcome(Map.of("proposed", proposal.kind(), "flightId", f.id()), proposal);
             }
             case "propose_abort_flight" -> {
+                boolean vi = LocaleUtils.isVietnamese();
                 FlightClientVm f = resolveFlight(String.valueOf(input.getOrDefault("flightId", ""))).orElse(null);
                 if (f == null) {
                     yield new DispatchOutcome(Map.of("error", "Flight not found"), null);
                 }
-                String rationale = String.valueOf(input.getOrDefault("rationale", "Operator abort"));
+                String rationale = String.valueOf(input.getOrDefault(
+                        "rationale",
+                        vi ? "Điều phái viên hủy chuyến bay" : "Operator abort"));
                 ProposedActionVm proposal = new ProposedActionVm(
                         "abort_flight",
-                        "Abort flight " + f.flightNumber(),
+                        vi ? "Hủy chuyến bay " + f.flightNumber() : "Abort flight " + f.flightNumber(),
                         "POST",
                         "/api/v1/flights/" + f.id() + "/abort",
                         Map.of("reason", rationale),
@@ -491,11 +577,12 @@ public class CopilotService {
                 yield new DispatchOutcome(Map.of("proposed", proposal.kind(), "flightId", f.id()), proposal);
             }
             case "propose_resolve_conflict" -> {
+                boolean vi = LocaleUtils.isVietnamese();
                 String conflictId = String.valueOf(input.getOrDefault("conflictId", ""));
                 String rationale = String.valueOf(input.getOrDefault("rationale", ""));
                 ProposedActionVm proposal = new ProposedActionVm(
                         "resolve_conflict",
-                        "Resolve conflict " + conflictId,
+                        vi ? "Giải quyết xung đột " + conflictId : "Resolve conflict " + conflictId,
                         "POST",
                         "/api/v1/conflicts/" + conflictId + "/resolve",
                         Map.of("strategy", "hold", "actions", Map.of("notes", rationale, "source", "copilot")),
@@ -503,11 +590,12 @@ public class CopilotService {
                 yield new DispatchOutcome(Map.of("proposed", proposal.kind(), "conflictId", conflictId), proposal);
             }
             case "propose_confirm_emergency" -> {
+                boolean vi = LocaleUtils.isVietnamese();
                 String incidentId = String.valueOf(input.getOrDefault("incidentId", ""));
                 String rationale = String.valueOf(input.getOrDefault("rationale", ""));
                 ProposedActionVm proposal = new ProposedActionVm(
                         "confirm_emergency",
-                        "Confirm response for incident " + incidentId,
+                        vi ? "Xác nhận ứng phó sự cố " + incidentId : "Confirm response for incident " + incidentId,
                         "POST",
                         "/api/v1/emergency/incidents/" + incidentId + "/confirm",
                         Map.of("approved", true),
