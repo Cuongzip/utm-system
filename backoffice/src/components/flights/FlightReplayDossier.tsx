@@ -125,6 +125,7 @@ export function FlightReplayDossier({
     const router = useRouter();
     const t = useTranslations("flights");
     const td = useTranslations("flights.deck");
+    const tMap = useTranslations("map");
     const tEmergency = useTranslations("emergency");
     const tConflicts = useTranslations("conflicts");
     const tCtrl = useTranslations("controlCenter");
@@ -217,14 +218,21 @@ export function FlightReplayDossier({
         [flightCallsignMap, locale]
     );
 
+    const singleFlightList = useMemo(() => [flight], [flight]);
+    const hasActiveRecord = Boolean(activeRecord);
+    const telemetryFlights = useMemo(
+        () => (hasActiveRecord ? singleFlightList : []),
+        [hasActiveRecord, singleFlightList]
+    );
+
     const telemetryMap = useMemo<Record<string, TelemetryRecord>>(() => {
         if (!activeRecord) return {};
         return { [flight.id]: activeRecord };
     }, [flight.id, activeRecord]);
 
     const fitBoundsPoints = useMemo(
-        () => buildFlightFitBoundsPoints(flight, departureHub, arrivalHub, activeRecord),
-        [flight, departureHub, arrivalHub, activeRecord]
+        () => buildFlightFitBoundsPoints(flight, departureHub, arrivalHub, timeline[0] ?? null),
+        [flight, departureHub, arrivalHub, timeline]
     );
 
     const routeDistanceNodes = useMemo(
@@ -565,42 +573,90 @@ export function FlightReplayDossier({
                                             aria-pressed={filterAirspace}
                                             onClick={() => setFilterAirspace((p) => !p)}
                                             className={cn(
-                                                "px-2.5 py-1 text-xs font-mono font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                                 filterAirspace
                                                     ? "bg-slate-800 text-white"
                                                     : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                                             )}
                                         >
-                                            {tCtrl("layerAirspace")}
+                                            <span
+                                                aria-hidden="true"
+                                                className={cn(
+                                                    "w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0",
+                                                    !filterAirspace && "opacity-45"
+                                                )}
+                                            />
+                                            <span>{tCtrl("layerAirspace")}</span>
                                         </button>
                                         <button
                                             type="button"
                                             aria-pressed={filterHubs}
                                             onClick={() => setFilterHubs((p) => !p)}
                                             className={cn(
-                                                "px-2.5 py-1 text-xs font-mono font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                                 filterHubs
                                                     ? "bg-slate-800 text-white"
                                                     : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                                             )}
                                         >
-                                            {tCtrl("layerHubs")}
+                                            <span
+                                                aria-hidden="true"
+                                                className={cn(
+                                                    "w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0",
+                                                    !filterHubs && "opacity-45"
+                                                )}
+                                            />
+                                            <span>{tCtrl("layerHubs")}</span>
                                         </button>
                                         <button
                                             type="button"
                                             aria-pressed={filterAdsb}
                                             onClick={() => setFilterAdsb((p) => !p)}
                                             className={cn(
-                                                "px-2.5 py-1 text-xs font-mono font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                                 filterAdsb
                                                     ? "bg-slate-800 text-white"
                                                     : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                                             )}
                                         >
-                                            {tCtrl("layerAdsb")}
+                                            <span
+                                                aria-hidden="true"
+                                                className={cn(
+                                                    "w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0",
+                                                    !filterAdsb && "opacity-45"
+                                                )}
+                                            />
+                                            <span>{tCtrl("layerAdsb")}</span>
                                         </button>
                                     </div>
                                 </div>
+                            }
+                            legendSlot={
+                                <>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span
+                                            aria-hidden="true"
+                                            className="w-4 border-t-2 border-dashed border-sky-400"
+                                        />
+                                        <span>{tMap("legendPlan")}</span>
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span
+                                            aria-hidden="true"
+                                            className="w-4 h-[2.5px] rounded-full bg-amber-500"
+                                        />
+                                        <span>{tMap("legendActual")}</span>
+                                    </span>
+                                    {totalFrames > 1 && cursorIndex < totalFrames - 1 && (
+                                        <span className="inline-flex items-center gap-1.5 text-slate-400">
+                                            <span
+                                                aria-hidden="true"
+                                                className="w-4 border-t-2 border-dotted border-amber-400/60"
+                                            />
+                                            <span>{tMap("legendRemaining")}</span>
+                                        </span>
+                                    )}
+                                </>
                             }
                             footer={
                                 <div className="flex flex-col w-full shrink-0">
@@ -729,20 +785,24 @@ export function FlightReplayDossier({
                             }
                         >
                             {filterAirspace && <AirspaceLayer zones={activeZones} />}
+                            {filterHubs && <HubsLayer hubs={relevantHubs} autoFitBounds={false} />}
                             <FlightsLayer
-                                flights={[flight]}
+                                flights={singleFlightList}
                                 selectedFlightId={flight.id}
                                 showRouteLabels="none"
+                                routeStyle="reference"
                                 hubs={hubs}
                             />
                             <LiveTelemetryLayer
-                                flights={activeRecord ? [flight] : []}
+                                flights={telemetryFlights}
                                 telemetryMap={telemetryMap}
                                 selectedFlightId={flight.id}
                                 autoFollowSelected={false}
                                 autoFitInitialBounds={false}
+                                showTrail={false}
+                                interpolate={false}
+                                variant="replay"
                             />
-                            {filterHubs && <HubsLayer hubs={relevantHubs} autoFitBounds={false} />}
                             {filterAdsb && <AdsbLayer aircraft={adsbData?.aircraft ?? []} />}
                             <FlightDeckMapOverlay
                                 flightId={flight.id}

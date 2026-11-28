@@ -91,7 +91,7 @@ function PerspectiveResetHandler({
                 animate: trigger > 0,
                 duration: 1.0,
                 minHeight: 2500,
-                maxHeight: 35000,
+                maxHeight: 80000,
             });
         }
     }, [viewer, isLoaded, trigger, hubs, activeFlights]);
@@ -190,68 +190,105 @@ export function DashboardTacticalMap({
                             aria-pressed={filterTraffic}
                             onClick={() => setFilterTraffic((prev) => !prev)}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                 filterTraffic
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            {t("liveTrafficCount", { count: activeFlights.length })}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    "w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0",
+                                    !filterTraffic && "opacity-45"
+                                )}
+                            />
+                            <span>{t("liveTrafficCount", { count: activeFlights.length })}</span>
                         </button>
                         <button
                             type="button"
                             aria-pressed={filterAirspace}
                             onClick={() => setFilterAirspace((prev) => !prev)}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                 filterAirspace
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            {tc("layerAirspace")}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    "w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0",
+                                    !filterAirspace && "opacity-45"
+                                )}
+                            />
+                            <span>{tc("layerAirspace")}</span>
                         </button>
                         <button
                             type="button"
                             aria-pressed={filterHubs}
                             onClick={() => setFilterHubs((prev) => !prev)}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                 filterHubs
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            {tc("layerHubs")}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    "w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0",
+                                    !filterHubs && "opacity-45"
+                                )}
+                            />
+                            <span>{tc("layerHubs")}</span>
                         </button>
                         <button
                             type="button"
                             aria-pressed={filterAdsb}
                             onClick={() => setFilterAdsb((prev) => !prev)}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                 filterAdsb
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            {tc("layerAdsb")}
-                            {filterAdsb && adsbData?.aircraft
-                                ? ` (${adsbData.aircraft.length})`
-                                : ""}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    "w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0",
+                                    !filterAdsb && "opacity-45"
+                                )}
+                            />
+                            <span>
+                                {tc("layerAdsb")}
+                                {filterAdsb && adsbData?.aircraft
+                                    ? ` (${adsbData.aircraft.length})`
+                                    : ""}
+                            </span>
                         </button>
                         <button
                             type="button"
                             aria-pressed={foresightOpen}
                             onClick={handleToggleForesight}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                 foresightOpen
                                     ? "bg-slate-800 text-white shadow-2xs"
                                     : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                             )}
                         >
-                            {t("foresightBtn")}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    "w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0",
+                                    !foresightOpen && "opacity-45"
+                                )}
+                            />
+                            <span>{t("foresightBtn")}</span>
                         </button>
                     </div>
                 </div>
@@ -262,7 +299,7 @@ export function DashboardTacticalMap({
                         <button
                             type="button"
                             onClick={handleReset}
-                            className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-sm text-[11px] font-mono font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                            className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md bg-slate-950/88 border border-slate-700/80 backdrop-blur-md shadow-sm text-[11px] font-mono font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
                         >
                             <RotateCcw className="w-3.5 h-3.5 text-slate-300" aria-hidden="true" />
                             <span>{t("resetMap")}</span>

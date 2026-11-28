@@ -20,6 +20,7 @@ export interface TacticalMapContainerProps {
     header?: React.ReactNode;
     footer?: React.ReactNode;
     overlay?: React.ReactNode;
+    legendSlot?: React.ReactNode;
     statusSlot?: React.ReactNode;
     hideBottomHud?: boolean;
     frameless?: boolean;
@@ -34,12 +35,41 @@ export const VALID_IMAGERY_TYPES: readonly ImageryType[] = [
     "street",
 ];
 
-export const BASEMAP_OPTIONS: ReadonlyArray<{ id: ImageryType; label: string }> = [
-    { id: "satellite-hybrid", label: "Satellite Hybrid" },
-    { id: "satellite", label: "Satellite Clean" },
-    { id: "tactical-dark", label: "Tactical Dark" },
-    { id: "carto", label: "Light Gray Canvas" },
-    { id: "street", label: "Street Map" },
+export const BASEMAP_OPTIONS: ReadonlyArray<{
+    id: ImageryType;
+    label: string;
+    swatchClass: string;
+}> = [
+    {
+        id: "satellite-hybrid",
+        label: "Satellite Hybrid",
+        swatchClass:
+            "bg-gradient-to-br from-emerald-950 via-slate-800 to-amber-900/70 ring-1 ring-amber-300/40",
+    },
+    {
+        id: "satellite",
+        label: "Satellite Clean",
+        swatchClass:
+            "bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 ring-1 ring-emerald-400/30",
+    },
+    {
+        id: "tactical-dark",
+        label: "Tactical Dark",
+        swatchClass:
+            "bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 ring-1 ring-cyan-500/35",
+    },
+    {
+        id: "carto",
+        label: "Light Gray Canvas",
+        swatchClass:
+            "bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 ring-1 ring-slate-400/50",
+    },
+    {
+        id: "street",
+        label: "Street Map",
+        swatchClass:
+            "bg-gradient-to-br from-amber-50 via-emerald-100 to-sky-200 ring-1 ring-sky-400/50",
+    },
 ];
 
 function subscribeStorageEvent(eventName: string, callback: () => void) {
@@ -98,6 +128,7 @@ export function TacticalMapContainer({
     header,
     footer,
     overlay,
+    legendSlot,
     statusSlot,
     hideBottomHud = false,
     frameless = false,
@@ -205,16 +236,16 @@ export function TacticalMapContainer({
                     <div
                         role="group"
                         aria-label={t("viewModeAria")}
-                        className="h-8 flex items-center rounded-md bg-slate-900/90 p-0.5 border border-slate-700/80 backdrop-blur-md shadow-sm pointer-events-auto"
+                        className="h-8 flex items-center rounded-md bg-slate-950/88 p-0.5 border border-slate-700/80 backdrop-blur-md shadow-sm pointer-events-auto"
                     >
                         <button
                             type="button"
                             aria-pressed={mapMode === "globe"}
                             onClick={() => handleModeChange("globe")}
                             title={t("globe3dTitle")}
-                            className={`h-full flex items-center gap-1 rounded-[4px] px-2 sm:px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer ${
+                            className={`h-full flex items-center gap-1 rounded-[4px] px-2 sm:px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 cursor-pointer ${
                                 mapMode === "globe"
-                                    ? "bg-slate-700 text-white shadow-2xs"
+                                    ? "bg-slate-800 text-cyan-200 shadow-2xs ring-1 ring-cyan-500/40"
                                     : "text-slate-400 hover:text-white"
                             }`}
                         >
@@ -226,9 +257,9 @@ export function TacticalMapContainer({
                             aria-pressed={mapMode === "2d"}
                             onClick={() => handleModeChange("2d")}
                             title={t("flat2dTitle")}
-                            className={`h-full flex items-center gap-1 rounded-[4px] px-2 sm:px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer ${
+                            className={`h-full flex items-center gap-1 rounded-[4px] px-2 sm:px-2.5 text-[11px] font-semibold font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 cursor-pointer ${
                                 mapMode === "2d"
-                                    ? "bg-slate-700 text-white shadow-2xs"
+                                    ? "bg-slate-800 text-cyan-200 shadow-2xs ring-1 ring-cyan-500/40"
                                     : "text-slate-400 hover:text-white"
                             }`}
                         >
@@ -246,10 +277,10 @@ export function TacticalMapContainer({
                             aria-label={t("basemapLayers")}
                             aria-expanded={isLayersOpen}
                             aria-haspopup="menu"
-                            className={`h-8 w-8 inline-flex items-center justify-center rounded-md border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 shadow-sm cursor-pointer ${
+                            className={`h-8 w-8 inline-flex items-center justify-center rounded-md border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 shadow-sm cursor-pointer ${
                                 isLayersOpen
-                                    ? "bg-slate-700 border-slate-500 text-white"
-                                    : "bg-slate-900/90 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md"
+                                    ? "bg-slate-800 border-cyan-500/50 text-cyan-200"
+                                    : "bg-slate-950/88 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md"
                             }`}
                             title={t("basemapLayers")}
                         >
@@ -260,9 +291,9 @@ export function TacticalMapContainer({
                             <div
                                 role="menu"
                                 aria-label={t("basemapOptionsAria")}
-                                className="absolute right-0 top-full mt-1.5 w-48 rounded-md border border-slate-700/85 bg-slate-900/95 p-1 text-slate-200 shadow-xl backdrop-blur-md z-50 text-xs font-mono"
+                                className="absolute right-0 top-full mt-1.5 w-52 rounded-md border border-slate-700/85 bg-slate-950/95 p-1 text-slate-200 shadow-xl backdrop-blur-md z-50 text-xs font-mono"
                             >
-                                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700/80 mb-0.5">
+                                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 mb-0.5">
                                     {t("basemap")}
                                 </div>
                                 {BASEMAP_OPTIONS.map((layer) => {
@@ -277,27 +308,36 @@ export function TacticalMapContainer({
                                                 handleLayerChange(layer.id);
                                                 setIsLayersOpen(false);
                                             }}
-                                            className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
+                                            className={`w-full text-left rounded-[4px] py-1.5 px-2 flex items-center justify-between gap-2 transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
                                                 isSelected
-                                                    ? "bg-slate-700/90 text-white font-bold"
-                                                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                    ? "bg-slate-800 text-white font-semibold"
+                                                    : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                                             }`}
                                         >
-                                            <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                                                {isSelected && (
-                                                    <Check
-                                                        className="h-3.5 w-3.5 text-white stroke-[2.5]"
-                                                        aria-hidden="true"
-                                                    />
-                                                )}
+                                            <span className="flex items-center gap-2 min-w-0">
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={cn(
+                                                        "h-3.5 w-3.5 rounded-[3px] shrink-0",
+                                                        layer.swatchClass
+                                                    )}
+                                                />
+                                                <span className="truncate">
+                                                    {t(`basemaps.${layer.id}`)}
+                                                </span>
                                             </span>
-                                            <span>{t(`basemaps.${layer.id}`)}</span>
+                                            {isSelected && (
+                                                <Check
+                                                    className="h-3.5 w-3.5 text-cyan-400 stroke-[2.5] shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                            )}
                                         </button>
                                     );
                                 })}
 
                                 {mapMode === "globe" && hasIonToken && (
-                                    <div className="mt-1 pt-1 border-t border-slate-700/80">
+                                    <div className="mt-1 pt-1 border-t border-slate-800">
                                         <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                             {t("env3d")}
                                         </div>
@@ -321,7 +361,7 @@ export function TacticalMapContainer({
                                             <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                                                 {enable3DBuildings && (
                                                     <Check
-                                                        className="h-3.5 w-3.5 text-white stroke-[2.5]"
+                                                        className="h-3.5 w-3.5 text-cyan-400 stroke-[2.5]"
                                                         aria-hidden="true"
                                                     />
                                                 )}
@@ -348,7 +388,7 @@ export function TacticalMapContainer({
                                             <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                                                 {enable3DTerrain && (
                                                     <Check
-                                                        className="h-3.5 w-3.5 text-white stroke-[2.5]"
+                                                        className="h-3.5 w-3.5 text-cyan-400 stroke-[2.5]"
                                                         aria-hidden="true"
                                                     />
                                                 )}
@@ -366,7 +406,7 @@ export function TacticalMapContainer({
                         onClick={() => setIsFullscreen(!isFullscreen)}
                         aria-label={isFullscreen ? t("exitFullscreen") : t("fullscreen")}
                         aria-pressed={isFullscreen}
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors shadow-sm pointer-events-auto cursor-pointer"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-slate-950/88 border border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition-colors shadow-sm pointer-events-auto cursor-pointer"
                         title={isFullscreen ? t("exitFullscreen") : t("fullscreen")}
                     >
                         {isFullscreen ? (
@@ -389,6 +429,11 @@ export function TacticalMapContainer({
                 >
                     {children}
                 </BaseCesiumMap>
+                {!hideBottomHud && !inspector && legendSlot && (
+                    <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2.5 px-2.5 py-1 rounded-md bg-slate-950/88 text-slate-100 border border-slate-700/80 backdrop-blur-md text-[10px] font-mono shadow-md pointer-events-none max-w-[calc(100%-10rem)]">
+                        {legendSlot}
+                    </div>
+                )}
                 <TacticalMapStatusBar
                     viewer={activeViewer}
                     statusSlot={statusSlot}

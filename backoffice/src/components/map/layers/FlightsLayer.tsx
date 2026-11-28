@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { ACTIVE_FLIGHT_STATUSES, DEFAULT_FLIGHT_STATUS, type Flight, type Hub } from "@/types";
@@ -18,6 +18,7 @@ export interface FlightHubCoord {
 }
 
 export type RouteLabelVisibility = "all" | "focused" | "none";
+export type FlightRouteStyle = "primary" | "reference";
 
 export interface FlightsLayerProps {
     flights: Flight[];
@@ -25,18 +26,20 @@ export interface FlightsLayerProps {
     highlightedFlightIds?: ReadonlySet<string>;
     dimUnselected?: boolean;
     showRouteLabels?: RouteLabelVisibility;
+    routeStyle?: FlightRouteStyle;
     hubs?: Hub[];
     activeOnly?: boolean;
 }
 
 const STATUS_COLOR_MAP: Record<string, string> = MAP_TOKENS.colors.flightStatus;
 
-export function FlightsLayer({
+export const FlightsLayer = memo(function FlightsLayer({
     flights = [],
     selectedFlightId,
     highlightedFlightIds,
     dimUnselected = false,
     showRouteLabels = "all",
+    routeStyle = "primary",
     hubs,
     activeOnly = false,
 }: FlightsLayerProps) {
@@ -242,33 +245,53 @@ export function FlightsLayer({
                 if (cartesianPositions.length < 2) continue;
 
                 const isDimmed = dimUnselected && hasActiveFocus && !isFocused;
-                const activeHex = isFocused ? "#00e5ff" : baseRouteColor;
+                const isReference = routeStyle === "reference";
+                const activeHex = isReference ? "#38bdf8" : isFocused ? "#00e5ff" : baseRouteColor;
                 const routeArcType = is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC;
 
                 const routeEntityId = `flight-route-${flight.id}`;
+                const polylineMaterial = isReference
+                    ? new Cesium.PolylineDashMaterialProperty({
+                          color: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.65),
+                          dashLength: 14,
+                      })
+                    : isFocused
+                      ? new Cesium.PolylineOutlineMaterialProperty({
+                            color: Cesium.Color.fromCssColorString("#00e5ff"),
+                            outlineColor:
+                                Cesium.Color.fromCssColorString("#071328").withAlpha(0.85),
+                            outlineWidth: 1.5,
+                        })
+                      : isDimmed
+                        ? Cesium.Color.fromAlpha(
+                              Cesium.Color.fromCssColorString(baseRouteColor),
+                              0.28
+                          )
+                        : new Cesium.PolylineOutlineMaterialProperty({
+                              color: Cesium.Color.fromCssColorString(baseRouteColor).withAlpha(
+                                  0.92
+                              ),
+                              outlineColor:
+                                  Cesium.Color.fromCssColorString("#071328").withAlpha(0.65),
+                              outlineWidth: 1,
+                          });
+
                 viewer.entities.add({
                     id: routeEntityId,
                     name: flight.flightNumber || `Flight ${flight.id.slice(0, 8)}`,
                     polyline: {
                         positions: cartesianPositions,
                         arcType: routeArcType,
-                        width: isSelected
-                            ? 4.5
-                            : isConflictHighlighted
-                              ? 3.5
-                              : isDimmed
-                                ? 2.0
-                                : 2.8,
-                        material: isFocused
-                            ? new Cesium.PolylineGlowMaterialProperty({
-                                  glowPower: 0.2,
-                                  taperPower: 1.0,
-                                  color: Cesium.Color.fromCssColorString("#00e5ff"),
-                              })
-                            : Cesium.Color.fromAlpha(
-                                  Cesium.Color.fromCssColorString(baseRouteColor),
-                                  isDimmed ? 0.28 : 0.84
-                              ),
+                        width: isReference
+                            ? 2.2
+                            : isSelected
+                              ? 4.2
+                              : isConflictHighlighted
+                                ? 3.6
+                                : isDimmed
+                                  ? 2.0
+                                  : 3.0,
+                        material: polylineMaterial,
                         clampToGround: false,
                     },
                 });
@@ -301,10 +324,10 @@ export function FlightsLayer({
                             polyline: {
                                 positions: [arrowFrom, arrowTo],
                                 arcType: routeArcType,
-                                width: isFocused ? 11 : 9,
+                                width: isReference ? 7 : isFocused ? 9 : 8,
                                 material: new Cesium.PolylineArrowMaterialProperty(
                                     Cesium.Color.fromCssColorString(activeHex).withAlpha(
-                                        isFocused ? 0.98 : 0.85
+                                        isReference ? 0.68 : isFocused ? 0.96 : 0.85
                                     )
                                 ),
                             },
@@ -318,7 +341,7 @@ export function FlightsLayer({
                         id: `flight-curtain-${flight.id}`,
                         points: parsedPoints,
                         colorCss: activeHex,
-                        alpha: 0.11,
+                        alpha: isReference ? 0.05 : 0.1,
                     });
                     if (curtainId) newEntityIds.push(curtainId);
                 }
@@ -400,10 +423,11 @@ export function FlightsLayer({
         highlightedFlightIds,
         dimUnselected,
         showRouteLabels,
+        routeStyle,
         hubs,
         activeOnly,
         sceneRevision,
     ]);
 
     return null;
-}
+});

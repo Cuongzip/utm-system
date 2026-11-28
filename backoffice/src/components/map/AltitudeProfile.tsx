@@ -305,14 +305,18 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
         return `${pathD} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
     }, [pathD, segments, innerH, getX]);
 
-    const fullTraceD = useMemo(() => {
+    const remainingTraceD = useMemo(() => {
         if (!fullTrace || fullTrace.length < 2) return "";
-        return fullTrace.reduce((acc, pt, idx) => {
+        const playedLen = liveProgress?.trace?.length ?? 0;
+        const startIdx = playedLen > 0 ? Math.max(0, playedLen - 1) : 0;
+        const slice = fullTrace.slice(startIdx);
+        if (slice.length < 2) return "";
+        return slice.reduce((acc, pt, idx) => {
             const x = getX(pt.distanceM);
             const y = getY(pt.altitudeM);
             return idx === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
         }, "");
-    }, [fullTrace, getX, getY]);
+    }, [fullTrace, liveProgress?.trace?.length, getX, getY]);
 
     const liveTraceD = useMemo(() => {
         const trace = liveProgress?.trace;
@@ -556,12 +560,12 @@ export function AltitudeProfile<T extends BaseAltitudeWaypoint = BaseAltitudeWay
                         strokeLinejoin="round"
                     />
 
-                    {fullTraceD && (
+                    {remainingTraceD && (
                         <path
-                            d={fullTraceD}
+                            d={remainingTraceD}
                             fill="none"
                             stroke={activeTraceColor}
-                            strokeOpacity={0.32}
+                            strokeOpacity={0.34}
                             strokeWidth="1.75"
                             strokeDasharray="3 3"
                             strokeLinecap="round"

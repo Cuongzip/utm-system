@@ -11,6 +11,20 @@ import { ACTIVE_FLIGHT_STATUSES, FLIGHT_STATUS, type Flight, type TelemetryRecor
 export type FlightDeckStreamMode = "live" | "replay";
 export type PlaybackSpeed = 0.5 | 1 | 2 | 4 | 8;
 
+const MAX_LIVE_FRAMES = 800;
+
+interface SortedTelemetryBucket {
+    records: TelemetryRecord[];
+    timestamps: number[];
+    keys: string[];
+}
+
+const EMPTY_BUCKET: SortedTelemetryBucket = {
+    records: [],
+    timestamps: [],
+    keys: [],
+};
+
 export function getRecordTimestampMs(rec: TelemetryRecord): number {
     if (!rec.timestamp) return 0;
     const parsed = Date.parse(rec.timestamp);
@@ -22,20 +36,18 @@ function getRecordDedupKey(rec: TelemetryRecord): string {
     return `ts:${rec.timestamp ?? ""}_${rec.latitude ?? ""}_${rec.longitude ?? ""}_${rec.altitude ?? ""}`;
 }
 
-function pickInitialReplayIndex(frames: TelemetryRecord[]): number {
-    if (frames.length <= 1) return 0;
-    const mid = Math.floor(frames.length * 0.5);
-    for (let offset = 0; offset < frames.length; offset++) {
-        const right = mid + offset;
-        if (right < frames.length && (frames[right]?.altitude ?? 0) > 5) {
-            return right;
-        }
-        const left = mid - offset;
-        if (left >= 0 && (frames[left]?.altitude ?? 0) > 5) {
-            return left;
+function findInsertIndex(timestamps: number[], ts: number): number {
+    let lo = 0;
+    let hi = timestamps.length;
+    while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (timestamps[mid] <= ts) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
         }
     }
-    return mid;
+    return lo;
 }
 
 export function useFlightDeckTelemetry(flight: Flight | null, enabled = true) {
@@ -52,21 +64,26 @@ export function useFlightDeckTelemetry(flight: Flight | null, enabled = true) {
         autoConnect: enabled && isAirborne,
     });
 
-    const [liveFrames, setLiveFrames] = useState<TelemetryRecord[]>([]);
+    const [liveBucket, setLiveBucket] = useState<SortedTelemetryBucket>(EMPTY_BUCKET);
     const [prevFlightId, setPrevFlightId] = useState(flightId);
     const [manualReplay, setManualReplay] = useState(false);
     const [cursorIndex, setCursorIndex] = useState<number | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackRate, setPlaybackRate] = useState<PlaybackSpeed>(1);
     const pollingRef = useRef(false);
+    const liveKeySetRef = useRef<Set<string>>(new Set());
 
     if (flightId !== prevFlightId) {
         setPrevFlightId(flightId);
-        setLiveFrames([]);
+        setLiveBucket(EMPTY_BUCKET);
         setManualReplay(false);
         setCursorIndex(null);
         setIsPlaying(false);
     }
+
+    useEffect(() => {
+        liveKeySetRef.current = new Set();
+    }, [flightId]);
 
     const historyQuery = useQuery({
         queryKey: QUERY_KEYS.flightTelemetryHistory(flightId),
@@ -76,23 +93,78 @@ export function useFlightDeckTelemetry(flight: Flight | null, enabled = true) {
         refetchInterval: isAirborne && !isSocketConnected ? 2500 : false,
     });
 
+    const historyBucket = useMemo<SortedTelemetryBucket>(() => {
+        const raw = historyQuery.data;
+        if (!raw || raw.length === 0) return EMPTY_BUCKET;
+        const entries: Array<{ key: string; ts: number; record: TelemetryRecord }> = [];
+        const seen = new Set<string>();
+        for (const item of raw) {
+            if (!item || item.latitude == null || item.longitude == null) continue;
+            const key = getRecordDedupKey(item);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            entries.push({ key, ts: getRecordTimestampMs(item), record: item });
+        }
+        entries.sort((a, b) => a.ts - b.ts);
+        return {
+            records: entries.map((e) => e.record),
+            timestamps: entries.map((e) => e.ts),
+            keys: entries.map((e) => e.key),
+        };
+    }, [historyQuery.data]);
+
+    // Incrementally insert live STOMP/poll samples in O(1) when chronological (99.9% of packets)
+    // and O(log N) binary insert otherwise — avoids per-packet Date.parse() sorting.
     const appendRecords = useCallback((records: TelemetryRecord[]) => {
         if (records.length === 0) return;
-        setLiveFrames((prev) => {
-            const seen = new Set(prev.map(getRecordDedupKey));
-            let changed = false;
-            const next = [...prev];
-            for (const rec of records) {
-                if (!rec || rec.latitude == null || rec.longitude == null) continue;
-                const key = getRecordDedupKey(rec);
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    next.push(rec);
-                    changed = true;
+        const seen = liveKeySetRef.current;
+
+        const incoming: Array<{ key: string; ts: number; record: TelemetryRecord }> = [];
+        for (const rec of records) {
+            if (!rec || rec.latitude == null || rec.longitude == null) continue;
+            const key = getRecordDedupKey(rec);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            incoming.push({ key, ts: getRecordTimestampMs(rec), record: rec });
+        }
+        if (incoming.length === 0) return;
+
+        setLiveBucket((prev) => {
+            const nextRecords = prev.records.slice();
+            const nextTimestamps = prev.timestamps.slice();
+            const nextKeys = prev.keys.slice();
+
+            for (const item of incoming) {
+                const len = nextTimestamps.length;
+                if (len === 0 || item.ts >= nextTimestamps[len - 1]) {
+                    nextRecords.push(item.record);
+                    nextTimestamps.push(item.ts);
+                    nextKeys.push(item.key);
+                } else {
+                    const idx = findInsertIndex(nextTimestamps, item.ts);
+                    nextRecords.splice(idx, 0, item.record);
+                    nextTimestamps.splice(idx, 0, item.ts);
+                    nextKeys.splice(idx, 0, item.key);
                 }
             }
-            if (!changed) return prev;
-            return next.length > 800 ? next.slice(next.length - 800) : next;
+
+            if (nextRecords.length > MAX_LIVE_FRAMES) {
+                const trim = nextRecords.length - MAX_LIVE_FRAMES;
+                for (let i = 0; i < trim; i++) {
+                    seen.delete(nextKeys[i]);
+                }
+                return {
+                    records: nextRecords.slice(trim),
+                    timestamps: nextTimestamps.slice(trim),
+                    keys: nextKeys.slice(trim),
+                };
+            }
+
+            return {
+                records: nextRecords,
+                timestamps: nextTimestamps,
+                keys: nextKeys,
+            };
         });
     }, []);
 
@@ -138,33 +210,67 @@ export function useFlightDeckTelemetry(flight: Flight | null, enabled = true) {
         };
     }, [flightId, enabled, isAirborne, isSocketConnected, appendRecords]);
 
-    const timeline = useMemo(() => {
-        const merged = new Map<string, TelemetryRecord>();
-        for (const item of historyQuery.data ?? []) {
-            if (item && item.latitude != null && item.longitude != null) {
-                merged.set(getRecordDedupKey(item), item);
-            }
-        }
-        for (const item of liveFrames) {
-            if (item && item.latitude != null && item.longitude != null) {
-                merged.set(getRecordDedupKey(item), item);
-            }
-        }
-        return Array.from(merged.values()).sort(
-            (a, b) => getRecordTimestampMs(a) - getRecordTimestampMs(b)
-        );
-    }, [historyQuery.data, liveFrames]);
+    // Linear two-pointer merge of pre-sorted history + live buckets (zero Date.parse / sort).
+    const timeline = useMemo<TelemetryRecord[]>(() => {
+        const hLen = historyBucket.records.length;
+        const lLen = liveBucket.records.length;
+        if (hLen === 0) return liveBucket.records;
+        if (lLen === 0) return historyBucket.records;
 
-    const defaultReplayIndex = useMemo(() => pickInitialReplayIndex(timeline), [timeline]);
+        if (liveBucket.timestamps[0] > historyBucket.timestamps[hLen - 1]) {
+            const combined = new Array<TelemetryRecord>(hLen + lLen);
+            for (let i = 0; i < hLen; i++) combined[i] = historyBucket.records[i];
+            for (let j = 0; j < lLen; j++) combined[hLen + j] = liveBucket.records[j];
+            return combined;
+        }
+
+        const merged: TelemetryRecord[] = [];
+        const seen = new Set<string>();
+        let i = 0;
+        let j = 0;
+
+        while (i < hLen && j < lLen) {
+            if (historyBucket.timestamps[i] <= liveBucket.timestamps[j]) {
+                const k = historyBucket.keys[i];
+                if (!seen.has(k)) {
+                    seen.add(k);
+                    merged.push(historyBucket.records[i]);
+                }
+                i++;
+            } else {
+                const k = liveBucket.keys[j];
+                if (!seen.has(k)) {
+                    seen.add(k);
+                    merged.push(liveBucket.records[j]);
+                }
+                j++;
+            }
+        }
+        while (i < hLen) {
+            const k = historyBucket.keys[i];
+            if (!seen.has(k)) {
+                seen.add(k);
+                merged.push(historyBucket.records[i]);
+            }
+            i++;
+        }
+        while (j < lLen) {
+            const k = liveBucket.keys[j];
+            if (!seen.has(k)) {
+                seen.add(k);
+                merged.push(liveBucket.records[j]);
+            }
+            j++;
+        }
+        return merged;
+    }, [historyBucket, liveBucket]);
 
     const mode: FlightDeckStreamMode = isTerminal || manualReplay ? "replay" : "live";
     const lastIdx = Math.max(0, timeline.length - 1);
     const effectiveIndex =
-        mode === "live"
+        mode === "live" || cursorIndex == null
             ? lastIdx
-            : cursorIndex == null
-              ? defaultReplayIndex
-              : Math.min(lastIdx, Math.max(0, cursorIndex));
+            : Math.min(lastIdx, Math.max(0, cursorIndex));
 
     useEffect(() => {
         if (!isPlaying || timeline.length <= 1) return;

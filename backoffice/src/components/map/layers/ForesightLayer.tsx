@@ -103,7 +103,7 @@ export function ForesightLayer({
                 nextStaticIds.push(lineId);
             }
 
-            const conflictIcon = getConflictMarkerUri();
+            const conflictIcon = getConflictMarkerUri("high");
             for (const c of activeData.predictedConflicts ?? []) {
                 if (typeof c.location?.lat !== "number" || typeof c.location?.lon !== "number") {
                     continue;
@@ -120,16 +120,17 @@ export function ForesightLayer({
                     ),
                     billboard: {
                         image: conflictIcon,
-                        width: isSelected ? 36 : 30,
-                        height: isSelected ? 36 : 30,
+                        width: isSelected ? 38 : 32,
+                        height: isSelected ? 38 : 32,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -45),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: `CPA T+${Math.round(c.timeToConflictSec ?? 0)}s · ${Math.round(c.minSeparationM ?? 0)}m`,
                         isSelected,
-                        accentColor: "#ef4444",
-                        pixelOffset: new Cesium.Cartesian2(0, -22),
+                        variant: "alert",
+                        accentColor: "#fca5a5",
+                        pixelOffset: new Cesium.Cartesian2(0, -24),
                         eyeOffset: new Cesium.Cartesian3(0, 0, -45),
                         maxDistance: 300000,
                     }),
@@ -197,7 +198,11 @@ export function ForesightLayer({
 
             const safeIdx = Math.min(Math.max(frameIndex, 0), frames.length - 1);
             const currentFrame = frames[safeIdx];
-            const ghostIcon = getDroneIconUri(isSimPreview ? "#10b981" : "#38bdf8", "#ffffff");
+            const ghostIcon = getDroneIconUri(
+                isSimPreview ? "#10b981" : "#38bdf8",
+                isSimPreview ? "#6ee7b7" : "#7dd3fc",
+                { variant: "ghost" }
+            );
             const seenIds = new Set<string>();
 
             for (const pt of currentFrame?.objects ?? []) {
@@ -225,16 +230,17 @@ export function ForesightLayer({
                         position: nextPos,
                         billboard: {
                             image: ghostIcon,
-                            width: 26,
-                            height: 26,
+                            width: 32,
+                            height: 32,
                             eyeOffset: new Cesium.Cartesian3(0, 0, -35),
                             disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         },
                         label: createTacticalLabel(Cesium, {
                             text: labelText,
                             isSelected: false,
+                            variant: "aircraft",
                             accentColor: isSimPreview ? "#10b981" : "#38bdf8",
-                            pixelOffset: new Cesium.Cartesian2(0, -18),
+                            pixelOffset: new Cesium.Cartesian2(0, -22),
                             eyeOffset: new Cesium.Cartesian3(0, 0, -35),
                             maxDistance: 300000,
                         }),

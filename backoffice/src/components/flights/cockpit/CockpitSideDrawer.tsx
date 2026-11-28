@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { memo, useState, useMemo, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,7 +14,7 @@ import {
     X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AltitudeProfile, type LiveAltitudeProgress } from "@/components/map";
+import { AltitudeProfile } from "@/components/map";
 import { StatusBadge } from "@/components/ui";
 import { conflictService, droneService, emergencyService } from "@/services";
 import {
@@ -33,7 +33,11 @@ import {
     localizeResponseAction,
     localizeServerText,
 } from "@/utils";
-import { summarizeCommandParams } from "../routeProgressUtils";
+import {
+    computeLiveAltitudeProgress,
+    summarizeCommandParams,
+    type RouteDistanceNode,
+} from "../routeProgressUtils";
 import {
     COMMAND_STATUS,
     DEFAULT_COMMAND_STATUS,
@@ -61,7 +65,9 @@ export interface CockpitSideDrawerProps {
     arrivalHub: Hub | null;
     airspaceZones: AirspaceZone[];
     telemetry: TelemetryRecord | null;
-    liveAltitudeProgress: LiveAltitudeProgress | null;
+    timeline: TelemetryRecord[];
+    visibleTrail: TelemetryRecord[];
+    routeDistanceNodes: RouteDistanceNode[];
 }
 
 function CockpitConflictItem({
@@ -193,14 +199,16 @@ function CockpitConflictItem({
     );
 }
 
-export function CockpitSideDrawer({
+export const CockpitSideDrawer = memo(function CockpitSideDrawer({
     flight,
     hubs,
     departureHub,
     arrivalHub,
     airspaceZones,
     telemetry,
-    liveAltitudeProgress,
+    timeline,
+    visibleTrail,
+    routeDistanceNodes,
 }: CockpitSideDrawerProps) {
     const t = useTranslations("flights.deck");
     const tEmergency = useTranslations("emergency");
@@ -262,6 +270,21 @@ export function CockpitSideDrawer({
     const [prevFlightId, setPrevFlightId] = useState(flight.id);
     const [openTab, setOpenTab] = useState<CockpitDrawerTab>(null);
     const [autoOpenedSafety, setAutoOpenedSafety] = useState(false);
+
+    // Only run the 800-point route projection when the 4D Profile tab is actually visible.
+    const liveAltitudeProgress = useMemo(
+        () =>
+            openTab === "profile"
+                ? computeLiveAltitudeProgress(
+                      telemetry,
+                      timeline,
+                      visibleTrail,
+                      routeDistanceNodes,
+                      false
+                  )
+                : null,
+        [openTab, telemetry, timeline, visibleTrail, routeDistanceNodes]
+    );
 
     if (flight.id !== prevFlightId) {
         setPrevFlightId(flight.id);
@@ -694,4 +717,4 @@ export function CockpitSideDrawer({
             )}
         </div>
     );
-}
+});

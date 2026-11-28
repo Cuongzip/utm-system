@@ -61,35 +61,29 @@ export function HubsMap({
             }}
             onMapClick={onMapPick}
             pickMode={pickMode}
-            overlay={
+            legendSlot={
                 <>
-                    {!showInspector && (
-                        <div className="absolute bottom-3 left-3 z-30 flex items-center gap-2.5 px-2.5 py-1 rounded-md bg-slate-900/90 text-slate-100 border border-slate-700/80 backdrop-blur-md text-[10px] font-mono shadow-md pointer-events-none">
-                            <span className="inline-flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-[#06b6d4]" />
-                                <span>{t("legendActive")}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                                <span>{t("legendMaint")}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-slate-400" />
-                                <span>{t("legendInactive")}</span>
-                            </span>
-                        </div>
-                    )}
-
-                    {pickMode && (
-                        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900/90 text-slate-100 border border-slate-700/80 backdrop-blur-md text-[11px] font-mono shadow-lg pointer-events-none whitespace-nowrap">
-                            <MapPin
-                                className="w-3.5 h-3.5 text-slate-300 shrink-0"
-                                aria-hidden="true"
-                            />
-                            <span>{t("pickBanner")}</span>
-                        </div>
-                    )}
+                    <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#06b6d4]" />
+                        <span>{t("legendActive")}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span>{t("legendMaint")}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-slate-400" />
+                        <span>{t("legendInactive")}</span>
+                    </span>
                 </>
+            }
+            overlay={
+                pickMode ? (
+                    <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-950/90 text-slate-100 border border-slate-700/80 backdrop-blur-md text-[11px] font-mono shadow-lg pointer-events-none whitespace-nowrap">
+                        <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" aria-hidden="true" />
+                        <span>{t("pickBanner")}</span>
+                    </div>
+                ) : null
             }
             inspector={
                 showInspector && selectedHub ? (

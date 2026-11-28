@@ -152,26 +152,38 @@ export default function ConflictsPage() {
                                     type="button"
                                     aria-pressed={showLiveTraffic}
                                     onClick={() => setShowLiveTraffic((prev) => !prev)}
-                                    className={`px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         showLiveTraffic
                                             ? "bg-slate-800 text-white shadow-2xs"
                                             : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                     }`}
                                 >
-                                    {t("liveTraffic")}
+                                    <span
+                                        aria-hidden="true"
+                                        className={`w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 ${
+                                            !showLiveTraffic ? "opacity-45" : ""
+                                        }`}
+                                    />
+                                    <span>{t("liveTraffic")}</span>
                                 </button>
 
                                 <button
                                     type="button"
                                     aria-pressed={showAirspace}
                                     onClick={() => setShowAirspace((prev) => !prev)}
-                                    className={`px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         showAirspace
                                             ? "bg-slate-800 text-white shadow-2xs"
                                             : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                     }`}
                                 >
-                                    {t("airspaceLayer")}
+                                    <span
+                                        aria-hidden="true"
+                                        className={`w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0 ${
+                                            !showAirspace ? "opacity-45" : ""
+                                        }`}
+                                    />
+                                    <span>{t("airspaceLayer")}</span>
                                 </button>
                             </div>
                         </div>

@@ -54,7 +54,7 @@ export function fitCameraToBounds(
     if (validPoints.length === 0) return false;
 
     const minHeight = options.minHeight ?? 1500;
-    const maxHeight = options.maxHeight ?? 45000;
+    const maxHeight = options.maxHeight ?? 80000;
     const paddingMult = options.paddingMultiplier ?? 1.55;
 
     let targetPoints = validPoints;
@@ -112,7 +112,9 @@ export function fitCameraToBounds(
     if (is3D) {
         const centerTarget = Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 0);
         const sphere = new Cesium.BoundingSphere(centerTarget, Math.max(maxSpanMeters * 0.5, 120));
-        const range = Math.min(Math.max(targetHeight * 1.15, minHeight), maxHeight * 1.25);
+        const pitchRad = Math.abs(Cesium.Math.toRadians(TACTICAL_3D_PITCH_DEG));
+        const pitchComp = 1 / Math.max(Math.sin(pitchRad), 0.5);
+        const range = Math.min(Math.max(targetHeight * pitchComp, minHeight), maxHeight * 1.45);
 
         viewer.camera.flyToBoundingSphere(sphere, {
             offset: new Cesium.HeadingPitchRange(
@@ -159,7 +161,16 @@ export function syncViewerTrackedEntity(
         }
         return;
     }
-    const target = viewer.entities.getById(entityId);
+    let target = viewer.entities.getById(entityId);
+    if (!target) {
+        for (let i = 0; i < viewer.dataSources.length; i++) {
+            const found = viewer.dataSources.get(i).entities.getById(entityId);
+            if (found) {
+                target = found;
+                break;
+            }
+        }
+    }
     if (target && viewer.trackedEntity !== target) {
         viewer.trackedEntity = target;
         viewer.scene.requestRender();

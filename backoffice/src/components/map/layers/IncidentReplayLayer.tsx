@@ -5,9 +5,22 @@ import type { Entity } from "cesium";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { fitCameraToBounds } from "../cesiumUtils";
+import { getDroneIconUri, getIncidentOriginIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { addRouteCurtainWall } from "../cesiumOutlineUtils";
 import type { BlackboxEntryVm } from "@/types";
+
+function computeSegmentHeadingDeg(
+    fromLat: number,
+    fromLng: number,
+    toLat: number,
+    toLng: number
+): number {
+    const dLat = toLat - fromLat;
+    const dLng = (toLng - fromLng) * Math.cos((fromLat * Math.PI) / 180);
+    if (Math.abs(dLat) < 1e-8 && Math.abs(dLng) < 1e-8) return 0;
+    return ((Math.atan2(dLng, dLat) * 180) / Math.PI + 360) % 360;
+}
 
 export interface IncidentReplayLayerProps {
     incidentLat?: number | null;
@@ -83,10 +96,11 @@ export function IncidentReplayLayer({
                     name: "Blackbox Flight Path",
                     polyline: {
                         positions,
-                        width: 3.2,
-                        material: new Cesium.PolylineGlowMaterialProperty({
-                            glowPower: 0.16,
-                            color: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.9),
+                        width: 3.4,
+                        material: new Cesium.PolylineOutlineMaterialProperty({
+                            color: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.92),
+                            outlineColor: Cesium.Color.fromCssColorString("#071328").withAlpha(0.8),
+                            outlineWidth: 1.2,
                         }),
                     },
                 });
@@ -96,7 +110,7 @@ export function IncidentReplayLayer({
                     id: "incident-replay-curtain",
                     points: routePts,
                     colorCss: "#38bdf8",
-                    alpha: 0.12,
+                    alpha: 0.1,
                 });
                 if (curtainId) nextIds.push(curtainId);
             }
@@ -117,18 +131,19 @@ export function IncidentReplayLayer({
                         incidentLat,
                         Math.max(incidentAlt ?? 20, 5)
                     ),
-                    point: {
-                        pixelSize: 12,
-                        color: Cesium.Color.fromCssColorString("#ef4444"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getIncidentOriginIconUri(),
+                        width: 34,
+                        height: 34,
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: incidentLabel,
                         isSelected: false,
-                        accentColor: "#ef4444",
-                        pixelOffset: new Cesium.Cartesian2(0, 20),
+                        variant: "alert",
+                        accentColor: "#fca5a5",
+                        pixelOffset: new Cesium.Cartesian2(0, 24),
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                     }),
                 });
@@ -214,8 +229,43 @@ export function IncidentReplayLayer({
                 Math.max(currentFrame.altitudeMsl ?? 20, 5)
             );
 
+            const prevFrame = playbackIndex > 0 ? blackboxEntries[playbackIndex - 1] : null;
+            const nextFrame =
+                playbackIndex + 1 < blackboxEntries.length
+                    ? blackboxEntries[playbackIndex + 1]
+                    : null;
+            let headingDeg = 0;
+            if (
+                prevFrame &&
+                typeof prevFrame.latitude === "number" &&
+                typeof prevFrame.longitude === "number"
+            ) {
+                headingDeg = computeSegmentHeadingDeg(
+                    prevFrame.latitude,
+                    prevFrame.longitude,
+                    currentFrame.latitude,
+                    currentFrame.longitude
+                );
+            } else if (
+                nextFrame &&
+                typeof nextFrame.latitude === "number" &&
+                typeof nextFrame.longitude === "number"
+            ) {
+                headingDeg = computeSegmentHeadingDeg(
+                    currentFrame.latitude,
+                    currentFrame.longitude,
+                    nextFrame.latitude,
+                    nextFrame.longitude
+                );
+            }
+
             if (cursorEntityRef.current) {
                 cursorEntityRef.current.position = new Cesium.ConstantPositionProperty(nextPos);
+                if (cursorEntityRef.current.billboard) {
+                    cursorEntityRef.current.billboard.rotation = new Cesium.ConstantProperty(
+                        -Cesium.Math.toRadians(headingDeg)
+                    );
+                }
                 if (cursorEntityRef.current.label) {
                     cursorEntityRef.current.label.text = new Cesium.ConstantProperty(labelText);
                 }
@@ -224,18 +274,20 @@ export function IncidentReplayLayer({
                     id: "incident-replay-cursor",
                     name: "Replay Position",
                     position: nextPos,
-                    point: {
-                        pixelSize: 14,
-                        color: Cesium.Color.fromCssColorString("#f59e0b"),
-                        outlineColor: Cesium.Color.WHITE,
-                        outlineWidth: 2,
+                    billboard: {
+                        image: getDroneIconUri("#f59e0b", "#fef3c7", { variant: "replay" }),
+                        width: 36,
+                        height: 36,
+                        rotation: -Cesium.Math.toRadians(headingDeg),
+                        eyeOffset: new Cesium.Cartesian3(0, 0, -30),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: labelText,
                         isSelected: true,
-                        accentColor: "#f59e0b",
-                        pixelOffset: new Cesium.Cartesian2(0, -22),
+                        variant: "aircraft",
+                        accentColor: "#fbbf24",
+                        pixelOffset: new Cesium.Cartesian2(0, -24),
                         eyeOffset: new Cesium.Cartesian3(0, 0, -30),
                     }),
                 });

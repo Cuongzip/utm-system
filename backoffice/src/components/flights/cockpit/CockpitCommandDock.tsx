@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { memo, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,7 +65,7 @@ interface PendingConfirmState {
     parameters?: string;
 }
 
-export function CockpitCommandDock({
+export const CockpitCommandDock = memo(function CockpitCommandDock({
     flight,
     drone,
     hubs,
@@ -144,6 +144,7 @@ export function CockpitCommandDock({
     }, [flightCommands]);
 
     const alternateHubOptions: SelectOption[] = useMemo(() => {
+        if (activePopover !== "divert") return [];
         const activeHubs = hubs.filter(
             (h) =>
                 h.id &&
@@ -172,7 +173,7 @@ export function CockpitCommandDock({
                 };
             }),
         ];
-    }, [hubs, flight.arrivalHubId, telemetry, t]);
+    }, [activePopover, hubs, flight.arrivalHubId, telemetry, t]);
 
     const invalidateAllAfterCommand = () => {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightCommands(flight.id) });
@@ -780,4 +781,4 @@ export function CockpitCommandDock({
             />
         </div>
     );
-}
+});

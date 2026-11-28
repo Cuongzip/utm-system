@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ import {
     buildFlightFitBoundsPoints,
     buildRouteDistanceNodes,
     computeLegEtaProgress,
-    computeLiveAltitudeProgress,
 } from "../routeProgressUtils";
 import { CockpitTopBar } from "./CockpitTopBar";
 import { CockpitTelemetryHud } from "./CockpitTelemetryHud";
@@ -52,9 +51,12 @@ export interface FlightCockpitWorkspaceProps {
     drones: Drone[];
 }
 
+const EMPTY_FLIGHTS: Flight[] = [];
+
 export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWorkspaceProps) {
     const t = useTranslations("flights");
     const td = useTranslations("flights.deck");
+    const tMap = useTranslations("map");
     const queryClient = useQueryClient();
     const { canAuthorizeFlight } = usePermissions();
 
@@ -134,31 +136,33 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
         return hubs.filter((h) => ids.has(h.id));
     }, [hubs, flight.departureHubId, flight.arrivalHubId]);
 
+    const singleFlightList = useMemo(() => [flight], [flight]);
+    const hasActiveRecord = Boolean(activeRecord);
+    const telemetryFlights = useMemo(
+        () => (hasActiveRecord ? singleFlightList : EMPTY_FLIGHTS),
+        [hasActiveRecord, singleFlightList]
+    );
+
+    const activeRecordRef = useRef<TelemetryRecord | null>(activeRecord);
+    useEffect(() => {
+        activeRecordRef.current = activeRecord;
+    }, [activeRecord]);
+
     const telemetryMap = useMemo<Record<string, TelemetryRecord>>(() => {
         if (!activeRecord) return {};
         return { [flight.id]: activeRecord };
     }, [flight.id, activeRecord]);
 
-    const fitBoundsPoints = useMemo(
-        () => buildFlightFitBoundsPoints(flight, departureHub, arrivalHub, activeRecord),
-        [flight, departureHub, arrivalHub, activeRecord]
-    );
+    const firstValidSample = timeline[0] ?? null;
+    const fitBoundsPoints = useMemo(() => {
+        const routePts = buildFlightFitBoundsPoints(flight, departureHub, arrivalHub, null);
+        if (routePts.length > 0) return routePts;
+        return buildFlightFitBoundsPoints(flight, departureHub, arrivalHub, firstValidSample);
+    }, [flight, departureHub, arrivalHub, firstValidSample]);
 
     const routeDistanceNodes = useMemo(
         () => buildRouteDistanceNodes(flight, departureHub, arrivalHub),
         [flight, departureHub, arrivalHub]
-    );
-
-    const liveAltitudeProgress = useMemo(
-        () =>
-            computeLiveAltitudeProgress(
-                activeRecord,
-                timeline,
-                visibleTrail,
-                routeDistanceNodes,
-                false
-            ),
-        [activeRecord, timeline, visibleTrail, routeDistanceNodes]
     );
 
     const legProgress = useMemo(
@@ -205,16 +209,34 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
 
     const isLifecycleBusy = authorizeMutation.isPending || abortMutation.isPending;
 
-    const handlePickGotoCoordinate = (latitude: number, longitude: number) => {
-        const defaultAlt = Math.round(
-            activeRecord?.altitude && activeRecord.altitude > 10
-                ? activeRecord.altitude
-                : (flight.cruisingAltitudeM ?? 80)
-        );
-        setGotoDraft({ latitude, longitude, altitude: defaultAlt });
-        setGotoPickMode(false);
-        setActivePopover("goto");
-    };
+    const handlePickGotoCoordinate = useCallback(
+        (latitude: number, longitude: number) => {
+            const currentAlt = activeRecordRef.current?.altitude;
+            const defaultAlt = Math.round(
+                currentAlt && currentAlt > 10 ? currentAlt : (flight.cruisingAltitudeM ?? 80)
+            );
+            setGotoDraft({ latitude, longitude, altitude: defaultAlt });
+            setGotoPickMode(false);
+            setActivePopover("goto");
+        },
+        [flight.cruisingAltitudeM]
+    );
+
+    const handleToggleFollowUav = useCallback(() => setFollowUav((p) => !p), []);
+    const handleFitRoute = useCallback(() => {
+        setFollowUav(false);
+        setFitTrigger((n) => n + 1);
+    }, []);
+    const handleToggleAirspace = useCallback(() => setFilterAirspace((p) => !p), []);
+    const handleToggleHubs = useCallback(() => setFilterHubs((p) => !p), []);
+    const handleToggleAdsb = useCallback(() => setFilterAdsb((p) => !p), []);
+    const handleOpenBriefing = useCallback(() => setBriefingOpen(true), []);
+    const handleOpenAbort = useCallback(() => setConfirmAbortOpen(true), []);
+    const handleEvaluateConformance = useCallback(
+        () => evaluateMutation.mutate(),
+        [evaluateMutation]
+    );
+    const handleAuthorize = useCallback(() => authorizeMutation.mutate(), [authorizeMutation]);
 
     return (
         <div className="flex-1 w-full h-full min-h-0 flex flex-col overflow-hidden bg-slate-950">
@@ -227,26 +249,23 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
                 isFresh={isFresh}
                 conformance={conformance}
                 isEvaluatingConformance={evaluateMutation.isPending}
-                onEvaluateConformance={() => evaluateMutation.mutate()}
+                onEvaluateConformance={handleEvaluateConformance}
                 legProgress={legProgress}
                 followUav={followUav}
-                onToggleFollowUav={() => setFollowUav((p) => !p)}
-                onFitRoute={() => {
-                    setFollowUav(false);
-                    setFitTrigger((n) => n + 1);
-                }}
+                onToggleFollowUav={handleToggleFollowUav}
+                onFitRoute={handleFitRoute}
                 filterAirspace={filterAirspace}
-                onToggleAirspace={() => setFilterAirspace((p) => !p)}
+                onToggleAirspace={handleToggleAirspace}
                 filterHubs={filterHubs}
-                onToggleHubs={() => setFilterHubs((p) => !p)}
+                onToggleHubs={handleToggleHubs}
                 filterAdsb={filterAdsb}
                 adsbCount={adsbData?.aircraft?.length}
-                onToggleAdsb={() => setFilterAdsb((p) => !p)}
-                onOpenBriefing={() => setBriefingOpen(true)}
+                onToggleAdsb={handleToggleAdsb}
+                onOpenBriefing={handleOpenBriefing}
                 canAuthorize={canAuthorizeFlight}
                 isLifecycleBusy={isLifecycleBusy}
-                onAuthorize={() => authorizeMutation.mutate()}
-                onAbort={() => setConfirmAbortOpen(true)}
+                onAuthorize={handleAuthorize}
+                onAbort={handleOpenAbort}
             />
 
             <TacticalMapContainer
@@ -273,7 +292,9 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
                             arrivalHub={arrivalHub}
                             airspaceZones={activeZones}
                             telemetry={activeRecord}
-                            liveAltitudeProgress={liveAltitudeProgress}
+                            timeline={timeline}
+                            visibleTrail={visibleTrail}
+                            routeDistanceNodes={routeDistanceNodes}
                         />
 
                         <CockpitCommandDock
@@ -288,24 +309,52 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
                             activePopover={activePopover}
                             onChangeActivePopover={setActivePopover}
                         />
+
+                        <div className="hidden xl:flex absolute bottom-3.5 left-3.5 z-20 items-center gap-2.5 px-2.5 py-1 rounded-md bg-slate-950/88 text-slate-100 border border-slate-700/80 backdrop-blur-md text-[10px] font-mono shadow-md pointer-events-none">
+                            <span className="inline-flex items-center gap-1.5">
+                                <span
+                                    aria-hidden="true"
+                                    className="w-4 border-t-2 border-dashed border-sky-400"
+                                />
+                                <span>{tMap("legendPlan")}</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                                <span
+                                    aria-hidden="true"
+                                    className="w-4 h-[2.5px] rounded-full bg-emerald-500"
+                                />
+                                <span>{tMap("legendLive")}</span>
+                            </span>
+                            {(gotoDraft || activeC2Target) && (
+                                <span className="inline-flex items-center gap-1.5 text-amber-300">
+                                    <span
+                                        aria-hidden="true"
+                                        className="w-4 border-t-2 border-dashed border-amber-400"
+                                    />
+                                    <span>{tMap("legendGoto")}</span>
+                                </span>
+                            )}
+                        </div>
                     </>
                 }
             >
                 {filterAirspace && <AirspaceLayer zones={activeZones} />}
+                {filterHubs && <HubsLayer hubs={relevantHubs} autoFitBounds={false} />}
                 <FlightsLayer
-                    flights={[flight]}
+                    flights={singleFlightList}
                     selectedFlightId={flight.id}
                     showRouteLabels="none"
+                    routeStyle="reference"
                     hubs={hubs}
                 />
                 <LiveTelemetryLayer
-                    flights={activeRecord ? [flight] : []}
+                    flights={telemetryFlights}
                     telemetryMap={telemetryMap}
                     selectedFlightId={flight.id}
                     autoFollowSelected={false}
                     autoFitInitialBounds={false}
+                    showTrail={false}
                 />
-                {filterHubs && <HubsLayer hubs={relevantHubs} autoFitBounds={false} />}
                 {filterAdsb && <AdsbLayer aircraft={adsbData?.aircraft ?? []} />}
                 <FlightDeckMapOverlay
                     flightId={flight.id}

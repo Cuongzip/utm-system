@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { memo, useState, useMemo, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Compass, CloudSun, ChevronDown, ChevronUp, Navigation } from "lucide-react";
@@ -59,7 +59,7 @@ function formatElapsedClock(sec: number): string {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function CockpitTelemetryHud({
+export const CockpitTelemetryHud = memo(function CockpitTelemetryHud({
     flight,
     drone,
     departureHub,
@@ -496,4 +496,4 @@ export function CockpitTelemetryHud({
             )}
         </aside>
     );
-}
+});

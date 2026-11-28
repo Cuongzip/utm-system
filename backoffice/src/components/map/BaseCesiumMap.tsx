@@ -61,6 +61,7 @@ export function BaseCesiumMap({
     const [viewer, setViewer] = useState<Viewer | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [mapError, setMapError] = useState<string | null>(null);
+    const [initAttempt, setInitAttempt] = useState(0);
 
     const onViewerReadyRef = useRef(onViewerReady);
     const onEntityClickRef = useRef(onEntityClick);
@@ -134,12 +135,17 @@ export function BaseCesiumMap({
                     );
                 }
 
-                activeViewer.useBrowserRecommendedResolution = false;
-                activeViewer.resolutionScale = 1.0;
-                activeViewer.scene.postProcessStages.fxaa.enabled = true;
+                // Cap effective pixelRatio cleanly at 1.25x (with useBrowserRecommendedResolution=true,
+                // Cesium uses 1.0 * resolutionScale instead of multiplying dpr * resolutionScale) and
+                // skip redundant FXAA since 4x hardware MSAA is already active.
+                activeViewer.useBrowserRecommendedResolution = true;
+                activeViewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 1.25);
+                activeViewer.scene.postProcessStages.fxaa.enabled = false;
                 activeViewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#050912");
                 activeViewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#070d19");
-                activeViewer.scene.globe.maximumScreenSpaceError = 1.33;
+                activeViewer.scene.globe.maximumScreenSpaceError = 1.85;
+                activeViewer.scene.globe.loadingDescendantLimit = 12;
+                activeViewer.scene.globe.preloadSiblings = false;
                 activeViewer.scene.globe.tileCacheSize = 500;
                 activeViewer.scene.globe.preloadAncestors = true;
                 activeViewer.scene.globe.depthTestAgainstTerrain = false;
@@ -176,6 +182,7 @@ export function BaseCesiumMap({
 
                 let dragStartPos: { x: number; y: number } | null = null;
                 let hasMovedDuringClick = false;
+                let lastHoverCheckTs = 0;
 
                 const inputHandler = new Cesium.ScreenSpaceEventHandler(activeViewer.scene.canvas);
                 inputHandler.setInputAction((event: ScreenSpaceEventHandler.PositionedEvent) => {
@@ -191,6 +198,26 @@ export function BaseCesiumMap({
                         ) > DRAG_THRESHOLD_PX
                     ) {
                         hasMovedDuringClick = true;
+                    }
+
+                    if (
+                        !dragStartPos &&
+                        !pickModeRef.current &&
+                        onEntityClickRef.current &&
+                        activeViewer &&
+                        !activeViewer.isDestroyed()
+                    ) {
+                        const now = performance.now();
+                        if (now - lastHoverCheckTs >= 80) {
+                            lastHoverCheckTs = now;
+                            const hovered = activeViewer.scene.pick(movement.endPosition);
+                            const isClickable = Boolean(
+                                Cesium.defined(hovered) && hovered.id && hovered.id.id
+                            );
+                            activeViewer.scene.canvas.style.cursor = isClickable
+                                ? "pointer"
+                                : "default";
+                        }
                     }
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
                 inputHandler.setInputAction(() => {
@@ -268,6 +295,7 @@ export function BaseCesiumMap({
             osmBuildingsRef.current = null;
             appliedTerrainRef.current = "ellipsoid";
             if (activeViewer && !activeViewer.isDestroyed()) {
+                activeViewer.scene.canvas.style.cursor = "default";
                 activeViewer.destroy();
             }
             viewerRef.current = null;
@@ -275,7 +303,7 @@ export function BaseCesiumMap({
             setIsLoaded(false);
             onViewerReadyRef.current?.(null, HAS_ION_TOKEN);
         };
-    }, []);
+    }, [initAttempt]);
 
     useEffect(() => {
         const v = viewerRef.current;
@@ -332,9 +360,19 @@ export function BaseCesiumMap({
                 const targetLat = hasValidCarto
                     ? Cesium.Math.toDegrees(groundCarto.latitude)
                     : DEFAULT_COORDINATES.lat;
-                const camHeight = fallbackCarto?.height ?? DEFAULT_COORDINATES.height;
-                const targetHeight = Number.isFinite(camHeight)
-                    ? Math.min(Math.max(camHeight, 1200), 120000)
+                const isLeaving3D = currentViewer.scene.mode === Cesium.SceneMode.SCENE3D;
+                const slantRange =
+                    isLeaving3D && pickedGround
+                        ? Cesium.Cartesian3.distance(currentViewer.camera.positionWC, pickedGround)
+                        : (fallbackCarto?.height ?? DEFAULT_COORDINATES.height);
+                const adjustedHeight =
+                    isLeaving3D && targetMode === Cesium.SceneMode.SCENE2D
+                        ? slantRange * 1.32
+                        : !isLeaving3D && targetMode === Cesium.SceneMode.SCENE3D
+                          ? slantRange * 0.95
+                          : slantRange;
+                const targetHeight = Number.isFinite(adjustedHeight)
+                    ? Math.min(Math.max(adjustedHeight, 1200), 140000)
                     : DEFAULT_COORDINATES.height;
 
                 const applyRestoredView = () => {
@@ -522,8 +560,20 @@ export function BaseCesiumMap({
                 )}
 
                 {mapError && (
-                    <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-900/90 text-red-400">
-                        <span className="text-sm font-semibold">{mapError}</span>
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-slate-950/92 px-4 text-center">
+                        <span className="text-sm font-mono font-semibold text-red-400">
+                            {mapError}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMapError(null);
+                                setInitAttempt((n) => n + 1);
+                            }}
+                            className="h-8 px-3 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-mono font-semibold text-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
+                        >
+                            {t("retryMap")}
+                        </button>
                     </div>
                 )}
 

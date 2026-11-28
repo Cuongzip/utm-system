@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import type { AirspaceZone } from "@/types";
@@ -8,17 +8,26 @@ import { getAirspaceZoneColor } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
 import { addCrispBoundaryPolyline, buildClosedRingCartesian } from "../cesiumOutlineUtils";
 
+export type AirspaceLabelFilter = "all" | "hazards" | "none";
+
 export interface AirspaceLayerProps {
     zones: AirspaceZone[];
     labelMaxDistance?: number;
+    labelFilter?: AirspaceLabelFilter;
 }
+
+const HUB_CONTEXT_ZONE_TYPES = new Set(["hub_zone", "hub_corridor"]);
 
 function formatCompactZoneName(zone: AirspaceZone): string {
     const raw = (zone.name || zone.id || "Zone").trim();
     return raw.length > 22 ? `${raw.slice(0, 20)}…` : raw;
 }
 
-export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: AirspaceLayerProps) {
+export const AirspaceLayer = memo(function AirspaceLayer({
+    zones = [],
+    labelMaxDistance = 11000,
+    labelFilter = "hazards",
+}: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
     const [sceneRevision, setSceneRevision] = useState(0);
@@ -88,6 +97,13 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
 
                 const ringHeight = is3D ? ceiling : 2;
                 const topRingPositions = buildClosedRingCartesian(Cesium, degreeArray, ringHeight);
+                const normalizedZoneType = (zone.zoneType ?? "").trim().toLowerCase();
+                const shouldShowLabel =
+                    labelFilter === "all"
+                        ? true
+                        : labelFilter === "hazards"
+                          ? !HUB_CONTEXT_ZONE_TYPES.has(normalizedZoneType)
+                          : false;
 
                 const entity = viewer.entities.add({
                     id: zone.id,
@@ -124,13 +140,15 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
                         centerLat,
                         is3D ? ceiling + 15 : 15
                     ),
-                    label: createTacticalLabel(Cesium, {
-                        text: `${formatCompactZoneName(zone)} · ${floor}–${ceiling}m`,
-                        isSelected: false,
-                        accentColor: baseColor,
-                        fontSize: 11,
-                        maxDistance: labelMaxDistance,
-                    }),
+                    label: shouldShowLabel
+                        ? createTacticalLabel(Cesium, {
+                              text: `${formatCompactZoneName(zone)} · ${floor}–${ceiling}m`,
+                              isSelected: false,
+                              variant: "zone",
+                              accentColor: baseColor,
+                              maxDistance: labelMaxDistance,
+                          })
+                        : undefined,
                 });
 
                 newEntityIds.push(entity.id);
@@ -165,7 +183,7 @@ export function AirspaceLayer({ zones = [], labelMaxDistance = 11000 }: Airspace
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, zones, labelMaxDistance, sceneRevision]);
+    }, [viewer, isLoaded, zones, labelMaxDistance, labelFilter, sceneRevision]);
 
     return null;
-}
+});

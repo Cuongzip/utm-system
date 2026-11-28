@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -56,7 +57,7 @@ export interface CockpitTopBarProps {
     onAbort: () => void;
 }
 
-export function CockpitTopBar({
+export const CockpitTopBar = memo(function CockpitTopBar({
     flight,
     drone,
     departureHub,
@@ -227,40 +228,63 @@ export function CockpitTopBar({
                         aria-pressed={filterAirspace}
                         onClick={onToggleAirspace}
                         className={cn(
-                            "h-6 px-2 rounded-[3px] text-[10px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                            "h-6 px-2 rounded-[3px] text-[10px] font-mono font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                             filterAirspace
                                 ? "bg-slate-700 text-white"
                                 : "text-slate-400 hover:text-slate-200"
                         )}
                     >
-                        {tCtrl("layerAirspace")}
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                "w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0",
+                                !filterAirspace && "opacity-40"
+                            )}
+                        />
+                        <span>{tCtrl("layerAirspace")}</span>
                     </button>
                     <button
                         type="button"
                         aria-pressed={filterHubs}
                         onClick={onToggleHubs}
                         className={cn(
-                            "h-6 px-2 rounded-[3px] text-[10px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                            "h-6 px-2 rounded-[3px] text-[10px] font-mono font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                             filterHubs
                                 ? "bg-slate-700 text-white"
                                 : "text-slate-400 hover:text-slate-200"
                         )}
                     >
-                        {tCtrl("layerHubs")}
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                "w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0",
+                                !filterHubs && "opacity-40"
+                            )}
+                        />
+                        <span>{tCtrl("layerHubs")}</span>
                     </button>
                     <button
                         type="button"
                         aria-pressed={filterAdsb}
                         onClick={onToggleAdsb}
                         className={cn(
-                            "h-6 px-2 rounded-[3px] text-[10px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                            "h-6 px-2 rounded-[3px] text-[10px] font-mono font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                             filterAdsb
                                 ? "bg-slate-700 text-white"
                                 : "text-slate-400 hover:text-slate-200"
                         )}
                     >
-                        {tCtrl("layerAdsb")}
-                        {filterAdsb && adsbCount !== undefined ? ` (${adsbCount})` : ""}
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                "w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0",
+                                !filterAdsb && "opacity-40"
+                            )}
+                        />
+                        <span>
+                            {tCtrl("layerAdsb")}
+                            {filterAdsb && adsbCount !== undefined ? ` (${adsbCount})` : ""}
+                        </span>
                     </button>
                 </div>
 
@@ -304,4 +328,4 @@ export function CockpitTopBar({
             </div>
         </header>
     );
-}
+});

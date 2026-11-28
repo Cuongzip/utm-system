@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { Entity, ScreenSpaceEventHandler } from "cesium";
+import { memo, useEffect, useRef, useState } from "react";
+import type { Cartesian3, Entity, ScreenSpaceEventHandler } from "cesium";
 import { useCesium } from "@/components/map/CesiumContext";
 import { getCesium } from "@/components/map/cesiumLoader";
+import { getTargetPinIconUri } from "@/components/map/mapIcons";
 import { createTacticalLabel } from "@/components/map/mapLabels";
+import { getLiveInterpolatedPosition } from "@/components/map/livePositionRegistry";
 import {
     fitCameraToBounds,
     setViewerCanvasCursor,
@@ -33,7 +35,15 @@ export interface FlightDeckMapOverlayProps {
     fitTrigger: number;
 }
 
-export function FlightDeckMapOverlay({
+const MIN_TRAIL_STEP_M = 1.5;
+
+function sampleKey(rec: TelemetryRecord | undefined): string {
+    if (!rec) return "";
+    if (rec.id) return rec.id;
+    return `${rec.timestamp ?? ""}_${rec.latitude ?? ""}_${rec.longitude ?? ""}_${rec.altitude ?? ""}`;
+}
+
+export const FlightDeckMapOverlay = memo(function FlightDeckMapOverlay({
     flightId,
     visibleTrail,
     fullTrail,
@@ -47,22 +57,69 @@ export function FlightDeckMapOverlay({
     fitTrigger,
 }: FlightDeckMapOverlayProps) {
     const { viewer, isLoaded } = useCesium();
-    const fullTrailEntityRef = useRef<Entity | null>(null);
+    const cesiumRef = useRef<typeof import("cesium") | null>(null);
+    const remainingTrailEntityRef = useRef<Entity | null>(null);
     const trailEntityRef = useRef<Entity | null>(null);
     const gotoPinEntityRef = useRef<Entity | null>(null);
     const gotoTetherEntityRef = useRef<Entity | null>(null);
     const gotoVectorEntityRef = useRef<Entity | null>(null);
+
+    const flownPositionsRef = useRef<Cartesian3[]>([]);
+    const remainingPositionsRef = useRef<Cartesian3[]>([]);
+    const liveTrailScratchRef = useRef<Cartesian3[]>([]);
+    const liveTipScratchRef = useRef<Cartesian3 | null>(null);
+    const gotoStartScratchRef = useRef<Cartesian3 | null>(null);
+    const gotoVectorScratchRef = useRef<Cartesian3[]>([]);
+
+    const trailCursorRef = useRef<{
+        flightId: string;
+        isReplay: boolean;
+        sceneRevision: number;
+        firstKey: string;
+        processedCount: number;
+        lastKeptLat: number;
+        lastKeptLng: number;
+        lastKeptAlt: number;
+    }>({
+        flightId: "",
+        isReplay: false,
+        sceneRevision: -1,
+        firstKey: "",
+        processedCount: 0,
+        lastKeptLat: Number.NaN,
+        lastKeptLng: Number.NaN,
+        lastKeptAlt: Number.NaN,
+    });
+
+    const latestSampleRef = useRef<TelemetryRecord | null>(null);
     const lastFitTriggerRef = useRef<number>(-1);
     const onPickRef = useRef(onPickGotoCoordinate);
+    const [sceneRevision, setSceneRevision] = useState(0);
 
     useEffect(() => {
         onPickRef.current = onPickGotoCoordinate;
     }, [onPickGotoCoordinate]);
 
     useEffect(() => {
+        latestSampleRef.current =
+            visibleTrail.length > 0 ? (visibleTrail[visibleTrail.length - 1] ?? null) : null;
+    }, [visibleTrail]);
+
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
+            setSceneRevision((rev) => rev + 1);
+        });
+        return () => {
+            removeListener();
+        };
+    }, [viewer, isLoaded]);
+
+    const hasTrailSample = visibleTrail.length > 0;
+    useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
         syncViewerTrackedEntity(viewer, `drone-live-${flightId}`, followUav);
-    }, [viewer, isLoaded, flightId, followUav, visibleTrail.length]);
+    }, [viewer, isLoaded, flightId, followUav, hasTrailSample]);
 
     useEffect(() => {
         const targetEntityId = `drone-live-${flightId}`;
@@ -85,90 +142,84 @@ export function FlightDeckMapOverlay({
         });
     }, [viewer, isLoaded, fitBoundsPoints, fitTrigger]);
 
+    // Mount persistent trail entities once per flight / mode / 2D-3D switch so live 5-10 Hz
+    // telemetry updates never destroy and recreate WebGL polyline geometries.
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
 
         let cancelled = false;
 
-        async function syncBreadcrumbTrail() {
-            const Cesium = await getCesium();
+        async function mountPersistentTrailEntities() {
+            const Cesium = cesiumRef.current ?? (await getCesium());
+            cesiumRef.current = Cesium;
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
-            if (fullTrailEntityRef.current) {
-                viewer.entities.remove(fullTrailEntityRef.current);
-                fullTrailEntityRef.current = null;
-            }
-            if (trailEntityRef.current) {
-                viewer.entities.remove(trailEntityRef.current);
-                trailEntityRef.current = null;
-            }
-
             const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
-
-            if (isReplay && fullTrail && fullTrail.length >= 2) {
-                const validFull = fullTrail.filter(
-                    (pt) =>
-                        typeof pt.latitude === "number" &&
-                        typeof pt.longitude === "number" &&
-                        isValidGeoPoint(pt.latitude, pt.longitude)
-                );
-                if (validFull.length >= 2) {
-                    const fullCoords: number[] = [];
-                    for (const s of validFull) {
-                        fullCoords.push(
-                            s.longitude!,
-                            s.latitude!,
-                            is3D ? Math.max(2, s.altitude ?? 50) : 5
-                        );
-                    }
-                    fullTrailEntityRef.current = viewer.entities.add({
-                        id: `deck-full-trail-${flightId}`,
-                        polyline: {
-                            positions: Cesium.Cartesian3.fromDegreesArrayHeights(fullCoords),
-                            width: 2.2,
-                            arcType: is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC,
-                            material: new Cesium.PolylineDashMaterialProperty({
-                                color: Cesium.Color.fromCssColorString("#fbbf24").withAlpha(0.38),
-                                dashLength: 12,
-                            }),
-                            clampToGround: false,
-                        },
-                    });
-                }
-            }
-
-            const validSamples = visibleTrail.filter(
-                (pt) =>
-                    typeof pt.latitude === "number" &&
-                    typeof pt.longitude === "number" &&
-                    isValidGeoPoint(pt.latitude, pt.longitude)
-            );
-
-            if (validSamples.length < 2) {
-                viewer.scene.requestRender();
-                return;
-            }
-
-            const flatCoords: number[] = [];
-            for (const s of validSamples) {
-                flatCoords.push(
-                    s.longitude!,
-                    s.latitude!,
-                    is3D ? Math.max(2, s.altitude ?? 50) : 6
-                );
-            }
-
+            const arcType = is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC;
             const trailHex = isReplay ? "#f59e0b" : "#10b981";
+            const outlineHex = isReplay ? "#1c1917" : "#052e16";
+
+            if (!liveTipScratchRef.current) {
+                liveTipScratchRef.current = new Cesium.Cartesian3();
+            }
+
+            if (isReplay) {
+                remainingTrailEntityRef.current = viewer.entities.add({
+                    id: `deck-remaining-trail-${flightId}`,
+                    polyline: {
+                        positions: new Cesium.CallbackProperty(() => {
+                            const pts = remainingPositionsRef.current;
+                            return pts.length >= 2 ? pts : [];
+                        }, false),
+                        width: 1.8,
+                        arcType,
+                        material: new Cesium.PolylineDashMaterialProperty({
+                            color: Cesium.Color.fromCssColorString("#fbbf24").withAlpha(0.32),
+                            dashLength: 10,
+                        }),
+                        clampToGround: false,
+                    },
+                });
+            }
+
             trailEntityRef.current = viewer.entities.add({
                 id: `deck-history-trail-${flightId}`,
                 polyline: {
-                    positions: Cesium.Cartesian3.fromDegreesArrayHeights(flatCoords),
-                    width: 4.0,
-                    arcType: is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC,
-                    material: new Cesium.PolylineGlowMaterialProperty({
-                        glowPower: 0.22,
-                        taperPower: 0.9,
-                        color: Cesium.Color.fromCssColorString(trailHex).withAlpha(0.94),
+                    positions: new Cesium.CallbackProperty(() => {
+                        const base = flownPositionsRef.current;
+                        if (isReplay) {
+                            return base.length >= 2 ? base : [];
+                        }
+                        if (base.length === 0) return [];
+                        const live = getLiveInterpolatedPosition(flightId);
+                        if (!live) {
+                            return base.length >= 2 ? base : [];
+                        }
+                        const tipAlt =
+                            !viewer.isDestroyed() && viewer.scene.mode === Cesium.SceneMode.SCENE3D
+                                ? Math.max(2, live.alt)
+                                : 6.5;
+                        const tip = Cesium.Cartesian3.fromDegrees(
+                            live.lng,
+                            live.lat,
+                            tipAlt,
+                            undefined,
+                            liveTipScratchRef.current ?? undefined
+                        );
+                        const scratch = liveTrailScratchRef.current;
+                        scratch.length = base.length + 1;
+                        for (let i = 0; i < base.length; i++) {
+                            scratch[i] = base[i];
+                        }
+                        scratch[base.length] = tip;
+                        return scratch.length >= 2 ? scratch : [];
+                    }, false),
+                    width: isReplay ? 3.6 : 3.8,
+                    arcType,
+                    material: new Cesium.PolylineOutlineMaterialProperty({
+                        color: Cesium.Color.fromCssColorString(trailHex).withAlpha(0.96),
+                        outlineColor: Cesium.Color.fromCssColorString(outlineHex).withAlpha(0.85),
+                        outlineWidth: 1.2,
                     }),
                     clampToGround: false,
                 },
@@ -177,14 +228,14 @@ export function FlightDeckMapOverlay({
             viewer.scene.requestRender();
         }
 
-        syncBreadcrumbTrail();
+        mountPersistentTrailEntities();
 
         return () => {
             cancelled = true;
             if (viewer && !viewer.isDestroyed()) {
-                if (fullTrailEntityRef.current) {
-                    viewer.entities.remove(fullTrailEntityRef.current);
-                    fullTrailEntityRef.current = null;
+                if (remainingTrailEntityRef.current) {
+                    viewer.entities.remove(remainingTrailEntityRef.current);
+                    remainingTrailEntityRef.current = null;
                 }
                 if (trailEntityRef.current) {
                     viewer.entities.remove(trailEntityRef.current);
@@ -193,15 +244,157 @@ export function FlightDeckMapOverlay({
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, flightId, visibleTrail, fullTrail, isReplay]);
+    }, [viewer, isLoaded, flightId, isReplay, sceneRevision]);
 
+    // Incrementally update pre-converted Cartesian3 trail buffers in place (O(1) per live packet).
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;
 
         let cancelled = false;
 
-        async function syncGotoPin() {
-            const Cesium = await getCesium();
+        async function updateTrailBuffers() {
+            const Cesium = cesiumRef.current ?? (await getCesium());
+            cesiumRef.current = Cesium;
+            if (!viewer || viewer.isDestroyed() || cancelled) return;
+
+            const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+            const firstKey = sampleKey(visibleTrail[0]);
+            const cur = trailCursorRef.current;
+            const canAppend =
+                !isReplay &&
+                cur.flightId === flightId &&
+                cur.isReplay === isReplay &&
+                cur.sceneRevision === sceneRevision &&
+                cur.firstKey === firstKey &&
+                cur.processedCount > 0 &&
+                visibleTrail.length >= cur.processedCount;
+
+            if (canAppend) {
+                const pts = flownPositionsRef.current;
+                for (let i = cur.processedCount; i < visibleTrail.length; i++) {
+                    const s = visibleTrail[i];
+                    if (
+                        typeof s.latitude !== "number" ||
+                        typeof s.longitude !== "number" ||
+                        !isValidGeoPoint(s.latitude, s.longitude)
+                    ) {
+                        continue;
+                    }
+                    const alt = is3D ? Math.max(2, s.altitude ?? 50) : 6.5;
+                    const isLast = i === visibleTrail.length - 1;
+                    if (!isLast && Number.isFinite(cur.lastKeptLat)) {
+                        const distM =
+                            Math.hypot(
+                                (s.latitude - cur.lastKeptLat) * 111320,
+                                (s.longitude - cur.lastKeptLng) * 111320
+                            ) + Math.abs(alt - cur.lastKeptAlt);
+                        if (distM < MIN_TRAIL_STEP_M) continue;
+                    }
+                    pts.push(Cesium.Cartesian3.fromDegrees(s.longitude, s.latitude, alt));
+                    cur.lastKeptLat = s.latitude;
+                    cur.lastKeptLng = s.longitude;
+                    cur.lastKeptAlt = alt;
+                }
+                cur.processedCount = visibleTrail.length;
+            } else {
+                const nextPts: Cartesian3[] = [];
+                let lastLat = Number.NaN;
+                let lastLng = Number.NaN;
+                let lastAlt = Number.NaN;
+
+                for (let i = 0; i < visibleTrail.length; i++) {
+                    const s = visibleTrail[i];
+                    if (
+                        typeof s.latitude !== "number" ||
+                        typeof s.longitude !== "number" ||
+                        !isValidGeoPoint(s.latitude, s.longitude)
+                    ) {
+                        continue;
+                    }
+                    const alt = is3D ? Math.max(2, s.altitude ?? 50) : 6.5;
+                    const isEndpoint = i === 0 || i === visibleTrail.length - 1;
+                    if (!isEndpoint && Number.isFinite(lastLat)) {
+                        const distM =
+                            Math.hypot(
+                                (s.latitude - lastLat) * 111320,
+                                (s.longitude - lastLng) * 111320
+                            ) + Math.abs(alt - lastAlt);
+                        if (distM < MIN_TRAIL_STEP_M) continue;
+                    }
+                    nextPts.push(Cesium.Cartesian3.fromDegrees(s.longitude, s.latitude, alt));
+                    lastLat = s.latitude;
+                    lastLng = s.longitude;
+                    lastAlt = alt;
+                }
+
+                flownPositionsRef.current = nextPts;
+                trailCursorRef.current = {
+                    flightId,
+                    isReplay,
+                    sceneRevision,
+                    firstKey,
+                    processedCount: visibleTrail.length,
+                    lastKeptLat: lastLat,
+                    lastKeptLng: lastLng,
+                    lastKeptAlt: lastAlt,
+                };
+            }
+
+            // Split the actual track cleanly at the playback cursor in Replay mode so flown
+            // and remaining segments never overlap.
+            if (isReplay && fullTrail && fullTrail.length > visibleTrail.length) {
+                const startIdx = Math.max(0, visibleTrail.length - 1);
+                const nextRemaining: Cartesian3[] = [];
+                for (let i = startIdx; i < fullTrail.length; i++) {
+                    const s = fullTrail[i];
+                    if (
+                        typeof s.latitude !== "number" ||
+                        typeof s.longitude !== "number" ||
+                        !isValidGeoPoint(s.latitude, s.longitude)
+                    ) {
+                        continue;
+                    }
+                    nextRemaining.push(
+                        Cesium.Cartesian3.fromDegrees(
+                            s.longitude,
+                            s.latitude,
+                            is3D ? Math.max(2, s.altitude ?? 50) : 5.5
+                        )
+                    );
+                }
+                remainingPositionsRef.current = nextRemaining;
+            } else {
+                remainingPositionsRef.current = [];
+            }
+
+            viewer.scene.requestRender();
+        }
+
+        updateTrailBuffers();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [viewer, isLoaded, flightId, visibleTrail, fullTrail, isReplay, sceneRevision]);
+
+    const targetPin = gotoDraft ?? activeC2Target;
+    const hasValidTargetPin = Boolean(
+        targetPin && isValidGeoPoint(targetPin.latitude, targetPin.longitude)
+    );
+    const targetLat = hasValidTargetPin ? targetPin!.latitude : Number.NaN;
+    const targetLng = hasValidTargetPin ? targetPin!.longitude : Number.NaN;
+    const targetAltInput = hasValidTargetPin ? (targetPin!.altitude ?? 60) : Number.NaN;
+
+    // Mount GOTO pin, vertical tether, and live-tracking vector ONLY when the GOTO target
+    // itself changes — never rebuilt per telemetry packet.
+    useEffect(() => {
+        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
+
+        let cancelled = false;
+
+        async function syncGotoEntities() {
+            const Cesium = cesiumRef.current ?? (await getCesium());
+            cesiumRef.current = Cesium;
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
             if (gotoPinEntityRef.current) {
@@ -217,22 +410,23 @@ export function FlightDeckMapOverlay({
                 gotoVectorEntityRef.current = null;
             }
 
-            const targetPin = gotoDraft ?? activeC2Target;
-            if (!targetPin || !isValidGeoPoint(targetPin.latitude, targetPin.longitude)) {
+            if (!hasValidTargetPin) {
                 viewer.scene.requestRender();
                 return;
             }
 
             const is3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
-            const alt = is3D ? Math.max(5, targetPin.altitude ?? 60) : 8;
+            const alt = is3D ? Math.max(5, targetAltInput) : 8;
+            const targetPos = Cesium.Cartesian3.fromDegrees(targetLng, targetLat, alt);
+
+            if (!gotoStartScratchRef.current) {
+                gotoStartScratchRef.current = new Cesium.Cartesian3();
+            }
 
             gotoTetherEntityRef.current = viewer.entities.add({
                 id: `deck-goto-tether-${flightId}`,
                 polyline: {
-                    positions: [
-                        Cesium.Cartesian3.fromDegrees(targetPin.longitude, targetPin.latitude, 0),
-                        Cesium.Cartesian3.fromDegrees(targetPin.longitude, targetPin.latitude, alt),
-                    ],
+                    positions: [Cesium.Cartesian3.fromDegrees(targetLng, targetLat, 0), targetPos],
                     width: 1.8,
                     material: new Cesium.PolylineDashMaterialProperty({
                         color: Cesium.Color.fromCssColorString("#f59e0b").withAlpha(0.9),
@@ -241,60 +435,74 @@ export function FlightDeckMapOverlay({
                 },
             });
 
-            const latestSample =
-                visibleTrail.length > 0 ? visibleTrail[visibleTrail.length - 1] : null;
-            if (
-                latestSample &&
-                typeof latestSample.latitude === "number" &&
-                typeof latestSample.longitude === "number" &&
-                isValidGeoPoint(latestSample.latitude, latestSample.longitude)
-            ) {
-                const uavAlt = is3D ? Math.max(2, latestSample.altitude ?? alt) : 8;
-                gotoVectorEntityRef.current = viewer.entities.add({
-                    id: `deck-goto-vector-${flightId}`,
-                    polyline: {
-                        positions: [
-                            Cesium.Cartesian3.fromDegrees(
-                                latestSample.longitude,
-                                latestSample.latitude,
-                                uavAlt
-                            ),
-                            Cesium.Cartesian3.fromDegrees(
-                                targetPin.longitude,
-                                targetPin.latitude,
-                                alt
-                            ),
-                        ],
-                        width: 2.6,
-                        arcType: is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC,
-                        material: new Cesium.PolylineDashMaterialProperty({
-                            color: Cesium.Color.fromCssColorString("#f59e0b").withAlpha(0.92),
-                            dashLength: 14,
-                        }),
-                        clampToGround: false,
-                    },
-                });
-            }
+            gotoVectorEntityRef.current = viewer.entities.add({
+                id: `deck-goto-vector-${flightId}`,
+                polyline: {
+                    positions: new Cesium.CallbackProperty(() => {
+                        const live = getLiveInterpolatedPosition(flightId);
+                        let srcLng: number | undefined;
+                        let srcLat: number | undefined;
+                        let srcAlt: number;
+
+                        if (live) {
+                            srcLng = live.lng;
+                            srcLat = live.lat;
+                            srcAlt = is3D ? Math.max(2, live.alt) : 8;
+                        } else {
+                            const fallback = latestSampleRef.current;
+                            if (
+                                fallback &&
+                                typeof fallback.latitude === "number" &&
+                                typeof fallback.longitude === "number" &&
+                                isValidGeoPoint(fallback.latitude, fallback.longitude)
+                            ) {
+                                srcLng = fallback.longitude;
+                                srcLat = fallback.latitude;
+                                srcAlt = is3D ? Math.max(2, fallback.altitude ?? alt) : 8;
+                            } else {
+                                return [];
+                            }
+                        }
+
+                        const start = Cesium.Cartesian3.fromDegrees(
+                            srcLng,
+                            srcLat,
+                            srcAlt,
+                            undefined,
+                            gotoStartScratchRef.current ?? undefined
+                        );
+                        const pair = gotoVectorScratchRef.current;
+                        pair.length = 2;
+                        pair[0] = start;
+                        pair[1] = targetPos;
+                        return pair;
+                    }, false),
+                    width: 2.6,
+                    arcType: is3D ? Cesium.ArcType.NONE : Cesium.ArcType.GEODESIC,
+                    material: new Cesium.PolylineDashMaterialProperty({
+                        color: Cesium.Color.fromCssColorString("#f59e0b").withAlpha(0.92),
+                        dashLength: 14,
+                    }),
+                    clampToGround: false,
+                },
+            });
 
             gotoPinEntityRef.current = viewer.entities.add({
                 id: `deck-goto-pin-${flightId}`,
-                position: Cesium.Cartesian3.fromDegrees(
-                    targetPin.longitude,
-                    targetPin.latitude,
-                    alt
-                ),
-                point: {
-                    pixelSize: 11,
-                    color: Cesium.Color.fromCssColorString("#f59e0b"),
-                    outlineColor: Cesium.Color.WHITE,
-                    outlineWidth: 2.5,
+                position: targetPos,
+                billboard: {
+                    image: getTargetPinIconUri("#f59e0b"),
+                    width: 30,
+                    height: 30,
+                    eyeOffset: new Cesium.Cartesian3(0, 0, -30),
                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
                 },
                 label: createTacticalLabel(Cesium, {
-                    text: `GOTO • ${Math.round(targetPin.altitude)}m`,
+                    text: `GOTO • ${Math.round(targetAltInput)}m`,
                     isSelected: true,
+                    variant: "aircraft",
                     accentColor: "#f59e0b",
-                    pixelOffset: new Cesium.Cartesian2(0, -20),
+                    pixelOffset: new Cesium.Cartesian2(0, -22),
                     eyeOffset: new Cesium.Cartesian3(0, 0, -30),
                     maxDistance: 250000,
                 }),
@@ -303,7 +511,7 @@ export function FlightDeckMapOverlay({
             viewer.scene.requestRender();
         }
 
-        syncGotoPin();
+        syncGotoEntities();
 
         return () => {
             cancelled = true;
@@ -323,7 +531,16 @@ export function FlightDeckMapOverlay({
                 viewer.scene.requestRender();
             }
         };
-    }, [viewer, isLoaded, flightId, gotoDraft, activeC2Target, visibleTrail]);
+    }, [
+        viewer,
+        isLoaded,
+        flightId,
+        hasValidTargetPin,
+        targetLat,
+        targetLng,
+        targetAltInput,
+        sceneRevision,
+    ]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed() || !gotoPickMode) {
@@ -336,7 +553,8 @@ export function FlightDeckMapOverlay({
         setViewerCanvasCursor(viewer, "crosshair");
 
         async function attachPicker() {
-            const Cesium = await getCesium();
+            const Cesium = cesiumRef.current ?? (await getCesium());
+            cesiumRef.current = Cesium;
             if (!viewer || viewer.isDestroyed() || cancelled) return;
 
             handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -374,4 +592,4 @@ export function FlightDeckMapOverlay({
     }, [viewer, isLoaded, gotoPickMode]);
 
     return null;
-}
+});

@@ -168,42 +168,65 @@ function ControlCenterContent() {
                                         aria-pressed={filterAirspace}
                                         onClick={() => setFilterAirspace((prev) => !prev)}
                                         className={cn(
-                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                             filterAirspace
                                                 ? "bg-slate-800 text-white shadow-2xs"
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                         )}
                                     >
-                                        {t("layerAirspace")}
+                                        <span
+                                            aria-hidden="true"
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0",
+                                                !filterAirspace && "opacity-45"
+                                            )}
+                                        />
+                                        <span>{t("layerAirspace")}</span>
                                     </button>
                                     <button
                                         type="button"
                                         aria-pressed={filterHubs}
                                         onClick={() => setFilterHubs((prev) => !prev)}
                                         className={cn(
-                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                             filterHubs
                                                 ? "bg-slate-800 text-white shadow-2xs"
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                         )}
                                     >
-                                        {t("layerHubs")}
+                                        <span
+                                            aria-hidden="true"
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0",
+                                                !filterHubs && "opacity-45"
+                                            )}
+                                        />
+                                        <span>{t("layerHubs")}</span>
                                     </button>
                                     <button
                                         type="button"
                                         aria-pressed={filterAdsb}
                                         onClick={() => setFilterAdsb((prev) => !prev)}
                                         className={cn(
-                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                             filterAdsb
                                                 ? "bg-slate-800 text-white shadow-2xs"
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                         )}
                                     >
-                                        {t("layerAdsb")}
-                                        {filterAdsb && adsbData?.aircraft
-                                            ? ` (${adsbData.aircraft.length})`
-                                            : ""}
+                                        <span
+                                            aria-hidden="true"
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0",
+                                                !filterAdsb && "opacity-45"
+                                            )}
+                                        />
+                                        <span>
+                                            {t("layerAdsb")}
+                                            {filterAdsb && adsbData?.aircraft
+                                                ? ` (${adsbData.aircraft.length})`
+                                                : ""}
+                                        </span>
                                     </button>
                                 </div>
                             </div>

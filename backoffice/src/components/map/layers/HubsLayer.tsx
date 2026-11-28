@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { HUB_STATUS, type Hub, type HubDraftPreview, type HubStatus } from "@/types";
@@ -49,7 +49,7 @@ function getHubStatusPalette(status: HubStatus | undefined, isSelected: boolean)
     }
 }
 
-export function HubsLayer({
+export const HubsLayer = memo(function HubsLayer({
     hubs = [],
     selectedHubId,
     autoFitBounds = true,
@@ -144,17 +144,18 @@ export function HubsLayer({
                         is3D ? Math.max(ceiling, 20) : 10
                     ),
                     billboard: {
-                        image: getHubIconUri(palette.icon, isSelected),
-                        width: isSelected ? 34 : 28,
-                        height: isSelected ? 34 : 28,
+                        image: getHubIconUri(palette.icon, isSelected, "default"),
+                        width: isSelected ? 42 : 34,
+                        height: isSelected ? 42 : 34,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -10),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: showHubLabel
                         ? createTacticalLabel(Cesium, {
                               text: hubLabelText,
                               isSelected,
-                              pixelOffset: new Cesium.Cartesian2(0, -22),
+                              variant: "hub",
+                              verticalOrigin: Cesium.VerticalOrigin.TOP,
+                              pixelOffset: new Cesium.Cartesian2(0, isSelected ? 26 : 22),
                           })
                         : undefined,
                     ellipse: {
@@ -222,17 +223,18 @@ export function HubsLayer({
                         is3D ? Math.max(draftCeiling, 20) : 10
                     ),
                     billboard: {
-                        image: getHubIconUri("#ffffff", false),
-                        width: 36,
-                        height: 36,
+                        image: getHubIconUri("#ffffff", false, "draft"),
+                        width: 42,
+                        height: 42,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -15),
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: draftPreview.code?.trim() || draftPreview.name?.trim() || "NEW HUB",
                         isSelected: true,
+                        variant: "hub",
                         accentColor: "#ffffff",
-                        pixelOffset: new Cesium.Cartesian2(0, -26),
+                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+                        pixelOffset: new Cesium.Cartesian2(0, 26),
                     }),
                     ellipse: {
                         semiMinorAxis: draftRadius,
@@ -326,4 +328,4 @@ export function HubsLayer({
     ]);
 
     return null;
-}
+});

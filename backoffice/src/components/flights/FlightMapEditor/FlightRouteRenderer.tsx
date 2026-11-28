@@ -129,10 +129,11 @@ export function FlightRouteRenderer({
                     polyline: {
                         positions: routePositions,
                         arcType: routeArcType,
-                        width: 3.4,
-                        material: new Cesium.PolylineGlowMaterialProperty({
-                            glowPower: 0.18,
+                        width: 3.6,
+                        material: new Cesium.PolylineOutlineMaterialProperty({
                             color: Cesium.Color.fromCssColorString("#06b6d4"),
+                            outlineColor: Cesium.Color.fromCssColorString("#071328").withAlpha(0.8),
+                            outlineWidth: 1.2,
                         }),
                         clampToGround: false,
                     },
@@ -160,7 +161,7 @@ export function FlightRouteRenderer({
                                     ),
                                 ],
                                 arcType: routeArcType,
-                                width: 10,
+                                width: 8,
                                 material: new Cesium.PolylineArrowMaterialProperty(
                                     Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.95)
                                 ),
@@ -186,9 +187,13 @@ export function FlightRouteRenderer({
                     id: depId,
                     position: depPos,
                     billboard: {
-                        image: getHubIconUri("#10b981", false),
-                        width: 28,
-                        height: 28,
+                        image: getHubIconUri(
+                            isSameHub ? "#06b6d4" : "#10b981",
+                            false,
+                            isSameHub ? "default" : "departure"
+                        ),
+                        width: 32,
+                        height: 32,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
@@ -196,8 +201,9 @@ export function FlightRouteRenderer({
                         text: isSameHub
                             ? `HUB: ${departureHub.code || departureHub.name}`
                             : `DEP: ${departureHub.code || departureHub.name}`,
-                        accentColor: "#10b981",
-                        pixelOffset: new Cesium.Cartesian2(0, -18),
+                        variant: "hub",
+                        accentColor: isSameHub ? "#06b6d4" : "#10b981",
+                        pixelOffset: new Cesium.Cartesian2(0, -22),
                     }),
                 });
                 newEntityIds.push(depId);
@@ -209,16 +215,17 @@ export function FlightRouteRenderer({
                     id: arrId,
                     position: arrPos,
                     billboard: {
-                        image: getHubIconUri("#06b6d4", false),
-                        width: 28,
-                        height: 28,
+                        image: getHubIconUri("#06b6d4", false, "arrival"),
+                        width: 32,
+                        height: 32,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: `ARR: ${arrivalHub.code || arrivalHub.name}`,
+                        variant: "hub",
                         accentColor: "#06b6d4",
-                        pixelOffset: new Cesium.Cartesian2(0, -18),
+                        pixelOffset: new Cesium.Cartesian2(0, -22),
                     }),
                 });
                 newEntityIds.push(arrId);
@@ -246,8 +253,8 @@ export function FlightRouteRenderer({
                     position: pos,
                     billboard: {
                         image: getWaypointIconUri(wp.sequence ?? index + 1, isSelected),
-                        width: isSelected ? 30 : 24,
-                        height: isSelected ? 30 : 24,
+                        width: isSelected ? 32 : 26,
+                        height: isSelected ? 32 : 26,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -256,7 +263,7 @@ export function FlightRouteRenderer({
                         text: `WP${wp.sequence ?? index + 1} (${alt}m)`,
                         isSelected,
                         accentColor: "#00e5ff",
-                        pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
+                        pixelOffset: new Cesium.Cartesian2(0, isSelected ? -22 : -18),
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                     }),
                 });

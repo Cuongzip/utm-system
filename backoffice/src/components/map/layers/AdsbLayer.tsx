@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
 import { getAircraftIconUri } from "../mapIcons";
@@ -12,7 +12,7 @@ export interface AdsbLayerProps {
     aircraft: AdsbAircraft[];
 }
 
-export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
+export const AdsbLayer = memo(function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
     const [sceneRevision, setSceneRevision] = useState(0);
@@ -79,8 +79,8 @@ export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
                     ),
                     billboard: {
                         image: target.onGround ? iconGround : iconAirborne,
-                        width: 26,
-                        height: 26,
+                        width: 30,
+                        height: 30,
                         rotation: -Cesium.Math.toRadians(heading),
                         eyeOffset: new Cesium.Cartesian3(0, 0, -25),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -88,8 +88,9 @@ export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
                     label: createTacticalLabel(Cesium, {
                         text: `${callsign} • ${altLabel}`,
                         isSelected: false,
+                        variant: "aircraft",
                         accentColor: "#f59e0b",
-                        pixelOffset: new Cesium.Cartesian2(0, -18),
+                        pixelOffset: new Cesium.Cartesian2(0, -20),
                         eyeOffset: new Cesium.Cartesian3(0, 0, -25),
                         maxDistance: 400000,
                     }),
@@ -129,4 +130,4 @@ export function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
     }, [viewer, isLoaded, aircraft, sceneRevision]);
 
     return null;
-}
+});

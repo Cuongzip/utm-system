@@ -73,16 +73,21 @@ export function MissionLayer({
                     name: `Departure: ${departureHub.name}`,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
                     billboard: {
-                        image: getHubIconUri("#06b6d4", false),
-                        width: 28,
-                        height: 28,
+                        image: getHubIconUri(
+                            isSameHub ? "#06b6d4" : "#10b981",
+                            false,
+                            isSameHub ? "default" : "departure"
+                        ),
+                        width: 32,
+                        height: 32,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: labelText,
-                        accentColor: "#06b6d4",
-                        pixelOffset: new Cesium.Cartesian2(0, -18),
+                        variant: "hub",
+                        accentColor: isSameHub ? "#06b6d4" : "#10b981",
+                        pixelOffset: new Cesium.Cartesian2(0, -22),
                     }),
                 });
                 newEntityIds.push(entity.id);
@@ -102,16 +107,17 @@ export function MissionLayer({
                     name: `Arrival: ${arrivalHub.name}`,
                     position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
                     billboard: {
-                        image: getHubIconUri("#06b6d4", false),
-                        width: 28,
-                        height: 28,
+                        image: getHubIconUri("#06b6d4", false, "arrival"),
+                        width: 32,
+                        height: 32,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: `ARR: ${arrivalHub.code || arrivalHub.name}`,
+                        variant: "hub",
                         accentColor: "#06b6d4",
-                        pixelOffset: new Cesium.Cartesian2(0, -18),
+                        pixelOffset: new Cesium.Cartesian2(0, -22),
                     }),
                 });
                 newEntityIds.push(entity.id);
@@ -142,10 +148,11 @@ export function MissionLayer({
                     polyline: {
                         positions,
                         arcType: routeArcType,
-                        width: 3.4,
-                        material: new Cesium.PolylineGlowMaterialProperty({
-                            glowPower: 0.16,
+                        width: 3.6,
+                        material: new Cesium.PolylineOutlineMaterialProperty({
                             color: Cesium.Color.fromCssColorString(routeColor),
+                            outlineColor: Cesium.Color.fromCssColorString("#071328").withAlpha(0.8),
+                            outlineWidth: 1.2,
                         }),
                         clampToGround: false,
                     },
@@ -172,7 +179,7 @@ export function MissionLayer({
                                     ),
                                 ],
                                 arcType: routeArcType,
-                                width: 10,
+                                width: 8,
                                 material: new Cesium.PolylineArrowMaterialProperty(
                                     Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.92)
                                 ),
@@ -228,18 +235,19 @@ export function MissionLayer({
                     position: Cesium.Cartesian3.fromDegrees(wpLng, wpLat, altVal),
                     billboard: {
                         image: isHubNode
-                            ? getHubIconUri("#f59e0b", isSelected)
+                            ? getHubIconUri("#f59e0b", isSelected, "stop")
                             : getWaypointIconUri(seqNum, isSelected),
-                        width: isSelected ? 30 : isHubNode ? 26 : 24,
-                        height: isSelected ? 30 : isHubNode ? 26 : 24,
+                        width: isSelected ? 34 : isHubNode ? 30 : 26,
+                        height: isSelected ? 34 : isHubNode ? 30 : 26,
                         eyeOffset: new Cesium.Cartesian3(0, 0, -20),
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
                     label: createTacticalLabel(Cesium, {
                         text: labelText,
                         isSelected,
+                        variant: isHubNode ? "hub" : "default",
                         accentColor: isSelected ? "#00e5ff" : isHubNode ? "#f59e0b" : undefined,
-                        pixelOffset: new Cesium.Cartesian2(0, isSelected ? -20 : -16),
+                        pixelOffset: new Cesium.Cartesian2(0, isSelected ? -22 : -18),
                     }),
                 });
                 newEntityIds.push(entity.id);

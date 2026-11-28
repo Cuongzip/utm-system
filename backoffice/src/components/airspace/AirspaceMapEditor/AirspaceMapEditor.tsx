@@ -201,7 +201,7 @@ export function AirspaceMapEditor({
             />
 
             {showContextZones && backgroundZones.length > 0 && (
-                <AirspaceLayer zones={backgroundZones} />
+                <AirspaceLayer zones={backgroundZones} labelFilter="all" />
             )}
         </TacticalMapContainer>
     );
