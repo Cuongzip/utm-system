@@ -66,6 +66,7 @@ import {
     calculateDistance,
     formatAltitude,
     formatCoordinates,
+    formatDateTime,
     formatDistance,
     formatTime,
     localizeAlertTypeTitle,
@@ -366,6 +367,24 @@ export function FlightReplayDossier({
         const list = incidentsData?.data ?? [];
         return list.filter((inc) => inc.flightId === flight.id);
     }, [incidentsData, flight.id]);
+
+    const getEventWindowStatus = useCallback(
+        (iso?: string | null): "in_window" | "pre_flight" | "post_flight" | "unknown" => {
+            if (
+                !iso ||
+                debriefMetrics.firstTs <= 0 ||
+                debriefMetrics.lastTs < debriefMetrics.firstTs
+            ) {
+                return "unknown";
+            }
+            const ts = Date.parse(iso);
+            if (Number.isNaN(ts)) return "unknown";
+            if (ts < debriefMetrics.firstTs - 5_000) return "pre_flight";
+            if (ts > debriefMetrics.lastTs + 5_000) return "post_flight";
+            return "in_window";
+        },
+        [debriefMetrics.firstTs, debriefMetrics.lastTs]
+    );
 
     const timelineMarkers = useMemo(() => {
         const { firstTs, lastTs } = debriefMetrics;
@@ -1200,16 +1219,24 @@ export function FlightReplayDossier({
                                                         {recordedIncidents.map((inc) => {
                                                             const incTs =
                                                                 inc.detectedAt || inc.createdOn;
+                                                            const windowStatus =
+                                                                getEventWindowStatus(incTs);
+                                                            const isOutOfWindow =
+                                                                windowStatus === "pre_flight" ||
+                                                                windowStatus === "post_flight";
                                                             const canSeek =
-                                                                totalFrames > 1 && Boolean(incTs);
+                                                                totalFrames > 1 &&
+                                                                windowStatus === "in_window";
                                                             return (
                                                                 <button
                                                                     key={inc.id}
                                                                     type="button"
                                                                     disabled={!canSeek}
-                                                                    onClick={() =>
-                                                                        seekToTimestamp(incTs)
-                                                                    }
+                                                                    onClick={() => {
+                                                                        if (canSeek) {
+                                                                            seekToTimestamp(incTs);
+                                                                        }
+                                                                    }}
                                                                     className={cn(
                                                                         "w-full text-left rounded-md border border-slate-200 bg-white p-3 space-y-1.5 transition-colors",
                                                                         canSeek
@@ -1260,13 +1287,18 @@ export function FlightReplayDossier({
                                                                                 )}
                                                                             {incTs && (
                                                                                 <span className="tabular-nums">
-                                                                                    {formatTime(
-                                                                                        incTs
-                                                                                    )}
+                                                                                    {isOutOfWindow
+                                                                                        ? formatDateTime(
+                                                                                              incTs,
+                                                                                              "dd/MM HH:mm:ss"
+                                                                                          )
+                                                                                        : formatTime(
+                                                                                              incTs
+                                                                                          )}
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                        {canSeek && (
+                                                                        {canSeek ? (
                                                                             <span className="inline-flex items-center gap-0.5 text-amber-700 font-semibold">
                                                                                 <span>
                                                                                     {td(
@@ -1275,6 +1307,17 @@ export function FlightReplayDossier({
                                                                                 </span>
                                                                                 <ArrowUpRight className="w-2.5 h-2.5" />
                                                                             </span>
+                                                                        ) : (
+                                                                            isOutOfWindow && (
+                                                                                <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-semibold text-slate-600">
+                                                                                    {td(
+                                                                                        windowStatus ===
+                                                                                            "pre_flight"
+                                                                                            ? "preFlightEvent"
+                                                                                            : "postFlightEvent"
+                                                                                    )}
+                                                                                </span>
+                                                                            )
                                                                         )}
                                                                     </div>
                                                                 </button>
@@ -1296,16 +1339,24 @@ export function FlightReplayDossier({
                                                         {recordedConflicts.map((c) => {
                                                             const cnfTs =
                                                                 c.detectedAt || c.createdOn;
+                                                            const windowStatus =
+                                                                getEventWindowStatus(cnfTs);
+                                                            const isOutOfWindow =
+                                                                windowStatus === "pre_flight" ||
+                                                                windowStatus === "post_flight";
                                                             const canSeek =
-                                                                totalFrames > 1 && Boolean(cnfTs);
+                                                                totalFrames > 1 &&
+                                                                windowStatus === "in_window";
                                                             return (
                                                                 <button
                                                                     key={c.id}
                                                                     type="button"
                                                                     disabled={!canSeek}
-                                                                    onClick={() =>
-                                                                        seekToTimestamp(cnfTs)
-                                                                    }
+                                                                    onClick={() => {
+                                                                        if (canSeek) {
+                                                                            seekToTimestamp(cnfTs);
+                                                                        }
+                                                                    }}
                                                                     className={cn(
                                                                         "w-full text-left rounded-md border border-slate-200 bg-white p-3 space-y-1.5 transition-colors",
                                                                         canSeek
@@ -1342,16 +1393,23 @@ export function FlightReplayDossier({
                                                                             )}
                                                                         </p>
                                                                     )}
-                                                                    {(cnfTs || canSeek) && (
+                                                                    {(cnfTs ||
+                                                                        canSeek ||
+                                                                        isOutOfWindow) && (
                                                                         <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-slate-500">
                                                                             <span className="tabular-nums">
                                                                                 {cnfTs
-                                                                                    ? formatTime(
-                                                                                          cnfTs
-                                                                                      )
+                                                                                    ? isOutOfWindow
+                                                                                        ? formatDateTime(
+                                                                                              cnfTs,
+                                                                                              "dd/MM HH:mm:ss"
+                                                                                          )
+                                                                                        : formatTime(
+                                                                                              cnfTs
+                                                                                          )
                                                                                     : ""}
                                                                             </span>
-                                                                            {canSeek && (
+                                                                            {canSeek ? (
                                                                                 <span className="inline-flex items-center gap-0.5 text-amber-700 font-semibold">
                                                                                     <span>
                                                                                         {td(
@@ -1360,6 +1418,17 @@ export function FlightReplayDossier({
                                                                                     </span>
                                                                                     <ArrowUpRight className="w-2.5 h-2.5" />
                                                                                 </span>
+                                                                            ) : (
+                                                                                isOutOfWindow && (
+                                                                                    <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-semibold text-slate-600">
+                                                                                        {td(
+                                                                                            windowStatus ===
+                                                                                                "pre_flight"
+                                                                                                ? "preFlightEvent"
+                                                                                                : "postFlightEvent"
+                                                                                        )}
+                                                                                    </span>
+                                                                                )
                                                                             )}
                                                                         </div>
                                                                     )}

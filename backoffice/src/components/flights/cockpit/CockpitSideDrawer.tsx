@@ -243,7 +243,7 @@ export function CockpitSideDrawer({
             activeIncidents.filter(
                 (inc) =>
                     inc.flightId === flight.id ||
-                    (Boolean(flight.droneId) && inc.droneId === flight.droneId)
+                    (!inc.flightId && Boolean(flight.droneId) && inc.droneId === flight.droneId)
             ),
         [activeIncidents, flight.id, flight.droneId]
     );
