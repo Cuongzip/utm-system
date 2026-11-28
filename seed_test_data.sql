@@ -1631,16 +1631,16 @@ INSERT INTO conflict (
   resolved_at, resolved_by, version, created_on, created_by
 )
 VALUES
-  -- [1] ACKNOWLEDGED active conflict (for Conflict Resolution UI testing!)
+  -- [1] ACKNOWLEDGED active conflict on SCHEDULED/NO_GO FL-2026-009 (keeps all AUTHORIZED flights 100% clean on takeoff!)
   ('cf100000-0000-4000-8000-000000000001',
    'GEOFENCE_VIOLATION', 'HIGH', 'ACKNOWLEDGED',
-   '2babe10b-d5b1-42a0-9c7b-f65f7473b566', NULL,
-   '76a06ff8-4ca7-418f-8077-c6c656fba3f5', 'b6241fe9-beb1-48d3-94ff-ae7ce4be0563',
+   '30000000-0000-4000-8000-000000000009', NULL,
+   'a942c710-1b8a-4c22-83e1-d647a829f101', 'e9574fe9-beb1-48d3-94ff-ae7ce4be0566',
    NOW() - interval '12 minutes', 'airspace_geofence_check',
-   10.7765, 106.7001, 120.0, 85.0, 150.0, 'HIGH', NULL, 28,
-   'Pre-departure trajectory review: wind-drift buffer for FL-2026-001 approaches Independence Palace Prohibited Airspace (ASZ-VNP1) western perimeter by 85m.',
-   '{"alertType":"GEOFENCE_VIOLATION","droneId":"30d1435a-77bf-49a1-8fd5-6920a6ed064c","flightNumber":"FL-2026-001","zoneCode":"ASZ-VNP1"}'::jsonb,
-   'REROUTE', '{"latitude":10.7755,"longitude":106.7085,"altitude":120.0,"offsetMeters":250.0}'::jsonb,
+   10.7950, 106.7460, 130.0, 85.0, 150.0, 'HIGH', NULL, 28,
+   'Pre-departure trajectory review: heavy-cargo wind-drift buffer for FL-2026-009 approaches Landmark 81 Hazard Geofence (ASZ-LM81) eastern perimeter by 85m.',
+   '{"alertType":"GEOFENCE_VIOLATION","droneId":"11223344-5566-4777-8888-99aabbcc0005","flightNumber":"FL-2026-009","zoneCode":"ASZ-LM81"}'::jsonb,
+   'REROUTE', '{"latitude":10.7950,"longitude":106.7520,"altitude":130.0,"offsetMeters":250.0}'::jsonb,
    NULL, NULL, 0, NOW() - interval '12 minutes', 'system'),
 
   -- [2] RESOLVED 2-flight separation conflict (FL-2026-010 vs FL-2026-002A with 3 snapshots)
@@ -1679,17 +1679,17 @@ VALUES
    'RETURN_TO_BASE', '{"reason":"CRITICAL_BATTERY_LANDING"}'::jsonb,
    NOW() - interval '115 minutes', 'system', 0, NOW() - interval '118 minutes', 'system'),
 
-  -- [5] DISMISSED weather conflict (for filter & dismissed status coverage)
+  -- [5] DISMISSED weather conflict on historical COMPLETED FL-2026-010 (for filter & dismissed status coverage)
   ('cf500000-0000-4000-8000-000000000005',
    'WEATHER', 'LOW', 'DISMISSED',
-   '30000000-0000-4000-8000-000000000006', NULL,
+   '6fdf054f-19f5-47e4-db1f-0c0cb8b7f9aa', NULL,
    'b153d821-2c9b-4d33-94f2-e758b930a202', 'd8463fe9-beb1-48d3-94ff-ae7ce4be0565',
-   NOW() - interval '25 minutes', 'automated_conformance',
-   10.7805, 106.7185, 110.0, NULL, NULL, 'LOW', NULL, NULL,
-   'Transient convective gust advisory from VVTS METAR dissipated prior to departure window.',
-   '{"alertType":"WEATHER_HAZARD","flightNumber":"FL-2026-006","gustMs":9.4}'::jsonb,
+   NOW() - interval '100 minutes', 'automated_conformance',
+   10.7805, 106.7180, 80.0, NULL, NULL, 'LOW', NULL, NULL,
+   'Transient convective gust advisory from VVTS METAR dissipated during historical FL-2026-010 survey window.',
+   '{"alertType":"WEATHER_HAZARD","flightNumber":"FL-2026-010","gustMs":9.4}'::jsonb,
    'AUTO_CLEARED', '{"reason":"METAR wind gust subsided below 6.5 m/s"}'::jsonb,
-   NOW() - interval '18 minutes', 'atc_hanoi', 0, NOW() - interval '25 minutes', 'system');
+   NOW() - interval '96 minutes', 'atc_hanoi', 0, NOW() - interval '100 minutes', 'system');
 
 INSERT INTO conflict_snapshot (
   id, conflict_id, recorded_at, primary_lat, primary_lon, primary_alt,
@@ -1697,9 +1697,9 @@ INSERT INTO conflict_snapshot (
   vertical_separation, time_to_conflict_sec, severity, created_on, created_by
 )
 VALUES
-  -- Snapshots for cf100000 (Geofence proximity)
-  ('c5100000-0001-4000-8000-000000000001', 'cf100000-0000-4000-8000-000000000001', NOW() - interval '12 minutes', 10.7765, 106.7001, 120.0, NULL, NULL, NULL, 95.0, NULL, 32, 'MEDIUM', NOW() - interval '12 minutes', 'system'),
-  ('c5100000-0002-4000-8000-000000000002', 'cf100000-0000-4000-8000-000000000001', NOW() - interval '11 minutes', 10.7765, 106.7000, 120.0, NULL, NULL, NULL, 85.0, NULL, 28, 'HIGH',   NOW() - interval '11 minutes', 'system'),
+  -- Snapshots for cf100000 (Geofence proximity on SCHEDULED FL-2026-009)
+  ('c5100000-0001-4000-8000-000000000001', 'cf100000-0000-4000-8000-000000000001', NOW() - interval '12 minutes', 10.7948, 106.7462, 130.0, NULL, NULL, NULL, 95.0, NULL, 32, 'MEDIUM', NOW() - interval '12 minutes', 'system'),
+  ('c5100000-0002-4000-8000-000000000002', 'cf100000-0000-4000-8000-000000000001', NOW() - interval '11 minutes', 10.7950, 106.7460, 130.0, NULL, NULL, NULL, 85.0, NULL, 28, 'HIGH',   NOW() - interval '11 minutes', 'system'),
 
   -- Snapshots for cf200000 (2-flight separation convergence -> recovery)
   ('c5200000-0001-4000-8000-000000000001', 'cf200000-0000-4000-8000-000000000002', NOW() - interval '97 minutes', 10.7805, 106.7180,  80.0, 10.7808, 106.7192, 100.0, 136.0, 20.0, 42, 'HIGH',     NOW() - interval '97 minutes', 'system'),
@@ -1729,21 +1729,21 @@ INSERT INTO alert (
   created_on, created_by
 )
 VALUES
-  -- [1] ACTIVE HIGH -> visible on TopAlertBanner (1/2)
+  -- [1] ACTIVE HIGH -> visible on TopAlertBanner (1/2), linked to SCHEDULED/NO_GO FL-2026-009 (never pollutes AUTHORIZED takeoff!)
   ('a1100000-0000-4000-8000-000000000001',
    'GEOFENCE_VIOLATION', 'HIGH', 'ACTIVE',
-   '30d1435a-77bf-49a1-8fd5-6920a6ed064c', '2babe10b-d5b1-42a0-9c7b-f65f7473b566', '76a06ff8-4ca7-418f-8077-c6c656fba3f5',
+   '11223344-5566-4777-8888-99aabbcc0005', '30000000-0000-4000-8000-000000000009', 'a942c710-1b8a-4c22-83e1-d647a829f101',
    'cf100000-0000-4000-8000-000000000001', NULL,
-   'Pre-flight geofence buffer advisory: FL-2026-001 wind-drift envelope sits 85m east of prohibited zone ASZ-VNP1.',
-   '{"conflictType":"geofence_violation","zoneCode":"ASZ-VNP1","separationDistance":85.0,"thresholdValue":150.0}'::jsonb,
+   'Pre-flight geofence buffer advisory: FL-2026-009 wind-drift envelope sits 85m east of Landmark 81 hazard zone ASZ-LM81.',
+   '{"conflictType":"geofence_violation","zoneCode":"ASZ-LM81","separationDistance":85.0,"thresholdValue":150.0}'::jsonb,
    NULL, NULL, NULL, NULL, NULL, NOW() - interval '10 minutes', 'system'),
 
-  -- [2] ACKNOWLEDGED MEDIUM -> visible on TopAlertBanner (2/2), linked to PENDING_CONFIRMATION incident
+  -- [2] ACKNOWLEDGED MEDIUM -> visible on TopAlertBanner (2/2), linked to PENDING_CONFIRMATION incident on CANCELLED FL-2026-012
   ('a1200000-0000-4000-8000-000000000002',
    'EMERGENCY_INCIDENT', 'MEDIUM', 'ACKNOWLEDGED',
-   'ece5662e-b5c6-477f-b710-918e2e11a1c5', '30000000-0000-4000-8000-000000000004', 'c854d502-2c9b-4e4a-93c2-b8759521e962',
+   'e5f6a702-2233-4455-6677-8899aabbccdd', '30000000-0000-4000-8000-000000000012', 'b153d821-2c9b-4d33-94f2-e758b930a202',
    NULL, '22222222-2222-4222-8222-222222222222',
-   'Incident INC-20261127-GEOF awaiting operator confirmation: HOVER advised near Landmark 81 hazard buffer.',
+   'Incident INC-20261127-GEOF awaiting operator confirmation: HOVER advised near Tan Son Nhat approach buffer (ASZ-TSNA).',
    '{"emergencyType":"geofence_warning","responseAction":"HOVER","protocolId":"10000000-0000-4000-8000-000000000008"}'::jsonb,
    NOW() - interval '4 minutes', 'atc_hanoi', NULL, NULL, NULL, NOW() - interval '6 minutes', 'system'),
 
@@ -1791,16 +1791,16 @@ VALUES
    'Grounded at Phu My Hung hangar bay 2 awaiting rotor bearing replacement.',
    NOW() - interval '2 days', 'system'),
 
-  -- [7] DISMISSED MEDIUM (dismissed weather advisory)
+  -- [7] DISMISSED MEDIUM (dismissed weather advisory on historical COMPLETED FL-2026-010)
   ('a1700000-0000-4000-8000-000000000007',
    'WEATHER_HAZARD', 'MEDIUM', 'DISMISSED',
-   'd4e5f601-1122-3344-5566-778899aabbcc', '30000000-0000-4000-8000-000000000006', 'b153d821-2c9b-4d33-94f2-e758b930a202',
+   '8c577611-85b0-4530-aa0f-7f9e2f6ea3e3', '6fdf054f-19f5-47e4-db1f-0c0cb8b7f9aa', 'b153d821-2c9b-4d33-94f2-e758b930a202',
    'cf500000-0000-4000-8000-000000000005', NULL,
    'Transient wind gust 9.4 m/s reported at Tan Son Nhat weather station (VVTS).',
    '{"windGustMs":9.4,"station":"VVTS","verdict":"GO_WITH_CONDITIONS"}'::jsonb,
-   NOW() - interval '20 minutes', 'atc_hanoi', NOW() - interval '18 minutes', 'atc_hanoi',
+   NOW() - interval '99 minutes', 'atc_hanoi', NOW() - interval '96 minutes', 'atc_hanoi',
    'Dismissed: updated METAR confirms wind subsided to 6.1 m/s.',
-   NOW() - interval '25 minutes', 'system');
+   NOW() - interval '100 minutes', 'system');
 
 -- ------------------------------------------------------------------------------
 -- 11. utm_simulation (3 historical sessions: 2 COMPLETED + 1 STOPPED, 10 events)
@@ -1957,13 +1957,13 @@ VALUES
    '[{"timestamp":"2026-11-27T05:06:00Z","event":"action_executing","data":{"action":"LAND","autoExecuted":true}},{"timestamp":"2026-11-27T05:06:02Z","event":"command_dispatched","data":{"commandType":"LAND"}},{"timestamp":"2026-11-27T05:09:00Z","event":"action_completed","data":{"touchdownAlt":0.0}},{"timestamp":"2026-11-27T05:12:00Z","event":"incident_resolved","data":{"resolvedBy":"atc_hanoi"}}]'::jsonb,
    NOW() - interval '118 minutes', 0, NOW() - interval '118 minutes', 'system'),
 
-  -- [2] PENDING_CONFIRMATION (ready for operator Confirm / Reject testing; 24h future timeout!)
+  -- [2] PENDING_CONFIRMATION on CANCELLED FL-2026-012 / MAINTENANCE VN-CARGO-009 (ready for Confirm/Reject testing; keeps all AUTHORIZED flights 100% clean!)
   ('22222222-2222-4222-8222-222222222222', 'INC-20261127-GEOF',
-   'ece5662e-b5c6-477f-b710-918e2e11a1c5', '30000000-0000-4000-8000-000000000004',
+   'e5f6a702-2233-4455-6677-8899aabbccdd', '30000000-0000-4000-8000-000000000012',
    '10000000-0000-4000-8000-000000000008', 'GEOFENCE_WARNING', 'WARNING', 'PENDING_CONFIRMATION',
-   'Geofence boundary proximity warning: planned route buffer passes within 38m of Landmark 81 hazard zone (ASZ-LM81).',
-   '{"proximityMeters":38.0,"bufferZone":"ASZ-LM81","batteryPercentage":91.0}'::jsonb,
-   10.7912000, 106.7270000, 110.0, 'HOVER',
+   'Geofence boundary proximity warning: rejected repositioning plan FL-2026-012 passes within 38m of Tan Son Nhat approach zone (ASZ-TSNA).',
+   '{"proximityMeters":38.0,"bufferZone":"ASZ-TSNA","batteryPercentage":62.0}'::jsonb,
+   10.8060000, 106.6690000, 140.0, 'HOVER',
    false, true, NULL, NULL, NOW() + interval '24 hours',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
    '[{"timestamp":"2026-11-27T06:58:00Z","event":"awaiting_confirmation","data":{"action":"HOVER","timeoutSeconds":20}}]'::jsonb,
@@ -2003,13 +2003,13 @@ VALUES
    '[{"timestamp":"2026-11-27T06:04:00Z","event":"awaiting_confirmation","data":{"action":"RTH","timeoutSeconds":30}},{"timestamp":"2026-11-27T06:08:00Z","event":"incident_resolved","data":{"resolvedBy":"pilot_nam"}}]'::jsonb,
    NOW() - interval '60 minutes', 0, NOW() - interval '60 minutes', 'system'),
 
-  -- [5] REJECTED WARNING (false-positive dismissed by operator; tests REJECTED status!)
+  -- [5] REJECTED WARNING on CANCELLED FL-2026-012 (false-positive dismissed by operator; tests REJECTED status!)
   ('55555555-5555-4555-8555-555555555555', 'INC-20261127-WIND',
-   '30d1435a-77bf-49a1-8fd5-6920a6ed064c', '2babe10b-d5b1-42a0-9c7b-f65f7473b566',
+   'e5f6a702-2233-4455-6677-8899aabbccdd', '30000000-0000-4000-8000-000000000012',
    '10000000-0000-4000-8000-000000000014', 'WEATHER_WIND', 'WARNING', 'REJECTED',
-   'Automated anemometer spike (12.8 m/s) flagged on Saigon Central Pad 1; confirmed sensor calibration test.',
-   '{"windSpeedMs":12.8,"batteryPercentage":96.0}'::jsonb,
-   10.7769000, 106.7009000, 12.5, 'DIVERT',
+   'Automated anemometer spike (12.8 m/s) flagged on Phu My Hung Pad 2; confirmed sensor calibration test.',
+   '{"windSpeedMs":12.8,"batteryPercentage":62.0}'::jsonb,
+   10.7290000, 106.7210000, 12.5, 'DIVERT',
    false, true, 'atc_hanoi', NOW() - interval '28 minutes', NULL,
    NULL, NULL, false, 'Rejected by ATC: anemometer calibration test in progress',
    NOW() - interval '28 minutes', 'atc_hanoi',

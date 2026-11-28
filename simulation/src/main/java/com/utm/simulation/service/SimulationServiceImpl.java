@@ -74,6 +74,8 @@ import org.springframework.data.jpa.domain.Specification;
 public class SimulationServiceImpl implements SimulationService {
 
     private static final double EARTH_RADIUS_METERS = 6371000.0;
+    private static final double MAX_CONTROLLED_CLIMB_MPS = 4.0;
+    private static final double MAX_CONTROLLED_DESCENT_MPS = 3.5;
     private static final Set<String> NON_SIMULATABLE_FLIGHT_STATUSES = Set.of(
             "planned", "scheduled", "completed", "cancelled", "rejected", "emergency_landing");
 
@@ -1830,16 +1832,10 @@ public class SimulationServiceImpl implements SimulationService {
                     if (runtime.targetAltitudeOverride != null && !runtime.forcedDescentActive
                             && !"motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
                         double altDelta = runtime.targetAltitudeOverride - runtime.currentAlt;
-                        segVertSpeed = Math.abs(altDelta) > 0.5 ? Math.signum(altDelta) * 4.0 : 0.0;
+                        double vertRate = altDelta >= 0.0 ? MAX_CONTROLLED_CLIMB_MPS : MAX_CONTROLLED_DESCENT_MPS;
+                        segVertSpeed = Math.abs(altDelta) > 0.5 ? Math.signum(altDelta) * vertRate : 0.0;
                     }
 
-                    boolean isChangingAltitude = runtime.targetAltitudeOverride != null
-                            && Math.abs(runtime.targetAltitudeOverride - runtime.currentAlt) > 0.5
-                            && !runtime.forcedDescentActive
-                            && !runtime.rtlActive
-                            && !runtime.divertLandingActive
-                            && !runtime.takeoffClimbActive
-                            && !"motor_failure".equalsIgnoreCase(runtime.activeScenario);
                     boolean isTerminalVerticalDescent = !runtime.takeoffClimbActive
                             && !runtime.rtlActive
                             && !runtime.divertLandingActive
@@ -1851,6 +1847,15 @@ public class SimulationServiceImpl implements SimulationService {
                                     runtime.waypoints.get(runtime.currentSegment).lon(),
                                     runtime.waypoints.getLast().lat(),
                                     runtime.waypoints.getLast().lon()) <= 2.0;
+                    boolean isChangingAltitude = !runtime.forcedDescentActive
+                            && !runtime.rtlActive
+                            && !runtime.divertLandingActive
+                            && !runtime.takeoffClimbActive
+                            && !"motor_failure".equalsIgnoreCase(runtime.activeScenario)
+                            && !isTerminalVerticalDescent
+                            && ((runtime.targetAltitudeOverride != null
+                                    && Math.abs(runtime.targetAltitudeOverride - runtime.currentAlt) > 0.5)
+                                || Math.abs(segVertSpeed) > 0.5);
                     String flightMode = runtime.emergencyStopActive ? "EMERGENCY_STOP"
                             : runtime.forcedDescentActive ? "LANDING"
                             : runtime.rtlActive ? "RTL"
@@ -2166,7 +2171,8 @@ public class SimulationServiceImpl implements SimulationService {
                             } else if (runtime.targetAltitudeOverride != null && !runtime.forcedDescentActive
                                      && !"motor_failure".equalsIgnoreCase(runtime.activeScenario)) {
                                 double delta = runtime.targetAltitudeOverride - runtime.currentAlt;
-                                double maxStep = 4.0 * timeStepSeconds;
+                                double vertRate = delta >= 0.0 ? MAX_CONTROLLED_CLIMB_MPS : MAX_CONTROLLED_DESCENT_MPS;
+                                double maxStep = vertRate * timeStepSeconds;
                                 if (Math.abs(delta) <= maxStep) {
                                     double reachedAlt = runtime.targetAltitudeOverride;
                                     runtime.currentAlt = reachedAlt;
@@ -2887,7 +2893,10 @@ public class SimulationServiceImpl implements SimulationService {
             List<WaypointVm> rejoined = new ArrayList<>();
             rejoined.add(new WaypointVm(currentLat, currentLon, currentAlt));
             if ((bestCrossDist > 3.0 || Math.abs(currentAlt - bestProjAlt) > 2.0) && distProjToSegEnd > 15.0) {
-                rejoined.add(new WaypointVm(bestProjLat, bestProjLon, bestProjAlt, cruiseSpeed, 0, null));
+                double interceptSpeed = bestCrossDist <= 3.0
+                        ? (bestProjAlt >= currentAlt ? MAX_CONTROLLED_CLIMB_MPS : MAX_CONTROLLED_DESCENT_MPS)
+                        : cruiseSpeed;
+                rejoined.add(new WaypointVm(bestProjLat, bestProjLon, bestProjAlt, interceptSpeed, 0, null));
             }
             for (int i = bestSegIdx + 1; i < originalWaypoints.size(); i++) {
                 rejoined.add(originalWaypoints.get(i));
@@ -2899,18 +2908,62 @@ public class SimulationServiceImpl implements SimulationService {
             if (originalWaypoints == null || originalWaypoints.isEmpty()) {
                 return;
             }
-            boolean hasAirborneAltDiff = Math.abs(currentAlt - defaultCruiseAlt) > 1.5;
-            if (!hasAirborneAltDiff) {
-                for (WaypointVm wp : waypoints) {
-                    if (wp != null && wp.alt() > 2.0 && Math.abs(wp.alt() - defaultCruiseAlt) > 1.5) {
-                        hasAirborneAltDiff = true;
-                        break;
+            double oldSegLen = (currentSegment < segmentDistances.size())
+                    ? segmentDistances.get(currentSegment)
+                    : 0.0;
+            double progressFraction = oldSegLen > 0.001
+                    ? Math.min(1.0, distanceInSegment / oldSegLen)
+                    : 0.0;
+            for (int i = Math.max(0, currentSegment); i < waypoints.size(); i++) {
+                WaypointVm wp = waypoints.get(i);
+                if (wp != null && wp.alt() > 1.0) {
+                    double targetOrigAlt = resolveOriginalAltitudeNear(wp.lat(), wp.lon());
+                    if (Math.abs(wp.alt() - targetOrigAlt) > 0.5) {
+                        waypoints.set(i, new WaypointVm(
+                                wp.lat(), wp.lon(), targetOrigAlt, wp.speed(), wp.hoverDurationSec(), wp.headingAtWaypoint()));
                     }
                 }
             }
-            if (hasAirborneAltDiff) {
-                rejoinOriginalRoute();
+            rebuildSegments();
+            if (currentSegment < segmentDistances.size()) {
+                distanceInSegment = progressFraction * segmentDistances.get(currentSegment);
             }
+            double plannedAlt = resolveCurrentSegmentPlannedAltitude(progressFraction);
+            if (Math.abs(currentAlt - plannedAlt) > 0.5) {
+                this.targetAltitudeOverride = plannedAlt;
+            }
+        }
+
+        private double resolveOriginalAltitudeNear(double lat, double lon) {
+            double bestDist = Double.MAX_VALUE;
+            double bestAlt = defaultCruiseAlt;
+            for (WaypointVm orig : originalWaypoints) {
+                if (orig != null && orig.alt() > 2.0) {
+                    double d = calculateHaversineDistance(lat, lon, orig.lat(), orig.lon());
+                    if (d < bestDist) {
+                        bestDist = d;
+                        bestAlt = orig.alt();
+                    }
+                }
+            }
+            return bestAlt;
+        }
+
+        private double resolveCurrentSegmentPlannedAltitude(double progressFraction) {
+            if (currentSegment + 1 < waypoints.size()) {
+                WaypointVm p1 = waypoints.get(currentSegment);
+                WaypointVm p2 = waypoints.get(currentSegment + 1);
+                if (p1.alt() > 2.0 && p2.alt() > 2.0) {
+                    return p1.alt() + progressFraction * (p2.alt() - p1.alt());
+                }
+                if (p1.alt() > 2.0) {
+                    return p1.alt();
+                }
+                if (p2.alt() > 2.0) {
+                    return p2.alt();
+                }
+            }
+            return defaultCruiseAlt;
         }
 
         String resolveNearbyHubId(double thresholdMeters) {
@@ -2928,18 +2981,28 @@ public class SimulationServiceImpl implements SimulationService {
         }
 
         double targetSpeedForCurrentSegment() {
+            double baseSpeed = cruiseSpeed;
             if (currentSegment + 1 < waypoints.size()) {
                 WaypointVm p1 = waypoints.get(currentSegment);
                 WaypointVm target = waypoints.get(currentSegment + 1);
                 if (target.speed() != null && target.speed() > 0.0) {
-                    return target.speed();
+                    baseSpeed = target.speed();
                 }
                 double horiz = calculateHaversineDistance(p1.lat(), p1.lon(), target.lat(), target.lon());
+                double dz = target.alt() - p1.alt();
+                double maxVertRate = dz >= 0.0 ? MAX_CONTROLLED_CLIMB_MPS : MAX_CONTROLLED_DESCENT_MPS;
                 if (horiz <= 1.0) {
-                    return target.alt() >= p1.alt() ? 4.0 : 3.5;
+                    return Math.min(baseSpeed, maxVertRate);
+                }
+                if (Math.abs(dz) > 0.5) {
+                    double len3d = Math.hypot(horiz, Math.abs(dz));
+                    double projectedVertRate = baseSpeed * (Math.abs(dz) / len3d);
+                    if (projectedVertRate > maxVertRate) {
+                        return maxVertRate * (len3d / Math.abs(dz));
+                    }
                 }
             }
-            return cruiseSpeed;
+            return baseSpeed;
         }
 
         void advance(double stepDist) {

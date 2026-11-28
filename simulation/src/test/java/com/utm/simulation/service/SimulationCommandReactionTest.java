@@ -908,10 +908,175 @@ class SimulationCommandReactionTest {
                         interceptHeading)
                 .isTrue();
 
-        for (int i = 0; i < 7; i++) {
+        org.mockito.Mockito.clearInvocations(telemetryClientService);
+        for (int i = 0; i < 12; i++) {
             simulationService.stepSessionOnce(sessionId);
         }
+        var orthoTelCaptor = org.mockito.ArgumentCaptor.forClass(com.utm.simulation.viewmodel.client.TelemetryPushVm.class);
+        verify(telemetryClientService, atLeastOnce()).pushTelemetry(orthoTelCaptor.capture());
+        assertThat(orthoTelCaptor.getAllValues())
+                .allSatisfy(t -> assertThat(t.verticalSpeed()).isGreaterThanOrEqualTo(-3.5));
+        assertThat(orthoTelCaptor.getAllValues())
+                .extracting(com.utm.simulation.viewmodel.client.TelemetryPushVm::flightMode)
+                .contains("ALTITUDE_CHANGE", "AUTONOMOUS");
         assertThat(entity.getCurrentLon()).isGreaterThan(106.7198);
         assertThat(entity.getCurrentAlt()).isCloseTo(110.0, org.assertj.core.data.Offset.offset(2.0));
+    }
+
+    @Test
+    @DisplayName("SET_ALTITUDE 120m followed by RESUME glides smoothly back to 110m at -3.5 m/s with ALTITUDE_CHANGE mode and never triggers false MOTOR_FAILURE")
+    void handleDroneCommand_setAltitudeThenResume_glidesSmoothlyWithoutFalseMotorFailure() {
+        String sessionId = "sim-fl006-repro";
+        String flightId = "flt-fl006-repro";
+        String droneId = "drn-fl006-repro";
+
+        GeoJsonLineStringVm route = new GeoJsonLineStringVm("LineString", List.of(
+                List.of(106.7009, 10.7769, 0.0),
+                List.of(106.7009, 10.7769, 110.0),
+                List.of(106.7185, 10.7805, 110.0),
+                List.of(106.7350, 10.7850, 110.0),
+                List.of(106.7350, 10.7850, 0.0)));
+        FlightDetailVm activeFlight = new FlightDetailVm(
+                flightId, "FL-2026-006", droneId, "hub-d1", "hub-tt", 110.0, route, 5,
+                Collections.emptyList(), "active");
+        SimulationSession entity = SimulationSession.builder()
+                .id(sessionId)
+                .flightId(flightId)
+                .droneId(droneId)
+                .status(SimulationStatus.RUNNING)
+                .speed(16.0)
+                .timeScale(1.0)
+                .currentBattery(99.0)
+                .build();
+        SimulationSessionVm vm = new SimulationSessionVm(
+                sessionId, flightId, droneId, SimulationStatus.RUNNING, 16.0, 1.0,
+                10.7769, 106.7009, 0.0, 75.0, 99.0, 0.0, 3800.0, 0.0, 0, null,
+                ZonedDateTime.now(), ZonedDateTime.now());
+        SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(flightId, 16.0, 1.0, 99.0);
+
+        when(flightClientService.getFlightDetail(flightId)).thenReturn(activeFlight);
+        when(sessionRepository.existsByDroneIdAndStatusIn(eq(droneId), anyList())).thenReturn(false);
+        when(sessionRepository.existsByFlightIdAndStatusIn(eq(flightId), anyList())).thenReturn(false);
+        when(simulationMapper.toEntity(createVm)).thenReturn(entity);
+        when(sessionRepository.saveAndFlush(entity)).thenReturn(entity);
+        when(simulationMapper.toVm(entity)).thenReturn(vm);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(entity));
+        when(sessionRepository.save(entity)).thenReturn(entity);
+        when(simulationMapper.toEventEntity(eq(sessionId), anyString(), any(), anyString(), anyString(), any()))
+                .thenReturn(SimulationEvent.builder().id("evt-fl006").sessionId(sessionId).build());
+        when(eventRepository.save(any(SimulationEvent.class)))
+                .thenReturn(SimulationEvent.builder().id("evt-fl006").sessionId(sessionId).build());
+
+        simulationService.createSession(createVm);
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-tkof-006", droneId, flightId, "TAKEOFF", 2, "{}", "PENDING", ZonedDateTime.now()));
+        for (int i = 0; i < 32; i++) {
+            simulationService.stepSessionOnce(sessionId);
+        }
+        assertThat(entity.getCurrentAlt()).isCloseTo(110.0, org.assertj.core.data.Offset.offset(1.0));
+
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-alt-120", droneId, flightId, "SET_ALTITUDE", 2, "{\"targetAltitude\": 120}", "PENDING", ZonedDateTime.now()));
+        for (int i = 0; i < 6; i++) {
+            simulationService.stepSessionOnce(sessionId);
+        }
+        assertThat(entity.getCurrentAlt()).isCloseTo(120.0, org.assertj.core.data.Offset.offset(0.5));
+
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-resume-006", droneId, flightId, "RESUME", 2, "{}", "PENDING", ZonedDateTime.now()));
+        org.mockito.Mockito.clearInvocations(telemetryClientService);
+        for (int i = 0; i < 6; i++) {
+            simulationService.stepSessionOnce(sessionId);
+        }
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.utm.simulation.viewmodel.client.TelemetryPushVm.class);
+        verify(telemetryClientService, atLeastOnce()).pushTelemetry(captor.capture());
+        List<com.utm.simulation.viewmodel.client.TelemetryPushVm> frames = captor.getAllValues();
+
+        assertThat(frames).hasSizeGreaterThanOrEqualTo(6);
+        assertThat(frames).allSatisfy(frame -> {
+            assertThat(frame.verticalSpeed()).isGreaterThanOrEqualTo(-3.5);
+            assertThat(frame.speed()).isGreaterThan(10.0);
+        });
+        assertThat(frames).anySatisfy(frame -> {
+            assertThat(frame.flightMode()).isEqualTo("ALTITUDE_CHANGE");
+            assertThat(frame.verticalSpeed()).isEqualTo(-3.5);
+        });
+        assertThat(frames.getLast().flightMode()).isEqualTo("AUTONOMOUS");
+        assertThat(entity.getCurrentAlt()).isCloseTo(110.0, org.assertj.core.data.Offset.offset(0.5));
+    }
+
+    @Test
+    @DisplayName("Steep nearby GOTO descent caps vertical speed to -3.5 m/s with ALTITUDE_CHANGE mode while real motor_failure retains -8.0 m/s CONTINGENCY")
+    void handleDroneCommand_steepGotoAndRealMotorFailure_distinguishControlledDescentFromFailure() {
+        String sessionId = "sim-steep-goto";
+        String flightId = "flt-steep-goto";
+        String droneId = "drn-steep-goto";
+
+        GeoJsonLineStringVm route = new GeoJsonLineStringVm("LineString", List.of(
+                List.of(106.7000, 10.7700, 120.0),
+                List.of(106.7200, 10.7900, 120.0)));
+        FlightDetailVm activeFlight = new FlightDetailVm(
+                flightId, "FLT-STEEP-01", droneId, "hub-d1", "hub-tt", 120.0, route, 2,
+                Collections.emptyList(), "active");
+        SimulationSession entity = SimulationSession.builder()
+                .id(sessionId)
+                .flightId(flightId)
+                .droneId(droneId)
+                .status(SimulationStatus.RUNNING)
+                .speed(18.0)
+                .timeScale(1.0)
+                .currentBattery(95.0)
+                .build();
+        SimulationSessionVm vm = new SimulationSessionVm(
+                sessionId, flightId, droneId, SimulationStatus.RUNNING, 18.0, 1.0,
+                10.7700, 106.7000, 120.0, 45.0, 95.0, 0.0, 3000.0, 0.0, 0, null,
+                ZonedDateTime.now(), ZonedDateTime.now());
+        SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(flightId, 18.0, 1.0, 95.0);
+
+        when(flightClientService.getFlightDetail(flightId)).thenReturn(activeFlight);
+        when(sessionRepository.existsByDroneIdAndStatusIn(eq(droneId), anyList())).thenReturn(false);
+        when(sessionRepository.existsByFlightIdAndStatusIn(eq(flightId), anyList())).thenReturn(false);
+        when(simulationMapper.toEntity(createVm)).thenReturn(entity);
+        when(sessionRepository.saveAndFlush(entity)).thenReturn(entity);
+        when(simulationMapper.toVm(entity)).thenReturn(vm);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(entity));
+        when(sessionRepository.save(entity)).thenReturn(entity);
+        when(simulationMapper.toEventEntity(eq(sessionId), anyString(), any(), anyString(), anyString(), any()))
+                .thenReturn(SimulationEvent.builder().id("evt-steep").sessionId(sessionId).build());
+        when(eventRepository.save(any(SimulationEvent.class)))
+                .thenReturn(SimulationEvent.builder().id("evt-steep").sessionId(sessionId).build());
+
+        simulationService.createSession(createVm);
+
+        simulationService.handleDroneCommand(new DroneCommandEvent(
+                "cmd-goto-steep", droneId, flightId, "GOTO", 2,
+                "{\"latitude\": 10.7702, \"longitude\": 106.7000, \"altitude\": 60.0}",
+                "PENDING", ZonedDateTime.now()));
+        org.mockito.Mockito.clearInvocations(telemetryClientService);
+        for (int i = 0; i < 4; i++) {
+            simulationService.stepSessionOnce(sessionId);
+        }
+
+        var gotoCaptor = org.mockito.ArgumentCaptor.forClass(com.utm.simulation.viewmodel.client.TelemetryPushVm.class);
+        verify(telemetryClientService, atLeastOnce()).pushTelemetry(gotoCaptor.capture());
+        assertThat(gotoCaptor.getAllValues()).hasSizeGreaterThanOrEqualTo(4);
+        assertThat(gotoCaptor.getAllValues()).allSatisfy(frame -> {
+            assertThat(frame.verticalSpeed()).isGreaterThanOrEqualTo(-3.5);
+            assertThat(frame.flightMode()).isEqualTo("ALTITUDE_CHANGE");
+        });
+
+        simulationService.injectScenario(sessionId, new com.utm.simulation.viewmodel.scenario.InjectScenarioVm(
+                com.utm.simulation.model.enumeration.EmergencyScenarioType.MOTOR_FAILURE, null));
+        org.mockito.Mockito.clearInvocations(telemetryClientService);
+        simulationService.stepSessionOnce(sessionId);
+
+        var motorCaptor = org.mockito.ArgumentCaptor.forClass(com.utm.simulation.viewmodel.client.TelemetryPushVm.class);
+        verify(telemetryClientService, atLeastOnce()).pushTelemetry(motorCaptor.capture());
+        assertThat(motorCaptor.getAllValues()).isNotEmpty();
+        assertThat(motorCaptor.getAllValues()).allSatisfy(frame -> {
+            assertThat(frame.verticalSpeed()).isEqualTo(-8.0);
+            assertThat(frame.flightMode()).isEqualTo("CONTINGENCY");
+        });
     }
 }
