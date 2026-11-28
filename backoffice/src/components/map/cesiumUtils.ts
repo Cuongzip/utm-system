@@ -145,3 +145,31 @@ export function fitCameraToBounds(
     viewer.scene.requestRender();
     return true;
 }
+
+export function syncViewerTrackedEntity(
+    viewer: Cesium.Viewer | null | undefined,
+    entityId: string,
+    enabled: boolean
+): void {
+    if (!viewer || viewer.isDestroyed()) return;
+    if (!enabled) {
+        if (viewer.trackedEntity?.id === entityId) {
+            viewer.trackedEntity = undefined;
+            viewer.scene.requestRender();
+        }
+        return;
+    }
+    const target = viewer.entities.getById(entityId);
+    if (target && viewer.trackedEntity !== target) {
+        viewer.trackedEntity = target;
+        viewer.scene.requestRender();
+    }
+}
+
+export function setViewerCanvasCursor(
+    viewer: Cesium.Viewer | null | undefined,
+    cursor: string
+): void {
+    if (!viewer || viewer.isDestroyed()) return;
+    viewer.scene.canvas.style.cursor = cursor;
+}

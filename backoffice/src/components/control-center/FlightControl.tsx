@@ -15,7 +15,9 @@ import {
 import { ChamferCard, ConfirmDialog } from "@/components/ui";
 import { droneService } from "@/services";
 import { QUERY_KEYS, useDroneCommands } from "@/hooks";
+import { useAppLocale } from "@/i18n";
 import { cn } from "@/lib";
+import { localizeResponseAction } from "@/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -53,6 +55,7 @@ export function FlightControl({
 }: FlightControlProps) {
     const t = useTranslations("controlCenter");
     const tc = useTranslations("common");
+    const locale = useAppLocale();
     const queryClient = useQueryClient();
     const [pendingConfirm, setPendingConfirm] = useState<CommandActionConfig | null>(null);
     const { data: commandList } = useDroneCommands(droneId);
@@ -134,7 +137,7 @@ export function FlightControl({
         onSuccess: (_data, type) => {
             toast.success(
                 t("confirmDialogs.dispatchedToast", {
-                    cmd: type.replace(/_/g, " ").toUpperCase(),
+                    cmd: localizeResponseAction(type, locale, true),
                 })
             );
             setPendingConfirm(null);
@@ -148,20 +151,22 @@ export function FlightControl({
     });
 
     const isAvailable = Boolean(droneId);
-    const isAirborne = Boolean(
-        (flightStatus && ACTIVE_FLIGHT_STATUSES.includes(flightStatus)) ||
-        (altitudeM != null && altitudeM > 2)
-    );
-    const isGroundedPreFlight = Boolean(
-        !isAirborne && flightStatus && !ACTIVE_FLIGHT_STATUSES.includes(flightStatus)
-    );
+    const isPhysicallyAirborne = Boolean(altitudeM != null && altitudeM > 1.5);
+    const isFlightActive = Boolean(flightStatus && ACTIVE_FLIGHT_STATUSES.includes(flightStatus));
+    const isAirborne = isFlightActive || isPhysicallyAirborne;
 
     const getDisabledReason = (commandType: CommandType): string | null => {
         if (!isAvailable) return t("disabledReasons.selectAircraft");
-        if (commandType === COMMAND_TYPE.TAKEOFF && isAirborne) {
-            return t("disabledReasons.alreadyAirborne");
+        if (commandType === COMMAND_TYPE.TAKEOFF) {
+            if (isPhysicallyAirborne) {
+                return t("disabledReasons.alreadyAirborne");
+            }
+            if (flightStatus && flightStatus !== FLIGHT_STATUS.AUTHORIZED && !isFlightActive) {
+                return t("disabledReasons.notDeparted");
+            }
+            return null;
         }
-        if (commandType !== COMMAND_TYPE.TAKEOFF && isGroundedPreFlight) {
+        if (!isAirborne) {
             return t("disabledReasons.notDeparted");
         }
         return null;

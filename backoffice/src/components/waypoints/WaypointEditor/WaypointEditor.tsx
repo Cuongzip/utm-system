@@ -5,7 +5,12 @@ import { useTranslations } from "next-intl";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
 import type { Hub } from "@/types";
-import type { WaypointItem } from "../types";
+import {
+    isHubWaypointItem,
+    parseHubActionItems,
+    parseWaypointActionItems,
+    type WaypointItem,
+} from "../types";
 import { WaypointEditorHeader } from "./WaypointEditorHeader";
 import { WaypointPositionSubTab } from "./WaypointPositionSubTab";
 import { WaypointActionsSubTab } from "./WaypointActionsSubTab";
@@ -37,9 +42,6 @@ export function WaypointEditor<T extends WaypointItem>({
     onClearFieldError,
 }: WaypointEditorProps<T>) {
     const t = useTranslations("waypoints.editor.tabs");
-    const [activeSubTab, setActiveSubTab] = useState<"position" | "actions" | "conditions">(
-        "position"
-    );
 
     const primaryPrefix = waypointIndex >= 0 ? `waypoints.${waypointIndex}.` : "";
     const secondaryPrefix =
@@ -80,6 +82,30 @@ export function WaypointEditor<T extends WaypointItem>({
         getWpError("headingAtWaypoint") ||
         getWpError("turnRadius");
 
+    const hasPositionErrors = Boolean(nameError || latError || lngError || altError || hubIdError);
+    const hasActionsErrors = Boolean(
+        actionsError || stopoverTypeError || groundTimeError || payloadDeltaError
+    );
+    const hasConditionsErrors = Boolean(conditionsError);
+
+    const [activeSubTab, setActiveSubTab] = useState<"position" | "actions" | "conditions">(() =>
+        hasActionsErrors && !hasPositionErrors ? "actions" : "position"
+    );
+    const [prevHadActionErr, setPrevHadActionErr] = useState(hasActionsErrors);
+    if (hasActionsErrors !== prevHadActionErr) {
+        setPrevHadActionErr(hasActionsErrors);
+        if (hasActionsErrors && !hasPositionErrors) {
+            setActiveSubTab("actions");
+        }
+    }
+
+    const actionBadgeCount = useMemo(() => {
+        if (isHubWaypointItem(waypoint)) {
+            return parseHubActionItems(waypoint).length;
+        }
+        return parseWaypointActionItems(waypoint).length;
+    }, [waypoint]);
+
     const allWaypointErrors = useMemo(() => {
         const msgs = new Set<string>();
         for (const [key, msg] of Object.entries(fieldErrors)) {
@@ -94,19 +120,6 @@ export function WaypointEditor<T extends WaypointItem>({
         }
         return Array.from(msgs);
     }, [fieldErrors, primaryPrefix, secondaryPrefix]);
-
-    const hasPositionErrors = Boolean(
-        nameError ||
-        latError ||
-        lngError ||
-        altError ||
-        hubIdError ||
-        stopoverTypeError ||
-        groundTimeError ||
-        payloadDeltaError
-    );
-    const hasActionsErrors = Boolean(actionsError);
-    const hasConditionsErrors = Boolean(conditionsError);
 
     return (
         <div className="space-y-3.5">
@@ -131,7 +144,7 @@ export function WaypointEditor<T extends WaypointItem>({
                     type="button"
                     onClick={() => setActiveSubTab("position")}
                     className={cn(
-                        "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1",
+                        "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                         activeSubTab === "position"
                             ? "bg-[var(--color-surface-panel)] shadow-2xs text-[var(--color-text-primary)] font-bold"
                             : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
@@ -145,21 +158,24 @@ export function WaypointEditor<T extends WaypointItem>({
                     type="button"
                     onClick={() => setActiveSubTab("actions")}
                     className={cn(
-                        "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1",
+                        "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                         activeSubTab === "actions"
                             ? "bg-[var(--color-surface-panel)] shadow-2xs text-[var(--color-text-primary)] font-bold"
                             : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
                         hasActionsErrors && "text-red-600"
                     )}
                 >
-                    <span>{t("actions")}</span>
+                    <span>
+                        {t("actions")}
+                        {actionBadgeCount > 0 ? ` (${actionBadgeCount})` : ""}
+                    </span>
                     {hasActionsErrors && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveSubTab("conditions")}
                     className={cn(
-                        "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1",
+                        "py-1 rounded transition-colors cursor-pointer flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                         activeSubTab === "conditions"
                             ? "bg-[var(--color-surface-panel)] shadow-2xs text-[var(--color-text-primary)] font-bold"
                             : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]",
@@ -175,7 +191,7 @@ export function WaypointEditor<T extends WaypointItem>({
 
             {activeSubTab === "position" && (
                 <WaypointPositionSubTab
-                    key={waypoint.id || waypoint.tempId}
+                    key={`${waypoint.id || waypoint.tempId}-${waypoint.hubId || "coord"}`}
                     waypoint={waypoint}
                     onUpdate={onUpdate}
                     hubs={hubs}
@@ -186,17 +202,11 @@ export function WaypointEditor<T extends WaypointItem>({
                     lngError={lngError}
                     altError={altError}
                     hubIdError={hubIdError}
-                    stopoverTypeError={stopoverTypeError}
-                    groundTimeError={groundTimeError}
-                    payloadDeltaError={payloadDeltaError}
                     onClearNameError={() => clearWpError("name")}
                     onClearLatError={() => clearWpError("latitude")}
                     onClearLngError={() => clearWpError("longitude")}
                     onClearAltError={() => clearWpError("altitude")}
                     onClearHubIdError={() => clearWpError("hubId")}
-                    onClearStopoverTypeError={() => clearWpError("stopoverType")}
-                    onClearGroundTimeError={() => clearWpError("groundTimeMinutes")}
-                    onClearPayloadDeltaError={() => clearWpError("payloadDeltaKg")}
                 />
             )}
 
@@ -206,6 +216,12 @@ export function WaypointEditor<T extends WaypointItem>({
                     onUpdate={onUpdate}
                     isReadOnly={isReadOnly}
                     error={actionsError}
+                    stopoverTypeError={stopoverTypeError}
+                    groundTimeError={groundTimeError}
+                    payloadDeltaError={payloadDeltaError}
+                    onClearStopoverTypeError={() => clearWpError("stopoverType")}
+                    onClearGroundTimeError={() => clearWpError("groundTimeMinutes")}
+                    onClearPayloadDeltaError={() => clearWpError("payloadDeltaKg")}
                 />
             )}
 

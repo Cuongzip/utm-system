@@ -995,7 +995,7 @@ export const viSafety: typeof enSafety = {
             restricted_zone: "VÙNG HẠN CHẾ",
         },
         strategies: {
-            hover: "BAY TREO (HOVER)",
+            hover: "BAY LƠ LỬNG (HOVER)",
             reroute: "ĐỔI LỘ TRÌNH",
             divert_altitude: "ĐỔI TẦNG CAO",
             return_to_base: "QUAY VỀ TRẠM (RTH)",
@@ -1141,7 +1141,7 @@ export const viSafety: typeof enSafety = {
         actionDescriptions: {
             RTH: "Quay về trạm gốc (RTH)",
             LAND: "Hạ cánh thẳng đứng ngay",
-            HOVER: "Giữ vị trí bay treo (Hover)",
+            HOVER: "Bay lơ lửng giữ vị trí (Hover)",
             DIVERT: "Chuyển hướng về vùng an toàn",
             DESCEND: "Hạ độ cao có kiểm soát",
             CLIMB: "Tăng lên độ cao an toàn",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,7 +15,9 @@ import {
     Skeleton,
 } from "@/components/ui";
 import { QUERY_KEYS, useEmergencyProtocols } from "@/hooks";
+import { useAppLocale } from "@/i18n";
 import { emergencyService } from "@/services/emergencyService";
+import { localizeResponseAction, localizeServerText } from "@/utils";
 import {
     RESPONSE_ACTION,
     RESPONSE_ACTIONS,
@@ -30,11 +32,6 @@ export interface ResponseProtocolsModalProps {
     canManageProtocols?: boolean;
 }
 
-const ACTION_OPTIONS = RESPONSE_ACTIONS.map((action) => ({
-    value: action,
-    label: action,
-}));
-
 export function ResponseProtocolsModal({
     isOpen,
     onClose,
@@ -42,8 +39,18 @@ export function ResponseProtocolsModal({
 }: ResponseProtocolsModalProps) {
     const t = useTranslations("emergency.modals.protocols");
     const tCommon = useTranslations("common");
+    const locale = useAppLocale();
     const queryClient = useQueryClient();
     const { data: protocolsData, isLoading: protocolsLoading } = useEmergencyProtocols(isOpen);
+
+    const actionOptions = useMemo(
+        () =>
+            RESPONSE_ACTIONS.map((action) => ({
+                value: action,
+                label: localizeResponseAction(action, locale, true),
+            })),
+        [locale]
+    );
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editAction, setEditAction] = useState<ResponseAction>(RESPONSE_ACTION.RTH);
@@ -140,12 +147,16 @@ export function ResponseProtocolsModal({
                                 <div className="flex justify-between items-center gap-3">
                                     <div className="flex flex-col gap-0.5 min-w-0">
                                         <div className="font-semibold text-sm text-[var(--color-text-primary)] truncate">
-                                            {protocol.name}
+                                            {localizeServerText(protocol.name, locale)}
                                         </div>
                                         <div className="text-xs font-mono text-[var(--color-text-muted)]">
                                             {t("actionPrefix")}{" "}
                                             <span className="font-bold text-slate-800">
-                                                {protocol.responseAction}
+                                                {localizeResponseAction(
+                                                    protocol.responseAction,
+                                                    locale,
+                                                    true
+                                                )}
                                             </span>
                                             {protocol.confirmationTimeoutSeconds != null && (
                                                 <span>
@@ -205,7 +216,7 @@ export function ResponseProtocolsModal({
                                                     onValueChange={(val) =>
                                                         setEditAction(val as ResponseAction)
                                                     }
-                                                    options={ACTION_OPTIONS}
+                                                    options={actionOptions}
                                                 />
                                             </div>
                                             <FormInput

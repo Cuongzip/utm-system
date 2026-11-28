@@ -24,9 +24,21 @@ import {
     type UnderlineTabItem,
 } from "@/components/ui";
 import { translateStatusLabel, useAppLocale } from "@/i18n";
-import { formatDateTime, formatTime, localizeServerText } from "@/utils";
+import {
+    formatDateTime,
+    formatTime,
+    formatTimelineEntryData,
+    localizeResponseAction,
+    localizeServerText,
+} from "@/utils";
 import { emergencyService } from "@/services/emergencyService";
-import { QUERY_KEYS, useDronesAll, useFlightsAll, useEmergencyIncidentBlackbox } from "@/hooks";
+import {
+    QUERY_KEYS,
+    useDronesAll,
+    useEntityCodeMap,
+    useFlightsAll,
+    useEmergencyIncidentBlackbox,
+} from "@/hooks";
 import {
     INCIDENT_STATUS,
     CLOSED_INCIDENT_STATUSES,
@@ -69,6 +81,7 @@ function IncidentDetailsModalBody({
     const queryClient = useQueryClient();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
+    const entityMap = useEntityCodeMap();
 
     const modalTabs = useMemo<readonly UnderlineTabItem<ModalTab>[]>(
         () => [
@@ -245,7 +258,9 @@ function IncidentDetailsModalBody({
         },
         {
             label: t("modals.details.actionRequired"),
-            value: incident.responseAction || t("modals.details.operatorInspection"),
+            value: incident.responseAction
+                ? localizeResponseAction(incident.responseAction, locale, true)
+                : t("modals.details.operatorInspection"),
         },
         { label: t("modals.details.detectedAt"), value: formatDateTime(incident.detectedAt) },
         {
@@ -279,8 +294,15 @@ function IncidentDetailsModalBody({
                         icon={AlertTriangle}
                         title={
                             incident.message
-                                ? localizeServerText(incident.message, locale)
+                                ? localizeServerText(incident.message, locale, { entityMap })
                                 : typeLabel
+                        }
+                        description={
+                            incident.resolutionNotes
+                                ? localizeServerText(incident.resolutionNotes, locale, {
+                                      entityMap,
+                                  })
+                                : undefined
                         }
                         rightSlot={
                             <StatusBadge
@@ -312,19 +334,33 @@ function IncidentDetailsModalBody({
                                 {t("modals.details.incidentTimeline")}
                             </span>
                             <div className="border border-[var(--color-border-default)] rounded-md divide-y divide-[var(--color-border-default)] max-h-36 overflow-y-auto bg-[var(--color-surface-panel)]">
-                                {incident.timeline.map((evt, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="px-3 py-2 flex justify-between items-center text-xs gap-3"
-                                    >
-                                        <span className="text-[var(--color-text-primary)] font-medium truncate">
-                                            {localizeServerText(evt.event, locale)}
-                                        </span>
-                                        <span className="text-[var(--color-text-muted)] text-[11px] shrink-0 font-mono tabular-nums">
-                                            {formatTime(evt.timestamp)}
-                                        </span>
-                                    </div>
-                                ))}
+                                {incident.timeline.map((evt, idx) => {
+                                    const metaText = formatTimelineEntryData(evt.data, locale, {
+                                        entityMap,
+                                    });
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="px-3 py-2 flex flex-col gap-0.5 text-xs"
+                                        >
+                                            <div className="flex justify-between items-center gap-3">
+                                                <span className="text-[var(--color-text-primary)] font-medium truncate">
+                                                    {localizeServerText(evt.event, locale, {
+                                                        entityMap,
+                                                    })}
+                                                </span>
+                                                <span className="text-[var(--color-text-muted)] text-[11px] shrink-0 font-mono tabular-nums">
+                                                    {formatTime(evt.timestamp)}
+                                                </span>
+                                            </div>
+                                            {metaText && (
+                                                <span className="text-[11px] font-mono text-[var(--color-text-muted)] truncate">
+                                                    {metaText}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -370,8 +406,26 @@ function IncidentDetailsModalBody({
                                         />
                                     ) : (
                                         blackboxEntries.slice(0, 15).map((entry) => {
-                                            const eventText =
-                                                entry.commandExecuted || entry.emergencyType || "—";
+                                            const eventText = entry.commandExecuted
+                                                ? localizeResponseAction(
+                                                      entry.commandExecuted,
+                                                      locale,
+                                                      true
+                                                  )
+                                                : entry.emergencyType &&
+                                                    (EMERGENCY_TYPES as readonly string[]).includes(
+                                                        entry.emergencyType
+                                                    )
+                                                  ? t(
+                                                        `types.${entry.emergencyType as EmergencyType}`
+                                                    )
+                                                  : entry.emergencyType
+                                                    ? localizeServerText(
+                                                          entry.emergencyType,
+                                                          locale,
+                                                          { entityMap }
+                                                      )
+                                                    : "—";
                                             return (
                                                 <TableRow key={entry.id}>
                                                     <TableCell

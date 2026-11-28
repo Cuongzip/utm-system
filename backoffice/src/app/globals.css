@@ -434,3 +434,64 @@ html[lang="vi"] .uppercase {
         scrollbar-color: #cbd5e1 transparent;
     }
 }
+
+@keyframes utm-drawer-overlay-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes utm-drawer-overlay-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes utm-drawer-slide-in {
+    from {
+        transform: translate3d(100%, 0, 0);
+    }
+    to {
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes utm-drawer-slide-out {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+    to {
+        transform: translate3d(100%, 0, 0);
+    }
+}
+
+.utm-drawer-overlay[data-state="open"] {
+    animation: utm-drawer-overlay-in 160ms ease-out;
+}
+
+.utm-drawer-overlay[data-state="closed"] {
+    animation: utm-drawer-overlay-out 140ms ease-in;
+}
+
+.utm-drawer-content[data-state="open"] {
+    animation: utm-drawer-slide-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.utm-drawer-content[data-state="closed"] {
+    animation: utm-drawer-slide-out 150ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .utm-drawer-overlay[data-state="open"],
+    .utm-drawer-overlay[data-state="closed"],
+    .utm-drawer-content[data-state="open"],
+    .utm-drawer-content[data-state="closed"] {
+        animation: none;
+    }
+}

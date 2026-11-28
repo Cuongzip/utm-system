@@ -4,8 +4,9 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Clock, Terminal } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState, Skeleton } from "@/components/ui";
-import { useDroneCommands } from "@/hooks";
-import { formatTime } from "@/utils";
+import { useDroneCommands, useEntityCodeMap } from "@/hooks";
+import { useAppLocale } from "@/i18n";
+import { formatTime, localizeResponseAction, localizeServerText } from "@/utils";
 import { COMMAND_TYPE, type DroneCommand, DEFAULT_COMMAND_STATUS } from "@/types";
 
 export interface RecentCommandsProps {
@@ -14,6 +15,8 @@ export interface RecentCommandsProps {
 
 export function RecentCommands({ droneId }: RecentCommandsProps) {
     const t = useTranslations("controlCenter");
+    const locale = useAppLocale();
+    const entityMap = useEntityCodeMap();
     const { data: commandList, isLoading } = useDroneCommands(droneId);
 
     const commands: DroneCommand[] = useMemo(() => {
@@ -42,7 +45,7 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
             case COMMAND_TYPE.EMERGENCY_STOP:
                 return t("commands.emergencyStop");
             default:
-                return (cmdType || "").replace(/_/g, " ");
+                return localizeResponseAction(cmdType, locale, true);
         }
     };
 
@@ -113,9 +116,15 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
                                 {cmd.errorMessage && (
                                     <span
                                         className="text-[10px] text-red-600 truncate font-mono"
-                                        title={cmd.errorMessage}
+                                        title={localizeServerText(cmd.errorMessage, locale, {
+                                            entityMap,
+                                        })}
                                     >
-                                        ({cmd.errorMessage})
+                                        (
+                                        {localizeServerText(cmd.errorMessage, locale, {
+                                            entityMap,
+                                        })}
+                                        )
                                     </span>
                                 )}
                             </div>

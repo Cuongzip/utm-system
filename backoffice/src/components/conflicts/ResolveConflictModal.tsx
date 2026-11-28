@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Compass, Check, AlertTriangle } from "lucide-react";
 import { Modal, CustomSelect, FormInput, Skeleton, TacticalCallout } from "@/components/ui";
-import { useConflictAdvice } from "@/hooks";
+import { useConflictAdvice, useEntityCodeMap } from "@/hooks";
 import type { AppLocale } from "@/i18n";
 import { localizeServerText, validateSchema } from "@/utils";
 import { resolveConflictBody } from "@/generated/conflict";
@@ -47,6 +47,7 @@ function ResolveConflictModalBody({
 }: ResolveConflictModalBodyProps) {
     const locale = useLocale() as AppLocale;
     const t = useTranslations("conflicts");
+    const entityMap = useEntityCodeMap();
     const [strategy, setStrategy] = useState<ResolutionStrategy>(
         RESOLUTION_STRATEGY.ALTITUDE_CHANGE
     );
@@ -99,7 +100,9 @@ function ResolveConflictModalBody({
         const mappedStrategy = matchResolutionStrategy(option.strategy);
         setStrategy(mappedStrategy);
         setSelectedAdviceRank(option.rank);
-        setNotes(option.rationale ? localizeServerText(option.rationale, locale) : "");
+        setNotes(
+            option.rationale ? localizeServerText(option.rationale, locale, { entityMap }) : ""
+        );
 
         const actions = option.recommendedActions || {};
         const altCandidate = actions.targetAltitudeM ?? actions.altitudeM ?? actions.newAltitudeM;
@@ -162,7 +165,7 @@ function ResolveConflictModalBody({
                 title={conflictTitle}
                 description={
                     conflict.description
-                        ? localizeServerText(conflict.description, locale)
+                        ? localizeServerText(conflict.description, locale, { entityMap })
                         : undefined
                 }
                 rightSlot={
@@ -244,7 +247,9 @@ function ResolveConflictModalBody({
                                         </div>
                                         {opt.rationale && (
                                             <p className="mt-1 text-[11px] text-slate-600 leading-snug">
-                                                {localizeServerText(opt.rationale, locale)}
+                                                {localizeServerText(opt.rationale, locale, {
+                                                    entityMap,
+                                                })}
                                             </p>
                                         )}
                                     </button>

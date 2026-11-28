@@ -45,6 +45,7 @@ export function ChamferButton({
     className,
     disabled,
     type = "button",
+    onClick,
     children,
     ...props
 }: ChamferButtonProps) {
@@ -52,6 +53,7 @@ export function ChamferButton({
         clip ?? (variant === "outline" || size === "xs" ? "xs" : "sm");
     const clipClass = CLIP_CLASSES[resolvedClip];
     const sizeClass = SIZE_CLASSES[size];
+    const linkClick = onClick as unknown as React.MouseEventHandler<HTMLAnchorElement> | undefined;
 
     if (variant === "outline") {
         const outlineWrapperClass = cn(
@@ -81,6 +83,7 @@ export function ChamferButton({
                         href={href}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={linkClick}
                         aria-label={props["aria-label"]}
                         title={props.title}
                         className={outlineWrapperClass}
@@ -93,6 +96,7 @@ export function ChamferButton({
                 return (
                     <a
                         href={href}
+                        onClick={linkClick}
                         aria-label={props["aria-label"]}
                         title={props.title}
                         className={outlineWrapperClass}
@@ -104,6 +108,7 @@ export function ChamferButton({
             return (
                 <Link
                     href={href}
+                    onClick={linkClick}
                     aria-label={props["aria-label"]}
                     title={props.title}
                     className={outlineWrapperClass}
@@ -114,7 +119,13 @@ export function ChamferButton({
         }
 
         return (
-            <button type={type} disabled={disabled} className={outlineWrapperClass} {...props}>
+            <button
+                type={type}
+                disabled={disabled}
+                onClick={onClick}
+                className={outlineWrapperClass}
+                {...props}
+            >
                 {outlineInner}
             </button>
         );
@@ -136,6 +147,7 @@ export function ChamferButton({
                     href={href}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={linkClick}
                     aria-label={props["aria-label"]}
                     title={props.title}
                     className={solidClass}
@@ -148,6 +160,7 @@ export function ChamferButton({
             return (
                 <a
                     href={href}
+                    onClick={linkClick}
                     aria-label={props["aria-label"]}
                     title={props.title}
                     className={solidClass}
@@ -159,6 +172,7 @@ export function ChamferButton({
         return (
             <Link
                 href={href}
+                onClick={linkClick}
                 aria-label={props["aria-label"]}
                 title={props.title}
                 className={solidClass}
@@ -169,7 +183,7 @@ export function ChamferButton({
     }
 
     return (
-        <button type={type} disabled={disabled} className={solidClass} {...props}>
+        <button type={type} disabled={disabled} onClick={onClick} className={solidClass} {...props}>
             {children}
         </button>
     );

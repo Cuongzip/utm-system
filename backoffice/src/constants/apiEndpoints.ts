@@ -7,6 +7,11 @@ export const API_ENDPOINTS = {
         BASE: "/api/api/v1/drones",
         BY_ID: (id: string) => `/api/api/v1/drones/${id}`,
         COMMANDS: (droneId: string) => `/api/api/v1/drones/${droneId}/commands`,
+        CANCEL_COMMAND: (droneId: string, commandId: string) =>
+            `/api/api/v1/drones/${droneId}/commands/${commandId}/cancel`,
+    },
+    COMMANDS: {
+        BY_FLIGHT: (flightId: string) => `/api/api/v1/commands/flight/${flightId}`,
     },
     HUBS: {
         BASE: "/api/api/v1/hubs",
@@ -138,6 +143,7 @@ export const API_ENDPOINTS = {
             `/api/api/v1/missions/${missionId}/waypoints/auto-plan-hubs`,
     },
     TELEMETRY: {
+        HISTORY_BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}`,
         LATEST_BY_FLIGHT: (flightId: string) => `/api/api/v1/telemetry/flight/${flightId}/latest`,
         LATEST_BY_DRONE: (droneId: string) => `/api/api/v1/telemetry/drone/${droneId}/latest`,
     },

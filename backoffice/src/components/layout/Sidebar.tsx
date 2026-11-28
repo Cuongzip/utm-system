@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,7 +26,13 @@ import {
     X,
 } from "lucide-react";
 
-import { usePermissions, type Permissions } from "@/hooks";
+import {
+    useConflictsActive,
+    useEmergencyActiveIncidents,
+    usePermissions,
+    type Permissions,
+} from "@/hooks";
+import { CLOSED_INCIDENT_STATUSES } from "@/types";
 import { AuthenticationInfo } from "./AuthenticationInfo";
 
 type SidebarTabId =
@@ -110,16 +116,33 @@ const NAV_SECTIONS: NavSectionConfig[] = [
     },
 ];
 
+function formatNavCount(count: number): string {
+    return count > 99 ? "99+" : String(count).padStart(2, "0");
+}
+
 export function Sidebar() {
     const t = useTranslations("nav");
     const pathname = usePathname();
     const permissions = usePermissions();
+    const { data: activeConflicts = [] } = useConflictsActive();
+    const { data: activeIncidents = [] } = useEmergencyActiveIncidents();
     const [mobileOpen, setMobileOpen] = useState(false);
+
+    const conflictsCount = activeConflicts.length;
+    const emergencyCount = useMemo(
+        () =>
+            activeIncidents.filter(
+                (inc) => !inc.status || !CLOSED_INCIDENT_STATUSES.includes(inc.status)
+            ).length,
+        [activeIncidents]
+    );
 
     const visibleSections = NAV_SECTIONS.map((section) => ({
         ...section,
         items: section.items.filter((item) => !item.isVisible || item.isVisible(permissions)),
     })).filter((section) => section.items.length > 0);
+
+    const isImmersiveCockpit = /^\/dashboard\/flights\/[^/]+\/cockpit(?:\/|$)/.test(pathname);
 
     useEffect(() => {
         if (!mobileOpen) return;
@@ -131,6 +154,10 @@ export function Sidebar() {
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [mobileOpen]);
+
+    if (isImmersiveCockpit) {
+        return null;
+    }
 
     return (
         <>
@@ -176,84 +203,104 @@ export function Sidebar() {
             <nav
                 id="main-sidebar-nav"
                 aria-label={t("mainNavigation")}
-                className={`fixed inset-y-0 left-0 z-50 w-60 bg-white text-slate-600 flex flex-col justify-between shrink-0 border-r border-slate-200 h-full overflow-y-auto transition-transform duration-200 lg:static lg:translate-x-0 lg:z-40 ${
+                className={`fixed inset-y-0 left-0 z-50 w-60 bg-white text-slate-600 flex flex-col shrink-0 border-r border-slate-200 h-full overflow-hidden transition-transform duration-200 lg:static lg:translate-x-0 lg:z-40 ${
                     mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
                 }`}
             >
-                <div className="flex flex-col">
-                    <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200">
-                        <Link
-                            href="/dashboard"
-                            onClick={() => setMobileOpen(false)}
-                            className="flex items-center space-x-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                        >
-                            <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center p-1 shadow-2xs">
-                                <Image
-                                    src="/svg/utm-logo.svg"
-                                    alt="UTM Logo"
-                                    width={24}
-                                    height={24}
-                                    className="h-6 w-6 object-contain"
-                                    priority
-                                />
+                <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 shrink-0">
+                    <Link
+                        href="/dashboard"
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center space-x-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center p-1 shadow-2xs">
+                            <Image
+                                src="/svg/utm-logo.svg"
+                                alt="UTM Logo"
+                                width={24}
+                                height={24}
+                                className="h-6 w-6 object-contain"
+                                priority
+                            />
+                        </div>
+                        <div>
+                            <span className="block text-sm font-bold tracking-widest text-slate-900 leading-none">
+                                UTM
+                            </span>
+                        </div>
+                    </Link>
+
+                    <button
+                        type="button"
+                        onClick={() => setMobileOpen(false)}
+                        aria-label={t("closeMenu")}
+                        className="lg:hidden p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors cursor-pointer"
+                    >
+                        <X className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto utm-scroll px-3 py-3 space-y-4 text-xs font-medium">
+                    {visibleSections.map((section) => (
+                        <div key={section.sectionKey} className="space-y-0.5">
+                            <div className="px-3 pb-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 select-none">
+                                {t(`sections.${section.sectionKey}`)}
                             </div>
-                            <div>
-                                <span className="block text-sm font-bold tracking-widest text-slate-900 leading-none">
-                                    UTM
-                                </span>
-                            </div>
-                        </Link>
+                            {section.items.map((item) => {
+                                const Icon = item.icon;
+                                const isActive =
+                                    item.href === "/dashboard"
+                                        ? pathname === "/dashboard"
+                                        : pathname.startsWith(item.href);
+                                const badgeCount =
+                                    item.id === "conflicts"
+                                        ? conflictsCount
+                                        : item.id === "emergency"
+                                          ? emergencyCount
+                                          : 0;
 
-                        <button
-                            type="button"
-                            onClick={() => setMobileOpen(false)}
-                            aria-label={t("closeMenu")}
-                            className="lg:hidden p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 transition-colors cursor-pointer"
-                        >
-                            <X className="w-4 h-4" aria-hidden="true" />
-                        </button>
-                    </div>
-
-                    <div className="px-3 py-3 space-y-4 text-xs font-medium">
-                        {visibleSections.map((section) => (
-                            <div key={section.sectionKey} className="space-y-0.5">
-                                <div className="px-3 pb-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 select-none">
-                                    {t(`sections.${section.sectionKey}`)}
-                                </div>
-                                {section.items.map((item) => {
-                                    const Icon = item.icon;
-                                    const isActive =
-                                        item.href === "/dashboard"
-                                            ? pathname === "/dashboard"
-                                            : pathname.startsWith(item.href);
-
-                                    return (
-                                        <Link
-                                            key={item.id}
-                                            href={item.href}
-                                            onClick={() => setMobileOpen(false)}
-                                            aria-current={isActive ? "page" : undefined}
-                                            className={`flex items-center w-full px-3 py-1.5 rounded-md transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
-                                                isActive
-                                                    ? "text-white bg-slate-700 shadow-2xs font-semibold"
-                                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                                            }`}
-                                        >
+                                return (
+                                    <Link
+                                        key={item.id}
+                                        href={item.href}
+                                        onClick={() => setMobileOpen(false)}
+                                        aria-current={isActive ? "page" : undefined}
+                                        className={`group flex items-center justify-between gap-2 w-full px-3 py-1.5 rounded-md transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                                            isActive
+                                                ? "text-white bg-slate-700 shadow-2xs font-semibold"
+                                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                                        }`}
+                                    >
+                                        <span className="flex items-center min-w-0">
                                             <Icon
                                                 className={`h-4 w-4 mr-2.5 shrink-0 ${
-                                                    isActive ? "text-white" : "text-slate-400"
+                                                    isActive
+                                                        ? "text-white"
+                                                        : "text-slate-400 group-hover:text-slate-600"
                                                 }`}
                                                 aria-hidden="true"
                                             />
                                             <span className="truncate">
                                                 {t(`items.${item.id}`)}
                                             </span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
+                                        </span>
+
+                                        {badgeCount > 0 && (
+                                            <span
+                                                className={`px-2 py-0.5 rounded-[5px] font-mono text-[11px] font-bold tabular-nums leading-tight shrink-0 transition-colors ${
+                                                    isActive
+                                                        ? "bg-slate-900/75 text-white"
+                                                        : "bg-slate-200/85 text-slate-700 group-hover:bg-slate-200 group-hover:text-slate-900"
+                                                }`}
+                                            >
+                                                {formatNavCount(badgeCount)}
+                                            </span>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    ))}
                 </div>
 
                 <div className="shrink-0">

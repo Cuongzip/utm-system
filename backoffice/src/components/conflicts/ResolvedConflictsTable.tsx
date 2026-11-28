@@ -15,7 +15,7 @@ import {
     StatusBadge,
     Pagination,
 } from "@/components/ui";
-import { usePagination } from "@/hooks";
+import { useEntityCodeMap, usePagination } from "@/hooks";
 import type { AppLocale } from "@/i18n";
 import {
     formatDateTime,
@@ -36,6 +36,7 @@ export function ResolvedConflictsTable({
 }: ResolvedConflictsTableProps) {
     const locale = useLocale() as AppLocale;
     const t = useTranslations("conflicts");
+    const entityMap = useEntityCodeMap();
     const [searchQuery, setSearchQuery] = useState("");
     const [severityFilter, setSeverityFilter] = useState("all");
 
@@ -116,7 +117,7 @@ export function ResolvedConflictsTable({
                                     : "—";
 
                                 const localizedDesc = item.description
-                                    ? localizeServerText(item.description, locale)
+                                    ? localizeServerText(item.description, locale, { entityMap })
                                     : "";
 
                                 const timeTooltip = item.detectedAt

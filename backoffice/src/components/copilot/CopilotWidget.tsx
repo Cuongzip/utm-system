@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -17,115 +18,22 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ChamferButton, ChamferCard, TacticalCallout } from "@/components/ui";
+import {
+    clampFloatingOffset,
+    COPILOT_OFFSET_STORAGE_KEY,
+    FLOATING_FAB_SIZE_PX,
+    useFloatingPosition,
+    type ViewportOffset,
+} from "@/hooks";
 import { intelligenceService } from "@/services";
 import type { CopilotToolTraceItem, CopilotProposedAction } from "@/types";
 
 export const COPILOT_TOGGLE_EVENT = "utm:copilot-toggle";
 
-const OFFSET_STORAGE_KEY = "utm_copilot_offset";
-const OFFSET_CHANGE_EVENT = "utm:copilot-offset-change";
-const EDGE_MARGIN_PX = 12;
-const LAUNCHER_SIZE_PX = 46;
 const PANEL_WIDTH_PX = 400;
 const PANEL_HEIGHT_PX = 520;
-const DRAG_THRESHOLD_PX = 5;
-
-interface ViewportOffset {
-    right: number;
-    bottom: number;
-}
-
-interface DragSession {
-    pointerId: number;
-    startX: number;
-    startY: number;
-    startRight: number;
-    startBottom: number;
-    boxWidth: number;
-    boxHeight: number;
-    lastRight: number;
-    lastBottom: number;
-    moved: boolean;
-}
-
 const DEFAULT_OFFSET: ViewportOffset = { right: 20, bottom: 20 };
-let cachedOffsetRaw: string | null = null;
-let cachedOffsetViewportKey = "";
-let cachedOffsetSnapshot: ViewportOffset = DEFAULT_OFFSET;
-
-function clampOffset(offset: ViewportOffset, boxWidth: number, boxHeight: number): ViewportOffset {
-    if (typeof window === "undefined") return offset;
-    const maxRight = Math.max(EDGE_MARGIN_PX, window.innerWidth - boxWidth - EDGE_MARGIN_PX);
-    const maxBottom = Math.max(EDGE_MARGIN_PX, window.innerHeight - boxHeight - EDGE_MARGIN_PX);
-    return {
-        right: Math.min(Math.max(EDGE_MARGIN_PX, Math.round(offset.right)), maxRight),
-        bottom: Math.min(Math.max(EDGE_MARGIN_PX, Math.round(offset.bottom)), maxBottom),
-    };
-}
-
-function subscribeOffsetStore(callback: () => void) {
-    if (typeof window === "undefined") return () => {};
-    window.addEventListener("storage", callback);
-    window.addEventListener("resize", callback);
-    window.addEventListener(OFFSET_CHANGE_EVENT, callback);
-    return () => {
-        window.removeEventListener("storage", callback);
-        window.removeEventListener("resize", callback);
-        window.removeEventListener(OFFSET_CHANGE_EVENT, callback);
-    };
-}
-
-function getOffsetSnapshot(): ViewportOffset {
-    if (typeof window === "undefined") return DEFAULT_OFFSET;
-    const viewportKey = `${window.innerWidth}x${window.innerHeight}`;
-    let raw: string | null = null;
-    try {
-        raw = localStorage.getItem(OFFSET_STORAGE_KEY);
-    } catch {
-        raw = null;
-    }
-
-    if (raw === cachedOffsetRaw && viewportKey === cachedOffsetViewportKey) {
-        return cachedOffsetSnapshot;
-    }
-
-    let parsedOffset = DEFAULT_OFFSET;
-    if (raw) {
-        try {
-            const parsed = JSON.parse(raw) as Partial<ViewportOffset>;
-            if (typeof parsed.right === "number" && typeof parsed.bottom === "number") {
-                parsedOffset = { right: parsed.right, bottom: parsed.bottom };
-            }
-        } catch {
-            parsedOffset = DEFAULT_OFFSET;
-        }
-    }
-
-    const clamped = clampOffset(parsedOffset, LAUNCHER_SIZE_PX, LAUNCHER_SIZE_PX);
-    cachedOffsetRaw = raw;
-    cachedOffsetViewportKey = viewportKey;
-    if (
-        clamped.right !== cachedOffsetSnapshot.right ||
-        clamped.bottom !== cachedOffsetSnapshot.bottom
-    ) {
-        cachedOffsetSnapshot = clamped;
-    }
-    return cachedOffsetSnapshot;
-}
-
-function getServerOffsetSnapshot(): ViewportOffset {
-    return DEFAULT_OFFSET;
-}
-
-function saveOffsetToStorage(next: ViewportOffset) {
-    if (typeof window === "undefined") return;
-    try {
-        localStorage.setItem(OFFSET_STORAGE_KEY, JSON.stringify(next));
-        window.dispatchEvent(new Event(OFFSET_CHANGE_EVENT));
-    } catch {
-        // ignore storage quota errors
-    }
-}
+const IS_COCKPIT_PATH_RE = /^\/dashboard\/flights\/[^/]+\/cockpit(?:\/|$)/;
 
 export function toggleCopilot() {
     if (typeof window !== "undefined") {
@@ -143,25 +51,22 @@ interface ChatEntry {
 }
 
 export function CopilotWidget() {
+    const pathname = usePathname();
     const t = useTranslations("copilot");
     const [open, setOpen] = useState(false);
-    const persistedOffset = useSyncExternalStore(
-        subscribeOffsetStore,
-        getOffsetSnapshot,
-        getServerOffsetSnapshot
-    );
-    const [dragOffset, setDragOffset] = useState<ViewportOffset | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
+    const { activeOffset, isDragging, startDrag, moveDrag, endDrag, cancelDrag } =
+        useFloatingPosition({
+            storageKey: COPILOT_OFFSET_STORAGE_KEY,
+            defaultOffset: DEFAULT_OFFSET,
+            boxSize: FLOATING_FAB_SIZE_PX,
+        });
     const [input, setInput] = useState("");
     const [entries, setEntries] = useState<ChatEntry[]>([]);
     const [expandedTraces, setExpandedTraces] = useState<Record<string, boolean>>({});
     const [executedActions, setExecutedActions] = useState<Record<string, boolean>>({});
     const [executingActionKey, setExecutingActionKey] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const dragSessionRef = useRef<DragSession | null>(null);
     const nextIdRef = useRef(0);
-
-    const activeOffset = dragOffset ?? persistedOffset;
 
     const quickPrompts = [t("quickPrompts.p1"), t("quickPrompts.p2"), t("quickPrompts.p3")];
 
@@ -188,80 +93,6 @@ export function CopilotWidget() {
         window.addEventListener("keydown", handleKeyDown, true);
         return () => window.removeEventListener("keydown", handleKeyDown, true);
     }, [open]);
-
-    const startDrag = (
-        e: React.PointerEvent<HTMLElement>,
-        originOffset: ViewportOffset,
-        boxWidth: number,
-        boxHeight: number
-    ) => {
-        if (e.button !== 0) return;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        dragSessionRef.current = {
-            pointerId: e.pointerId,
-            startX: e.clientX,
-            startY: e.clientY,
-            startRight: originOffset.right,
-            startBottom: originOffset.bottom,
-            boxWidth,
-            boxHeight,
-            lastRight: originOffset.right,
-            lastBottom: originOffset.bottom,
-            moved: false,
-        };
-    };
-
-    const moveDrag = (e: React.PointerEvent<HTMLElement>) => {
-        const session = dragSessionRef.current;
-        if (!session || session.pointerId !== e.pointerId) return;
-
-        const dx = e.clientX - session.startX;
-        const dy = e.clientY - session.startY;
-        if (!session.moved && Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
-            session.moved = true;
-            setIsDragging(true);
-        }
-        if (!session.moved) return;
-
-        const next = clampOffset(
-            {
-                right: session.startRight - dx,
-                bottom: session.startBottom - dy,
-            },
-            session.boxWidth,
-            session.boxHeight
-        );
-        session.lastRight = next.right;
-        session.lastBottom = next.bottom;
-        setDragOffset(next);
-    };
-
-    const endDrag = (e: React.PointerEvent<HTMLElement>, onTap?: () => void) => {
-        const session = dragSessionRef.current;
-        if (!session || session.pointerId !== e.pointerId) return;
-
-        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-            e.currentTarget.releasePointerCapture(e.pointerId);
-        }
-        dragSessionRef.current = null;
-        setIsDragging(false);
-
-        if (session.moved) {
-            saveOffsetToStorage({ right: session.lastRight, bottom: session.lastBottom });
-            setDragOffset(null);
-        } else {
-            setDragOffset(null);
-            onTap?.();
-        }
-    };
-
-    const cancelDrag = (e: React.PointerEvent<HTMLElement>) => {
-        const session = dragSessionRef.current;
-        if (!session || session.pointerId !== e.pointerId) return;
-        dragSessionRef.current = null;
-        setDragOffset(null);
-        setIsDragging(false);
-    };
 
     const chatMutation = useMutation({
         mutationFn: async (nextEntries: ChatEntry[]) => {
@@ -327,6 +158,10 @@ export function CopilotWidget() {
         }
     };
 
+    if (pathname && IS_COCKPIT_PATH_RE.test(pathname)) {
+        return null;
+    }
+
     if (!open) {
         return (
             <button
@@ -335,7 +170,7 @@ export function CopilotWidget() {
                 title={t("launcherTooltip")}
                 style={{ right: `${activeOffset.right}px`, bottom: `${activeOffset.bottom}px` }}
                 onPointerDown={(e) =>
-                    startDrag(e, activeOffset, LAUNCHER_SIZE_PX, LAUNCHER_SIZE_PX)
+                    startDrag(e, activeOffset, FLOATING_FAB_SIZE_PX, FLOATING_FAB_SIZE_PX)
                 }
                 onPointerMove={moveDrag}
                 onPointerUp={(e) => endDrag(e, () => setOpen(true))}
@@ -346,12 +181,12 @@ export function CopilotWidget() {
                         setOpen(true);
                     }
                 }}
-                className={`group fixed z-50 h-[46px] w-[46px] p-[1.5px] chamfer-sm bg-slate-400/90 hover:bg-slate-300 drop-shadow-[0_8px_20px_rgba(15,23,42,0.28)] flex items-center justify-center touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
+                className={`group fixed z-40 h-10 w-10 p-[1.5px] chamfer-sm bg-slate-400/90 hover:bg-slate-300 drop-shadow-[0_8px_20px_rgba(15,23,42,0.28)] flex items-center justify-center touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
                     isDragging ? "cursor-grabbing scale-105" : "cursor-grab transition-transform"
                 }`}
             >
                 <span className="w-full h-full chamfer-sm bg-slate-800 group-hover:bg-slate-700 text-white flex items-center justify-center transition-colors pointer-events-none">
-                    <Bot className="w-5 h-5 text-white" aria-hidden="true" />
+                    <Bot className="w-[18px] h-[18px] text-white" aria-hidden="true" />
                 </span>
             </button>
         );
@@ -365,7 +200,7 @@ export function CopilotWidget() {
         typeof window !== "undefined"
             ? Math.min(PANEL_HEIGHT_PX, window.innerHeight - 24)
             : PANEL_HEIGHT_PX;
-    const clampedPanel = clampOffset(activeOffset, panelW, panelH);
+    const clampedPanel = clampFloatingOffset(activeOffset, panelW, panelH);
 
     return (
         <div

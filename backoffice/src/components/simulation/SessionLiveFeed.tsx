@@ -18,9 +18,17 @@ import {
     type UnderlineTabItem,
 } from "@/components/ui";
 import { useTelemetryStream } from "@/hooks/useStomp";
-import { useSimulationEvents, useFlightsAll, useDronesAll } from "@/hooks";
+import { useSimulationEvents, useFlightsAll, useDronesAll, useEntityCodeMap } from "@/hooks";
+import { useAppLocale } from "@/i18n";
 import { toast } from "sonner";
-import { formatTime, formatCoordinates, formatAltitude } from "@/utils";
+import {
+    formatTime,
+    formatCoordinates,
+    formatAltitude,
+    localizeServerText,
+    localizeSimEventType,
+    localizeSimScenario,
+} from "@/utils";
 import {
     SIMULATION_STATUS,
     SIMULATION_SCENARIO,
@@ -36,6 +44,8 @@ type TabType = "telemetry" | "events" | "specs";
 
 export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
     const t = useTranslations("simulation.liveFeed");
+    const locale = useAppLocale();
+    const entityMap = useEntityCodeMap();
     const [activeTab, setActiveTab] = useState<TabType>("telemetry");
     const [wsRecords, setWsRecords] = useState<TelemetryRecord[]>([]);
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -274,17 +284,24 @@ export function SessionLiveFeed({ session }: SessionLiveFeedProps) {
                                                 />
                                                 {evt.scenario && (
                                                     <span className="text-[11px] font-mono text-slate-500 uppercase">
-                                                        [{evt.scenario}]
+                                                        [{localizeSimScenario(evt.scenario, locale)}
+                                                        ]
                                                     </span>
                                                 )}
                                                 <span className="text-xs font-mono text-slate-800">
-                                                    {evt.message || evt.type || t("eventFallback")}
+                                                    {evt.message
+                                                        ? localizeServerText(evt.message, locale, {
+                                                              entityMap,
+                                                          })
+                                                        : evt.type
+                                                          ? localizeSimEventType(evt.type, locale)
+                                                          : t("eventFallback")}
                                                 </span>
                                             </div>
 
                                             {evt.type && (
                                                 <span className="text-[10px] font-mono text-slate-400 uppercase shrink-0">
-                                                    {evt.type}
+                                                    {localizeSimEventType(evt.type, locale)}
                                                 </span>
                                             )}
                                         </div>

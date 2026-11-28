@@ -7,12 +7,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
     ArrowLeft,
+    ArrowUpRight,
     Save,
     Loader2,
     FileSearch,
     ShieldCheck,
     Play,
     Radio,
+    RotateCcw,
     CheckCircle2,
     AlertTriangle,
 } from "lucide-react";
@@ -35,6 +37,7 @@ import {
     getInitialFlightFormPayload,
     EDITABLE_FLIGHT_STATUSES,
     ACTIVE_FLIGHT_STATUSES,
+    CONTROLLABLE_FLIGHT_STATUSES,
     DEFAULT_FLIGHT_STATUS,
     FLIGHT_STATUS,
     FLIGHT_AUTHORIZATION_STATUS,
@@ -58,6 +61,7 @@ export interface FlightEditorProps {
     drones: Drone[];
     onSave: (payload: CreateFlightPayload | UpdateFlightPayload) => Promise<void>;
     loading: boolean;
+    onBackToReplay?: () => void;
 }
 
 export function FlightEditor({
@@ -67,9 +71,11 @@ export function FlightEditor({
     drones = [],
     onSave,
     loading = false,
+    onBackToReplay,
 }: FlightEditorProps) {
     const router = useRouter();
     const t = useTranslations("flights");
+    const td = useTranslations("flights.deck");
     const tCommon = useTranslations("common");
     const tWp = useTranslations("waypoints");
     const queryClient = useQueryClient();
@@ -392,11 +398,8 @@ export function FlightEditor({
     const canStartNow = Boolean(
         mode === "edit" && initialData?.id && flightStatus === FLIGHT_STATUS.AUTHORIZED
     );
-    const isActiveNow = Boolean(
-        mode === "edit" && initialData?.id && ACTIVE_FLIGHT_STATUSES.includes(flightStatus)
-    );
     const canCompleteOrAbortNow = Boolean(
-        mode === "edit" && initialData?.id && flightStatus === FLIGHT_STATUS.ACTIVE
+        mode === "edit" && initialData?.id && ACTIVE_FLIGHT_STATUSES.includes(flightStatus)
     );
 
     const pageTitle =
@@ -417,6 +420,33 @@ export function FlightEditor({
                 badges={mode === "edit" ? <StatusBadge status={flightStatus} showDot /> : null}
                 headerActions={
                     <div className="flex flex-wrap items-center gap-2">
+                        {mode === "edit" && initialData?.id && onBackToReplay && (
+                            <ChamferButton
+                                variant="dark"
+                                size="sm"
+                                clip="sm"
+                                onClick={onBackToReplay}
+                            >
+                                <RotateCcw className="w-3.5 h-3.5 text-white" />
+                                <span>{td("backToReplay")}</span>
+                            </ChamferButton>
+                        )}
+
+                        {mode === "edit" &&
+                            initialData?.id &&
+                            CONTROLLABLE_FLIGHT_STATUSES.includes(flightStatus) && (
+                                <ChamferButton
+                                    href={`/dashboard/flights/${initialData.id}/cockpit`}
+                                    variant="dark"
+                                    size="sm"
+                                    clip="sm"
+                                >
+                                    <Radio className="w-3.5 h-3.5 text-white" />
+                                    <span>{td("enterCockpit")}</span>
+                                    <ArrowUpRight className="w-3.5 h-3.5 text-white" />
+                                </ChamferButton>
+                            )}
+
                         {mode === "edit" && initialData?.id && (
                             <ChamferButton
                                 variant="outline"
@@ -486,18 +516,6 @@ export function FlightEditor({
                                     <span>{t("editor.abort")}</span>
                                 </ChamferButton>
                             </>
-                        )}
-
-                        {isActiveNow && (
-                            <ChamferButton
-                                href="/dashboard/control-center"
-                                variant="dark"
-                                size="sm"
-                                clip="sm"
-                            >
-                                <Radio className="w-3.5 h-3.5 text-white" />
-                                <span>{t("editor.controlCenter")}</span>
-                            </ChamferButton>
                         )}
 
                         <ChamferButton

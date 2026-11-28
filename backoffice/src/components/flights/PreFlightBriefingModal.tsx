@@ -25,7 +25,7 @@ import { useFlightBriefing } from "@/hooks";
 import { intelligenceService } from "@/services";
 import { translateStatusLabel, useAppLocale } from "@/i18n";
 import type { FlightAssessment } from "@/types";
-import { formatDateTime } from "@/utils";
+import { formatDateTime, localizeServerText } from "@/utils";
 
 export interface PreFlightBriefingModalProps {
     isOpen: boolean;
@@ -315,7 +315,11 @@ export function PreFlightBriefingModal({
                                     )}
                                 </span>
                             }
-                            description={assessment.ai?.humanSummary}
+                            description={
+                                assessment.ai?.humanSummary
+                                    ? localizeServerText(assessment.ai.humanSummary, locale)
+                                    : undefined
+                            }
                             rightSlot={
                                 <StatusBadge status={rawDecisionCode} label={decisionLabel} />
                             }
@@ -329,7 +333,7 @@ export function PreFlightBriefingModal({
                                         </span>
                                         <ul className="list-disc list-inside text-xs text-red-800 space-y-0.5">
                                             {assessment.ai.blockingReasons.map((r, i) => (
-                                                <li key={i}>{r}</li>
+                                                <li key={i}>{localizeServerText(r, locale)}</li>
                                             ))}
                                         </ul>
                                     </div>
@@ -343,7 +347,7 @@ export function PreFlightBriefingModal({
                                     </span>
                                     <ul className="list-disc list-inside text-xs text-slate-700 space-y-0.5">
                                         {assessment.ai.conditions.map((c, i) => (
-                                            <li key={i}>{c}</li>
+                                            <li key={i}>{localizeServerText(c, locale)}</li>
                                         ))}
                                     </ul>
                                 </div>

@@ -61,4 +61,18 @@ export const droneService = {
             body: JSON.stringify(payload),
         });
     },
+
+    getCommandsByFlightId: async (flightId: string): Promise<DroneCommand[]> => {
+        const res = await apiClient<DroneCommand[] | DroneCommandListResponse>(
+            API_ENDPOINTS.COMMANDS.BY_FLIGHT(flightId)
+        );
+        if (Array.isArray(res)) return res;
+        return res?.items ?? [];
+    },
+
+    cancelCommand: async (droneId: string, commandId: string): Promise<DroneCommand> => {
+        return apiClient<DroneCommand>(API_ENDPOINTS.DRONES.CANCEL_COMMAND(droneId, commandId), {
+            method: "POST",
+        });
+    },
 };

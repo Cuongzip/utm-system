@@ -6,7 +6,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ChamferCard, StatusBadge, EmptyState, Skeleton } from "@/components/ui";
 import { compareCreatedDesc, formatDateTime } from "@/utils";
-import { DEFAULT_FLIGHT_STATUS, type Flight, type FlightStatus, type Hub } from "@/types";
+import {
+    ACTIVE_FLIGHT_STATUSES,
+    DEFAULT_FLIGHT_STATUS,
+    type Flight,
+    type FlightStatus,
+    type Hub,
+} from "@/types";
 
 export interface DashboardFlightLogProps {
     flights: Flight[];
@@ -94,12 +100,16 @@ export function DashboardFlightLog({
                             : tc("unscheduled");
                         const status: FlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;
 
+                        const isAirborne = ACTIVE_FLIGHT_STATUSES.includes(status);
+
                         return (
                             <Link
                                 key={flight.id || idx}
                                 href={
                                     flight.id
-                                        ? `/dashboard/flights/${flight.id}`
+                                        ? isAirborne
+                                            ? `/dashboard/flights/${flight.id}/cockpit`
+                                            : `/dashboard/flights/${flight.id}`
                                         : "/dashboard/flights"
                                 }
                                 className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"

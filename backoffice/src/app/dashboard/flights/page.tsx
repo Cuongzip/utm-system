@@ -18,7 +18,7 @@ import { useCrudList, useHubsAll, useDronesAll, usePermissions, QUERY_KEYS } fro
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppLocale } from "@/i18n";
 import { createStatusOptions, compareCreatedDesc } from "@/utils";
-import { FLIGHT_STATUSES, type Flight } from "@/types";
+import { ACTIVE_FLIGHT_STATUSES, FLIGHT_STATUSES, type Flight } from "@/types";
 
 export default function FlightsPage() {
     const router = useRouter();
@@ -143,7 +143,10 @@ export default function FlightsPage() {
     }, [flights, deferredSearch, statusFilter, hubMap, droneMap]);
 
     const handleSelectFlight = (flight: Flight | null) => {
-        if (flight?.id) {
+        if (!flight?.id) return;
+        if (flight.status && ACTIVE_FLIGHT_STATUSES.includes(flight.status)) {
+            router.push(`/dashboard/flights/${flight.id}/cockpit`);
+        } else {
             router.push(`/dashboard/flights/${flight.id}`);
         }
     };
@@ -193,6 +196,8 @@ export default function FlightsPage() {
                     hasFilters={hasFilters}
                     onClearFilters={clearFilters}
                     onSelectFlight={handleSelectFlight}
+                    onOpenDeck={(flight) => router.push(`/dashboard/flights/${flight.id}/cockpit`)}
+                    onViewDossier={(flight) => router.push(`/dashboard/flights/${flight.id}`)}
                     onOpenBriefing={setBriefingFlight}
                     onAuthorizeFlight={authorizeFlightMutation.mutate}
                     onStartFlight={startFlightMutation.mutate}

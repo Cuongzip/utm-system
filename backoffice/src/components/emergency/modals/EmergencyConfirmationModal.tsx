@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { AlertOctagon, AlertTriangle, Check, Clock, ShieldAlert, X } from "lucide-react";
 import { Modal, ChamferButton, StatusBadge, TacticalCallout } from "@/components/ui";
 import { useAppLocale } from "@/i18n";
-import { useDronesAll, useFlightsAll } from "@/hooks";
-import { localizeServerText } from "@/utils";
+import { useDronesAll, useEntityCodeMap, useFlightsAll } from "@/hooks";
+import { localizeResponseAction, localizeServerText } from "@/utils";
 import {
     EMERGENCY_SEVERITY,
     EMERGENCY_TYPES,
@@ -36,6 +36,7 @@ export function EmergencyConfirmationModal({
     const locale = useAppLocale();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
+    const entityMap = useEntityCodeMap();
     const [nowMs, setNowMs] = useState(() => Date.now());
 
     const current = pendingConfirmations[0] ?? null;
@@ -165,7 +166,9 @@ export function EmergencyConfirmationModal({
                     tone={severity === EMERGENCY_SEVERITY.WARNING ? "warning" : "critical"}
                     icon={SeverityIcon}
                     title={
-                        incident.message ? localizeServerText(incident.message, locale) : typeLabel
+                        incident.message
+                            ? localizeServerText(incident.message, locale, { entityMap })
+                            : typeLabel
                     }
                     description={t("modals.confirm.supervisedDesc")}
                     rightSlot={<StatusBadge status={severity} dotShape="circle" />}
@@ -201,7 +204,9 @@ export function EmergencyConfirmationModal({
                             {t("modals.confirm.protocol")}
                         </dt>
                         <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 truncate">
-                            {protocol?.name || t("modals.confirm.standardFailsafe")}
+                            {protocol?.name
+                                ? localizeServerText(protocol.name, locale, { entityMap })
+                                : t("modals.confirm.standardFailsafe")}
                         </dd>
                     </div>
                 </dl>
@@ -216,7 +221,7 @@ export function EmergencyConfirmationModal({
                         </span>
                     </div>
                     <span className="px-2.5 py-1 text-xs font-mono font-bold rounded bg-slate-900 text-white shrink-0">
-                        {proposedAction}
+                        {localizeResponseAction(proposedAction, locale, true)}
                     </span>
                 </div>
 

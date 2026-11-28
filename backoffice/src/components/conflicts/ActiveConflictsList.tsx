@@ -7,7 +7,7 @@ import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/component
 import { cn } from "@/lib";
 import type { AppLocale } from "@/i18n";
 import { formatDateTime, formatDistance, formatAltitude, localizeServerText } from "@/utils";
-import { useFlightsAll } from "@/hooks";
+import { useEntityCodeMap, useFlightsAll } from "@/hooks";
 import { CONFLICT_STATUS, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
 export interface ActiveConflictsListProps {
@@ -32,6 +32,7 @@ export function ActiveConflictsList({
     const locale = useLocale() as AppLocale;
     const t = useTranslations("conflicts");
     const { data: flights = [] } = useFlightsAll();
+    const entityMap = useEntityCodeMap();
     const [referenceNowMs, setReferenceNowMs] = useState<number | null>(null);
 
     useEffect(() => {
@@ -107,7 +108,9 @@ export function ActiveConflictsList({
                     : null;
 
                 const rawAdvisory = recommendationSummary || cleanDescription;
-                const advisoryText = rawAdvisory ? localizeServerText(rawAdvisory, locale) : null;
+                const advisoryText = rawAdvisory
+                    ? localizeServerText(rawAdvisory, locale, { entityMap })
+                    : null;
 
                 const detectedMs = conflict.detectedAt
                     ? new Date(conflict.detectedAt).getTime()

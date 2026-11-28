@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import { useHubCurrentWeather, useHubWeatherForecast, useHubWeatherAlerts } from "@/hooks";
 import type { AppLocale } from "@/i18n";
-import { formatDateTime, localizeServerText } from "@/utils";
+import { formatDateTime, localizeAlertTypeTitle, localizeServerText } from "@/utils";
 import type { Hub } from "@/types";
 
 interface HubWeatherDetailCardProps {
@@ -214,7 +214,11 @@ export function HubWeatherDetailCard({ hub }: HubWeatherDetailCardProps) {
                                             key={`${alert.type}-${idx}`}
                                             tone={isCrit ? "critical" : "warning"}
                                             icon={AlertTriangle}
-                                            title={alert.title || alert.type}
+                                            title={
+                                                alert.title
+                                                    ? localizeServerText(alert.title, locale)
+                                                    : localizeAlertTypeTitle(alert.type, locale)
+                                            }
                                             description={
                                                 alert.message
                                                     ? localizeServerText(alert.message, locale)

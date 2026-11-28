@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
-import type { WaypointItem } from "../types";
+import { isHubWaypointItem, type WaypointItem } from "../types";
 
 export interface WaypointEditorHeaderProps {
     waypoint: WaypointItem;
@@ -12,10 +12,11 @@ export interface WaypointEditorHeaderProps {
 export function WaypointEditorHeader({ waypoint, onClose }: WaypointEditorHeaderProps) {
     const t = useTranslations("waypoints.editor");
     const tCommon = useTranslations("common");
+    const isHubNode = isHubWaypointItem(waypoint);
     return (
         <div className="flex items-center justify-between border-b border-[var(--color-border-default)] pb-2.5">
             <span className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wide">
-                {t("headerTitle", { seq: waypoint.sequence ?? 1 })}
+                {t(isHubNode ? "hubHeaderTitle" : "headerTitle", { seq: waypoint.sequence ?? 1 })}
             </span>
             <button
                 type="button"

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { PageHeader } from "@/components/ui";
+import { PageEditorSkeleton, PageHeader } from "@/components/ui";
 import {
     LiveTelemetry,
     FlightControl,
@@ -85,13 +86,15 @@ function PerspectiveResetHandler({ hubs, flights }: { hubs: Hub[]; flights: Flig
     return null;
 }
 
-export default function ControlCenterPage() {
+function ControlCenterContent() {
     const t = useTranslations("controlCenter");
+    const searchParams = useSearchParams();
+    const queryFlightId = searchParams.get("flightId");
     const { data: allFlights = [] } = useFlightsAll(3000);
     const { data: hubs = [] } = useHubsAll();
     const { data: drones = [] } = useDronesAll();
     const { data: airspaceZones = [] } = useAirspaceAll();
-    const [rawSelectedFlightId, setSelectedFlightId] = useState<string | null>(null);
+    const [rawSelectedFlightId, setSelectedFlightId] = useState<string | null>(queryFlightId);
     const [filterAirspace, setFilterAirspace] = useState(true);
     const [filterHubs, setFilterHubs] = useState(true);
     const [filterAdsb, setFilterAdsb] = useState(false);
@@ -267,5 +270,13 @@ export default function ControlCenterPage() {
                 <ActiveAlerts />
             </div>
         </div>
+    );
+}
+
+export default function ControlCenterPage() {
+    return (
+        <Suspense fallback={<PageEditorSkeleton />}>
+            <ControlCenterContent />
+        </Suspense>
     );
 }

@@ -11,6 +11,8 @@ import {
     FileSearch,
     Pencil,
     Eye,
+    Radio,
+    RotateCcw,
 } from "lucide-react";
 import {
     ChamferCard,
@@ -31,6 +33,7 @@ import {
 } from "@/components/ui";
 import { usePagination } from "@/hooks";
 import {
+    ACTIVE_FLIGHT_STATUSES,
     EDITABLE_FLIGHT_STATUSES,
     DEFAULT_FLIGHT_STATUS,
     FLIGHT_STATUS,
@@ -49,6 +52,8 @@ export interface FlightsTableProps {
     hasFilters?: boolean;
     onClearFilters?: () => void;
     onSelectFlight: (flight: Flight) => void;
+    onOpenDeck?: (flight: Flight) => void;
+    onViewDossier?: (flight: Flight) => void;
     onOpenBriefing: (flight: Flight) => void;
     onAuthorizeFlight: (flight: Flight) => void;
     onStartFlight: (flight: Flight) => void;
@@ -67,6 +72,8 @@ export function FlightsTable({
     hasFilters = false,
     onClearFilters,
     onSelectFlight,
+    onOpenDeck,
+    onViewDossier,
     onOpenBriefing,
     onAuthorizeFlight,
     onStartFlight,
@@ -86,15 +93,34 @@ export function FlightsTable({
         const authStatus: FlightAuthorizationStatus =
             flight.authorizationStatus ?? FLIGHT_AUTHORIZATION_STATUS.PENDING;
         const isEditable = EDITABLE_FLIGHT_STATUSES.includes(status);
+        const isAirborne = ACTIVE_FLIGHT_STATUSES.includes(status);
+        const isPostFlight =
+            status === FLIGHT_STATUS.COMPLETED ||
+            status === FLIGHT_STATUS.EMERGENCY_LANDING ||
+            status === FLIGHT_STATUS.CANCELLED;
+
+        const primaryLabel = isAirborne
+            ? t("actions.openDeck")
+            : isPostFlight
+              ? t("actions.replayFlight")
+              : isEditable
+                ? t("actions.editPlan")
+                : t("actions.viewDetails");
+
+        const primaryIcon = isAirborne ? (
+            <Radio className="w-3.5 h-3.5 text-emerald-600" />
+        ) : isPostFlight ? (
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+        ) : isEditable ? (
+            <Pencil className="w-3.5 h-3.5 text-slate-500" />
+        ) : (
+            <Eye className="w-3.5 h-3.5 text-slate-500" />
+        );
 
         const items: ActionMenuItem[] = [
             {
-                label: isEditable ? t("actions.editPlan") : t("actions.viewDetails"),
-                icon: isEditable ? (
-                    <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                ) : (
-                    <Eye className="w-3.5 h-3.5 text-slate-500" />
-                ),
+                label: primaryLabel,
+                icon: primaryIcon,
                 onClick: () => onSelectFlight(flight),
             },
             {
@@ -103,6 +129,22 @@ export function FlightsTable({
                 onClick: () => onOpenBriefing(flight),
             },
         ];
+
+        if (isAirborne && onViewDossier) {
+            items.push({
+                label: t("actions.viewDossier"),
+                icon: <Eye className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onViewDossier(flight),
+            });
+        }
+
+        if (status === FLIGHT_STATUS.AUTHORIZED && onOpenDeck) {
+            items.push({
+                label: t("actions.openDeck"),
+                icon: <Radio className="w-3.5 h-3.5 text-slate-500" />,
+                onClick: () => onOpenDeck(flight),
+            });
+        }
 
         if (
             canAuthorize &&
@@ -124,7 +166,7 @@ export function FlightsTable({
             });
         }
 
-        if (status === FLIGHT_STATUS.ACTIVE) {
+        if (isAirborne) {
             items.push({
                 label: t("actions.complete"),
                 icon: <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />,

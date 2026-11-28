@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { StatusBadge } from "@/components/ui";
 import { useFlightFeasibility } from "@/hooks";
-import { formatDistance } from "@/utils";
+import { useAppLocale } from "@/i18n";
+import { formatDistance, localizeServerText } from "@/utils";
 import { FEASIBILITY_VERDICT, type Drone, type FeasibilityVerdict } from "@/types";
 import { estimateRouteFeasibility } from "./flightUtils";
 
@@ -22,6 +23,7 @@ export function FlightFeasibilityCard({
     overrideReason,
 }: FlightFeasibilityCardProps) {
     const t = useTranslations("flights.feasibility");
+    const locale = useAppLocale();
     const { data: liveResult } = useFlightFeasibility(flightId, Boolean(flightId) && distanceM > 0);
 
     const localEstimate = useMemo(() => {
@@ -123,8 +125,10 @@ export function FlightFeasibilityCard({
                 <ul className="space-y-1 pt-1.5 border-t border-[var(--color-border-default)] text-[11px] text-slate-600">
                     {solutions.slice(0, 2).map((sol, idx) => (
                         <li key={idx}>
-                            <span className="font-semibold text-slate-800">{sol.label}: </span>
-                            <span>{sol.detail}</span>
+                            <span className="font-semibold text-slate-800">
+                                {localizeServerText(sol.label, locale)}:{" "}
+                            </span>
+                            <span>{localizeServerText(sol.detail, locale)}</span>
                         </li>
                     ))}
                 </ul>

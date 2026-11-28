@@ -4,12 +4,12 @@ import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ShieldCheck } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge, EmptyState, Skeleton } from "@/components/ui";
-import { useActiveAlerts, QUERY_KEYS } from "@/hooks";
+import { useActiveAlerts, useEntityCodeMap, QUERY_KEYS } from "@/hooks";
 import { alertService } from "@/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib";
-import { formatTime, localizeServerText } from "@/utils";
+import { formatTime, localizeAlertTypeTitle, localizeServerText } from "@/utils";
 import type { AppLocale } from "@/i18n";
 import { ALERT_SEVERITY, ALERT_STATUS } from "@/types";
 
@@ -17,29 +17,12 @@ export interface ActiveAlertsProps {
     fixedHeight?: boolean;
 }
 
-const VI_ALERT_TYPE_LABELS: Record<string, string> = {
-    MOTOR_FAILURE: "LỖI ĐỘNG CƠ",
-    C2_LINK_LOST: "MẤT KẾT NỐI C2",
-    C2_LINK_LOST_CONTINGENT: "GIÁN ĐOẠN C2",
-    SIGNAL_LOST: "MẤT TÍN HIỆU",
-    GPS_FAILURE: "LỖI ĐỊNH VỊ GPS",
-    BATTERY_LOW: "PIN THẤP",
-    BATTERY_CRITICAL: "PIN NGUY CẤP",
-    BATTERY_DRAIN: "SỤT PIN NHANH",
-    GEOFENCE_BREACH: "VI PHẠM VÙNG CẤM",
-    AIRSPACE_VIOLATION: "VI PHẠM KHÔNG PHẬN",
-    LATERAL_CORRIDOR_BREACH: "LỆCH NGANG HÀNH LANG",
-    VERTICAL_CORRIDOR_BREACH: "LỆCH CAO ĐỘ HÀNH LANG",
-    CORRIDOR_DEVIATION: "LỆCH HÀNH LANG BAY",
-    LOSS_OF_SEPARATION: "MẤT PHÂN CÁCH",
-    WEATHER_HAZARD: "NGUY HIỂM THỜI TIẾT",
-};
-
 export function ActiveAlerts({ fixedHeight = true }: ActiveAlertsProps) {
     const t = useTranslations("controlCenter");
     const ta = useTranslations("alerts");
     const tc = useTranslations("common");
     const locale = useLocale() as AppLocale;
+    const entityMap = useEntityCodeMap();
     const queryClient = useQueryClient();
     const { data: alerts = [], isLoading } = useActiveAlerts();
 
@@ -130,13 +113,10 @@ export function ActiveAlerts({ fixedHeight = true }: ActiveAlertsProps) {
                     sortedAlerts.map((alert) => {
                         const isAcknowledged = alert.status === ALERT_STATUS.ACKNOWLEDGED;
                         const rawTypeKey = (alert.alertType || "ALERT").trim().toUpperCase();
-                        const displayType =
-                            locale === "vi"
-                                ? (VI_ALERT_TYPE_LABELS[rawTypeKey] ??
-                                  rawTypeKey.replace(/_/g, " "))
-                                : rawTypeKey.replace(/_/g, " ");
+                        const displayType = localizeAlertTypeTitle(rawTypeKey, locale);
                         const cleanMsg =
-                            localizeServerText(alert.message, locale) || t("anomalyDetected");
+                            localizeServerText(alert.message, locale, { entityMap }) ||
+                            t("anomalyDetected");
 
                         return (
                             <div

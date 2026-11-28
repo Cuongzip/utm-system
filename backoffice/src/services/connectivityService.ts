@@ -89,6 +89,12 @@ export const connectivityService = {
         return apiClient<TelemetryModeConfig[]>(API_ENDPOINTS.CONNECTIVITY.TELEMETRY_MODES);
     },
 
+    getDeviceTelemetryMode: async (deviceId: string): Promise<SetTelemetryModeResponse> => {
+        return apiClient<SetTelemetryModeResponse>(
+            API_ENDPOINTS.CONNECTIVITY.DEVICE_TELEMETRY_MODE(deviceId)
+        );
+    },
+
     setDeviceTelemetryMode: async (
         deviceId: string,
         payload: SetTelemetryModePayload

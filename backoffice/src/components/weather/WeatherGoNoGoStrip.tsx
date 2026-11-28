@@ -43,7 +43,7 @@ export function WeatherGoNoGoStrip({
 
     const results = useQueries({
         queries: visibleHubs.map((hub) => ({
-            queryKey: QUERY_KEYS.weatherHubGoNoGo(hub.id),
+            queryKey: QUERY_KEYS.weatherHubGoNoGo(hub.id, locale),
             queryFn: () => weatherAisService.getHubGoNoGo(hub.id),
             staleTime: 1000 * 60 * 2,
             retry: false,

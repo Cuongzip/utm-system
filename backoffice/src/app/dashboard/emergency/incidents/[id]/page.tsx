@@ -49,6 +49,7 @@ import {
     useEmergencyIncidentBlackbox,
     useDronesAll,
     useFlightsAll,
+    useEntityCodeMap,
 } from "@/hooks";
 import { emergencyService } from "@/services/emergencyService";
 import { translateStatusLabel, useAppLocale } from "@/i18n";
@@ -58,6 +59,8 @@ import {
     formatCoordinates,
     formatAltitude,
     formatSpeed,
+    formatTimelineEntryData,
+    localizeResponseAction,
     localizeServerText,
 } from "@/utils";
 import {
@@ -78,16 +81,6 @@ const PLAYBACK_SPEED_OPTIONS = [
     { value: "2", label: "2x" },
     { value: "4", label: "4x" },
 ];
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function formatTimelineValue(val: unknown): string {
-    const str = String(val ?? "");
-    if (UUID_PATTERN.test(str)) {
-        return `${str.slice(0, 8).toUpperCase()}`;
-    }
-    return str;
-}
 
 interface RootCauseFormProps {
     incident: EmergencyIncidentVm;
@@ -214,6 +207,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
     );
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
+    const entityMap = useEntityCodeMap();
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackIndex, setPlaybackIndex] = useState(0);
@@ -462,7 +456,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         value:
                             incident.responseAction &&
                             incident.responseAction !== RESPONSE_ACTION.NONE
-                                ? incident.responseAction
+                                ? localizeResponseAction(incident.responseAction, locale, true)
                                 : t("detail.noneAction"),
                         subValue: incident.wasAutoExecuted
                             ? t("detail.autoExecuted")
@@ -703,10 +697,26 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                             />
                                         ) : (
                                             blackboxEntries.slice(0, 50).map((entry, idx) => {
-                                                const eventText =
-                                                    entry.commandExecuted ||
-                                                    entry.emergencyType ||
-                                                    "—";
+                                                const eventText = entry.commandExecuted
+                                                    ? localizeResponseAction(
+                                                          entry.commandExecuted,
+                                                          locale,
+                                                          true
+                                                      )
+                                                    : entry.emergencyType &&
+                                                        (
+                                                            EMERGENCY_TYPES as readonly string[]
+                                                        ).includes(entry.emergencyType)
+                                                      ? t(
+                                                            `types.${entry.emergencyType as EmergencyType}`
+                                                        )
+                                                      : entry.emergencyType
+                                                        ? localizeServerText(
+                                                              entry.emergencyType,
+                                                              locale,
+                                                              { entityMap }
+                                                          )
+                                                        : "—";
                                                 const isActiveFrame = idx === safeIndex;
                                                 return (
                                                     <TableRow
@@ -767,7 +777,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
 
                             <p className="text-sm font-semibold text-slate-900 leading-snug">
                                 {incident.message
-                                    ? localizeServerText(incident.message, locale)
+                                    ? localizeServerText(incident.message, locale, { entityMap })
                                     : typeLabel}
                             </p>
 
@@ -815,7 +825,11 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 <TacticalCallout
                                     tone="info"
                                     title={t("detail.resolutionNotes")}
-                                    description={incident.resolutionNotes}
+                                    description={localizeServerText(
+                                        incident.resolutionNotes,
+                                        locale,
+                                        { entityMap }
+                                    )}
                                 />
                             )}
                         </div>
@@ -834,38 +848,42 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                 </p>
                             ) : (
                                 <div className="flex flex-col gap-3">
-                                    {incident.timeline.map((evt, idx) => (
-                                        <div key={idx} className="flex gap-3">
-                                            <div className="flex flex-col items-center pt-1">
-                                                <div className="w-2 h-2 rounded-full bg-slate-800 shrink-0" />
-                                                {idx < (incident.timeline?.length ?? 0) - 1 && (
-                                                    <div className="w-px flex-1 bg-slate-200 mt-1" />
-                                                )}
-                                            </div>
-                                            <div className="flex-1 pb-2 min-w-0">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-xs font-semibold text-slate-900">
-                                                        {evt.event
-                                                            ? localizeServerText(evt.event, locale)
-                                                            : t("detail.eventFallback")}
-                                                    </span>
-                                                    <span className="text-[11px] font-mono text-slate-400 shrink-0 tabular-nums">
-                                                        {formatTime(evt.timestamp)}
-                                                    </span>
+                                    {incident.timeline.map((evt, idx) => {
+                                        const metaText = formatTimelineEntryData(evt.data, locale, {
+                                            entityMap,
+                                        });
+                                        return (
+                                            <div key={idx} className="flex gap-3">
+                                                <div className="flex flex-col items-center pt-1">
+                                                    <div className="w-2 h-2 rounded-full bg-slate-800 shrink-0" />
+                                                    {idx < (incident.timeline?.length ?? 0) - 1 && (
+                                                        <div className="w-px flex-1 bg-slate-200 mt-1" />
+                                                    )}
                                                 </div>
-                                                {evt.data && Object.keys(evt.data).length > 0 && (
-                                                    <p className="text-[11px] font-mono text-slate-500 mt-0.5 break-words">
-                                                        {Object.entries(evt.data)
-                                                            .map(
-                                                                ([k, v]) =>
-                                                                    `${k}: ${formatTimelineValue(v)}`
-                                                            )
-                                                            .join(" · ")}
-                                                    </p>
-                                                )}
+                                                <div className="flex-1 pb-2 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-xs font-semibold text-slate-900">
+                                                            {evt.event
+                                                                ? localizeServerText(
+                                                                      evt.event,
+                                                                      locale,
+                                                                      { entityMap }
+                                                                  )
+                                                                : t("detail.eventFallback")}
+                                                        </span>
+                                                        <span className="text-[11px] font-mono text-slate-400 shrink-0 tabular-nums">
+                                                            {formatTime(evt.timestamp)}
+                                                        </span>
+                                                    </div>
+                                                    {metaText && (
+                                                        <p className="text-[11px] font-mono text-slate-500 mt-0.5 break-words">
+                                                            {metaText}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

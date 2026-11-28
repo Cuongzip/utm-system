@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { ChevronRight, ShieldCheck, Check, X, Clock } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/components/ui";
 import { useAppLocale } from "@/i18n";
-import { formatRelativeTime, localizeServerText } from "@/utils";
-import { useDronesAll, useFlightsAll } from "@/hooks";
+import { formatRelativeTime, localizeResponseAction, localizeServerText } from "@/utils";
+import { useDronesAll, useEntityCodeMap, useFlightsAll } from "@/hooks";
 import {
     INCIDENT_STATUS,
     EMERGENCY_TYPES,
@@ -34,6 +34,7 @@ export function ActiveIncidentsList({
     const locale = useAppLocale();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
+    const entityMap = useEntityCodeMap();
     const [nowMs, setNowMs] = useState(() => Date.now());
 
     const hasPending = useMemo(
@@ -135,7 +136,7 @@ export function ActiveIncidentsList({
                             incident.incidentNumber ||
                             droneRegText;
                         const detailMessage = incident.message
-                            ? localizeServerText(incident.message, locale)
+                            ? localizeServerText(incident.message, locale, { entityMap })
                             : "";
 
                         return (
@@ -184,7 +185,11 @@ export function ActiveIncidentsList({
                                     {incident.responseAction &&
                                         incident.responseAction !== RESPONSE_ACTION.NONE && (
                                             <span className="px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider rounded bg-slate-100 text-slate-700 border border-slate-200">
-                                                {incident.responseAction}
+                                                {localizeResponseAction(
+                                                    incident.responseAction,
+                                                    locale,
+                                                    true
+                                                )}
                                             </span>
                                         )}
 

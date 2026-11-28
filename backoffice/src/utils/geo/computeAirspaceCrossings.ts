@@ -173,9 +173,22 @@ export function computeAirspaceCrossings(
                     const endD = prev.dist + segLen * t1;
                     const alt0 = prev.alt + (curr.alt - prev.alt) * t0;
                     const alt1 = prev.alt + (curr.alt - prev.alt) * t1;
-                    const penetrated =
-                        zoneType !== "hub_corridor" &&
-                        doesSegmentOverlapAltitudeBand(alt0, alt1, floorM, ceilingM);
+                    const normalizedType = zoneType.toLowerCase();
+                    const isPermissiveZone =
+                        normalizedType === "hub_corridor" ||
+                        normalizedType === "hub_zone" ||
+                        normalizedType === "controlled";
+                    const maxSegAlt = Math.max(alt0, alt1);
+                    const minSegAlt = Math.min(alt0, alt1);
+                    const isMidCorridorBelowFloor =
+                        normalizedType === "hub_corridor" &&
+                        floorM > 0 &&
+                        minSegAlt < floorM &&
+                        startD > 120 &&
+                        endD < projectedRoute[projectedRoute.length - 1].dist - 120;
+                    const penetrated = isPermissiveZone
+                        ? maxSegAlt > ceilingM || isMidCorridorBelowFloor
+                        : doesSegmentOverlapAltitudeBand(alt0, alt1, floorM, ceilingM);
 
                     if (openBand && Math.abs(openBand.endDistanceM - startD) <= 2) {
                         openBand.endDistanceM = endD;

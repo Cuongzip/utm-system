@@ -4,8 +4,13 @@ import { useTranslations } from "next-intl";
 import { AlertCircle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib";
 import { formatAltitude, formatCoordinates } from "@/utils";
-import { STOPOVER_TYPE, WAYPOINT_TYPE, type Hub } from "@/types";
-import type { WaypointItem } from "../types";
+import { type Hub } from "@/types";
+import {
+    isHubWaypointItem,
+    parseHubActionItems,
+    parseWaypointActionItems,
+    type WaypointItem,
+} from "../types";
 
 export interface WaypointListItemProps<T extends WaypointItem> {
     waypoint: T;
@@ -35,25 +40,34 @@ export function WaypointListItem<T extends WaypointItem>({
     onDelete,
 }: WaypointListItemProps<T>) {
     const t = useTranslations("waypoints");
-    const isHubStop = waypoint.waypointType === WAYPOINT_TYPE.HUB || Boolean(waypoint.hubId);
+    const isHubStop = isHubWaypointItem(waypoint);
     const displayName =
         (isHubStop ? matchedHub?.name || waypoint.name : waypoint.name) ||
         t("defaultWaypointName", { seq: displaySequence });
     const coordStr = formatCoordinates(waypoint);
-    const stopoverText =
-        waypoint.stopoverType && waypoint.stopoverType !== STOPOVER_TYPE.NONE
-            ? `${t(`stopoverShort.${waypoint.stopoverType}`)}${
+    const hubItems = isHubStop ? parseHubActionItems(waypoint) : [];
+    const hubStopSummary =
+        hubItems.length > 0
+            ? `${hubItems.map((i) => t(`stopoverShort.${i.type}`)).join(" + ")}${
                   waypoint.groundTimeMinutes != null && waypoint.groundTimeMinutes > 0
                       ? ` ${waypoint.groundTimeMinutes}m`
                       : ""
               }`
             : null;
+    const actionCount = isHubStop ? 0 : parseWaypointActionItems(waypoint).length;
+    const actionSummary =
+        actionCount > 0 ? t("actions.actionsCountBadge", { count: actionCount }) : null;
     const metaText = isHubStop
-        ? [matchedHub?.code, stopoverText, coordStr].filter(Boolean).join(" • ")
-        : t("altMeta", {
-              alt: formatAltitude(waypoint.altitude ?? 50),
-              coords: coordStr,
-          });
+        ? [matchedHub?.code, hubStopSummary, coordStr].filter(Boolean).join(" • ")
+        : [
+              t("altMeta", {
+                  alt: formatAltitude(waypoint.altitude ?? 50),
+                  coords: coordStr,
+              }),
+              actionSummary,
+          ]
+              .filter(Boolean)
+              .join(" • ");
 
     return (
         <div

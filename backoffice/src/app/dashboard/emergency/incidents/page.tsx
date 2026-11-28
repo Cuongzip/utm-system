@@ -23,9 +23,9 @@ import {
     TableLoading,
 } from "@/components/ui";
 import { EmergencyNavTabs } from "@/components/emergency/EmergencyNavTabs";
-import { useEmergencyIncidents, useDronesAll, useFlightsAll } from "@/hooks";
+import { useEmergencyIncidents, useDronesAll, useEntityCodeMap, useFlightsAll } from "@/hooks";
 import { translateStatusLabel, useAppLocale } from "@/i18n";
-import { formatDateTime, localizeServerText } from "@/utils";
+import { formatDateTime, localizeResponseAction, localizeServerText } from "@/utils";
 import {
     EMERGENCY_SEVERITIES,
     EMERGENCY_TYPES,
@@ -80,6 +80,7 @@ export default function EmergencyIncidentsPage() {
     } = useEmergencyIncidents(queryParams);
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
+    const entityMap = useEntityCodeMap();
 
     const droneMap = useMemo(
         () =>
@@ -317,7 +318,9 @@ export default function EmergencyIncidentsPage() {
                                             `INC-${incident.id.slice(0, 8).toUpperCase()}`;
                                         const typeLabel = getTypeLabel(incident.emergencyType);
                                         const summary = incident.message
-                                            ? localizeServerText(incident.message, locale)
+                                            ? localizeServerText(incident.message, locale, {
+                                                  entityMap,
+                                              })
                                             : typeLabel;
 
                                         return (
@@ -366,7 +369,11 @@ export default function EmergencyIncidentsPage() {
                                                     incident.responseAction !==
                                                         RESPONSE_ACTION.NONE ? (
                                                         <span className="px-2 py-0.5 text-[11px] font-mono font-bold rounded bg-slate-100 text-slate-700 border border-slate-200">
-                                                            {incident.responseAction}
+                                                            {localizeResponseAction(
+                                                                incident.responseAction,
+                                                                locale,
+                                                                true
+                                                            )}
                                                         </span>
                                                     ) : (
                                                         <span className="text-slate-400">—</span>

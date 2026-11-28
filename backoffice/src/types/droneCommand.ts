@@ -38,6 +38,11 @@ export const COMMAND_TYPE = {
     PAUSE: "pause",
     HOVER: "hover",
     RESUME: "resume",
+    GOTO: "goto",
+    SET_ALTITUDE: "set_altitude",
+    UPDATE_MISSION: "update_mission",
+    SET_HOME: "set_home",
+    CONFIGURE: "configure",
 } as const satisfies Record<string, CommandTypeGenerated>;
 
 export const DEFAULT_COMMAND_STATUS: CommandStatusGenerated = COMMAND_STATUS.PENDING;

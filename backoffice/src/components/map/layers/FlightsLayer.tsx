@@ -142,14 +142,33 @@ export function FlightsLayer({
 
                     if (sanitizedCoords.length >= 2) {
                         coordinates = sanitizedCoords;
-                        if (dep && isValidGeoPoint(dep.lat, dep.lng)) {
+                        if (
+                            dep &&
+                            isValidGeoPoint(dep.lat, dep.lng) &&
+                            calculateDistance(
+                                Number(coordinates[0][1]),
+                                Number(coordinates[0][0]),
+                                dep.lat,
+                                dep.lng
+                            ) <= 60
+                        ) {
                             coordinates[0] = [dep.lng, dep.lat, coordinates[0][2] ?? 10];
                         }
-                        if (arr && isValidGeoPoint(arr.lat, arr.lng)) {
-                            coordinates[coordinates.length - 1] = [
+                        const lastIdx = coordinates.length - 1;
+                        if (
+                            arr &&
+                            isValidGeoPoint(arr.lat, arr.lng) &&
+                            calculateDistance(
+                                Number(coordinates[lastIdx][1]),
+                                Number(coordinates[lastIdx][0]),
+                                arr.lat,
+                                arr.lng
+                            ) <= 60
+                        ) {
+                            coordinates[lastIdx] = [
                                 arr.lng,
                                 arr.lat,
-                                coordinates[coordinates.length - 1][2] ?? 10,
+                                coordinates[lastIdx][2] ?? 10,
                             ];
                         }
                     }

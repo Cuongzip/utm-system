@@ -22,9 +22,13 @@ export const WAYPOINT_ACTION_TYPES = [
     "fly_through",
     "hover",
     "photo",
+    "start_video",
+    "stop_video",
+    "rotate_gimbal",
     "winch_drop",
     "payload_pickup",
     "payload_drop",
+    "sound_alert",
     "land",
 ] as const;
 export type WaypointActionType = (typeof WAYPOINT_ACTION_TYPES)[number];
@@ -34,9 +38,13 @@ export const WAYPOINT_ACTION_TYPE = {
     FLY_THROUGH: "fly_through",
     HOVER: "hover",
     PHOTO: "photo",
+    START_VIDEO: "start_video",
+    STOP_VIDEO: "stop_video",
+    ROTATE_GIMBAL: "rotate_gimbal",
     WINCH_DROP: "winch_drop",
     PAYLOAD_PICKUP: "payload_pickup",
     PAYLOAD_DROP: "payload_drop",
+    SOUND_ALERT: "sound_alert",
     LAND: "land",
 } as const satisfies Record<string, WaypointActionType>;
 
@@ -44,11 +52,15 @@ export const DEFAULT_WAYPOINT_ACTION: WaypointActionType = WAYPOINT_ACTION_TYPE.
 export const WAYPOINT_ACTION_LABELS: Record<WaypointActionType, string> = {
     takeoff: "Takeoff",
     fly_through: "Fly Through",
-    hover: "Hover",
-    photo: "Photo",
+    hover: "Hover in Place",
+    photo: "Take Photo",
+    start_video: "Start Video Recording",
+    stop_video: "Stop Video Recording",
+    rotate_gimbal: "Rotate Camera / Gimbal",
     winch_drop: "Winch Drop",
     payload_pickup: "Payload Pickup",
-    payload_drop: "Payload Drop",
+    payload_drop: "Drop Payload",
+    sound_alert: "Sound Alert",
     land: "Landing",
 };
 

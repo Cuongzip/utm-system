@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAppLocale } from "@/i18n";
 import { organizationService } from "@/services/organizationService";
 import { hubService } from "@/services/hubService";
 import { droneService } from "@/services/droneService";
@@ -18,6 +19,7 @@ import { weatherAisService } from "@/services/weatherAisService";
 import { intelligenceService } from "@/services/intelligenceService";
 import { apiClient } from "@/services/apiClient";
 import {
+    FLIGHT_STATUS,
     IN_PROGRESS_COMMAND_STATUSES,
     type IncidentQueryParams,
     type EmergencyStatsQueryParams,
@@ -34,19 +36,28 @@ export const QUERY_KEYS = {
     drones: ["drones"] as const,
     dronesAll: ["drones", "all"] as const,
     droneCommands: (droneId: string) => ["drones", droneId, "commands"] as const,
+    flightCommands: (flightId: string) => ["commands", "flight", flightId] as const,
     flights: ["flights"] as const,
     flightsAll: ["flights", "all"] as const,
     flightDetail: (id: string) => ["flights", "detail", id] as const,
-    flightFeasibility: (id: string) => ["flights", id, "feasibility"] as const,
+    flightFeasibility: (id: string, locale?: string) =>
+        locale
+            ? (["flights", id, "feasibility", locale] as const)
+            : (["flights", id, "feasibility"] as const),
     flightConformance: (id: string) => ["flights", id, "conformance"] as const,
+    flightTelemetryHistory: (id: string) => ["telemetry", "flight", id, "history"] as const,
     airspace: ["airspace"] as const,
     airspaceDetail: (id: string) => ["airspace", "detail", id] as const,
     missions: ["missions"] as const,
     missionDetail: (id: string) => ["missions", "detail", id] as const,
-    missionExecutionPlan: (id: string, autoSplitByRange = false) =>
+    missionExecutionPlan: (id: string, autoSplitByRange = false, locale?: string) =>
         autoSplitByRange
-            ? (["missions", id, "execution-plan", "auto-split"] as const)
-            : (["missions", id, "execution-plan"] as const),
+            ? locale
+                ? (["missions", id, "execution-plan", "auto-split", locale] as const)
+                : (["missions", id, "execution-plan", "auto-split"] as const)
+            : locale
+              ? (["missions", id, "execution-plan", locale] as const)
+              : (["missions", id, "execution-plan"] as const),
     missionExecutions: (id: string) => ["missions", id, "executions"] as const,
     connectivity: ["connectivity"] as const,
     connectivityDevices: ["connectivity", "devices"] as const,
@@ -88,10 +99,22 @@ export const QUERY_KEYS = {
     weatherSigmet: ["weather", "sigmet"] as const,
     weatherNotams: ["weather", "notams"] as const,
     weatherAdsb: ["weather", "adsb"] as const,
-    weatherHubCurrent: (hubId: string) => ["weather", "current", hubId] as const,
-    weatherHubForecast: (hubId: string) => ["weather", "forecast", hubId] as const,
-    weatherHubAlerts: (hubId: string) => ["weather", "alerts", hubId] as const,
-    weatherHubGoNoGo: (hubId: string) => ["weather", "go-no-go", hubId] as const,
+    weatherHubCurrent: (hubId: string, locale?: string) =>
+        locale
+            ? (["weather", "current", hubId, locale] as const)
+            : (["weather", "current", hubId] as const),
+    weatherHubForecast: (hubId: string, locale?: string) =>
+        locale
+            ? (["weather", "forecast", hubId, locale] as const)
+            : (["weather", "forecast", hubId] as const),
+    weatherHubAlerts: (hubId: string, locale?: string) =>
+        locale
+            ? (["weather", "alerts", hubId, locale] as const)
+            : (["weather", "alerts", hubId] as const),
+    weatherHubGoNoGo: (hubId: string, locale?: string) =>
+        locale
+            ? (["weather", "go-no-go", hubId, locale] as const)
+            : (["weather", "go-no-go", hubId] as const),
     connectivityStatus: ["connectivity", "status"] as const,
     connectivityProtocolStats: ["connectivity", "protocols", "stats"] as const,
     connectivityTelemetryModes: ["connectivity", "telemetry", "modes"] as const,
@@ -100,9 +123,17 @@ export const QUERY_KEYS = {
     connectivityCaCert: ["connectivity", "ca-certificate"] as const,
     connectivityDeviceCert: (deviceId: string) =>
         ["connectivity", "devices", deviceId, "certificate"] as const,
+    connectivityDeviceMode: (deviceId: string) =>
+        ["connectivity", "devices", deviceId, "telemetry-mode"] as const,
     integrationKeys: ["integration", "keys"] as const,
-    flightBriefing: (flightId: string) => ["intelligence", "briefing", flightId] as const,
-    flightAssessment: (flightId: string) => ["intelligence", "assess", flightId] as const,
+    flightBriefing: (flightId: string, locale?: string) =>
+        locale
+            ? (["intelligence", "briefing", flightId, locale] as const)
+            : (["intelligence", "briefing", flightId] as const),
+    flightAssessment: (flightId: string, locale?: string) =>
+        locale
+            ? (["intelligence", "assess", flightId, locale] as const)
+            : (["intelligence", "assess", flightId] as const),
     foresightPredict: (horizon: number, step: number) =>
         ["intelligence", "foresight", "predict", horizon, step] as const,
 };
@@ -192,11 +223,24 @@ export function useAirspaceDetail(zoneId: string) {
     });
 }
 
-export function useFlightDetail(flightId: string) {
+export function useFlightDetail(flightId: string, refetchIntervalMs?: number | false) {
     return useQuery({
         queryKey: QUERY_KEYS.flightDetail(flightId),
         queryFn: () => flightService.getById(flightId),
         enabled: Boolean(flightId),
+        staleTime: refetchIntervalMs ? 0 : undefined,
+        refetchInterval: (query) => {
+            if (!refetchIntervalMs) return false;
+            const status = query.state.data?.status;
+            if (
+                status === FLIGHT_STATUS.COMPLETED ||
+                status === FLIGHT_STATUS.CANCELLED ||
+                status === FLIGHT_STATUS.EMERGENCY_LANDING
+            ) {
+                return false;
+            }
+            return refetchIntervalMs;
+        },
     });
 }
 
@@ -371,8 +415,9 @@ export function useMissionExecutionPlan(
     enabled = true,
     autoSplitByRange = false
 ) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.missionExecutionPlan(missionId || "", autoSplitByRange),
+        queryKey: QUERY_KEYS.missionExecutionPlan(missionId || "", autoSplitByRange, locale),
         queryFn: () => missionService.getExecutionPlan(missionId!, autoSplitByRange),
         enabled: Boolean(missionId) && enabled,
         staleTime: 1000 * 10,
@@ -389,8 +434,9 @@ export function useMissionExecutions(missionId?: string | null, enabled = true) 
 }
 
 export function useFlightFeasibility(flightId?: string | null, enabled = true) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.flightFeasibility(flightId || ""),
+        queryKey: QUERY_KEYS.flightFeasibility(flightId || "", locale),
         queryFn: () => flightService.checkFeasibility(flightId!),
         enabled: Boolean(flightId) && enabled,
         staleTime: 1000 * 30,
@@ -543,8 +589,9 @@ export function useAdsbAircraft(enabled = true, refetchInterval = 15000) {
 }
 
 export function useHubCurrentWeather(hubId?: string | null, enabled = true) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.weatherHubCurrent(hubId || ""),
+        queryKey: QUERY_KEYS.weatherHubCurrent(hubId || "", locale),
         queryFn: () => weatherAisService.getHubCurrentWeather(hubId!),
         enabled: Boolean(hubId) && enabled,
         staleTime: 1000 * 60 * 2,
@@ -552,8 +599,9 @@ export function useHubCurrentWeather(hubId?: string | null, enabled = true) {
 }
 
 export function useHubWeatherForecast(hubId?: string | null, enabled = true) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.weatherHubForecast(hubId || ""),
+        queryKey: QUERY_KEYS.weatherHubForecast(hubId || "", locale),
         queryFn: () => weatherAisService.getHubForecast(hubId!),
         enabled: Boolean(hubId) && enabled,
         staleTime: 1000 * 60 * 5,
@@ -561,8 +609,9 @@ export function useHubWeatherForecast(hubId?: string | null, enabled = true) {
 }
 
 export function useHubWeatherAlerts(hubId?: string | null, enabled = true) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.weatherHubAlerts(hubId || ""),
+        queryKey: QUERY_KEYS.weatherHubAlerts(hubId || "", locale),
         queryFn: () => weatherAisService.getHubAlerts(hubId!),
         enabled: Boolean(hubId) && enabled,
         staleTime: 1000 * 60 * 2,
@@ -615,8 +664,9 @@ export function useIntegrationApiKeys(enabled = true) {
 }
 
 export function useFlightBriefing(flightId?: string | null, enabled = true) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.flightBriefing(flightId || ""),
+        queryKey: QUERY_KEYS.flightBriefing(flightId || "", locale),
         queryFn: () => intelligenceService.getFlightBriefing(flightId!),
         enabled: Boolean(flightId) && enabled,
         staleTime: 1000 * 30,
@@ -625,11 +675,51 @@ export function useFlightBriefing(flightId?: string | null, enabled = true) {
 }
 
 export function useFlightAssessment(flightId?: string | null, enabled = false) {
+    const locale = useAppLocale();
     return useQuery({
-        queryKey: QUERY_KEYS.flightAssessment(flightId || ""),
+        queryKey: QUERY_KEYS.flightAssessment(flightId || "", locale),
         queryFn: () => intelligenceService.assessFlight(flightId!),
         enabled: Boolean(flightId) && enabled,
         staleTime: 1000 * 30,
+        retry: false,
+    });
+}
+
+export function useFlightCommands(flightId?: string | null, enabled = true) {
+    return useQuery({
+        queryKey: QUERY_KEYS.flightCommands(flightId || ""),
+        queryFn: () => droneService.getCommandsByFlightId(flightId!),
+        enabled: Boolean(flightId) && enabled,
+        refetchInterval: (query) => {
+            if (!enabled) return false;
+            const items = query.state.data ?? [];
+            const hasActive = items.some(
+                (cmd) =>
+                    cmd.status != null &&
+                    IN_PROGRESS_COMMAND_STATUSES.includes(cmd.status.toLowerCase())
+            );
+            return hasActive ? 1500 : 4000;
+        },
+    });
+}
+
+export function useDeviceTelemetryMode(deviceId?: string | null, enabled = true) {
+    return useQuery({
+        queryKey: QUERY_KEYS.connectivityDeviceMode(deviceId || ""),
+        queryFn: () => connectivityService.getDeviceTelemetryMode(deviceId!),
+        enabled: Boolean(deviceId) && enabled,
+        staleTime: 1000 * 10,
+        retry: false,
+    });
+}
+
+export function useHubWeatherGoNoGo(hubId?: string | null, enabled = true) {
+    const locale = useAppLocale();
+    return useQuery({
+        queryKey: QUERY_KEYS.weatherHubGoNoGo(hubId || "", locale),
+        queryFn: () => weatherAisService.getHubGoNoGo(hubId!),
+        enabled: Boolean(hubId) && enabled,
+        staleTime: 1000 * 120,
         retry: false,
     });
 }
