@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utm.commonlibrary.kafka.event.DroneCommandEvent;
+import com.utm.commonlibrary.kafka.event.FlightLifecycleEvent;
 import com.utm.commonlibrary.service.SystemTokenService;
 import com.utm.simulation.kafka.SimulationCommandAckPublisher;
 import com.utm.simulation.service.client.FlightClientService;
@@ -11,12 +12,14 @@ import com.utm.simulation.service.client.MissionClientService;
 import com.utm.simulation.service.client.TelemetryClientService;
 import com.utm.simulation.viewmodel.client.TelemetryLatestVm;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -124,6 +127,7 @@ public class SimulationServiceImpl implements SimulationService {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8,
             Thread.ofVirtual().factory());
     private final Map<String, SimulationSessionRuntime> activeRuntimes = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> flightBootstrapLocks = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void recoverOrphanedSessions() {
@@ -145,6 +149,17 @@ public class SimulationServiceImpl implements SimulationService {
     @Override
     @Transactional
     public SimulationSessionVm createSession(SimulationSessionCreateVm createVm) {
+        String flightId = createVm.flightId();
+        if (flightId != null && !flightId.isBlank()) {
+            Object flightLock = flightBootstrapLocks.computeIfAbsent(flightId.trim(), k -> new Object());
+            synchronized (flightLock) {
+                return createSessionInternal(createVm);
+            }
+        }
+        return createSessionInternal(createVm);
+    }
+
+    private SimulationSessionVm createSessionInternal(SimulationSessionCreateVm createVm) {
         String flightId = createVm.flightId();
         String missionId = createVm.missionId();
         boolean hasFlightId = flightId != null && !flightId.isBlank();
@@ -184,7 +199,8 @@ public class SimulationServiceImpl implements SimulationService {
                 throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, "droneId", droneId);
             }
             if (sessionRepository.existsByFlightIdAndStatusIn(flightId,
-                    List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
+                    List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))
+                    || findActiveRuntime(flightId.trim(), droneId) != null) {
                 throw new DuplicatedException(MessageCode.SIMULATION_ALREADY_ACTIVE, "flightId", flightId);
             }
             waypoints = resolveWaypoints(flight);
@@ -194,14 +210,18 @@ public class SimulationServiceImpl implements SimulationService {
             resolvedFlightId = flight.id() != null ? flight.id() : flightId;
             boolean shouldAutoStartFlight = "authorized".equalsIgnoreCase(flight.status());
             if (shouldAutoStartFlight && !flightClientService.startFlight(resolvedFlightId)) {
-                throw new BadRequestException(MessageCode.FLIGHT_NOT_SIMULATABLE,
-                        "flightId", resolvedFlightId,
-                        "reason", "Failed to start authorized flight before launching simulation");
+                FlightDetailVm refreshed = flightClientService.getFlightDetail(resolvedFlightId);
+                if (refreshed == null || refreshed.status() == null
+                        || !"active".equalsIgnoreCase(refreshed.status().trim())) {
+                    throw new BadRequestException(MessageCode.FLIGHT_NOT_SIMULATABLE,
+                            "flightId", resolvedFlightId,
+                            "reason", "Failed to start authorized flight before launching simulation");
+                }
             }
         } else if (hasMissionId) {
             var missionOpt = missionClientService != null
                     ? missionClientService.getMissionById(resolvedMissionId)
-                    : java.util.Optional.<MissionClientService.MissionSimulationVm>empty();
+                    : Optional.<MissionClientService.MissionSimulationVm>empty();
             if (missionOpt.isEmpty()) {
                 throw new NotFoundException(MessageCode.MISSION_NOT_FOUND, "id", resolvedMissionId);
             }
@@ -235,9 +255,17 @@ public class SimulationServiceImpl implements SimulationService {
             throw new BadRequestException(MessageCode.INVALID_SIMULATION_WAYPOINTS);
         }
 
+        WaypointVm rawFirst = waypoints.getFirst();
+        boolean startsFromGround = rawFirst.alt() != null && rawFirst.alt() <= 2.0;
+        double effectiveCruiseAlt = flightCruiseAlt != null && flightCruiseAlt > 0.0
+                ? flightCruiseAlt
+                : resolveFirstAirborneAltitude(waypoints, 50.0);
+        if (startsFromGround) {
+            waypoints = ensureGroundTakeoffWaypoints(waypoints, rawFirst.lat(), rawFirst.lon(), effectiveCruiseAlt);
+        }
+
         WaypointVm first = waypoints.getFirst();
-        WaypointVm second = waypoints.get(1);
-        double initialHeading = calculateBearing(first.lat(), first.lon(), second.lat(), second.lon());
+        double initialHeading = resolveInitialHeading(waypoints);
 
         SimulationSession entity = simulationMapper.toEntity(createVm);
         entity.setDroneId(droneId);
@@ -249,7 +277,7 @@ public class SimulationServiceImpl implements SimulationService {
         entity.setStatus(SimulationStatus.RUNNING);
         entity.setCurrentLat(first.lat());
         entity.setCurrentLon(first.lon());
-        entity.setCurrentAlt(first.alt());
+        entity.setCurrentAlt(startsFromGround ? 0.0 : first.alt());
         entity.setCurrentHeading(initialHeading);
         entity.setTotalDistance(totalDist);
 
@@ -258,25 +286,36 @@ public class SimulationServiceImpl implements SimulationService {
         long tickPeriodMs = Math.max(100L, Math.round(1000.0 / createVm.tickRate()));
         String currentBearerToken = extractCurrentBearerToken();
         SimulationSessionRuntime runtime = new SimulationSessionRuntime(
-                saved, waypoints, currentBearerToken, departureHubId, arrivalHubId, flightCruiseAlt);
-        Runnable startRuntime = () -> {
-            activeRuntimes.put(saved.getId(), runtime);
-            runtime.scheduledFuture = scheduler.scheduleAtFixedRate(
-                    () -> runSimulationTick(runtime),
-                    0,
-                    tickPeriodMs,
-                    TimeUnit.MILLISECONDS);
+                saved, waypoints, currentBearerToken, departureHubId, arrivalHubId, effectiveCruiseAlt);
+        runtime.takeoffClimbActive = startsFromGround;
+        activeRuntimes.put(saved.getId(), runtime);
+        Runnable scheduleTicks = () -> {
+            if (activeRuntimes.get(saved.getId()) == runtime) {
+                runtime.scheduledFuture = scheduler.scheduleAtFixedRate(
+                        () -> runSimulationTick(runtime),
+                        0,
+                        tickPeriodMs,
+                        TimeUnit.MILLISECONDS);
+            }
         };
 
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    startRuntime.run();
+                    scheduleTicks.run();
+                }
+
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) {
+                        activeRuntimes.remove(saved.getId(), runtime);
+                        runtime.cancelFutures(true);
+                    }
                 }
             });
         } else {
-            startRuntime.run();
+            scheduleTicks.run();
         }
 
         log.info(
@@ -525,10 +564,23 @@ public class SimulationServiceImpl implements SimulationService {
                     runtime.pendingTrigger = null;
                     runtime.activeScenario = scenarioCode;
                     runtime.scenarioConfig = configMap;
+                    runtime.operatorOverride = false;
                     if ("c2_lost".equalsIgnoreCase(scenarioCode)) {
                         runtime.c2LostSeconds = 0.0;
                         runtime.failsafeRerouteActive = false;
+                        runtime.rtlActive = false;
+                        runtime.divertLandingActive = false;
+                        runtime.takeoffClimbActive = false;
+                        runtime.forcedDescentActive = false;
+                        runtime.emergencyStopActive = false;
+                        runtime.holdingByCommand = false;
                         runtime.speed = 0.0;
+                    } else if ("motor_failure".equalsIgnoreCase(scenarioCode)) {
+                        runtime.takeoffClimbActive = false;
+                        runtime.rtlActive = false;
+                        runtime.divertLandingActive = false;
+                        runtime.forcedDescentActive = false;
+                        runtime.holdingByCommand = false;
                     }
                     if (durationSeconds != null && durationSeconds > 0) {
                         runtime.scenarioClearFuture = scheduler.schedule(
@@ -544,6 +596,10 @@ public class SimulationServiceImpl implements SimulationService {
 
         if (!armedForTrigger) {
             session.setActiveScenario(scenarioCode);
+            session.setFlightPhase("EMERGENCY");
+            if ("c2_lost".equalsIgnoreCase(scenarioCode)) {
+                session.setSpeed(0.0);
+            }
         }
         session.setScenarioConfig(configMap);
         sessionRepository.save(session);
@@ -584,6 +640,7 @@ public class SimulationServiceImpl implements SimulationService {
                 runtime.pendingScenario = null;
                 runtime.pendingScenarioConfig = null;
                 runtime.pendingTrigger = null;
+                runtime.operatorOverride = false;
                 runtime.c2LostSeconds = 0.0;
                 runtime.failsafeRerouteActive = false;
                 if (runtime.currentBattery > 0.0) {
@@ -667,6 +724,166 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     @Override
+    public void handleFlightStarted(FlightLifecycleEvent event) {
+        if (event == null || event.flightId() == null || event.flightId().isBlank()) {
+            return;
+        }
+        String flightId = event.flightId().trim();
+        Object flightLock = flightBootstrapLocks.computeIfAbsent(flightId, k -> new Object());
+        synchronized (flightLock) {
+            try {
+                SimulationSessionRuntime existing = findActiveRuntime(flightId, event.droneId());
+                if (existing != null) {
+                    log.debug("Simulation runtime '{}' already active for flight '{}'; skipping FLIGHT_STARTED bootstrap",
+                            existing.sessionId, flightId);
+                    return;
+                }
+                if (sessionRepository.existsByFlightIdAndStatusIn(flightId,
+                        List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
+                    log.debug("Simulation session already active in DB for flight '{}'; skipping FLIGHT_STARTED bootstrap",
+                            flightId);
+                    return;
+                }
+                Optional<TelemetryLatestVm> latestTelOpt = safeGetLatestFlightTelemetry(flightId);
+                if (isRecentExternalTelemetry(latestTelOpt.orElse(null), flightId)) {
+                    return;
+                }
+
+                FlightDetailVm flight = flightClientService.getFlightDetail(flightId);
+                if (flight == null) {
+                    log.warn("Cannot auto-start simulation on FLIGHT_STARTED: flight '{}' not found", flightId);
+                    return;
+                }
+                if (flight.status() != null
+                        && NON_SIMULATABLE_FLIGHT_STATUSES.contains(flight.status().trim().toLowerCase(Locale.ROOT))) {
+                    return;
+                }
+                String droneId = (flight.droneId() != null && !flight.droneId().isBlank())
+                        ? flight.droneId().trim()
+                        : (event.droneId() != null ? event.droneId().trim() : null);
+                if (droneId == null || droneId.isBlank()) {
+                    return;
+                }
+                if (findActiveRuntime(flightId, droneId) != null
+                        || sessionRepository.existsByDroneIdAndStatusIn(droneId,
+                                List.of(SimulationStatus.RUNNING, SimulationStatus.PAUSED))) {
+                    return;
+                }
+
+                List<WaypointVm> rawWaypoints = resolveWaypoints(flight);
+                double totalDist = calculateTotalDistance(rawWaypoints);
+                if (totalDist < 10.0) {
+                    return;
+                }
+
+                double effectiveCruiseAlt = flight.cruisingAltitudeM() != null && flight.cruisingAltitudeM() > 0.0
+                        ? flight.cruisingAltitudeM()
+                        : resolveFirstAirborneAltitude(rawWaypoints, 50.0);
+                WaypointVm rawFirst = rawWaypoints.getFirst();
+                List<WaypointVm> waypoints = ensureGroundTakeoffWaypoints(
+                        rawWaypoints, rawFirst.lat(), rawFirst.lon(), effectiveCruiseAlt);
+                double initialHeading = resolveInitialHeading(waypoints);
+                double startBattery = latestTelOpt
+                        .map(TelemetryLatestVm::batteryPercentage)
+                        .filter(b -> b != null && b > 0.0)
+                        .orElse(100.0);
+                String resolvedFlightId = flight.id() != null && !flight.id().isBlank() ? flight.id() : flightId;
+
+                SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(
+                        resolvedFlightId, 15.0, 1.0, startBattery, event.missionId(), droneId, waypoints, 1.0);
+                SimulationSession entity = simulationMapper.toEntity(createVm);
+                if (entity == null) {
+                    return;
+                }
+                entity.setDroneId(droneId);
+                entity.setFlightId(resolvedFlightId);
+                entity.setMissionId(event.missionId());
+                entity.setFlightPhase("TAKEOFF");
+                entity.setTickRate(1.0);
+                entity.setWaypoints(waypoints);
+                entity.setStatus(SimulationStatus.RUNNING);
+                entity.setSpeed(15.0);
+                entity.setTimeScale(1.0);
+                entity.setCurrentLat(waypoints.getFirst().lat());
+                entity.setCurrentLon(waypoints.getFirst().lon());
+                entity.setCurrentAlt(0.0);
+                entity.setCurrentHeading(initialHeading);
+                entity.setCurrentBattery(startBattery);
+                entity.setTotalDistance(totalDist);
+
+                SimulationSession saved = sessionRepository.saveAndFlush(entity);
+                SimulationSessionRuntime runtime = new SimulationSessionRuntime(
+                        saved,
+                        waypoints,
+                        extractCurrentBearerToken(),
+                        flight.departureHubId(),
+                        flight.arrivalHubId(),
+                        effectiveCruiseAlt);
+                runtime.currentAlt = 0.0;
+                runtime.currentHeading = initialHeading;
+                runtime.previousTickHeading = initialHeading;
+                runtime.currentBattery = startBattery;
+                runtime.lastReportedBattery = startBattery;
+                runtime.takeoffClimbActive = true;
+
+                activeRuntimes.put(saved.getId(), runtime);
+                runtime.scheduledFuture = scheduler.scheduleAtFixedRate(
+                        () -> runSimulationTick(runtime),
+                        1000L,
+                        1000L,
+                        TimeUnit.MILLISECONDS);
+                log.info("Auto-started VTOL simulation session '{}' for flight '{}' (drone '{}') on FLIGHT_STARTED",
+                        saved.getId(), resolvedFlightId, droneId);
+            } catch (Exception ex) {
+                log.warn("Failed to auto-start simulation session on FLIGHT_STARTED for flight '{}': {}",
+                        flightId, ex.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void handleFlightTerminated(String flightId, String eventType) {
+        if (flightId == null || flightId.isBlank()) {
+            return;
+        }
+        String normalizedFlightId = flightId.trim();
+        boolean isCompleted = FlightLifecycleEvent.FLIGHT_COMPLETED.equalsIgnoreCase(eventType);
+        SimulationStatus targetStatus = isCompleted ? SimulationStatus.COMPLETED : SimulationStatus.STOPPED;
+        Object flightLock = flightBootstrapLocks.computeIfAbsent(normalizedFlightId, k -> new Object());
+        synchronized (flightLock) {
+            List<SimulationSessionRuntime> matching = activeRuntimes.values().stream()
+                    .filter(rt -> normalizedFlightId.equals(rt.flightId)
+                            && (rt.status == SimulationStatus.RUNNING || rt.status == SimulationStatus.PAUSED))
+                    .toList();
+            for (SimulationSessionRuntime runtime : matching) {
+                activeRuntimes.remove(runtime.sessionId);
+                runtime.lock.lock();
+                try {
+                    runtime.status = targetStatus;
+                    if (isCompleted) {
+                        runtime.currentAlt = 0.0;
+                        runtime.speed = 0.0;
+                    }
+                } finally {
+                    runtime.lock.unlock();
+                }
+                runtime.cancelFutures(false);
+                sessionRepository.findById(runtime.sessionId).ifPresent(session -> {
+                    session.setStatus(targetStatus);
+                    if (isCompleted) {
+                        session.setFlightPhase("LANDED");
+                        session.setCurrentAlt(0.0);
+                        session.setSpeed(0.0);
+                    }
+                    sessionRepository.save(session);
+                });
+                log.info("Terminated simulation session '{}' -> {} on {} for flight '{}'",
+                        runtime.sessionId, targetStatus, eventType, normalizedFlightId);
+            }
+        }
+    }
+
+    @Override
     public void handleDroneCommand(DroneCommandEvent commandEvent) {
         if (commandEvent == null || commandEvent.commandType() == null || commandEvent.commandType().isBlank()) {
             return;
@@ -674,7 +891,11 @@ public class SimulationServiceImpl implements SimulationService {
         String cmdType = commandEvent.commandType().trim().toUpperCase(Locale.ROOT);
         SimulationSessionRuntime runtime = findActiveRuntime(commandEvent.flightId(), commandEvent.droneId());
         if (runtime == null) {
-            runtime = bootstrapRuntimeForCommand(commandEvent, cmdType);
+            BootstrapAttempt attempt = bootstrapRuntimeForCommand(commandEvent, cmdType);
+            if (attempt.skippedForExternalHardware()) {
+                return;
+            }
+            runtime = attempt.runtime();
         }
         if (runtime == null) {
             log.debug("No simulatable flight runtime available for command {} (drone={}, flight={})",
@@ -689,6 +910,7 @@ public class SimulationServiceImpl implements SimulationService {
         String eventMessage;
         List<String> preemptedCmdIds = List.of();
         String preemptedCmdType = null;
+        boolean instantCompleted = false;
 
         runtime.lock.lock();
         try {
@@ -697,10 +919,11 @@ public class SimulationServiceImpl implements SimulationService {
                         cmdType, "FAILED", "Simulation session has already terminated");
                 return;
             }
+            boolean isInstantConfigCmd = "CONFIGURE".equals(cmdType) || "SET_HOME".equals(cmdType);
             boolean sameOngoingManeuver = cmdType.equals(runtime.activeCommandType)
                     && ("RTL".equals(cmdType) || "LAND".equals(cmdType) || "TAKEOFF".equals(cmdType))
                     && extractDouble(params, "latitude", "lat") == null;
-            if (!sameOngoingManeuver && !runtime.activeCommandIds.isEmpty()) {
+            if (!isInstantConfigCmd && !sameOngoingManeuver && !runtime.activeCommandIds.isEmpty()) {
                 preemptedCmdIds = runtime.drainActiveCommandIdsExcept(commandEvent.commandId());
                 preemptedCmdType = runtime.activeCommandType;
             }
@@ -716,8 +939,9 @@ public class SimulationServiceImpl implements SimulationService {
                     runtime.forcedDescentActive = false;
                     runtime.emergencyStopActive = false;
                     runtime.rtlActive = false;
+                    runtime.divertLandingActive = false;
                     runtime.failsafeRerouteActive = false;
-                    runtime.operatorOverride = true;
+                    runtime.operatorOverride = runtime.activeScenario != null;
                     double targetClimbAlt = Math.max(runtime.defaultCruiseAlt, 20.0);
                     Double requestedAlt = extractDouble(params, "altitude", "alt", "targetAltitude");
                     if (requestedAlt != null && requestedAlt > 5.0) {
@@ -731,7 +955,14 @@ public class SimulationServiceImpl implements SimulationService {
                         climbAndCruise.add(new WaypointVm(runtime.currentLat, runtime.currentLon, runtime.currentAlt, 4.0, 0, null));
                         climbAndCruise.add(new WaypointVm(runtime.currentLat, runtime.currentLon, targetClimbAlt, 4.0, 0, null));
                         for (int i = 1; i < runtime.originalWaypoints.size(); i++) {
-                            climbAndCruise.add(runtime.originalWaypoints.get(i));
+                            WaypointVm origWp = runtime.originalWaypoints.get(i);
+                            if (i == 1
+                                    && calculateHaversineDistance(
+                                            runtime.currentLat, runtime.currentLon, origWp.lat(), origWp.lon()) <= 2.0
+                                    && origWp.alt() > 2.0) {
+                                continue;
+                            }
+                            climbAndCruise.add(origWp);
                         }
                         runtime.reroutePath(climbAndCruise);
                         runtime.speed = runtime.cruiseSpeed;
@@ -757,21 +988,27 @@ public class SimulationServiceImpl implements SimulationService {
                 }
                 case "RESUME" -> {
                     runtime.status = SimulationStatus.RUNNING;
+                    boolean wasRerouted = runtime.rtlActive || runtime.divertLandingActive || runtime.failsafeRerouteActive;
                     runtime.holdingByCommand = false;
                     runtime.forcedDescentActive = false;
                     runtime.emergencyStopActive = false;
                     runtime.failsafeRerouteActive = false;
                     runtime.takeoffClimbActive = false;
+                    runtime.divertLandingActive = false;
                     runtime.targetAltitudeOverride = null;
-                    runtime.operatorOverride = true;
-                    if (runtime.rtlActive) {
+                    runtime.operatorOverride = runtime.activeScenario != null;
+                    runtime.arrivalHubId = runtime.originalArrivalHubId;
+                    runtime.arrivalPadWaypoint = runtime.originalArrivalPadWaypoint;
+                    if (wasRerouted) {
                         runtime.rtlActive = false;
                         runtime.rejoinOriginalRoute();
+                    } else {
+                        runtime.restoreOriginalWaypointsAltitude();
                     }
                     runtime.speed = runtime.cruiseSpeed;
                     runtime.registerActiveCommand(commandEvent.commandId(), cmdType);
                     runtime.ackPendingOnNextTick = true;
-                    eventMessage = "C2 command RESUME applied: resuming planned cruise trajectory";
+                    eventMessage = "C2 command RESUME applied: intercepting and resuming planned cruise trajectory";
                 }
                 case "LAND", "EMERGENCY_STOP" -> {
                     boolean isEstop = "EMERGENCY_STOP".equals(cmdType);
@@ -779,9 +1016,10 @@ public class SimulationServiceImpl implements SimulationService {
                     runtime.forcedDescentActive = true;
                     runtime.emergencyStopActive = isEstop;
                     runtime.rtlActive = false;
+                    runtime.divertLandingActive = false;
                     runtime.takeoffClimbActive = false;
                     runtime.failsafeRerouteActive = false;
-                    runtime.operatorOverride = true;
+                    runtime.operatorOverride = runtime.activeScenario != null;
                     runtime.forcedDescentRateMps = isEstop ? 8.0 : 3.5;
                     runtime.forcedDescentReason = isEstop
                             ? "Executed emergency stop motor cut / rapid failsafe descent"
@@ -800,9 +1038,10 @@ public class SimulationServiceImpl implements SimulationService {
                     runtime.forcedDescentActive = false;
                     runtime.emergencyStopActive = false;
                     runtime.takeoffClimbActive = false;
+                    runtime.divertLandingActive = false;
                     runtime.failsafeRerouteActive = true;
                     runtime.rtlActive = true;
-                    runtime.operatorOverride = true;
+                    runtime.operatorOverride = runtime.activeScenario != null;
                     runtime.targetAltitudeOverride = null;
                     runtime.speed = runtime.cruiseSpeed;
                     Double targetLat = extractDouble(params, "latitude", "lat");
@@ -838,8 +1077,8 @@ public class SimulationServiceImpl implements SimulationService {
                                 cmdType, "FAILED", "Missing target latitude/longitude for GOTO");
                         return;
                     }
+                    String targetHubId = extractString(params, "targetHubId");
                     Double targetAlt = extractDouble(params, "altitude", "alt", "targetAltitude");
-                    double effectiveAlt = targetAlt != null ? targetAlt : runtime.currentAlt;
                     runtime.status = SimulationStatus.RUNNING;
                     runtime.holdingByCommand = false;
                     runtime.forcedDescentActive = false;
@@ -847,15 +1086,42 @@ public class SimulationServiceImpl implements SimulationService {
                     runtime.rtlActive = false;
                     runtime.takeoffClimbActive = false;
                     runtime.failsafeRerouteActive = true;
-                    runtime.operatorOverride = true;
+                    runtime.operatorOverride = runtime.activeScenario != null;
                     runtime.targetAltitudeOverride = null;
                     runtime.speed = runtime.cruiseSpeed;
-                    runtime.rerouteTo(new WaypointVm(targetLat, targetLon, effectiveAlt));
+                    if (targetHubId != null && !targetHubId.isBlank()) {
+                        runtime.arrivalHubId = targetHubId.trim();
+                        runtime.arrivalPadWaypoint = new WaypointVm(targetLat, targetLon, 0.0);
+                        runtime.divertLandingActive = true;
+                        double horizToHub = calculateHaversineDistance(
+                                runtime.currentLat, runtime.currentLon, targetLat, targetLon);
+                        double requestedCruiseAlt = targetAlt != null && targetAlt > 10.0
+                                ? targetAlt
+                                : runtime.defaultCruiseAlt;
+                        double safeAlt = Math.max(runtime.currentAlt, Math.max(requestedCruiseAlt, 40.0));
+                        List<WaypointVm> divertPath = new ArrayList<>();
+                        divertPath.add(new WaypointVm(runtime.currentLat, runtime.currentLon, runtime.currentAlt));
+                        if (horizToHub > 15.0) {
+                            if (runtime.currentAlt < safeAlt - 1.0) {
+                                divertPath.add(new WaypointVm(runtime.currentLat, runtime.currentLon, safeAlt, 4.0, 0, null));
+                            }
+                            divertPath.add(new WaypointVm(targetLat, targetLon, safeAlt, runtime.cruiseSpeed, 0, null));
+                        }
+                        divertPath.add(new WaypointVm(targetLat, targetLon, 0.0, 3.5, 0, null));
+                        runtime.reroutePath(divertPath);
+                        eventMessage = String.format(Locale.US,
+                                "C2 command GOTO applied: diverting to hub %s via %.0fm AGL [%.5f, %.5f] -> 0m touchdown",
+                                runtime.arrivalHubId, safeAlt, targetLat, targetLon);
+                    } else {
+                        runtime.divertLandingActive = false;
+                        double effectiveAlt = targetAlt != null ? targetAlt : runtime.currentAlt;
+                        runtime.rerouteTo(new WaypointVm(targetLat, targetLon, effectiveAlt));
+                        eventMessage = String.format(Locale.US,
+                                "C2 command GOTO applied: diverting to [%.5f, %.5f, %.1fm]",
+                                targetLat, targetLon, effectiveAlt);
+                    }
                     runtime.registerActiveCommand(commandEvent.commandId(), cmdType);
                     runtime.ackPendingOnNextTick = false;
-                    eventMessage = String.format(Locale.US,
-                            "C2 command GOTO applied: diverting to [%.5f, %.5f, %.1fm]",
-                            targetLat, targetLon, effectiveAlt);
                 }
                 case "SET_ALTITUDE" -> {
                     Double targetAlt = extractDouble(params, "targetAltitude", "altitude", "alt");
@@ -865,13 +1131,66 @@ public class SimulationServiceImpl implements SimulationService {
                                 cmdType, "FAILED", "Missing targetAltitude parameter");
                         return;
                     }
+                    double clampedAlt = Math.max(10.0, Math.min(500.0, targetAlt));
                     runtime.status = SimulationStatus.RUNNING;
-                    runtime.targetAltitudeOverride = Math.max(0.0, targetAlt);
+                    runtime.targetAltitudeOverride = clampedAlt;
+                    runtime.updateRemainingAirborneWaypointsAltitude(clampedAlt);
                     runtime.registerActiveCommand(commandEvent.commandId(), cmdType);
-                    runtime.ackPendingOnNextTick = Math.abs(runtime.currentAlt - runtime.targetAltitudeOverride) <= 0.5;
+                    boolean alreadyAtTargetAlt = Math.abs(runtime.currentAlt - clampedAlt) <= 0.5;
+                    if (alreadyAtTargetAlt) {
+                        runtime.currentAlt = clampedAlt;
+                        runtime.targetAltitudeOverride = null;
+                    }
+                    runtime.ackPendingOnNextTick = alreadyAtTargetAlt;
                     eventMessage = String.format(Locale.US,
                             "C2 command SET_ALTITUDE applied: adjusting target altitude to %.1fm",
-                            runtime.targetAltitudeOverride);
+                            clampedAlt);
+                }
+                case "CONFIGURE" -> {
+                    Double requestedSpeed = extractDouble(params, "targetSpeedMps", "cruiseSpeedMs", "speed");
+                    if (requestedSpeed != null) {
+                        double clampedSpeed = Math.max(2.0, Math.min(30.0, requestedSpeed));
+                        double prevCruiseSpeed = runtime.cruiseSpeed;
+                        runtime.cruiseSpeed = clampedSpeed;
+                        for (int i = 1; i < runtime.waypoints.size(); i++) {
+                            WaypointVm prevWp = runtime.waypoints.get(i - 1);
+                            WaypointVm wp = runtime.waypoints.get(i);
+                            double horiz = calculateHaversineDistance(prevWp.lat(), prevWp.lon(), wp.lat(), wp.lon());
+                            if (horiz > 1.0 && wp.speed() != null && Math.abs(wp.speed() - prevCruiseSpeed) < 0.01) {
+                                runtime.waypoints.set(i, new WaypointVm(
+                                        wp.lat(), wp.lon(), wp.alt(), clampedSpeed, wp.hoverDurationSec(), wp.headingAtWaypoint()));
+                            }
+                        }
+                        boolean c2Loitering = "c2_lost".equalsIgnoreCase(runtime.activeScenario) && !runtime.failsafeRerouteActive;
+                        if (!runtime.holdingByCommand && !runtime.forcedDescentActive && !c2Loitering) {
+                            runtime.speed = clampedSpeed;
+                        }
+                        eventMessage = String.format(Locale.US,
+                                "C2 command CONFIGURE applied: updated cruise speed to %.1f m/s", clampedSpeed);
+                    } else {
+                        eventMessage = "C2 command CONFIGURE applied: updated flight controller parameters";
+                    }
+                    instantCompleted = true;
+                }
+                case "SET_HOME" -> {
+                    Double homeLat = extractDouble(params, "latitude", "lat");
+                    Double homeLon = extractDouble(params, "longitude", "lon", "lng");
+                    String targetHubId = extractString(params, "targetHubId");
+                    boolean coordsUpdated = false;
+                    if (homeLat != null && homeLon != null
+                            && homeLat >= -90.0 && homeLat <= 90.0
+                            && homeLon >= -180.0 && homeLon <= 180.0) {
+                        runtime.homePadWaypoint = new WaypointVm(homeLat, homeLon, 0.0);
+                        coordsUpdated = true;
+                    }
+                    if (targetHubId != null && !targetHubId.isBlank()) {
+                        runtime.departureHubId = targetHubId.trim();
+                    }
+                    instantCompleted = true;
+                    eventMessage = coordsUpdated
+                            ? String.format(Locale.US, "C2 command SET_HOME applied: updated home pad to [%.5f, %.5f]",
+                                    homeLat, homeLon)
+                            : "C2 command SET_HOME applied: updated home hub configuration";
                 }
                 default -> {
                     log.debug("Simulation acknowledging non-maneuver C2 command type: {}", cmdType);
@@ -893,8 +1212,13 @@ public class SimulationServiceImpl implements SimulationService {
         }
         publishCommandAck(commandEvent.commandId(), runtime.droneId, runtime.flightId,
                 cmdType, "ACKNOWLEDGED", "C2 command accepted by onboard flight controller");
-        publishCommandAck(commandEvent.commandId(), runtime.droneId, runtime.flightId,
-                cmdType, "EXECUTING", eventMessage);
+        if (instantCompleted) {
+            publishCommandAck(commandEvent.commandId(), runtime.droneId, runtime.flightId,
+                    cmdType, "COMPLETED", eventMessage);
+        } else {
+            publishCommandAck(commandEvent.commandId(), runtime.droneId, runtime.flightId,
+                    cmdType, "EXECUTING", eventMessage);
+        }
 
         if (snapshot != null) {
             persistRuntimeState(snapshot);
@@ -913,54 +1237,82 @@ public class SimulationServiceImpl implements SimulationService {
         }
     }
 
-    private SimulationSessionRuntime bootstrapRuntimeForCommand(DroneCommandEvent commandEvent, String cmdType) {
+    private record BootstrapAttempt(SimulationSessionRuntime runtime, boolean skippedForExternalHardware) {
+    }
+
+    private BootstrapAttempt bootstrapRuntimeForCommand(DroneCommandEvent commandEvent, String cmdType) {
         try {
-            FlightDetailVm flight = null;
+            FlightDetailVm initialFlight = null;
+            String lockFlightId = null;
             if (commandEvent.flightId() != null && !commandEvent.flightId().isBlank()) {
-                flight = flightClientService.getFlightDetail(commandEvent.flightId().trim());
+                lockFlightId = commandEvent.flightId().trim();
             } else if (commandEvent.droneId() != null && !commandEvent.droneId().isBlank()) {
-                flight = flightClientService.findControllableFlightByDroneId(commandEvent.droneId().trim());
-            }
-            if (flight == null || flight.id() == null || flight.droneId() == null || flight.droneId().isBlank()
-                    || flight.status() == null) {
-                return null;
-            }
-            String fStatus = flight.status().trim().toLowerCase(Locale.ROOT);
-            if ("TAKEOFF".equals(cmdType)) {
-                if ("authorized".equals(fStatus)) {
-                    if (!flightClientService.startFlight(flight.id())) {
-                        log.warn("Auto-attach TAKEOFF could not start authorized flight '{}'", flight.id());
-                        return null;
-                    }
-                } else if (!"active".equals(fStatus)) {
-                    return null;
+                initialFlight = flightClientService.findControllableFlightByDroneId(commandEvent.droneId().trim());
+                if (initialFlight != null && initialFlight.id() != null && !initialFlight.id().isBlank()) {
+                    lockFlightId = initialFlight.id().trim();
                 }
-            } else if (!"active".equals(fStatus) && !"diverted".equals(fStatus)) {
-                return null;
+            }
+            if (lockFlightId == null) {
+                return new BootstrapAttempt(null, false);
             }
 
-            SimulationSessionRuntime existing = findActiveRuntime(flight.id(), flight.droneId());
-            if (existing != null) {
-                return existing;
-            }
+            Object flightLock = flightBootstrapLocks.computeIfAbsent(lockFlightId, k -> new Object());
+            synchronized (flightLock) {
+                SimulationSessionRuntime existing = findActiveRuntime(lockFlightId, commandEvent.droneId());
+                if (existing != null) {
+                    return new BootstrapAttempt(existing, false);
+                }
 
-            List<WaypointVm> waypoints = resolveWaypoints(flight);
-            double totalDist = calculateTotalDistance(waypoints);
-            if (totalDist < 10.0) {
-                return null;
-            }
+                Optional<TelemetryLatestVm> latestOpt = safeGetLatestFlightTelemetry(lockFlightId);
+                if (isRecentExternalTelemetry(latestOpt.orElse(null), lockFlightId)) {
+                    return new BootstrapAttempt(null, true);
+                }
 
-            WaypointVm first = waypoints.getFirst();
-            WaypointVm second = waypoints.get(1);
-            double startLat = first.lat();
-            double startLon = first.lon();
-            double startAlt = "TAKEOFF".equals(cmdType) ? 0.0 : first.alt();
-            double startHeading = calculateBearing(first.lat(), first.lon(), second.lat(), second.lon());
-            double startBattery = 100.0;
+                FlightDetailVm flight = initialFlight != null
+                        ? initialFlight
+                        : flightClientService.getFlightDetail(lockFlightId);
+                if (flight == null || flight.id() == null || flight.droneId() == null || flight.droneId().isBlank()
+                        || flight.status() == null) {
+                    return new BootstrapAttempt(null, false);
+                }
+                String fStatus = flight.status().trim().toLowerCase(Locale.ROOT);
+                if ("TAKEOFF".equals(cmdType)) {
+                    if ("authorized".equals(fStatus)) {
+                        if (!flightClientService.startFlight(flight.id())) {
+                            FlightDetailVm refreshed = flightClientService.getFlightDetail(flight.id());
+                            if (refreshed == null || refreshed.status() == null
+                                    || !"active".equalsIgnoreCase(refreshed.status().trim())) {
+                                log.warn("Auto-attach TAKEOFF could not start authorized flight '{}'", flight.id());
+                                return new BootstrapAttempt(null, false);
+                            }
+                            flight = refreshed;
+                        }
+                    } else if (!"active".equals(fStatus)) {
+                        return new BootstrapAttempt(null, false);
+                    }
+                } else if (!"active".equals(fStatus) && !"diverted".equals(fStatus)) {
+                    return new BootstrapAttempt(null, false);
+                }
 
-            if (!"TAKEOFF".equals(cmdType)) {
-                var latestOpt = telemetryClientService.getLatestFlightTelemetry(flight.id());
-                if (latestOpt.isPresent()) {
+                existing = findActiveRuntime(flight.id(), flight.droneId());
+                if (existing != null) {
+                    return new BootstrapAttempt(existing, false);
+                }
+
+                List<WaypointVm> rawWaypoints = resolveWaypoints(flight);
+                double totalDist = calculateTotalDistance(rawWaypoints);
+                if (totalDist < 10.0) {
+                    return new BootstrapAttempt(null, false);
+                }
+
+                WaypointVm rawFirst = rawWaypoints.getFirst();
+                double startLat = rawFirst.lat();
+                double startLon = rawFirst.lon();
+                double startAlt = "TAKEOFF".equals(cmdType) ? 0.0 : rawFirst.alt();
+                Double telemetryHeading = null;
+                double startBattery = 100.0;
+
+                if (!"TAKEOFF".equals(cmdType) && latestOpt.isPresent()) {
                     TelemetryLatestVm tel = latestOpt.get();
                     if (tel.latitude() != null && tel.longitude() != null) {
                         startLat = tel.latitude();
@@ -970,66 +1322,175 @@ public class SimulationServiceImpl implements SimulationService {
                         startAlt = tel.altitude();
                     }
                     if (tel.heading() != null) {
-                        startHeading = tel.heading();
+                        telemetryHeading = tel.heading();
                     }
                     if (tel.batteryPercentage() != null && tel.batteryPercentage() > 0.0) {
                         startBattery = tel.batteryPercentage();
                     }
                 }
-            }
 
-            SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(
-                    flight.id(), 15.0, 1.0, startBattery, null, flight.droneId(), waypoints, 1.0);
-            SimulationSession entity = simulationMapper.toEntity(createVm);
-            if (entity == null) {
-                return null;
-            }
-            entity.setDroneId(flight.droneId());
-            entity.setFlightId(flight.id());
-            entity.setFlightPhase("TAKEOFF".equals(cmdType) ? "TAKEOFF" : "CRUISE");
-            entity.setTickRate(1.0);
-            entity.setWaypoints(waypoints);
-            entity.setStatus(SimulationStatus.RUNNING);
-            entity.setSpeed(15.0);
-            entity.setTimeScale(1.0);
-            entity.setCurrentLat(startLat);
-            entity.setCurrentLon(startLon);
-            entity.setCurrentAlt(startAlt);
-            entity.setCurrentHeading(startHeading);
-            entity.setCurrentBattery(startBattery);
-            entity.setTotalDistance(totalDist);
+                double effectiveCruiseAlt = flight.cruisingAltitudeM() != null && flight.cruisingAltitudeM() > 0.0
+                        ? flight.cruisingAltitudeM()
+                        : resolveFirstAirborneAltitude(rawWaypoints, 50.0);
+                boolean startsFromGround = startAlt <= 2.0;
+                List<WaypointVm> waypoints = startsFromGround
+                        ? ensureGroundTakeoffWaypoints(rawWaypoints, startLat, startLon, effectiveCruiseAlt)
+                        : rawWaypoints;
+                if (startsFromGround) {
+                    startAlt = 0.0;
+                }
+                double startHeading = telemetryHeading != null ? telemetryHeading : resolveInitialHeading(waypoints);
 
-            SimulationSession saved = sessionRepository.saveAndFlush(entity);
-            SimulationSessionRuntime runtime = new SimulationSessionRuntime(
-                    saved,
-                    waypoints,
-                    extractCurrentBearerToken(),
-                    flight.departureHubId(),
-                    flight.arrivalHubId(),
-                    flight.cruisingAltitudeM());
-            runtime.currentLat = startLat;
-            runtime.currentLon = startLon;
-            runtime.currentAlt = startAlt;
-            runtime.currentHeading = startHeading;
-            runtime.currentBattery = startBattery;
-            runtime.lastReportedBattery = startBattery;
+                SimulationSessionCreateVm createVm = new SimulationSessionCreateVm(
+                        flight.id(), 15.0, 1.0, startBattery, null, flight.droneId(), waypoints, 1.0);
+                SimulationSession entity = simulationMapper.toEntity(createVm);
+                if (entity == null) {
+                    return new BootstrapAttempt(null, false);
+                }
+                entity.setDroneId(flight.droneId());
+                entity.setFlightId(flight.id());
+                entity.setFlightPhase(startsFromGround ? "TAKEOFF" : "CRUISE");
+                entity.setTickRate(1.0);
+                entity.setWaypoints(waypoints);
+                entity.setStatus(SimulationStatus.RUNNING);
+                entity.setSpeed(15.0);
+                entity.setTimeScale(1.0);
+                entity.setCurrentLat(startLat);
+                entity.setCurrentLon(startLon);
+                entity.setCurrentAlt(startAlt);
+                entity.setCurrentHeading(startHeading);
+                entity.setCurrentBattery(startBattery);
+                entity.setTotalDistance(totalDist);
 
-            SimulationSessionRuntime prev = activeRuntimes.putIfAbsent(saved.getId(), runtime);
-            if (prev != null) {
-                return prev;
+                SimulationSession saved = sessionRepository.saveAndFlush(entity);
+                SimulationSessionRuntime runtime = new SimulationSessionRuntime(
+                        saved,
+                        waypoints,
+                        extractCurrentBearerToken(),
+                        flight.departureHubId(),
+                        flight.arrivalHubId(),
+                        effectiveCruiseAlt);
+                runtime.currentLat = startLat;
+                runtime.currentLon = startLon;
+                runtime.currentAlt = startAlt;
+                runtime.currentHeading = startHeading;
+                runtime.previousTickHeading = startHeading;
+                runtime.currentBattery = startBattery;
+                runtime.lastReportedBattery = startBattery;
+                runtime.takeoffClimbActive = startsFromGround;
+
+                SimulationSessionRuntime prev = activeRuntimes.putIfAbsent(saved.getId(), runtime);
+                if (prev != null) {
+                    return new BootstrapAttempt(prev, false);
+                }
+                runtime.scheduledFuture = scheduler.scheduleAtFixedRate(
+                        () -> runSimulationTick(runtime),
+                        1000L,
+                        1000L,
+                        TimeUnit.MILLISECONDS);
+                log.info("Auto-attached on-demand simulation runtime '{}' for flight '{}' on C2 command {}",
+                        saved.getId(), flight.id(), cmdType);
+                return new BootstrapAttempt(runtime, false);
             }
-            runtime.scheduledFuture = scheduler.scheduleAtFixedRate(
-                    () -> runSimulationTick(runtime),
-                    1000L,
-                    1000L,
-                    TimeUnit.MILLISECONDS);
-            log.info("Auto-attached on-demand simulation runtime '{}' for flight '{}' on C2 command {}",
-                    saved.getId(), flight.id(), cmdType);
-            return runtime;
         } catch (Exception ex) {
             log.warn("Failed to auto-attach simulation runtime for command {}: {}", cmdType, ex.getMessage());
-            return null;
+            return new BootstrapAttempt(null, false);
         }
+    }
+
+    private Optional<TelemetryLatestVm> safeGetLatestFlightTelemetry(String flightId) {
+        if (flightId == null || flightId.isBlank() || telemetryClientService == null) {
+            return Optional.empty();
+        }
+        try {
+            Optional<TelemetryLatestVm> result = telemetryClientService.getLatestFlightTelemetry(flightId);
+            return result != null ? result : Optional.empty();
+        } catch (Exception ex) {
+            log.debug("Could not fetch latest telemetry for flight '{}': {}", flightId, ex.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private boolean isRecentExternalTelemetry(TelemetryLatestVm tel, String flightId) {
+        if (tel == null || tel.timestamp() == null || tel.source() == null || tel.source().isBlank()) {
+            return false;
+        }
+        String src = tel.source().trim();
+        if ("simulation".equalsIgnoreCase(src) || "simulator".equalsIgnoreCase(src)) {
+            return false;
+        }
+        if (Duration.between(tel.timestamp(), ZonedDateTime.now()).abs().toSeconds() <= 12) {
+            log.info("Skipping simulation auto-bootstrap for flight '{}': active external telemetry detected (source='{}', timestamp={})",
+                    flightId, src, tel.timestamp());
+            return true;
+        }
+        return false;
+    }
+
+    private double resolveFirstAirborneAltitude(List<WaypointVm> waypoints, double fallbackAlt) {
+        if (waypoints != null) {
+            for (WaypointVm wp : waypoints) {
+                if (wp != null && wp.alt() != null && wp.alt() >= 10.0) {
+                    return wp.alt();
+                }
+            }
+        }
+        return fallbackAlt;
+    }
+
+    private List<WaypointVm> ensureGroundTakeoffWaypoints(
+            List<WaypointVm> waypoints,
+            double startLat,
+            double startLon,
+            double defaultCruiseAlt) {
+        double targetClimbAlt = Math.max(resolveFirstAirborneAltitude(waypoints, defaultCruiseAlt), 20.0);
+        if (waypoints.size() >= 2) {
+            WaypointVm wp0 = waypoints.get(0);
+            WaypointVm wp1 = waypoints.get(1);
+            double horiz01 = calculateHaversineDistance(wp0.lat(), wp0.lon(), wp1.lat(), wp1.lon());
+            if (horiz01 <= 2.0 && wp1.alt() != null && wp1.alt() >= 10.0) {
+                List<WaypointVm> normalized = new ArrayList<>(waypoints);
+                normalized.set(0, new WaypointVm(
+                        wp0.lat(), wp0.lon(), 0.0,
+                        wp0.speed() != null && wp0.speed() > 0.0 ? wp0.speed() : 4.0,
+                        wp0.hoverDurationSec(), wp0.headingAtWaypoint()));
+                normalized.set(1, new WaypointVm(
+                        wp1.lat(), wp1.lon(), wp1.alt(),
+                        wp1.speed() != null && wp1.speed() > 0.0 ? wp1.speed() : 4.0,
+                        wp1.hoverDurationSec(), wp1.headingAtWaypoint()));
+                return normalized;
+            }
+        }
+
+        List<WaypointVm> result = new ArrayList<>();
+        result.add(new WaypointVm(startLat, startLon, 0.0, 4.0, 0, null));
+        result.add(new WaypointVm(startLat, startLon, targetClimbAlt, 4.0, 0, null));
+        for (int i = 0; i < waypoints.size(); i++) {
+            WaypointVm wp = waypoints.get(i);
+            if (i == 0 && calculateHaversineDistance(startLat, startLon, wp.lat(), wp.lon()) <= 2.0) {
+                continue;
+            }
+            result.add(wp);
+        }
+        return result;
+    }
+
+    private double resolveInitialHeading(List<WaypointVm> waypoints) {
+        if (waypoints == null || waypoints.size() < 2) {
+            return 0.0;
+        }
+        WaypointVm first = waypoints.getFirst();
+        if (first.headingAtWaypoint() != null) {
+            return first.headingAtWaypoint();
+        }
+        for (int i = 0; i < waypoints.size() - 1; i++) {
+            WaypointVm a = waypoints.get(i);
+            WaypointVm b = waypoints.get(i + 1);
+            if (calculateHaversineDistance(a.lat(), a.lon(), b.lat(), b.lon()) > 0.5) {
+                return calculateBearing(a.lat(), a.lon(), b.lat(), b.lon());
+            }
+        }
+        return 0.0;
     }
 
     void stepSessionOnce(String sessionId) {
@@ -1082,6 +1543,22 @@ public class SimulationServiceImpl implements SimulationService {
                 try {
                     return Double.parseDouble(val.asText().trim());
                 } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return null;
+    }
+
+    private String extractString(JsonNode node, String... fieldNames) {
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        for (String field : fieldNames) {
+            JsonNode val = node.get(field);
+            if (val != null && !val.isNull()) {
+                String text = val.asText().trim();
+                if (!text.isEmpty()) {
+                    return text;
                 }
             }
         }
@@ -1317,7 +1794,7 @@ public class SimulationServiceImpl implements SimulationService {
                     terminalLog = "Simulation session '" + runtime.sessionId + "' stopped: battery depleted for drone '"
                             + runtime.droneId + "'";
                 } else {
-                    boolean c2Severed = "c2_lost".equalsIgnoreCase(runtime.activeScenario) && !runtime.operatorOverride;
+                    boolean c2Severed = "c2_lost".equalsIgnoreCase(runtime.activeScenario);
                     boolean sendTelemetry = !c2Severed && runtime.currentBattery > 0.0;
 
                     if (runtime.ackPendingOnNextTick && !runtime.activeCommandIds.isEmpty()) {
@@ -1356,12 +1833,33 @@ public class SimulationServiceImpl implements SimulationService {
                         segVertSpeed = Math.abs(altDelta) > 0.5 ? Math.signum(altDelta) * 4.0 : 0.0;
                     }
 
+                    boolean isChangingAltitude = runtime.targetAltitudeOverride != null
+                            && Math.abs(runtime.targetAltitudeOverride - runtime.currentAlt) > 0.5
+                            && !runtime.forcedDescentActive
+                            && !runtime.rtlActive
+                            && !runtime.divertLandingActive
+                            && !runtime.takeoffClimbActive
+                            && !"motor_failure".equalsIgnoreCase(runtime.activeScenario);
+                    boolean isTerminalVerticalDescent = !runtime.takeoffClimbActive
+                            && !runtime.rtlActive
+                            && !runtime.divertLandingActive
+                            && runtime.waypoints.size() >= 2
+                            && runtime.currentSegment == runtime.waypoints.size() - 2
+                            && runtime.waypoints.getLast().alt() <= 2.0
+                            && calculateHaversineDistance(
+                                    runtime.waypoints.get(runtime.currentSegment).lat(),
+                                    runtime.waypoints.get(runtime.currentSegment).lon(),
+                                    runtime.waypoints.getLast().lat(),
+                                    runtime.waypoints.getLast().lon()) <= 2.0;
                     String flightMode = runtime.emergencyStopActive ? "EMERGENCY_STOP"
                             : runtime.forcedDescentActive ? "LANDING"
                             : runtime.rtlActive ? "RTL"
+                            : runtime.divertLandingActive ? "DIVERT"
                             : runtime.takeoffClimbActive ? "TAKEOFF"
+                            : isChangingAltitude ? "ALTITUDE_CHANGE"
                             : runtime.holdingByCommand ? "LOITER"
                             : (runtime.activeScenario != null && !runtime.operatorOverride) ? "CONTINGENCY"
+                            : isTerminalVerticalDescent ? "LANDING"
                             : "AUTONOMOUS";
 
                     if (sendTelemetry) {
@@ -1412,6 +1910,19 @@ public class SimulationServiceImpl implements SimulationService {
                         double hdop = (!runtime.operatorOverride && "gps_failure".equalsIgnoreCase(runtime.activeScenario)) ? 6.5 : 0.9;
                         int sats = (!runtime.operatorOverride && "gps_failure".equalsIgnoreCase(runtime.activeScenario)) ? 3 : 14;
 
+                        double headingDelta = (((runtime.currentHeading - runtime.previousTickHeading) % 360.0) + 540.0) % 360.0 - 180.0;
+                        runtime.previousTickHeading = runtime.currentHeading;
+                        double pitch = Math.round((-Math.min(12.0, effectiveSpeed * 0.42)
+                                + Math.max(-8.0, Math.min(8.0, segVertSpeed * 1.1))) * 10.0) / 10.0;
+                        double roll = Math.round(Math.max(-22.0, Math.min(22.0,
+                                effectiveSpeed > 0.5 ? headingDelta * 0.65 : 0.0)) * 10.0) / 10.0;
+                        double altitudeAgl = Math.round(effectiveAlt * 10.0) / 10.0;
+                        double batteryVoltage = Math.round((43.2 + (runtime.currentBattery / 100.0) * 7.2) * 100.0) / 100.0;
+                        double batteryTemperature = Math.round((31.5 + (effectiveSpeed > 1.0 ? 5.2 : 1.8)
+                                + ((100.0 - runtime.currentBattery) * 0.06)) * 10.0) / 10.0;
+                        double batteryDischargeRate = Math.round((effectiveSpeed > 0.5 ? 275.0 + effectiveSpeed * 6.2
+                                : (effectiveAlt > 0.5 ? 340.0 : 18.0)) * 10.0) / 10.0;
+
                         telemetryPush = new TelemetryPushVm(
                                 runtime.droneId,
                                 runtime.flightId,
@@ -1420,8 +1931,8 @@ public class SimulationServiceImpl implements SimulationService {
                                 Math.round(effectiveAlt * 10.0) / 10.0,
                                 Math.round(effectiveSpeed * 10.0) / 10.0,
                                 Math.round(effectiveHeading * 10.0) / 10.0,
-                                0.0,
-                                0.0,
+                                pitch,
+                                roll,
                                 Math.round(effectiveHeading * 10.0) / 10.0,
                                 Math.round(runtime.currentBattery * 10.0) / 10.0,
                                 ZonedDateTime.now(),
@@ -1430,42 +1941,60 @@ public class SimulationServiceImpl implements SimulationService {
                                 hdop,
                                 sats,
                                 flightMode,
-                                "simulation");
+                                "simulation",
+                                altitudeAgl,
+                                batteryVoltage,
+                                batteryTemperature,
+                                batteryDischargeRate);
                     }
 
                     if (runtime.isFinished()) {
-                        if ("GOTO".equals(runtime.activeCommandType) && runtime.currentAlt > 2.0 && !runtime.rtlActive) {
+                        if ("GOTO".equals(runtime.activeCommandType) && runtime.currentAlt > 2.0
+                                && !runtime.rtlActive && !runtime.divertLandingActive) {
                             runtime.holdingByCommand = true;
                             runtime.speed = 0.0;
+                            WaypointVm holdPt = new WaypointVm(runtime.currentLat, runtime.currentLon, runtime.currentAlt);
+                            runtime.reroutePath(List.of(holdPt, holdPt));
                             runtime.drainActiveCommandsToAcks(pendingAcks, "COMPLETED",
                                     "Reached GOTO coordinates; holding position");
                             snapshotToPersist = runtime.snapshot();
                         } else {
                             boolean wasRtl = runtime.rtlActive;
-                            runtime.currentAlt = wasRtl ? 0.0 : runtime.currentAlt;
+                            boolean wasDivertLanding = runtime.divertLandingActive;
+                            boolean endsAtGround = !runtime.waypoints.isEmpty()
+                                    && runtime.waypoints.getLast().alt() <= 1.0;
+                            runtime.currentAlt = (wasRtl || wasDivertLanding || endsAtGround) ? 0.0 : runtime.currentAlt;
                             runtime.speed = 0.0;
                             runtime.status = SimulationStatus.COMPLETED;
                             runtime.cancelFutures(false);
                             activeRuntimes.remove(runtime.sessionId);
                             snapshotToPersist = runtime.snapshot();
                             completionLandingHubId = wasRtl ? runtime.departureHubId : runtime.arrivalHubId;
-                            runtime.drainActiveCommandsToAcks(pendingAcks, "COMPLETED",
-                                    wasRtl ? "RTH touchdown completed at departure hub (0m AGL)"
+                            String ackMsg = wasRtl
+                                    ? "RTH touchdown completed at departure hub (0m AGL)"
+                                    : (wasDivertLanding
+                                            ? "Diverted landing completed at alternate hub (0m AGL)"
                                             : "Flight maneuver completed");
+                            runtime.drainActiveCommandsToAcks(pendingAcks, "COMPLETED", ackMsg);
                             if (sendTelemetry) {
                                 telemetryPush = buildTouchdownTelemetry(runtime);
                             }
+                            String completeEventMsg = wasRtl
+                                    ? "Return-to-home touchdown completed at departure hub"
+                                    : (wasDivertLanding
+                                            ? "Diverted landing completed at alternate hub"
+                                            : "Flight simulation completed at final waypoint");
                             pendingEvent = new PendingEvent(
                                     runtime.sessionId,
                                     "SESSION_COMPLETED",
                                     null,
-                                    wasRtl ? "Return-to-home touchdown completed at departure hub"
-                                            : "Flight simulation completed at final waypoint",
+                                    completeEventMsg,
                                     "LOW",
                                     null);
                             terminalLog = "Simulation session '" + runtime.sessionId
                                     + (wasRtl ? "' completed RTH landing at departure hub"
-                                            : "' completed flight path successfully");
+                                            : (wasDivertLanding ? "' completed diverted landing at alternate hub"
+                                                    : "' completed flight path successfully"));
                         }
                     } else {
                         double stepDist = 0.0;
@@ -1554,6 +2083,7 @@ public class SimulationServiceImpl implements SimulationService {
                                                     : "RTL";
                                     if ("LAND".equals(actionCfg) || runtime.currentBattery <= 15.0) {
                                         runtime.forcedDescentActive = true;
+                                        runtime.divertLandingActive = false;
                                         runtime.forcedDescentRateMps = 3.5;
                                         runtime.forcedDescentReason = "Onboard C2 link-loss failsafe vertical landing";
                                         runtime.holdingByCommand = false;
@@ -1569,6 +2099,7 @@ public class SimulationServiceImpl implements SimulationService {
                                     } else {
                                         runtime.failsafeRerouteActive = true;
                                         runtime.rtlActive = true;
+                                        runtime.divertLandingActive = false;
                                         runtime.holdingByCommand = false;
                                         runtime.forcedDescentActive = false;
                                         runtime.targetAltitudeOverride = null;
@@ -1637,11 +2168,21 @@ public class SimulationServiceImpl implements SimulationService {
                                 double delta = runtime.targetAltitudeOverride - runtime.currentAlt;
                                 double maxStep = 4.0 * timeStepSeconds;
                                 if (Math.abs(delta) <= maxStep) {
-                                    runtime.currentAlt = runtime.targetAltitudeOverride;
+                                    double reachedAlt = runtime.targetAltitudeOverride;
+                                    runtime.currentAlt = reachedAlt;
+                                    runtime.targetAltitudeOverride = null;
+                                    if (runtime.currentSegment == 0 && runtime.waypoints.size() >= 2
+                                            && runtime.waypoints.get(0).alt() <= 1.0
+                                            && calculateHaversineDistance(
+                                                    runtime.waypoints.get(0).lat(), runtime.waypoints.get(0).lon(),
+                                                    runtime.waypoints.get(1).lat(), runtime.waypoints.get(1).lon()) <= 1.0) {
+                                        runtime.currentSegment = 1;
+                                        runtime.distanceInSegment = 0.0;
+                                    }
                                     snapshotToPersist = runtime.snapshot();
                                     if ("SET_ALTITUDE".equals(runtime.activeCommandType)) {
                                         runtime.drainActiveCommandsToAcks(pendingAcks, "COMPLETED",
-                                                "Reached commanded altitude " + runtime.targetAltitudeOverride + "m");
+                                                "Reached commanded altitude " + reachedAlt + "m");
                                     }
                                 } else {
                                     runtime.currentAlt += Math.signum(delta) * maxStep;
@@ -1666,9 +2207,16 @@ public class SimulationServiceImpl implements SimulationService {
                                 terminalLog = "Simulation session '" + runtime.sessionId
                                         + "' stopped: battery depleted for drone '" + runtime.droneId + "'";
                             } else {
+                                int prevSegment = runtime.currentSegment;
                                 runtime.advance(stepDist);
+                                double climbTargetAlt = (runtime.waypoints.size() >= 2
+                                        && calculateHaversineDistance(
+                                                runtime.waypoints.get(0).lat(), runtime.waypoints.get(0).lon(),
+                                                runtime.waypoints.get(1).lat(), runtime.waypoints.get(1).lon()) <= 2.0)
+                                                        ? runtime.waypoints.get(1).alt()
+                                                        : runtime.defaultCruiseAlt;
                                 if (runtime.takeoffClimbActive
-                                        && (runtime.currentSegment >= 1 || runtime.currentAlt >= runtime.defaultCruiseAlt - 0.5)) {
+                                        && (runtime.currentSegment >= 1 || runtime.currentAlt >= climbTargetAlt - 0.5)) {
                                     runtime.takeoffClimbActive = false;
                                     snapshotToPersist = runtime.snapshot();
                                     if ("TAKEOFF".equals(runtime.activeCommandType)) {
@@ -1678,7 +2226,7 @@ public class SimulationServiceImpl implements SimulationService {
                                 }
                                 runtime.elapsedSimSeconds += timeStepSeconds;
                                 runtime.tickCount++;
-                                if (runtime.tickCount % 5 == 0) {
+                                if (runtime.tickCount % 5 == 0 || runtime.currentSegment != prevSegment) {
                                     snapshotToPersist = runtime.snapshot();
                                 }
                             }
@@ -1758,6 +2306,8 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     private TelemetryPushVm buildTouchdownTelemetry(SimulationSessionRuntime runtime) {
+        double batteryVoltage = Math.round((43.2 + (runtime.currentBattery / 100.0) * 7.2) * 100.0) / 100.0;
+        double batteryTemperature = Math.round((31.5 + 1.8 + ((100.0 - runtime.currentBattery) * 0.06)) * 10.0) / 10.0;
         return new TelemetryPushVm(
                 runtime.droneId,
                 runtime.flightId,
@@ -1776,7 +2326,11 @@ public class SimulationServiceImpl implements SimulationService {
                 0.9,
                 14,
                 "LANDED",
-                "simulation");
+                "simulation",
+                0.0,
+                batteryVoltage,
+                batteryTemperature,
+                18.0);
     }
 
     private String resolveRuntimeBearerToken(SimulationSessionRuntime runtime) {
@@ -2040,17 +2594,19 @@ public class SimulationServiceImpl implements SimulationService {
         final String droneId;
         final String flightId;
         final String bearerToken;
-        final String departureHubId;
-        final String arrivalHubId;
+        String departureHubId;
+        String arrivalHubId;
+        final String originalArrivalHubId;
         final double defaultCruiseAlt;
         final List<WaypointVm> originalWaypoints;
         final List<WaypointVm> waypoints;
         final WaypointVm originWaypoint;
-        final WaypointVm homePadWaypoint;
-        final WaypointVm arrivalPadWaypoint;
+        WaypointVm homePadWaypoint;
+        WaypointVm arrivalPadWaypoint;
+        final WaypointVm originalArrivalPadWaypoint;
         double totalDistance;
         final List<Double> segmentDistances;
-        final double cruiseSpeed;
+        double cruiseSpeed;
 
         SimulationStatus status;
         double speed;
@@ -2062,6 +2618,7 @@ public class SimulationServiceImpl implements SimulationService {
         double currentLon;
         double currentAlt;
         double currentHeading;
+        double previousTickHeading;
         double currentBattery;
         double lastReportedBattery;
         String activeScenario;
@@ -2076,6 +2633,7 @@ public class SimulationServiceImpl implements SimulationService {
         boolean emergencyStopActive = false;
         boolean failsafeRerouteActive = false;
         boolean rtlActive = false;
+        boolean divertLandingActive = false;
         boolean takeoffClimbActive = false;
         boolean operatorOverride = false;
         boolean ackPendingOnNextTick = false;
@@ -2106,12 +2664,14 @@ public class SimulationServiceImpl implements SimulationService {
             this.bearerToken = bearerToken;
             this.departureHubId = departureHubId;
             this.arrivalHubId = arrivalHubId;
+            this.originalArrivalHubId = arrivalHubId;
             this.originalWaypoints = List.copyOf(waypoints);
             this.waypoints = new ArrayList<>(waypoints);
             this.originWaypoint = waypoints.getFirst();
             WaypointVm lastWp = waypoints.getLast();
             this.homePadWaypoint = new WaypointVm(originWaypoint.lat(), originWaypoint.lon(), 0.0);
             this.arrivalPadWaypoint = new WaypointVm(lastWp.lat(), lastWp.lon(), 0.0);
+            this.originalArrivalPadWaypoint = this.arrivalPadWaypoint;
             this.defaultCruiseAlt = defaultCruiseAlt != null && defaultCruiseAlt > 0.0
                     ? defaultCruiseAlt
                     : (originWaypoint.alt() > 0.0 ? originWaypoint.alt() : 50.0);
@@ -2137,6 +2697,7 @@ public class SimulationServiceImpl implements SimulationService {
                     : (initialHoriz > 0.1
                             ? calculateBearing(first.lat(), first.lon(), waypoints.get(1).lat(), waypoints.get(1).lon())
                             : 0.0);
+            this.previousTickHeading = this.currentHeading;
         }
 
         RuntimeSnapshot snapshot() {
@@ -2220,6 +2781,26 @@ public class SimulationServiceImpl implements SimulationService {
             this.totalDistance = Math.max(total, 0.001);
         }
 
+        void updateRemainingAirborneWaypointsAltitude(double clampedAlt) {
+            double oldSegLen = (currentSegment < segmentDistances.size())
+                    ? segmentDistances.get(currentSegment)
+                    : 0.0;
+            double progressFraction = oldSegLen > 0.001
+                    ? Math.min(1.0, distanceInSegment / oldSegLen)
+                    : 0.0;
+            for (int i = Math.max(0, currentSegment); i < waypoints.size(); i++) {
+                WaypointVm wp = waypoints.get(i);
+                if (wp != null && wp.alt() > 1.0) {
+                    waypoints.set(i, new WaypointVm(
+                            wp.lat(), wp.lon(), clampedAlt, wp.speed(), wp.hoverDurationSec(), wp.headingAtWaypoint()));
+                }
+            }
+            rebuildSegments();
+            if (currentSegment < segmentDistances.size()) {
+                distanceInSegment = progressFraction * segmentDistances.get(currentSegment);
+            }
+        }
+
         void rerouteTo(WaypointVm destination) {
             reroutePath(List.of(new WaypointVm(currentLat, currentLon, currentAlt), destination));
         }
@@ -2248,25 +2829,88 @@ public class SimulationServiceImpl implements SimulationService {
             if (originalWaypoints == null || originalWaypoints.size() < 2) {
                 return;
             }
-            int bestIdx = originalWaypoints.size() - 1;
-            double bestDist = Double.MAX_VALUE;
-            for (int i = 1; i < originalWaypoints.size(); i++) {
-                WaypointVm wp = originalWaypoints.get(i);
-                double d = calculateHaversineDistance(currentLat, currentLon, wp.lat(), wp.lon());
-                if (d < bestDist) {
-                    bestDist = d;
-                    bestIdx = i;
+            int bestSegIdx = -1;
+            double bestCrossDist = Double.MAX_VALUE;
+            double bestProjLat = currentLat;
+            double bestProjLon = currentLon;
+            double bestProjAlt = defaultCruiseAlt;
+
+            double cosLat = Math.max(1e-6, Math.cos(Math.toRadians(currentLat)));
+            for (int i = 0; i < originalWaypoints.size() - 1; i++) {
+                WaypointVm a = originalWaypoints.get(i);
+                WaypointVm b = originalWaypoints.get(i + 1);
+                double segHoriz = calculateHaversineDistance(a.lat(), a.lon(), b.lat(), b.lon());
+                if (segHoriz <= 2.0) {
+                    continue;
+                }
+                double ax = (a.lon() - currentLon) * 111320.0 * cosLat;
+                double ay = (a.lat() - currentLat) * 111320.0;
+                double bx = (b.lon() - currentLon) * 111320.0 * cosLat;
+                double by = (b.lat() - currentLat) * 111320.0;
+                double dx = bx - ax;
+                double dy = by - ay;
+                double lenSq = dx * dx + dy * dy;
+                double t = lenSq > 0.01
+                        ? Math.max(0.0, Math.min(1.0, ((-ax) * dx + (-ay) * dy) / lenSq))
+                        : 0.0;
+
+                double qLat = a.lat() + t * (b.lat() - a.lat());
+                double qLon = a.lon() + t * (b.lon() - a.lon());
+                double startAirAlt = a.alt() > 2.0 ? a.alt() : (b.alt() > 2.0 ? b.alt() : defaultCruiseAlt);
+                double endAirAlt = b.alt() > 2.0 ? b.alt() : startAirAlt;
+                double qAlt = startAirAlt + t * (endAirAlt - startAirAlt);
+
+                double crossDist = calculateHaversineDistance(currentLat, currentLon, qLat, qLon);
+                if (crossDist + 1.0 < bestCrossDist
+                        || (Math.abs(crossDist - bestCrossDist) <= 1.0 && i > bestSegIdx)) {
+                    bestCrossDist = crossDist;
+                    bestSegIdx = i;
+                    bestProjLat = qLat;
+                    bestProjLon = qLon;
+                    bestProjAlt = qAlt;
                 }
             }
-            if (bestDist < 20.0 && bestIdx + 1 < originalWaypoints.size()) {
-                bestIdx++;
+
+            if (bestSegIdx < 0) {
+                bestSegIdx = originalWaypoints.size() - 2;
+                WaypointVm target = originalWaypoints.get(bestSegIdx + 1);
+                bestProjLat = target.lat();
+                bestProjLon = target.lon();
+                bestProjAlt = target.alt() > 2.0 ? target.alt() : defaultCruiseAlt;
+                bestCrossDist = calculateHaversineDistance(currentLat, currentLon, bestProjLat, bestProjLon);
             }
+
+            WaypointVm segEnd = originalWaypoints.get(bestSegIdx + 1);
+            double distProjToSegEnd = calculateHaversineDistance(
+                    bestProjLat, bestProjLon, segEnd.lat(), segEnd.lon());
+
             List<WaypointVm> rejoined = new ArrayList<>();
             rejoined.add(new WaypointVm(currentLat, currentLon, currentAlt));
-            for (int i = bestIdx; i < originalWaypoints.size(); i++) {
+            if ((bestCrossDist > 3.0 || Math.abs(currentAlt - bestProjAlt) > 2.0) && distProjToSegEnd > 15.0) {
+                rejoined.add(new WaypointVm(bestProjLat, bestProjLon, bestProjAlt, cruiseSpeed, 0, null));
+            }
+            for (int i = bestSegIdx + 1; i < originalWaypoints.size(); i++) {
                 rejoined.add(originalWaypoints.get(i));
             }
             reroutePath(rejoined);
+        }
+
+        void restoreOriginalWaypointsAltitude() {
+            if (originalWaypoints == null || originalWaypoints.isEmpty()) {
+                return;
+            }
+            boolean hasAirborneAltDiff = Math.abs(currentAlt - defaultCruiseAlt) > 1.5;
+            if (!hasAirborneAltDiff) {
+                for (WaypointVm wp : waypoints) {
+                    if (wp != null && wp.alt() > 2.0 && Math.abs(wp.alt() - defaultCruiseAlt) > 1.5) {
+                        hasAirborneAltDiff = true;
+                        break;
+                    }
+                }
+            }
+            if (hasAirborneAltDiff) {
+                rejoinOriginalRoute();
+            }
         }
 
         String resolveNearbyHubId(double thresholdMeters) {

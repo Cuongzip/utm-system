@@ -643,4 +643,44 @@ class DroneCommandServiceImplTest {
                 assertThat(sampleCommand.getErrorMessage()).contains("No active aircraft or simulation runtime");
                 verify(droneCommandRepository).save(sampleCommand);
         }
+
+        @Test
+        @DisplayName("sendCommand for CONFIGURE and SET_HOME uses real Kafka ACK pipeline rather than simulated local completion")
+        void sendCommand_configureAndSetHome_usesRealKafkaAckWatchdog() {
+                DroneCommandPostVm configurePostVm = new DroneCommandPostVm(
+                                CommandType.CONFIGURE,
+                                "f1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                "{\"targetSpeedMps\": 22.0}",
+                                null,
+                                null);
+                DroneCommand configureCmd = DroneCommand.builder()
+                                .id("c5b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                .droneId(sampleDrone.getId())
+                                .flightId("f1b2c3d4-e5f6-7890-abcd-ef1234567890")
+                                .commandType(CommandType.CONFIGURE)
+                                .status(CommandStatus.PENDING)
+                                .priority(3)
+                                .timeoutMs(5000)
+                                .maxRetries(1)
+                                .build();
+                DroneCommandVm configureVm = createCommandVm("c5b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                CommandType.CONFIGURE, CommandStatus.PENDING, 3, 5000);
+
+                when(droneRepository.findById(sampleDrone.getId())).thenReturn(Optional.of(sampleDrone));
+                when(droneCommandMapper.toEntity(eq(configurePostVm), eq(sampleDrone.getId()), anyString(),
+                                eq(3), eq(5000), eq(1))).thenReturn(configureCmd);
+                when(droneCommandRepository.save(configureCmd)).thenReturn(configureCmd);
+                when(droneCommandMapper.toVm(configureCmd)).thenReturn(configureVm);
+
+                DroneCommandVm result = droneCommandService.sendCommand(sampleDrone.getId(), configurePostVm);
+
+                assertThat(result).isNotNull();
+                assertThat(result.commandType()).isEqualTo(CommandType.CONFIGURE);
+                assertThat(result.status()).isEqualTo(CommandStatus.PENDING);
+                assertThat(configureCmd.getStatus()).isEqualTo(CommandStatus.PENDING);
+
+                when(droneCommandRepository.findById(configureCmd.getId())).thenReturn(Optional.of(configureCmd));
+                droneCommandService.markFailedIfUnacknowledged(configureCmd.getId());
+                assertThat(configureCmd.getStatus()).isEqualTo(CommandStatus.FAILED);
+        }
 }

@@ -1,6 +1,7 @@
 package com.utm.simulation.service;
 
 import com.utm.commonlibrary.kafka.event.DroneCommandEvent;
+import com.utm.commonlibrary.kafka.event.FlightLifecycleEvent;
 import com.utm.simulation.model.enumeration.SimulationStatus;
 import com.utm.simulation.viewmodel.scenario.InjectScenarioResultVm;
 import com.utm.simulation.viewmodel.scenario.InjectScenarioVm;
@@ -42,6 +43,12 @@ public interface SimulationService {
     List<com.utm.simulation.viewmodel.session.SimulationEventVm> getSessionEvents(String id);
 
     default void handleDroneCommand(DroneCommandEvent commandEvent) {
+    }
+
+    default void handleFlightStarted(FlightLifecycleEvent event) {
+    }
+
+    default void handleFlightTerminated(String flightId, String eventType) {
     }
 }
 

@@ -1,5 +1,6 @@
 package com.utm.simulation.service.client;
 
+import com.utm.commonlibrary.exception.BadRequestException;
 import com.utm.simulation.config.ServiceUrlConfig;
 import com.utm.simulation.viewmodel.client.FlightDetailVm;
 import com.utm.simulation.viewmodel.client.GeoJsonLineStringVm;
@@ -11,12 +12,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -40,6 +46,12 @@ class FlightClientServiceImplTest {
 
     @Mock
     private RestClient.RequestHeadersSpec<?> requestHeadersSpec;
+
+    @Mock
+    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock
+    private RestClient.RequestBodySpec requestBodySpec;
 
     @Mock
     private RestClient.ResponseSpec responseSpec;
@@ -159,6 +171,46 @@ class FlightClientServiceImplTest {
 
             assertThat(waypoints).hasSize(2);
             assertThat(waypoints.getFirst().lat()).isEqualTo(10.7769);
+        }
+    }
+
+    @Nested
+    @DisplayName("startFlight")
+    class StartFlight {
+
+        @Test
+        @DisplayName("whenInvalidFlightState400Returned_returnsFalseWithoutRethrowing")
+        void whenInvalidFlightState400Returned_returnsFalseWithoutRethrowing() {
+            when(serviceUrlConfig.flight()).thenReturn(new ServiceUrlConfig.FlightUrlConfig("http://localhost:8086"));
+            doReturn(requestBodyUriSpec).when(restClient).post();
+            doReturn(requestBodySpec).when(requestBodyUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestBodySpec).retrieve();
+            byte[] body = "{\"errorCode\":\"INVALID_FLIGHT_STATE\",\"detail\":\"Flight already active\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+            when(responseSpec.toBodilessEntity()).thenThrow(HttpClientErrorException.create(
+                    HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY, body, StandardCharsets.UTF_8));
+
+            boolean started = flightClientService.startFlight(FLIGHT_ID);
+
+            assertThat(started).isFalse();
+        }
+
+        @Test
+        @DisplayName("whenSafetyGuard400Returned_rethrowsBadRequestException")
+        void whenSafetyGuard400Returned_rethrowsBadRequestException() {
+            when(serviceUrlConfig.flight()).thenReturn(new ServiceUrlConfig.FlightUrlConfig("http://localhost:8086"));
+            doReturn(requestBodyUriSpec).when(restClient).post();
+            doReturn(requestBodySpec).when(requestBodyUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestBodySpec).retrieve();
+            byte[] body = "{\"errorCode\":\"INSUFFICIENT_BATTERY_FOR_FLIGHT\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+            when(responseSpec.toBodilessEntity()).thenThrow(HttpClientErrorException.create(
+                    HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY, body, StandardCharsets.UTF_8));
+
+            assertThatThrownBy(() -> flightClientService.startFlight(FLIGHT_ID))
+                    .isInstanceOf(BadRequestException.class)
+                    .satisfies(ex -> assertThat(((BadRequestException) ex).getErrorCode())
+                            .isEqualTo("INSUFFICIENT_BATTERY_FOR_FLIGHT"));
         }
     }
 }

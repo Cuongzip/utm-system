@@ -11,14 +11,29 @@ public record FlightBriefVm(
         String flightNumber,
         String droneId,
         String departureHubId,
+        String arrivalHubId,
         String status,
         Double cruisingAltitudeM,
         ZonedDateTime scheduledDeparture,
         ZonedDateTime scheduledArrival,
         JsonNode plannedRoute
 ) {
+    public FlightBriefVm(
+            String id,
+            String flightNumber,
+            String droneId,
+            String departureHubId,
+            String status,
+            Double cruisingAltitudeM,
+            ZonedDateTime scheduledDeparture,
+            ZonedDateTime scheduledArrival,
+            JsonNode plannedRoute) {
+        this(id, flightNumber, droneId, departureHubId, null, status, cruisingAltitudeM,
+                scheduledDeparture, scheduledArrival, plannedRoute);
+    }
+
     public FlightBriefVm(String id, String flightNumber, String droneId, String departureHubId) {
-        this(id, flightNumber, droneId, departureHubId, null, null, null, null, null);
+        this(id, flightNumber, droneId, departureHubId, null, null, null, null, null, null);
     }
 }
 

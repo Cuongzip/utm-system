@@ -33,7 +33,7 @@ public class FlightClientServiceImpl implements FlightClientService {
     public FlightClientServiceImpl(RestClient restClient, ServiceUrlConfig serviceUrlConfig, ObjectMapper objectMapper) {
         this.restClient = restClient;
         this.serviceUrlConfig = serviceUrlConfig;
-        this.objectMapper = objectMapper;
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
     }
 
     @Override
@@ -97,6 +97,11 @@ public class FlightClientServiceImpl implements FlightClientService {
             log.info("Synchronized flight '{}' -> ACTIVE from simulation start", flightId);
             return true;
         } catch (RestClientResponseException ex) {
+            if (ex.getStatusCode().is4xxClientError() && isInvalidFlightStateError(ex)) {
+                log.info("Flight '{}' already transitioned state during startFlight race (INVALID_FLIGHT_STATE); continuing",
+                        flightId);
+                return false;
+            }
             log.warn("Flight service rejected startFlight for '{}': HTTP {} {}",
                     flightId, ex.getStatusCode().value(), ex.getResponseBodyAsString());
             if (ex.getStatusCode().is4xxClientError()) {
@@ -105,6 +110,21 @@ public class FlightClientServiceImpl implements FlightClientService {
             return false;
         } catch (Exception ex) {
             log.warn("Could not start flight '{}' from simulation: {}", flightId, ex.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isInvalidFlightStateError(RestClientResponseException ex) {
+        String rawBody = ex.getResponseBodyAsString();
+        if (rawBody == null || rawBody.isBlank() || objectMapper == null) {
+            return false;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(rawBody);
+            JsonNode codeNode = root.get("errorCode");
+            return codeNode != null && codeNode.isTextual()
+                    && "INVALID_FLIGHT_STATE".equalsIgnoreCase(codeNode.asText().trim());
+        } catch (Exception ignored) {
             return false;
         }
     }

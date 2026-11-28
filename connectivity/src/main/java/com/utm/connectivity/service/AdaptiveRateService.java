@@ -11,6 +11,8 @@ public interface AdaptiveRateService {
 
     List<TelemetryModeConfigVm> getSupportedModes();
 
+    DeviceTelemetryModeVm getDeviceTelemetryMode(String deviceIdOrKey);
+
     DeviceTelemetryModeVm setDeviceTelemetryMode(String deviceIdOrKey, TelemetryMode mode, String reason);
 
     void onDroneModeTransition(String droneId, TelemetryMode targetMode, String reason);

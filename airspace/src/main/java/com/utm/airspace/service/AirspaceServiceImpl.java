@@ -81,6 +81,9 @@ public class AirspaceServiceImpl implements AirspaceService {
         boolean safe = true;
 
         ZonedDateTime now = ZonedDateTime.now();
+        boolean insideActiveHubZone = isPointInsidePermissiveHubZone(
+                checkVm.lat(), checkVm.lon(), checkVm.alt(), activeZones, activeZoneVms, now);
+
         for (int i = 0; i < activeZones.size(); i++) {
             AirspaceZone zone = activeZones.get(i);
             if (!isZoneEffective(zone, now)) {
@@ -140,7 +143,9 @@ public class AirspaceServiceImpl implements AirspaceService {
                             "warning",
                             String.format("Point altitude (%.1fm) exceeds ceiling limit (%.1fm) of zone '%s'",
                                     checkVm.alt(), effectiveCeiling, zone.getName())));
-                } else if (belowFloor) {
+                } else if (belowFloor
+                        && zone.getZoneType() == AirspaceZoneType.HUB_CORRIDOR
+                        && !insideActiveHubZone) {
                     safe = false;
                     violations.add(new AirspaceViolationVm(
                             zone.getId(),
@@ -199,8 +204,13 @@ public class AirspaceServiceImpl implements AirspaceService {
 
         List<SpatialCalculationService.SampledPoint> sampledPoints = spatialCalculationService
                 .samplePolyline(checkPathVm.points(), checkPathVm.spacingM());
+        List<AirspaceCheckPointVm> terminalPoints = checkPathVm.points();
 
         for (SpatialCalculationService.SampledPoint pt : sampledPoints) {
+            boolean insideActiveHubZone = isPointInsidePermissiveHubZone(
+                    pt.lat(), pt.lon(), pt.alt(), activeZones, activeZoneVms, now);
+            boolean nearGroundTerminal = isNearGroundTerminalEndpoint(pt.lat(), pt.lon(), terminalPoints);
+
             for (int i = 0; i < activeZones.size(); i++) {
                 AirspaceZone zone = activeZones.get(i);
                 if (!isZoneEffective(zone, now)) {
@@ -269,7 +279,10 @@ public class AirspaceServiceImpl implements AirspaceService {
                                 Math.round(pt.distanceFromStartM() * 100.0) / 100.0,
                                 String.format("Trajectory altitude (%.1fm) exceeds ceiling limit (%.1fm) in zone '%s'",
                                         pt.alt(), effectiveCeiling, zone.getName())));
-                    } else if (belowFloor) {
+                    } else if (belowFloor
+                            && zone.getZoneType() == AirspaceZoneType.HUB_CORRIDOR
+                            && !insideActiveHubZone
+                            && !nearGroundTerminal) {
                         reportedSegmentZonePairs.add(pt.segmentIndex() + ":" + zone.getId());
                         violations.add(new AirspacePathConflictVm(
                                 zone.getId(),
@@ -385,6 +398,54 @@ public class AirspaceServiceImpl implements AirspaceService {
         }
         List<OpenaipAirspaceItemVm> list = weatherAisClientService.getOpenaipAirspaces();
         return list != null ? list : List.of();
+    }
+
+    private boolean isPointInsidePermissiveHubZone(
+            Double lat,
+            Double lon,
+            Double alt,
+            List<AirspaceZone> activeZones,
+            List<AirspaceZoneVm> activeZoneVms,
+            ZonedDateTime now) {
+        if (lat == null || lon == null) {
+            return false;
+        }
+        double effectiveAlt = alt != null ? alt : 0.0;
+        for (int i = 0; i < activeZones.size(); i++) {
+            AirspaceZone zone = activeZones.get(i);
+            if (zone.getZoneType() != AirspaceZoneType.HUB_ZONE || !isZoneEffective(zone, now)) {
+                continue;
+            }
+            Double floor = resolveEffectiveFloor(zone);
+            Double ceiling = resolveEffectiveCeiling(zone);
+            if (floor != null && effectiveAlt < floor) {
+                continue;
+            }
+            if (ceiling != null && effectiveAlt > ceiling) {
+                continue;
+            }
+            if (spatialCalculationService.isPointInPolygon(lat, lon, activeZoneVms.get(i).geometry())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isNearGroundTerminalEndpoint(
+            double lat,
+            double lon,
+            List<AirspaceCheckPointVm> rawPoints) {
+        if (rawPoints == null || rawPoints.size() < 2) {
+            return false;
+        }
+        AirspaceCheckPointVm start = rawPoints.getFirst();
+        if (start != null && start.alt() != null && start.alt() <= 2.0
+                && spatialCalculationService.calculateDistanceMeters(lat, lon, start.lat(), start.lon()) <= 120.0) {
+            return true;
+        }
+        AirspaceCheckPointVm end = rawPoints.getLast();
+        return end != null && end.alt() != null && end.alt() <= 2.0
+                && spatialCalculationService.calculateDistanceMeters(lat, lon, end.lat(), end.lon()) <= 120.0;
     }
 
     private static boolean isForbiddenType(AirspaceZoneType type) {

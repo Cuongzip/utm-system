@@ -107,9 +107,17 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
         cacheLatestTelemetry(incomingTelemetry.flightId(), incomingTelemetry);
 
+        List<FlightBriefVm> activeFlights = fetchActiveFlightsCached();
+        FlightBriefVm currentFlight = activeFlights.stream()
+                .filter(f -> incomingTelemetry.flightId().equals(f.id()))
+                .findFirst()
+                .orElse(null);
+
         AirspaceCheckResponseVm airspaceCheck = checkAirspaceCompliance(incomingTelemetry);
-        if (airspaceCheck != null && !airspaceCheck.safe()) {
-            String breachedZoneId = extractFirstZoneId(airspaceCheck);
+        EffectiveAirspaceBreach breach = extractEffectiveAirspaceViolation(
+                airspaceCheck, currentFlight, incomingTelemetry, incomingTelemetry.flightId());
+        if (breach != null) {
+            String breachedZoneId = breach.zoneId();
             String createdConflictId = runInTransactionResult(() -> {
                 List<Conflict> existingAirspaceConflicts = conflictRepository
                         .findByPrimaryFlightIdAndStatusIn(incomingTelemetry.flightId(), ACTIVE_STATUSES)
@@ -124,20 +132,19 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     Conflict singleConflict = conflictDetectionMapper.toLiveSingleFlightConflict(
                             incomingTelemetry.flightId(),
                             ConflictType.AIRSPACE_BREACH,
-                            ConflictSeverity.CRITICAL,
+                            breach.severity(),
                             incomingTelemetry.latitude(),
                             incomingTelemetry.longitude(),
                             incomingTelemetry.altitude(),
-                            String.format("Airspace breach detected for flight %s into restricted zone",
-                                    incomingTelemetry.flightId()));
-                    singleConflict.setAirspaceZoneId(breachedZoneId);
+                            breach.description());
+                    singleConflict.setAirspaceZoneId(breach.zoneUuidOrNull());
                     singleConflict = conflictRepository.save(singleConflict);
 
                     conflictSnapshotService.recordSnapshot(
                             singleConflict,
                             incomingTelemetry.latitude(), incomingTelemetry.longitude(), incomingTelemetry.altitude(),
                             null, null, null,
-                            0.0, 0.0, 0, ConflictSeverity.CRITICAL);
+                            0.0, 0.0, 0, breach.severity());
                     return singleConflict.getId();
                 }
                 return null;
@@ -149,13 +156,14 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                         incomingTelemetry.flightId(),
                         createdConflictId,
                         "AIRSPACE_BREACH",
-                        "CRITICAL",
-                        "Flight breached restricted airspace zone",
+                        toAlertSeverity(breach.severity()),
+                        breach.alertMessage(),
                         incomingTelemetry.altitude(),
-                        120.0);
-                log.warn("LIVE CONFLICT DETECTED: Airspace breach for flight {}", incomingTelemetry.flightId());
+                        breach.thresholdAltitude() != null ? breach.thresholdAltitude() : 120.0);
+                log.warn("LIVE CONFLICT DETECTED: Airspace breach for flight {} ({})",
+                        incomingTelemetry.flightId(), breach.description());
             }
-        } else if (airspaceCheck != null && airspaceCheck.safe()) {
+        } else if (airspaceCheck != null) {
             List<String> resolvedIds = runInTransactionResult(() -> {
                 List<Conflict> openBreaches = conflictRepository
                         .findByPrimaryFlightIdAndStatusIn(incomingTelemetry.flightId(), ACTIVE_STATUSES)
@@ -173,13 +181,12 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
             });
             if (resolvedIds != null) {
                 for (String resolvedId : resolvedIds) {
-                    autoResolveLinkedAlerts(resolvedId, "Flight exited restricted airspace zone");
-                    log.info("LIVE AIRSPACE BREACH AUTO-RESOLVED: Conflict {} cleared restricted zone", resolvedId);
+                    autoResolveLinkedAlerts(resolvedId, "Flight exited restricted or non-compliant airspace band");
+                    log.info("LIVE AIRSPACE BREACH AUTO-RESOLVED: Conflict {} cleared airspace band", resolvedId);
                 }
             }
         }
 
-        List<FlightBriefVm> activeFlights = fetchActiveFlightsCached();
         for (FlightBriefVm otherFlight : activeFlights) {
             if (otherFlight.id().equals(incomingTelemetry.flightId())) {
                 continue;
@@ -331,8 +338,10 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
 
         for (FlightWithTelemetry ft : flightDataList) {
             AirspaceCheckResponseVm airspaceCheck = checkAirspaceCompliance(ft.telemetry());
-            if (airspaceCheck != null && !airspaceCheck.safe()) {
-                String breachedZoneId = extractFirstZoneId(airspaceCheck);
+            EffectiveAirspaceBreach breach = extractEffectiveAirspaceViolation(
+                    airspaceCheck, ft.flight(), ft.telemetry(), ft.flight().flightNumber());
+            if (breach != null) {
+                String breachedZoneId = breach.zoneId();
                 List<Conflict> existingSingleConflicts = conflictRepository
                         .findByPrimaryFlightIdAndStatusIn(ft.flight().id(), ACTIVE_STATUSES)
                         .stream()
@@ -346,20 +355,19 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     Conflict singleConflict = conflictDetectionMapper.toSingleFlightConflict(
                             ft.flight(),
                             ConflictType.AIRSPACE_BREACH,
-                            ConflictSeverity.CRITICAL,
+                            breach.severity(),
                             ft.telemetry().latitude(),
                             ft.telemetry().longitude(),
                             ft.telemetry().altitude(),
-                            String.format("Airspace breach detected for flight %s into restricted zone",
-                                    ft.flight().flightNumber()));
-                    singleConflict.setAirspaceZoneId(breachedZoneId);
+                            breach.description());
+                    singleConflict.setAirspaceZoneId(breach.zoneUuidOrNull());
                     singleConflict = conflictRepository.save(singleConflict);
 
                     conflictSnapshotService.recordSnapshot(
                             singleConflict,
                             ft.telemetry().latitude(), ft.telemetry().longitude(), ft.telemetry().altitude(),
                             null, null, null,
-                            0.0, 0.0, 0, ConflictSeverity.CRITICAL);
+                            0.0, 0.0, 0, breach.severity());
                     newConflictsDetected++;
 
                     triggerAlert(
@@ -367,14 +375,14 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                             ft.flight().id(),
                             singleConflict.getId(),
                             "AIRSPACE_BREACH",
-                            "CRITICAL",
-                            "Flight breached restricted airspace zone",
+                            toAlertSeverity(breach.severity()),
+                            breach.alertMessage(),
                             ft.telemetry().altitude(),
-                            120.0);
-                    log.warn("SINGLE-FLIGHT CONFLICT DETECTED: Flight {} ({}) breached airspace zone",
-                            ft.flight().flightNumber(), ft.flight().id());
+                            breach.thresholdAltitude() != null ? breach.thresholdAltitude() : 120.0);
+                    log.warn("SINGLE-FLIGHT CONFLICT DETECTED: Flight {} ({}) breached airspace zone: {}",
+                            ft.flight().flightNumber(), ft.flight().id(), breach.description());
                 }
-            } else if (airspaceCheck != null && airspaceCheck.safe()) {
+            } else if (airspaceCheck != null) {
                 List<Conflict> openBreaches = conflictRepository
                         .findByPrimaryFlightIdAndStatusIn(ft.flight().id(), ACTIVE_STATUSES)
                         .stream()
@@ -385,7 +393,22 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                     conflictDetectionMapper.resolveConflictAuto(open, "SYSTEM_AUTO");
                     conflictRepository.save(open);
                     resolvedConflictsCount++;
-                    autoResolveLinkedAlerts(open.getId(), "Flight exited restricted airspace zone");
+                    autoResolveLinkedAlerts(open.getId(), "Flight exited restricted or non-compliant airspace band");
+                }
+            }
+        }
+
+        List<Conflict> openAllActive = conflictRepository.findByStatusInOrderByDetectedAtDesc(ACTIVE_STATUSES);
+        if (openAllActive != null) {
+            for (Conflict open : openAllActive) {
+                if (open.getSecondaryFlightId() == null
+                        && open.getConflictType() == ConflictType.AIRSPACE_BREACH
+                        && open.getPrimaryFlightId() != null
+                        && !activeFlightIds.contains(open.getPrimaryFlightId())) {
+                    conflictDetectionMapper.resolveConflictAuto(open, "SYSTEM_AUTO");
+                    conflictRepository.save(open);
+                    resolvedConflictsCount++;
+                    autoResolveLinkedAlerts(open.getId(), "Flight completed or left active airspace");
                 }
             }
         }
@@ -735,20 +758,109 @@ public class ConflictDetectionServiceImpl implements ConflictDetectionService {
                 distHoriz, distVert, timeToConflict, severity);
     }
 
-    private String extractFirstZoneId(AirspaceCheckResponseVm check) {
-        if (check == null || check.violations() == null || check.violations().isEmpty()) {
+    private record EffectiveAirspaceBreach(
+            String zoneId,
+            String zoneUuidOrNull,
+            ConflictSeverity severity,
+            String description,
+            String alertMessage,
+            Double thresholdAltitude) {
+    }
+
+    private EffectiveAirspaceBreach extractEffectiveAirspaceViolation(
+            AirspaceCheckResponseVm check,
+            FlightBriefVm flight,
+            TelemetryBriefVm telemetry,
+            String fallbackFlightLabel) {
+        if (check == null || check.safe() || check.violations() == null || check.violations().isEmpty()) {
             return null;
         }
-        Object first = check.violations().getFirst();
-        if (first instanceof Map<?, ?> map) {
-            Object zoneId = map.get("zoneId");
-            if (zoneId != null && !zoneId.toString().isBlank()) {
-                return zoneId.toString().trim();
+        String flightLabel = (flight != null && flight.flightNumber() != null && !flight.flightNumber().isBlank())
+                ? flight.flightNumber()
+                : fallbackFlightLabel;
+
+        EffectiveAirspaceBreach selected = null;
+        for (Object raw : check.violations()) {
+            if (raw instanceof Map<?, ?> map) {
+                String zoneId = map.get("zoneId") != null ? map.get("zoneId").toString().trim() : null;
+                String zoneType = map.get("zoneType") != null ? map.get("zoneType").toString().trim() : "";
+                String sevRaw = map.get("severity") != null ? map.get("severity").toString().trim() : "";
+                String reason = map.get("reason") != null ? map.get("reason").toString().trim() : "";
+                Double ceiling = map.get("altitudeCeiling") instanceof Number n ? n.doubleValue() : null;
+                Double floor = map.get("altitudeFloor") instanceof Number n ? n.doubleValue() : null;
+
+                boolean isCorridorFloorWarning = "hub_corridor".equalsIgnoreCase(zoneType)
+                        && reason.toLowerCase(Locale.ROOT).contains("below floor limit");
+                if (isCorridorFloorWarning && isAuthorizedTerminalVerticalPhase(flight, telemetry)) {
+                    continue;
+                }
+
+                boolean isCriticalZone = "critical".equalsIgnoreCase(sevRaw)
+                        || "no_fly_zone".equalsIgnoreCase(zoneType)
+                        || "prohibited".equalsIgnoreCase(zoneType)
+                        || "emergency_exclusion".equalsIgnoreCase(zoneType);
+                ConflictSeverity mappedSeverity = isCriticalZone ? ConflictSeverity.CRITICAL : ConflictSeverity.HIGH;
+                String description = !reason.isBlank()
+                        ? String.format("Flight %s: %s", flightLabel, reason)
+                        : String.format("Airspace breach detected for flight %s into restricted zone", flightLabel);
+                String alertMessage = isCriticalZone
+                        ? "Flight breached restricted airspace zone"
+                        : (!reason.isBlank() ? reason : "Flight violated airspace altitude or boundary rule");
+                Double threshold = reason.toLowerCase(Locale.ROOT).contains("below floor")
+                        ? floor
+                        : ceiling;
+                String dbZoneUuid = (zoneId != null && zoneId.length() <= 36) ? zoneId : null;
+
+                EffectiveAirspaceBreach candidate = new EffectiveAirspaceBreach(
+                        zoneId, dbZoneUuid, mappedSeverity, description, alertMessage, threshold);
+                if (selected == null || (mappedSeverity == ConflictSeverity.CRITICAL
+                        && selected.severity() != ConflictSeverity.CRITICAL)) {
+                    selected = candidate;
+                }
+            } else if (raw instanceof String str && !str.isBlank()) {
+                String trimmed = str.trim();
+                String dbZoneUuid = trimmed.length() <= 36 ? trimmed : null;
+                return new EffectiveAirspaceBreach(
+                        trimmed,
+                        dbZoneUuid,
+                        ConflictSeverity.CRITICAL,
+                        String.format("Airspace breach detected for flight %s into restricted zone", flightLabel),
+                        "Flight breached restricted airspace zone",
+                        120.0);
             }
-        } else if (first instanceof String str && !str.isBlank()) {
-            return str.trim();
         }
-        return null;
+        return selected;
+    }
+
+    private boolean isAuthorizedTerminalVerticalPhase(FlightBriefVm flight, TelemetryBriefVm telemetry) {
+        if (telemetry == null || telemetry.latitude() == null || telemetry.longitude() == null) {
+            return false;
+        }
+        String mode = telemetry.flightMode() != null ? telemetry.flightMode().trim().toUpperCase(Locale.ROOT) : "";
+        boolean isVerticalMode = "TAKEOFF".equals(mode)
+                || "LANDING".equals(mode)
+                || "RTL".equals(mode)
+                || "DIVERT".equals(mode)
+                || "LANDED".equals(mode)
+                || (telemetry.altitude() != null && telemetry.altitude() <= 2.0);
+        if (!isVerticalMode) {
+            return false;
+        }
+        if (flight == null || flight.plannedRoute() == null) {
+            return true;
+        }
+        List<StrategicTrajectoryPointVm> pts = extractWaypointsFromPlannedRoute(
+                flight.plannedRoute(), flight.cruisingAltitudeM());
+        if (pts.isEmpty()) {
+            return true;
+        }
+        StrategicTrajectoryPointVm dep = pts.getFirst();
+        StrategicTrajectoryPointVm arr = pts.getLast();
+        double distDep = calculateHaversineDistance(
+                telemetry.latitude(), telemetry.longitude(), dep.lat(), dep.lon());
+        double distArr = calculateHaversineDistance(
+                telemetry.latitude(), telemetry.longitude(), arr.lat(), arr.lon());
+        return distDep <= 180.0 || distArr <= 180.0;
     }
 
     private List<FlightBriefVm> fetchActiveFlightsCached() {

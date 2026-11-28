@@ -16,6 +16,21 @@ public record TelemetryLatestVm(
         Double heading,
         @JsonAlias({"batteryPercentage", "batteryLevel", "battery"})
         Double batteryPercentage,
-        ZonedDateTime timestamp
+        @JsonAlias({"timestamp", "recordedAt", "createdOn"})
+        ZonedDateTime timestamp,
+        String source
 ) {
+    public TelemetryLatestVm(
+            String droneId,
+            String flightId,
+            Double latitude,
+            Double longitude,
+            Double altitude,
+            Double speed,
+            Double heading,
+            Double batteryPercentage,
+            ZonedDateTime timestamp
+    ) {
+        this(droneId, flightId, latitude, longitude, altitude, speed, heading, batteryPercentage, timestamp, null);
+    }
 }

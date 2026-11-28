@@ -142,6 +142,12 @@ public class DeviceRegistrationController {
         return ResponseEntity.ok(adaptiveRateService.getSupportedModes());
     }
 
+    @GetMapping("/devices/{id}/telemetry-mode")
+    @Operation(summary = "Get current adaptive telemetry rate mode for a device")
+    public ResponseEntity<DeviceTelemetryModeVm> getDeviceTelemetryMode(@PathVariable("id") String id) {
+        return ResponseEntity.ok(adaptiveRateService.getDeviceTelemetryMode(id));
+    }
+
     @PutMapping("/devices/{id}/telemetry-mode")
     @PreAuthorize("hasAnyRole('admin', 'hub_operator', 'atc')")
     @Operation(summary = "Update adaptive telemetry rate mode for a device")

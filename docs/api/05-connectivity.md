@@ -186,8 +186,9 @@ Hủy bỏ liên kết phần cứng thiết bị.
 ### 5.4.7 Nhóm PKI X.509, Adaptive Telemetry Rate & Command Router (`/api/v1/connectivity`)
 - **`GET /api/v1/connectivity/ca-certificate`** *(Authenticated)*: Tải chứng thư gốc UTM Root CA (PEM).
 - **`GET /api/v1/connectivity/devices/{id}/certificate`**, **`POST /api/v1/connectivity/devices/{id}/certificate/renew`**, **`POST /api/v1/connectivity/devices/{id}/certificate/revoke`** *(`admin, hub_operator`)*: Xem, cấp mới/gia hạn hoặc thu hồi chứng thư X.509 của thiết bị.
-- **`GET /api/v1/connectivity/telemetry/modes`** *(Authenticated)*: Danh mục cấu hình tần số thích ứng (`IDLE: 0.2Hz`, `NORMAL: 1Hz`, `ENHANCED: 5Hz`, `EMERGENCY: 10Hz`).
-- **`GET /api/v1/connectivity/devices/{id}/telemetry-mode`** & **`PUT /api/v1/connectivity/devices/{id}/telemetry-mode`** *(`admin, atc, hub_operator, pilot`)*: Xem hoặc chuyển chế độ tần số phát viễn trắc của thiết bị (cũng tự động nâng lên `EMERGENCY` khi nhận sự kiện khẩn cấp từ Kafka `utm.emergency.events`).
+- **`GET /api/v1/connectivity/telemetry/modes`** *(Authenticated)*: Danh mục cấu hình tần số thích ứng (`IDLE: 0.033Hz`, `NORMAL: 0.5Hz`, `ENHANCED: 2.0Hz`, `EMERGENCY: 10.0Hz`).
+- **`GET /api/v1/connectivity/devices/{id}/telemetry-mode`** *(Authenticated)*: Lấy chế độ tần số phát viễn trắc hiện tại của thiết bị (tra cứu linh hoạt `{id}` theo `id`, `deviceIdentifier` hoặc `droneId`; trả về `DeviceTelemetryModeVm` gồm `deviceId`, `deviceIdentifier`, `droneId`, `telemetryMode`, `telemetryModeReason`, `rateHz`, `intervalMs`, `updatedAt`).
+- **`PUT /api/v1/connectivity/devices/{id}/telemetry-mode`** *(`admin, atc, hub_operator`)*: Chuyển chế độ tần số phát viễn trắc của thiết bị (cũng tự động nâng lên `EMERGENCY` khi nhận sự kiện khẩn cấp từ Kafka `utm.emergency.events`).
 - **`GET /api/v1/connectivity/telemetry/stats`**, **`GET /api/v1/connectivity/protocols/stats`**, **`GET /api/v1/connectivity/commands/stats`**, **`GET /api/v1/connectivity/status`** *(Authenticated)*: Thống kê băng thông viễn trắc, phân bố giao thức, độ trễ định tuyến lệnh C2 (Kafka `utm.drone.commands` -> `utm.drone.command.acks`) và tổng quan sức khỏe kết nối.
 
 ---

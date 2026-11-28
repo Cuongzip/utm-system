@@ -203,6 +203,8 @@ public class TelemetryEmergencyDetectorConsumer extends BaseCdcConsumer<String, 
         String mode = telemetry.flightMode() != null ? telemetry.flightMode().trim().toUpperCase() : "";
         boolean commandedDescent = "LANDING".equals(mode)
                 || "RTL".equals(mode)
+                || "DIVERT".equals(mode)
+                || "ALTITUDE_CHANGE".equals(mode)
                 || "EMERGENCY_STOP".equals(mode)
                 || "LANDED".equals(mode);
         if (!commandedDescent && vertSpeed != null && vertSpeed <= MOTOR_FAILURE_DESCENT_MPS && (alt == null || alt > 5.0)

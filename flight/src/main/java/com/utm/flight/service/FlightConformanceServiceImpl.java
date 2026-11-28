@@ -256,28 +256,39 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
         boolean isCommandedVerticalPhase = "LANDING".equals(modeUpper)
                 || "TAKEOFF".equals(modeUpper)
                 || "RTL".equals(modeUpper)
+                || "DIVERT".equals(modeUpper)
+                || "ALTITUDE_CHANGE".equals(modeUpper)
                 || "EMERGENCY_STOP".equals(modeUpper)
                 || "LANDED".equals(modeUpper);
 
-        if (!isCommandedVerticalPhase && prevAlt != null && prevTime != null && telemetry.altitude() != null) {
-            long dtMs = Duration.between(prevTime, telemetry.getEffectiveTimestamp()).toMillis();
-            if (dtMs >= 500 && dtMs <= 10000) {
-                double dtSec = dtMs / 1000.0;
-                double vz = (telemetry.altitude() - prevAlt) / dtSec;
-                if (vz < -5.0) {
-                    String msg = String.format(
-                            "Rapid descent rate %.1f m/s detected! Suspected motor or propulsion failure", vz);
-                    transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg,
-                            effectiveTelemetry, "equipment_failure", "MOTOR_FAILURE", conflictNotices);
-                    if (markEmergencyReported(flight.getId(), "motor_failure")) {
-                        emergencyNotices.add(new EmergencyNotice(flight, "motor_failure", "critical", msg, effectiveTelemetry,
-                                Map.of("descentRateMs", Math.round(vz * 10.0) / 10.0, "previousAltitude", prevAlt,
-                                        "currentAltitude", telemetry.altitude())));
-                    }
-                    updateFlightStatusAndSave(flight, conformance);
-                    FlightConformance saved = conformanceRepository.save(conformance);
-                    return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices, null);
+        if (!isCommandedVerticalPhase && telemetry.altitude() != null) {
+            Double vz = null;
+            if (telemetry.verticalSpeed() != null) {
+                vz = telemetry.verticalSpeed();
+            } else if (prevAlt != null && prevTime != null) {
+                long dtMs = Duration.between(prevTime, telemetry.getEffectiveTimestamp()).toMillis();
+                if (dtMs >= 500 && dtMs <= 10000) {
+                    vz = (telemetry.altitude() - prevAlt) / (dtMs / 1000.0);
                 }
+            }
+            if (vz != null && vz < -5.0) {
+                String msg = String.format(
+                        "Rapid descent rate %.1f m/s detected! Suspected motor or propulsion failure", vz);
+                transitionStatus(flight, conformance, ConformanceStatus.CONTINGENT, msg,
+                        effectiveTelemetry, "equipment_failure", "MOTOR_FAILURE", conflictNotices);
+                if (markEmergencyReported(flight.getId(), "motor_failure")) {
+                    Map<String, Object> detectionData = new LinkedHashMap<>();
+                    detectionData.put("descentRateMs", Math.round(vz * 10.0) / 10.0);
+                    if (prevAlt != null) {
+                        detectionData.put("previousAltitude", prevAlt);
+                    }
+                    detectionData.put("currentAltitude", telemetry.altitude());
+                    emergencyNotices.add(new EmergencyNotice(
+                            flight, "motor_failure", "critical", msg, effectiveTelemetry, detectionData));
+                }
+                updateFlightStatusAndSave(flight, conformance);
+                FlightConformance saved = conformanceRepository.save(conformance);
+                return new EvaluationOutcome(flight, saved, conflictNotices, emergencyNotices, null);
             }
         }
 
@@ -658,6 +669,7 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
 
         double minDistance = Double.MAX_VALUE;
         double correspondingVerticalError = 0.0;
+        double best3dError = Double.MAX_VALUE;
 
         for (int i = 0; i < coordinates.size() - 1; i++) {
             List<Double> c1 = coordinates.get(i);
@@ -691,23 +703,35 @@ public class FlightConformanceServiceImpl implements FlightConformanceService {
             double dat = Math.acos(cosDat) * EARTH_RADIUS_M;
 
             double distanceToSegment;
-            double fractionOnSegment;
-            boolean isBehindStart = Math.cos(theta13 - theta12) < 0.0;
-            if (isBehindStart) {
-                distanceToSegment = d13;
-                fractionOnSegment = 0.0;
-            } else if (dat > d12) {
-                distanceToSegment = calculateHaversineDistance(w2Lat, w2Lon, pLat, pLon);
-                fractionOnSegment = 1.0;
+            double segVerticalError;
+            if (d12 <= 2.0) {
+                distanceToSegment = Math.min(d13, calculateHaversineDistance(w2Lat, w2Lon, pLat, pLon));
+                double minSegAlt = Math.min(w1Alt, w2Alt);
+                double maxSegAlt = Math.max(w1Alt, w2Alt);
+                segVerticalError = pAlt < minSegAlt ? (minSegAlt - pAlt) : (pAlt > maxSegAlt ? (pAlt - maxSegAlt) : 0.0);
             } else {
-                distanceToSegment = dxt;
-                fractionOnSegment = (d12 > 0) ? dat / d12 : 0.0;
+                double fractionOnSegment;
+                boolean isBehindStart = Math.cos(theta13 - theta12) < 0.0;
+                if (isBehindStart) {
+                    distanceToSegment = d13;
+                    fractionOnSegment = 0.0;
+                } else if (dat > d12) {
+                    distanceToSegment = calculateHaversineDistance(w2Lat, w2Lon, pLat, pLon);
+                    fractionOnSegment = 1.0;
+                } else {
+                    distanceToSegment = dxt;
+                    fractionOnSegment = dat / d12;
+                }
+                double expectedAlt = w1Alt + fractionOnSegment * (w2Alt - w1Alt);
+                segVerticalError = Math.abs(pAlt - expectedAlt);
             }
 
-            if (distanceToSegment < minDistance) {
+            double seg3dError = Math.hypot(distanceToSegment, segVerticalError);
+            if (seg3dError + 1e-6 < best3dError
+                    || (Math.abs(seg3dError - best3dError) <= 1e-6 && distanceToSegment < minDistance)) {
+                best3dError = seg3dError;
                 minDistance = distanceToSegment;
-                double expectedAlt = w1Alt + fractionOnSegment * (w2Alt - w1Alt);
-                correspondingVerticalError = Math.abs(pAlt - expectedAlt);
+                correspondingVerticalError = segVerticalError;
             }
         }
 

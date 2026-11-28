@@ -218,6 +218,77 @@ class ConflictDetectionServiceImplTest {
                         verify(conflictDetectionMapper, never()).toLiveEntity(any(), any(), any(), any(), any(), any(),
                                         any(), any(), any(), any(), any());
                 }
+
+                @Test
+                @DisplayName("whenCorridorFloorWarningDuringAuthorizedTerminalPhase_skipsFalseBreachButFlagsCeilingViolationAsHigh")
+                void whenCorridorFloorWarningDuringAuthorizedTerminalPhase_skipsFalseBreachButFlagsCeilingViolationAsHigh()
+                                throws Exception {
+                        var mapper = new ObjectMapper();
+                        var routeNode = mapper.readTree(
+                                        "{\"type\":\"LineString\",\"coordinates\":[[106.7009,10.7769,0.0],[106.7009,10.7769,110.0],[106.7350,10.7850,110.0],[106.7350,10.7850,0.0]]}");
+                        FlightBriefVm activeFlight = new FlightBriefVm(
+                                        FLIGHT_1_ID, "FL-2026-006", DRONE_1_ID, HUB_ID, "hub-bravo-uuid",
+                                        "active", 110.0, null, null, routeNode);
+                        when(responseSpec.body(FlightListBriefVm.class))
+                                        .thenReturn(new FlightListBriefVm(List.of(activeFlight), 1));
+
+                        TelemetryBriefVm landingTelemetry = new TelemetryBriefVm(
+                                        FLIGHT_1_ID, DRONE_1_ID, 10.785001, 106.735001, 18.4, 0.0, 75.0, -3.5,
+                                        "LANDING");
+                        java.util.Map<String, Object> corridorFloorViolation = java.util.Map.of(
+                                        "zoneId", "c7352fe9-beb1-48d3-94ff-ae7ce4be0564",
+                                        "zoneType", "hub_corridor",
+                                        "severity", "warning",
+                                        "altitudeFloor", 20.0,
+                                        "altitudeCeiling", 150.0,
+                                        "reason",
+                                        "Point altitude (18.4m) falls below floor limit (20.0m) of zone 'Saigon River Low-Altitude Flight Corridor'");
+                        when(postResponseSpec.body(AirspaceCheckResponseVm.class))
+                                        .thenReturn(new AirspaceCheckResponseVm(false, List.of(corridorFloorViolation)));
+                        when(conflictRepository.findByPrimaryFlightIdAndStatusIn(eq(FLIGHT_1_ID), anyList()))
+                                        .thenReturn(Collections.emptyList());
+
+                        conflictDetectionService.evaluateLiveTelemetry(landingTelemetry);
+
+                        verify(conflictRepository, never()).save(any());
+
+                        TelemetryBriefVm overCeilingTelemetry = new TelemetryBriefVm(
+                                        FLIGHT_1_ID, DRONE_1_ID, 10.7805, 106.7185, 223.0, 15.0, 75.0, 0.0,
+                                        "AUTONOMOUS");
+                        java.util.Map<String, Object> ceilingViolation = java.util.Map.of(
+                                        "zoneId", "c7352fe9-beb1-48d3-94ff-ae7ce4be0564",
+                                        "zoneType", "hub_corridor",
+                                        "severity", "warning",
+                                        "altitudeFloor", 20.0,
+                                        "altitudeCeiling", 150.0,
+                                        "reason",
+                                        "Point altitude (223.0m) exceeds ceiling limit (150.0m) of zone 'Saigon River Low-Altitude Flight Corridor'");
+                        when(postResponseSpec.body(AirspaceCheckResponseVm.class))
+                                        .thenReturn(new AirspaceCheckResponseVm(false, List.of(ceilingViolation)));
+                        Conflict ceilingConflict = Conflict.builder()
+                                        .id("conflict-ceiling-1")
+                                        .primaryFlightId(FLIGHT_1_ID)
+                                        .conflictType(ConflictType.AIRSPACE_BREACH)
+                                        .severity(ConflictSeverity.HIGH)
+                                        .build();
+                        when(conflictDetectionMapper.toLiveSingleFlightConflict(
+                                        eq(FLIGHT_1_ID), eq(ConflictType.AIRSPACE_BREACH), eq(ConflictSeverity.HIGH),
+                                        eq(10.7805), eq(106.7185), eq(223.0), anyString()))
+                                        .thenReturn(ceilingConflict);
+                        when(conflictRepository.save(ceilingConflict)).thenReturn(ceilingConflict);
+
+                        conflictDetectionService.evaluateLiveTelemetry(overCeilingTelemetry);
+
+                        verify(conflictDetectionMapper).toLiveSingleFlightConflict(
+                                        eq(FLIGHT_1_ID),
+                                        eq(ConflictType.AIRSPACE_BREACH),
+                                        eq(ConflictSeverity.HIGH),
+                                        eq(10.7805),
+                                        eq(106.7185),
+                                        eq(223.0),
+                                        org.mockito.ArgumentMatchers.contains("exceeds ceiling limit (150.0m)"));
+                        verify(conflictRepository).save(ceilingConflict);
+                }
         }
 
         @Nested

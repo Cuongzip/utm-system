@@ -202,7 +202,7 @@ Tạo mới một hồ sơ kế hoạch chuyến bay.
   1. **Số hiệu chuyến bay**: Nếu `flightNumber` được truyền lên: trim, uppercase và kiểm tra trùng lặp $\rightarrow$ nếu trùng ném `409 Conflict` (`FLIGHT_NUMBER_ALREADY_EXISTED`). Nếu để trống/null: tự động sinh số hiệu duy nhất qua `BusinessCodeGenerator` (chuẩn Base32 theo ngày).
   2. Kiểm tra Drone tồn tại qua `DroneClientService` $\rightarrow$ nếu không tìm thấy ném `404 Not Found`.
   3. Kiểm tra Hub đi và đến qua `HubClientService` $\rightarrow$ nếu không tìm thấy ném `404 Not Found`.
-  4. Nếu không cung cấp `plannedRoute`, tự động tạo tuyến đường thẳng mặc định giữa 2 Hub.
+  4. Chuẩn hóa tuyến đường 3D VTOL (`ensureVerticalHubShafts` / `anchorWaypointsWithHubs`): Dù client gửi `plannedRoute` trực tiếp hay gửi `waypoints` hoặc để trống, hệ thống luôn neo trục leo thẳng đứng tại tâm Hub đi (`[depLon, depLat, 0.0] -> [depLon, depLat, firstCruiseAlt]`) và trục hạ thẳng đứng tại tâm Hub đến (`[arrLon, arrLat, lastCruiseAlt] -> [arrLon, arrLat, 0.0]`), không nhân bản nếu đã có trục thẳng đứng.
   5. Khởi tạo `status = SCHEDULED`, `authorizationStatus = PENDING`, `conformanceStatus = CONFORMANT`.
 - **Phản hồi thành công**: `201 Created` - Model: `FlightVm`.
 
@@ -329,7 +329,8 @@ Kích hoạt đánh giá tức thời mức độ tuân thủ hành lang 4D từ
 - **Chỉ định role**: `admin, hub_operator, pilot`
 - **Logic đánh giá**:
   - Truy vấn telemetry mới nhất qua `TelemetryClientService`.
-  - Tính toán sai số vuông góc ngang (`crossTrackErrorM`) và sai số cao độ (`verticalErrorM`) so với Polyline kế hoạch.
+  - Tính toán sai số vuông góc ngang (`crossTrackErrorM`) và sai số cao độ (`verticalErrorM`) so với Polyline kế hoạch bằng lựa chọn phân đoạn 3D (`Math.hypot(distanceToSegment, segVerticalError)`), đảm bảo trục leo/hạ thẳng đứng tại Vertiport thắng phân đoạn bay bằng khi có nhiễu GPS ngang nhỏ.
+  - Khi kiểm tra rớt độ cao đột ngột (`motor_failure`), ưu tiên sử dụng `telemetry.verticalSpeed` (nếu có) thay vì chênh lệch cao độ theo đồng hồ thực để không phát cảnh báo giả khi tua nhanh thời gian giả lập (`timeScale > 1x`).
   - Phân loại trạng thái: `CONFORMANT`, `NON_CONFORMING` (lệch ngang > 15m / dọc > 10m hoặc telemetry trễ > 30s), `CONTINGENT` (mất tín hiệu > 90s).
   - Tự động gọi `ConflictClientService` khi `NON_CONFORMING` và gọi `EmergencyClientService` khi `CONTINGENT`.
 - **Phản hồi thành công**: `200 OK` - Model: `FlightConformanceVm`.
@@ -403,3 +404,15 @@ Thẩm định khả thi năng lượng độc lập trước khi khởi tạo b
 
 - **Chỉ định role**: Authenticated
 - **Phản hồi thành công**: `200 OK` - Model: `FeasibilityResultVm`.
+
+---
+
+### 8.4.4 Đồng Bộ Lệnh Điều Khiển C2 Thời Gian Thực (`utm.drone.commands`)
+
+`DroneCommandConsumer` lắng nghe các sự kiện lệnh điều khiển C2 trên Kafka để đồng bộ tức thời hành lang bay 4D (`plannedRoute`, `cruisingAltitudeM`, `status`, `conformanceStatus`) với quỹ đạo thực tế của Drone:
+
+- **`TAKEOFF`**: Tự động kích hoạt `startFlight(id)` khi chuyến bay đang ở trạng thái `AUTHORIZED`.
+- **`SET_ALTITUDE`**: Trích xuất `targetAltitude` / `altitude` (giới hạn an toàn trong khoảng `[10.0, 500.0]` mét AGL), cập nhật `cruisingAltitudeM`, nâng/hạ toàn bộ tọa độ Z trên không (`> 1.0m`) trong `plannedRoute` (giữ nguyên các điểm chạm bệ đáp `0.0m`), đặt `conformanceStatus = CONFORMANT` và tự động giải quyết xung đột lệch hành lang qua `ConflictClientService`. Trong quá trình thay đổi cao độ (`flightMode = ALTITUDE_CHANGE`), bộ đánh giá Conformance và Emergency miễn trừ cảnh báo giả `VERTICAL_ALTITUDE_BREACH` và `MOTOR_FAILURE`.
+- **`GOTO` có `targetHubId` (Chuyển hướng hạ cánh sang Vertiport dự phòng)**: Cập nhật `arrivalHubId`, bổ sung điểm tiếp cận và điểm chạm đất thẳng đứng `0.0m` tại tâm Hub dự phòng vào `plannedRoute`, chuyển `status = DIVERTED`.
+- **`GOTO` không có `targetHubId` (Tactical Point-to-Point GOTO)**: Dựng tuyến `plannedRoute` 2 điểm từ vị trí telemetry hiện tại tới `[targetLon, targetLat, effectiveAlt]`, chuyển `status = DIVERTED` nhưng **giữ nguyên danh sách `waypoints` gốc** để lệnh `RESUME` sau đó nối lại mượt mà vào lộ trình kế hoạch ban đầu.
+- **`RTL` / `RESUME` / `EMERGENCY_STOP`**: Đồng bộ hành lang RTH 3D về `departureHubId`, khôi phục hành lang `ACTIVE` từ `waypoints` gốc khi `RESUME`, hoặc kích hoạt `abortFlight` (`EMERGENCY_LANDING`) khi `EMERGENCY_STOP`.

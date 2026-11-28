@@ -45,6 +45,7 @@ import com.utm.flight.viewmodel.flight.FlightPutVm;
 import com.utm.flight.viewmodel.flight.FlightRejectVm;
 import com.utm.flight.viewmodel.flight.FlightVm;
 import com.utm.flight.viewmodel.flight.FlightWaypointVm;
+import com.utm.flight.viewmodel.flight.GeoJsonLineStringVm;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -398,7 +399,18 @@ public class FlightServiceImpl implements FlightService {
 
         flightMapper.updateEntityFromPutVm(flight, flightPutVm);
 
-        if (flightPutVm.plannedRoute() != null) {
+        if (flightPutVm.plannedRoute() != null
+                && flightPutVm.plannedRoute().coordinates() != null
+                && !flightPutVm.plannedRoute().coordinates().isEmpty()) {
+            HubBriefVm depHub = flight.getDepartureHubId() != null
+                    ? hubClientService.getHubById(flight.getDepartureHubId()).orElse(null)
+                    : null;
+            HubBriefVm arrHub = flight.getArrivalHubId() != null
+                    ? hubClientService.getHubById(flight.getArrivalHubId()).orElse(null)
+                    : null;
+            flight.setPlannedRoute(ensureVerticalHubShafts(
+                    flightPutVm.plannedRoute(), depHub, arrHub, flight.getCruisingAltitudeM()));
+        } else if (flightPutVm.plannedRoute() != null) {
             flight.setPlannedRoute(GeoJsonLineString.of(flightPutVm.plannedRoute().coordinates()));
         } else if (flightPutVm.waypoints() != null && flightPutVm.waypoints().size() >= 2) {
             HubBriefVm depHub = hubClientService.getHubById(flight.getDepartureHubId()).orElse(null);
@@ -735,6 +747,9 @@ public class FlightServiceImpl implements FlightService {
         }
 
         String trimmedHubId = (targetHubId != null && !targetHubId.isBlank()) ? targetHubId.trim() : null;
+        Optional<TelemetryBriefVm> latestTel = telemetryClientService != null
+                ? telemetryClientService.getLatestFlightTelemetry(id)
+                : Optional.empty();
         Optional<HubBriefVm> divertHubOpt = Optional.empty();
         if (trimmedHubId != null && hubClientService != null) {
             try {
@@ -758,17 +773,40 @@ public class FlightServiceImpl implements FlightService {
                                 ? target.getCruisingAltitudeM()
                                 : DEFAULT_CRUISING_ALT_AGL;
                         List<List<Double>> existingCoords = parseRouteCoordinates(target.getPlannedRoute());
-                        List<List<Double>> updatedCoords = new ArrayList<>(existingCoords);
-                        List<Double> approachPoint = List.of(divertHub.location().lng(), divertHub.location().lat(), cruiseAlt);
-                        List<Double> touchdownPoint = List.of(divertHub.location().lng(), divertHub.location().lat(), 0.0);
-                        if (updatedCoords.size() >= 2) {
-                            updatedCoords.set(updatedCoords.size() - 1, approachPoint);
-                            updatedCoords.add(touchdownPoint);
+                        Double fallbackLon = !existingCoords.isEmpty() && existingCoords.getFirst() != null
+                                && existingCoords.getFirst().size() >= 2
+                                ? existingCoords.getFirst().get(0)
+                                : null;
+                        Double fallbackLat = !existingCoords.isEmpty() && existingCoords.getFirst() != null
+                                && existingCoords.getFirst().size() >= 2
+                                ? existingCoords.getFirst().get(1)
+                                : null;
+
+                        Double curLat = latestTel.map(TelemetryBriefVm::latitude).orElse(fallbackLat);
+                        Double curLon = latestTel.map(TelemetryBriefVm::longitude).orElse(fallbackLon);
+                        double curAlt = latestTel.map(TelemetryBriefVm::altitude).filter(a -> a > 0.0).orElse(cruiseAlt);
+                        double safeDivertAlt = Math.max(curAlt, Math.max(cruiseAlt, 40.0));
+                        double divertLat = divertHub.location().lat();
+                        double divertLon = divertHub.location().lng();
+
+                        if (curLat != null && curLon != null) {
+                            target.setPlannedRoute(GeoJsonLineString.of(List.of(
+                                    List.of(curLon, curLat, safeDivertAlt),
+                                    List.of(divertLon, divertLat, safeDivertAlt),
+                                    List.of(divertLon, divertLat, 0.0))));
                         } else {
-                            updatedCoords.add(approachPoint);
-                            updatedCoords.add(touchdownPoint);
+                            List<List<Double>> updatedCoords = new ArrayList<>(existingCoords);
+                            List<Double> approachPoint = List.of(divertLon, divertLat, cruiseAlt);
+                            List<Double> touchdownPoint = List.of(divertLon, divertLat, 0.0);
+                            if (updatedCoords.size() >= 2) {
+                                updatedCoords.set(updatedCoords.size() - 1, approachPoint);
+                                updatedCoords.add(touchdownPoint);
+                            } else {
+                                updatedCoords.add(approachPoint);
+                                updatedCoords.add(touchdownPoint);
+                            }
+                            target.setPlannedRoute(GeoJsonLineString.of(updatedCoords));
                         }
-                        target.setPlannedRoute(GeoJsonLineString.of(updatedCoords));
                     }
                 });
             }
@@ -869,9 +907,14 @@ public class FlightServiceImpl implements FlightService {
             return flightMapper.toVm(flight);
         }
 
-        Optional<TelemetryBriefVm> latestTel = telemetryClientService != null
-                ? telemetryClientService.getLatestFlightTelemetry(id)
-                : Optional.empty();
+        Optional<HubBriefVm> depHubOpt = Optional.empty();
+        if (flight.getDepartureHubId() != null && !flight.getDepartureHubId().isBlank() && hubClientService != null) {
+            try {
+                depHubOpt = hubClientService.getHubById(flight.getDepartureHubId().trim());
+            } catch (Exception ex) {
+                log.debug("Could not fetch departure hub {} on RESUME: {}", flight.getDepartureHubId(), ex.getMessage());
+            }
+        }
         Optional<HubBriefVm> arrHubOpt = Optional.empty();
         if (flight.getArrivalHubId() != null && !flight.getArrivalHubId().isBlank() && hubClientService != null) {
             try {
@@ -880,37 +923,36 @@ public class FlightServiceImpl implements FlightService {
                 log.debug("Could not fetch arrival hub {} on RESUME: {}", flight.getArrivalHubId(), ex.getMessage());
             }
         }
+        Optional<HubBriefVm> resolvedDepHub = depHubOpt;
         Optional<HubBriefVm> resolvedArrHub = arrHubOpt;
 
         Flight savedFlight = runFlightMutation(id, flight, target -> {
             if (target.getStatus() != FlightStatus.DIVERTED) {
                 return target;
             }
-            double cruiseAlt = target.getCruisingAltitudeM() != null && target.getCruisingAltitudeM() > 0
-                    ? target.getCruisingAltitudeM()
-                    : DEFAULT_CRUISING_ALT_AGL;
-            List<List<Double>> resumedCoords = new ArrayList<>();
-            latestTel.ifPresent(tel -> {
-                if (tel.latitude() != null && tel.longitude() != null) {
-                    resumedCoords.add(List.of(tel.longitude(), tel.latitude(),
-                            tel.altitude() != null && tel.altitude() > 0 ? tel.altitude() : cruiseAlt));
-                }
-            });
-            if (target.getWaypoints() != null) {
-                for (var wp : target.getWaypoints()) {
-                    if (wp != null && wp.latitude() != null && wp.longitude() != null) {
-                        resumedCoords.add(List.of(wp.longitude(), wp.latitude(),
-                                wp.altitude() != null && wp.altitude() > 0 ? wp.altitude() : cruiseAlt));
-                    }
+            List<List<Double>> existingCoords = parseRouteCoordinates(target.getPlannedRoute());
+            boolean endsAtArrivalHub = true;
+            if (resolvedArrHub.isPresent() && hasValidCoordinates(resolvedArrHub.get()) && !existingCoords.isEmpty()) {
+                List<Double> lastPt = existingCoords.getLast();
+                if (lastPt != null && lastPt.size() >= 2) {
+                    double distToArr = haversineMeters(
+                            lastPt.get(1), lastPt.get(0),
+                            resolvedArrHub.get().location().lat(), resolvedArrHub.get().location().lng());
+                    endsAtArrivalHub = distToArr <= HUB_ANCHOR_THRESHOLD_M;
                 }
             }
-            resolvedArrHub.ifPresent(arrHub -> {
-                if (hasValidCoordinates(arrHub)) {
-                    resumedCoords.add(List.of(arrHub.location().lng(), arrHub.location().lat(), cruiseAlt));
+            if (existingCoords.size() < 2 || !endsAtArrivalHub) {
+                List<FlightWaypointVm> wps = target.getWaypoints() != null && flightMapper != null
+                        ? flightMapper.toWaypointVms(target.getWaypoints())
+                        : List.of();
+                List<List<Double>> rebuilt = anchorWaypointsWithHubs(
+                        wps != null ? wps : List.of(),
+                        resolvedDepHub.orElse(null),
+                        resolvedArrHub.orElse(null),
+                        target.getCruisingAltitudeM());
+                if (rebuilt.size() >= 2) {
+                    target.setPlannedRoute(GeoJsonLineString.of(rebuilt));
                 }
-            });
-            if (resumedCoords.size() >= 2) {
-                target.setPlannedRoute(GeoJsonLineString.of(resumedCoords));
             }
             target.setStatus(FlightStatus.ACTIVE);
             target.setConformanceStatus(ConformanceStatus.CONFORMANT);
@@ -920,6 +962,68 @@ public class FlightServiceImpl implements FlightService {
             conflictClientService.resolveConformanceConflicts(id, "Flight resumed planned corridor");
         }
         log.info("Flight ID: {} resumed ACTIVE planned trajectory", id);
+        return flightMapper.toVm(savedFlight);
+    }
+
+    @Override
+    public FlightVm updateActiveCruisingAltitude(String id, double targetAltitudeM) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
+
+        if (flight.getStatus() != FlightStatus.ACTIVE && flight.getStatus() != FlightStatus.DIVERTED) {
+            return flightMapper.toVm(flight);
+        }
+
+        double clampedAlt = Math.max(10.0, Math.min(500.0, targetAltitudeM));
+        Flight savedFlight = runFlightMutation(id, flight, target -> {
+            if (target.getStatus() != FlightStatus.ACTIVE && target.getStatus() != FlightStatus.DIVERTED) {
+                return target;
+            }
+            target.setCruisingAltitudeM(clampedAlt);
+            List<List<Double>> existingCoords = parseRouteCoordinates(target.getPlannedRoute());
+            if (!existingCoords.isEmpty()) {
+                List<List<Double>> updatedCoords = new ArrayList<>(existingCoords.size());
+                for (List<Double> coord : existingCoords) {
+                    if (coord != null && coord.size() >= 2) {
+                        double lon = coord.get(0);
+                        double lat = coord.get(1);
+                        double z = coord.size() >= 3 && coord.get(2) != null ? coord.get(2) : clampedAlt;
+                        double updatedZ = z > 1.0 ? clampedAlt : z;
+                        updatedCoords.add(List.of(lon, lat, updatedZ));
+                    }
+                }
+                if (updatedCoords.size() >= 2) {
+                    target.setPlannedRoute(GeoJsonLineString.of(updatedCoords));
+                }
+            }
+            target.setConformanceStatus(ConformanceStatus.CONFORMANT);
+            return flightRepository.saveAndFlush(target);
+        });
+        if (conflictClientService != null) {
+            conflictClientService.resolveConformanceConflicts(id, "Cruising altitude updated via C2 SET_ALTITUDE");
+        }
+        log.info("Flight ID: {} cruising altitude updated to {}m via C2 SET_ALTITUDE", id, clampedAlt);
+        return flightMapper.toVm(savedFlight);
+    }
+
+    @Override
+    public FlightVm tacticalGoto(String id, double targetLat, double targetLon, Double targetAltM) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(MessageCode.FLIGHT_NOT_FOUND, "id", id));
+
+        if (flight.getStatus() != FlightStatus.ACTIVE && flight.getStatus() != FlightStatus.DIVERTED) {
+            return flightMapper.toVm(flight);
+        }
+
+        Flight savedFlight = runFlightMutation(id, flight, target -> {
+            if (target.getStatus() != FlightStatus.ACTIVE && target.getStatus() != FlightStatus.DIVERTED) {
+                return target;
+            }
+            target.setStatus(FlightStatus.DIVERTED);
+            return flightRepository.saveAndFlush(target);
+        });
+        log.info("Flight ID: {} transitioned to DIVERTED for tactical GOTO [{}, {}] while preserving plannedRoute",
+                id, targetLat, targetLon);
         return flightMapper.toVm(savedFlight);
     }
 
@@ -1203,7 +1307,11 @@ public class FlightServiceImpl implements FlightService {
     private GeoJsonLineString buildPlannedRoute(FlightPostVm postVm, HubBriefVm depHub, HubBriefVm arrHub) {
         if (postVm.plannedRoute() != null && postVm.plannedRoute().coordinates() != null
                 && !postVm.plannedRoute().coordinates().isEmpty()) {
-            return GeoJsonLineString.of(postVm.plannedRoute().coordinates());
+            GeoJsonLineString anchoredRoute = ensureVerticalHubShafts(
+                    postVm.plannedRoute(), depHub, arrHub, postVm.cruisingAltitudeM());
+            if (!isRouteEmpty(anchoredRoute)) {
+                return anchoredRoute;
+            }
         }
 
         if (postVm.waypoints() != null && !postVm.waypoints().isEmpty()) {
@@ -1228,6 +1336,115 @@ public class FlightServiceImpl implements FlightService {
         }
 
         return GeoJsonLineString.of(fallbackCoords);
+    }
+
+    private GeoJsonLineString ensureVerticalHubShafts(
+            GeoJsonLineStringVm route,
+            HubBriefVm depHub,
+            HubBriefVm arrHub,
+            Double cruisingAltitudeM
+    ) {
+        List<List<Double>> raw = route != null && route.coordinates() != null ? route.coordinates() : List.of();
+        double effectiveCruiseAlt = cruisingAltitudeM != null && cruisingAltitudeM > 0
+                ? cruisingAltitudeM
+                : DEFAULT_CRUISING_ALT_AGL;
+
+        List<List<Double>> pts = new ArrayList<>();
+        for (List<Double> c : raw) {
+            if (c != null && c.size() >= 2 && c.get(0) != null && c.get(1) != null) {
+                double z = c.size() >= 3 && c.get(2) != null ? Math.max(0.0, c.get(2)) : effectiveCruiseAlt;
+                pts.add(List.of(c.get(0), c.get(1), z));
+            }
+        }
+        if (pts.isEmpty()) {
+            return GeoJsonLineString.empty();
+        }
+
+        boolean hasDepHub = hasValidCoordinates(depHub);
+        boolean hasArrHub = hasValidCoordinates(arrHub);
+
+        boolean alreadyHasDepShaft = pts.size() >= 2
+                && haversineMeters(pts.get(0).get(1), pts.get(0).get(0), pts.get(1).get(1), pts.get(1).get(0)) <= 2.0
+                && pts.get(0).get(2) <= 1.0
+                && pts.get(1).get(2) >= 5.0
+                && (!hasDepHub || haversineMeters(
+                        depHub.location().lat(), depHub.location().lng(), pts.get(0).get(1), pts.get(0).get(0)) <= HUB_ANCHOR_THRESHOLD_M);
+
+        boolean alreadyHasArrShaft = pts.size() >= 2
+                && haversineMeters(
+                        pts.get(pts.size() - 2).get(1), pts.get(pts.size() - 2).get(0),
+                        pts.getLast().get(1), pts.getLast().get(0)) <= 2.0
+                && pts.getLast().get(2) <= 1.0
+                && pts.get(pts.size() - 2).get(2) >= 5.0
+                && (!hasArrHub || haversineMeters(
+                        arrHub.location().lat(), arrHub.location().lng(), pts.getLast().get(1), pts.getLast().get(0)) <= HUB_ANCHOR_THRESHOLD_M);
+
+        boolean firstIsDepHubEndpoint = !alreadyHasDepShaft && hasDepHub
+                && haversineMeters(
+                        depHub.location().lat(), depHub.location().lng(), pts.getFirst().get(1), pts.getFirst().get(0)) <= HUB_ANCHOR_THRESHOLD_M;
+        boolean lastIsArrHubEndpoint = !alreadyHasArrShaft && hasArrHub && pts.size() >= 2
+                && haversineMeters(
+                        arrHub.location().lat(), arrHub.location().lng(), pts.getLast().get(1), pts.getLast().get(0)) <= HUB_ANCHOR_THRESHOLD_M;
+
+        int airSearchStart = alreadyHasDepShaft ? 1 : (firstIsDepHubEndpoint ? 1 : 0);
+        int airSearchEndExclusive = alreadyHasArrShaft
+                ? (pts.size() - 1)
+                : (lastIsArrHubEndpoint ? (pts.size() - 1) : pts.size());
+
+        Double firstAirAlt = null;
+        Double lastAirAlt = null;
+        for (int i = airSearchStart; i < airSearchEndExclusive; i++) {
+            double z = pts.get(i).get(2);
+            if (z > 5.0) {
+                if (firstAirAlt == null) {
+                    firstAirAlt = z;
+                }
+                lastAirAlt = z;
+            }
+        }
+
+        double firstCruiseAlt = firstAirAlt != null ? firstAirAlt : effectiveCruiseAlt;
+        double lastCruiseAlt = lastAirAlt != null ? lastAirAlt : firstCruiseAlt;
+
+        List<List<Double>> anchored = new ArrayList<>();
+        int bodyStart = 0;
+        int bodyEndExclusive = pts.size();
+
+        if (alreadyHasDepShaft) {
+            anchored.add(pts.get(0));
+            anchored.add(pts.get(1));
+            bodyStart = 2;
+        } else if (hasDepHub) {
+            double depLon = depHub.location().lng();
+            double depLat = depHub.location().lat();
+            anchored.add(List.of(depLon, depLat, 0.0));
+            anchored.add(List.of(depLon, depLat, firstCruiseAlt));
+            if (firstIsDepHubEndpoint) {
+                bodyStart = 1;
+            }
+        }
+
+        if (alreadyHasArrShaft) {
+            bodyEndExclusive = Math.max(bodyStart, pts.size() - 2);
+        } else if (hasArrHub && lastIsArrHubEndpoint) {
+            bodyEndExclusive = Math.max(bodyStart, pts.size() - 1);
+        }
+
+        for (int i = bodyStart; i < bodyEndExclusive; i++) {
+            anchored.add(pts.get(i));
+        }
+
+        if (alreadyHasArrShaft) {
+            anchored.add(pts.get(pts.size() - 2));
+            anchored.add(pts.getLast());
+        } else if (hasArrHub) {
+            double arrLon = arrHub.location().lng();
+            double arrLat = arrHub.location().lat();
+            anchored.add(List.of(arrLon, arrLat, lastCruiseAlt));
+            anchored.add(List.of(arrLon, arrLat, 0.0));
+        }
+
+        return GeoJsonLineString.of(anchored);
     }
 
     /**

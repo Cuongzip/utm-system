@@ -85,7 +85,19 @@ public class DroneCommandConsumer extends BaseCdcConsumer<String, DroneCommandEv
                     flightService.divertFlight(flight.getId(), targetHubId, divertReason);
                     log.info("Diverted flight {} to hub {} due to C2 GOTO command",
                             flight.getId(), targetHubId);
+                } else {
+                    Double targetLat = extractDouble(params, "latitude", "lat");
+                    Double targetLon = extractDouble(params, "longitude", "lon", "lng");
+                    Double targetAlt = extractDouble(params, "altitude", "alt", "targetAltitude");
+                    if (targetLat != null && targetLon != null) {
+                        flightService.tacticalGoto(flight.getId(), targetLat, targetLon, targetAlt);
+                        log.info("Updated flight {} corridor to tactical GOTO [{}, {}]",
+                                flight.getId(), targetLat, targetLon);
+                    }
                 }
+            } else if ("SET_ALTITUDE".equals(cmdType) && event.parameters() != null && !event.parameters().isBlank()) {
+                log.debug("Observed tactical C2 SET_ALTITUDE for flight {}; preserving immutable ATC plannedRoute",
+                        flight.getId());
             } else if ("EMERGENCY_STOP".equals(cmdType)) {
                 flightService.abortFlight(flight.getId(),
                         new FlightAbortVm("Emergency stop command executed for drone " + event.droneId()));
@@ -94,5 +106,24 @@ public class DroneCommandConsumer extends BaseCdcConsumer<String, DroneCommandEv
         } catch (Exception ex) {
             log.warn("Failed to apply C2 command {} to flight {}: {}", cmdType, flight.getId(), ex.getMessage());
         }
+    }
+
+    private Double extractDouble(JsonNode node, String... fieldNames) {
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        for (String field : fieldNames) {
+            JsonNode val = node.get(field);
+            if (val != null && val.isNumber()) {
+                return val.asDouble();
+            }
+            if (val != null && val.isTextual()) {
+                try {
+                    return Double.parseDouble(val.asText().trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return null;
     }
 }

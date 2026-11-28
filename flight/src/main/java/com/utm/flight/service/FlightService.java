@@ -64,4 +64,12 @@ public interface FlightService {
     default FlightVm resumePlannedRoute(String id) {
         throw new UnsupportedOperationException("resumePlannedRoute not implemented");
     }
+
+    default FlightVm updateActiveCruisingAltitude(String id, double targetAltitudeM) {
+        throw new UnsupportedOperationException("updateActiveCruisingAltitude not implemented");
+    }
+
+    default FlightVm tacticalGoto(String id, double targetLat, double targetLon, Double targetAltM) {
+        throw new UnsupportedOperationException("tacticalGoto not implemented");
+    }
 }

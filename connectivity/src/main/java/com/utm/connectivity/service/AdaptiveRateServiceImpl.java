@@ -39,6 +39,24 @@ public class AdaptiveRateServiceImpl implements AdaptiveRateService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public DeviceTelemetryModeVm getDeviceTelemetryMode(String deviceIdOrKey) {
+        DeviceRegistration device = deviceRegistrationService.requireEntityByKey(deviceIdOrKey);
+        TelemetryMode mode = device.getTelemetryMode() != null ? device.getTelemetryMode() : TelemetryMode.NORMAL;
+        TelemetryModeConfigVm cfg = configFor(mode);
+        return new DeviceTelemetryModeVm(
+                device.getId(),
+                device.getDeviceIdentifier(),
+                device.getDroneId(),
+                mode,
+                device.getTelemetryModeReason(),
+                cfg.rateHz(),
+                cfg.intervalMs(),
+                device.getLastModifiedOn() != null ? device.getLastModifiedOn() : device.getCreatedOn()
+        );
+    }
+
+    @Override
     @Transactional
     public DeviceTelemetryModeVm setDeviceTelemetryMode(String deviceIdOrKey, TelemetryMode mode, String reason) {
         DeviceRegistration device = deviceRegistrationService.requireEntityByKey(deviceIdOrKey);

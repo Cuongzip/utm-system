@@ -127,13 +127,19 @@ class TelemetryEmergencyDetectorConsumerTest {
     }
 
     @Test
-    @DisplayName("does not trigger MOTOR_FAILURE during commanded LANDING or EMERGENCY_STOP flight modes")
+    @DisplayName("does not trigger MOTOR_FAILURE during commanded LANDING, ALTITUDE_CHANGE, or EMERGENCY_STOP flight modes")
     void onTelemetryReceived_commandedLandingDescent_doesNotTriggerMotorFailure() {
         ZonedDateTime t0 = ZonedDateTime.parse("2026-11-23T10:15:00Z");
 
         consumer.onTelemetryReceived("drone-7", new TelemetryStreamVm(
                 "drone-7", "flight-7", 10.7769, 106.7009, 45.0, 0.0, 90.0, 85.0, t0,
                 95.0, 0.9, 14, -6.0, "LANDING"));
+        consumer.onTelemetryReceived("drone-8", new TelemetryStreamVm(
+                "drone-8", "flight-8", 10.7769, 106.7009, 75.0, 12.0, 90.0, 85.0, t0,
+                95.0, 0.9, 14, -6.0, "ALTITUDE_CHANGE"));
+        consumer.onTelemetryReceived("drone-9", new TelemetryStreamVm(
+                "drone-9", "flight-9", 10.7769, 106.7009, 30.0, 0.0, 90.0, 85.0, t0,
+                95.0, 0.9, 14, -6.0, "DIVERT"));
 
         verify(emergencyIncidentService, never()).createIncident(any(), any());
     }

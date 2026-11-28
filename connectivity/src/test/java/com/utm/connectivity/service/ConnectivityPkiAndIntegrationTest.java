@@ -1,6 +1,7 @@
 package com.utm.connectivity.service;
 
 import com.utm.commonlibrary.exception.AccessDeniedException;
+import com.utm.commonlibrary.exception.NotFoundException;
 import com.utm.commonlibrary.kafka.event.DroneCommandEvent;
 import com.utm.connectivity.model.DeviceCertificate;
 import com.utm.connectivity.model.DeviceRegistration;
@@ -130,6 +131,58 @@ class ConnectivityPkiAndIntegrationTest {
         assertThat(vm.telemetryMode()).isEqualTo(TelemetryMode.EMERGENCY);
         assertThat(vm.rateHz()).isEqualTo(10.0);
         assertThat(vm.intervalMs()).isEqualTo(100);
+    }
+
+    @Test
+    @DisplayName("Should return current device telemetry mode with rate configuration and audit timestamp")
+    void getDeviceTelemetryMode_existingDevice_returnsCurrentModeAndConfig() {
+        ZonedDateTime createdAt = ZonedDateTime.parse("2026-11-27T06:00:00Z");
+        ZonedDateTime modifiedAt = ZonedDateTime.parse("2026-11-27T07:15:00Z");
+        sampleDevice.setTelemetryMode(TelemetryMode.ENHANCED);
+        sampleDevice.setTelemetryModeReason("Terminal approach corridor");
+        sampleDevice.setCreatedOn(createdAt);
+        sampleDevice.setLastModifiedOn(modifiedAt);
+        when(deviceRegistrationService.requireEntityByKey("drone-001")).thenReturn(sampleDevice);
+
+        DeviceTelemetryModeVm vm = adaptiveRateService.getDeviceTelemetryMode("drone-001");
+
+        assertThat(vm.deviceId()).isEqualTo("dev-001");
+        assertThat(vm.deviceIdentifier()).isEqualTo("DRONE-VN-UAV-001");
+        assertThat(vm.droneId()).isEqualTo("drone-001");
+        assertThat(vm.telemetryMode()).isEqualTo(TelemetryMode.ENHANCED);
+        assertThat(vm.telemetryModeReason()).isEqualTo("Terminal approach corridor");
+        assertThat(vm.rateHz()).isEqualTo(2.0);
+        assertThat(vm.intervalMs()).isEqualTo(500);
+        assertThat(vm.updatedAt()).isEqualTo(modifiedAt);
+    }
+
+    @Test
+    @DisplayName("Should default to NORMAL mode and createdOn timestamp when telemetryMode and lastModifiedOn are null")
+    void getDeviceTelemetryMode_nullModeAndLastModified_defaultsToNormalAndCreatedOn() {
+        ZonedDateTime createdAt = ZonedDateTime.parse("2026-11-27T06:00:00Z");
+        sampleDevice.setTelemetryMode(null);
+        sampleDevice.setTelemetryModeReason(null);
+        sampleDevice.setCreatedOn(createdAt);
+        sampleDevice.setLastModifiedOn(null);
+        when(deviceRegistrationService.requireEntityByKey("dev-001")).thenReturn(sampleDevice);
+
+        DeviceTelemetryModeVm vm = adaptiveRateService.getDeviceTelemetryMode("dev-001");
+
+        assertThat(vm.deviceId()).isEqualTo("dev-001");
+        assertThat(vm.telemetryMode()).isEqualTo(TelemetryMode.NORMAL);
+        assertThat(vm.rateHz()).isEqualTo(0.5);
+        assertThat(vm.intervalMs()).isEqualTo(2000);
+        assertThat(vm.updatedAt()).isEqualTo(createdAt);
+    }
+
+    @Test
+    @DisplayName("Should propagate NotFoundException when getting telemetry mode for unknown device key")
+    void getDeviceTelemetryMode_unknownDevice_throwsNotFoundException() {
+        when(deviceRegistrationService.requireEntityByKey("missing-dev"))
+                .thenThrow(new NotFoundException("DEVICE_NOT_FOUND", "id", "missing-dev"));
+
+        assertThatThrownBy(() -> adaptiveRateService.getDeviceTelemetryMode("missing-dev"))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test

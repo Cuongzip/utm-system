@@ -793,5 +793,72 @@ class AirspaceServiceImplTest {
             assertThat(result.violations()).hasSize(1);
             assertThat(result.violations().getFirst().reason()).contains("60.0m");
         }
+
+        @Test
+        @DisplayName("checkPoint exempts HUB_CORRIDOR floor during Vertiport HUB_ZONE takeoff/landing but flags mid-corridor MOCA floor violation")
+        void checkPoint_hubCorridorFloorWithAndWithoutHubZone_enforcesThreeLayerPrecedence() {
+            GeoJsonPolygonVm corridorPoly = testPolygon;
+            GeoJsonPolygonVm hubPoly = new GeoJsonPolygonVm(
+                    "Polygon",
+                    List.of(List.of(
+                            List.of(106.699, 10.775),
+                            List.of(106.703, 10.775),
+                            List.of(106.703, 10.779),
+                            List.of(106.699, 10.779),
+                            List.of(106.699, 10.775))));
+
+            AirspaceZone corridorZone = AirspaceZone.builder()
+                    .id("zone-corridor-sgn")
+                    .code("ASZ-SGRC")
+                    .name("Saigon River Low-Altitude Flight Corridor")
+                    .zoneType(AirspaceZoneType.HUB_CORRIDOR)
+                    .altitudeFloor(20.0)
+                    .altitudeCeiling(150.0)
+                    .priority(10)
+                    .status(AirspaceZoneStatus.ACTIVE)
+                    .build();
+            AirspaceZone hubZone = AirspaceZone.builder()
+                    .id("zone-hub-d1")
+                    .code("ASZ-HUB-D1")
+                    .name("Saigon Central Vertiport Terminal Zone")
+                    .zoneType(AirspaceZoneType.HUB_ZONE)
+                    .altitudeFloor(0.0)
+                    .altitudeCeiling(150.0)
+                    .priority(20)
+                    .status(AirspaceZoneStatus.ACTIVE)
+                    .build();
+
+            AirspaceZoneVm hubZoneVm = new AirspaceZoneVm(
+                    "zone-hub-d1", "ASZ-HUB-D1", "hub-1", "Saigon Central Vertiport Terminal Zone",
+                    AirspaceZoneType.HUB_ZONE, 150.0, hubPoly, AirspaceZoneStatus.ACTIVE, null,
+                    ZonedDateTime.now(), "admin", ZonedDateTime.now(), "admin");
+            AirspaceZoneVm corridorZoneVm = new AirspaceZoneVm(
+                    "zone-corridor-sgn", "ASZ-SGRC", "hub-1", "Saigon River Low-Altitude Flight Corridor",
+                    AirspaceZoneType.HUB_CORRIDOR, 150.0, corridorPoly, AirspaceZoneStatus.ACTIVE, null,
+                    ZonedDateTime.now(), "admin", ZonedDateTime.now(), "admin");
+
+            when(airspaceZoneRepository.findByStatus(AirspaceZoneStatus.ACTIVE))
+                    .thenReturn(List.of(corridorZone, hubZone));
+            when(airspaceZoneMapper.toVmList(List.of(hubZone, corridorZone)))
+                    .thenReturn(List.of(hubZoneVm, corridorZoneVm));
+
+            when(spatialCalculationService.isPointInPolygon(10.7769, 106.7009, hubPoly)).thenReturn(true);
+            when(spatialCalculationService.isPointInPolygon(10.7769, 106.7009, corridorPoly)).thenReturn(true);
+
+            AirspaceCheckResultVm terminalClimbResult = airspaceService.checkPoint(
+                    new AirspaceCheckVm(10.7769, 106.7009, 8.0));
+            assertThat(terminalClimbResult.safe()).isTrue();
+            assertThat(terminalClimbResult.violations()).isEmpty();
+
+            when(spatialCalculationService.isPointInPolygon(10.7805, 106.7185, hubPoly)).thenReturn(false);
+            when(spatialCalculationService.isPointInPolygon(10.7805, 106.7185, corridorPoly)).thenReturn(true);
+
+            AirspaceCheckResultVm midCorridorLowResult = airspaceService.checkPoint(
+                    new AirspaceCheckVm(10.7805, 106.7185, 8.0));
+            assertThat(midCorridorLowResult.safe()).isFalse();
+            assertThat(midCorridorLowResult.violations()).hasSize(1);
+            assertThat(midCorridorLowResult.violations().getFirst().zoneId()).isEqualTo("zone-corridor-sgn");
+            assertThat(midCorridorLowResult.violations().getFirst().reason()).contains("below floor limit (20.0m)");
+        }
     }
 }

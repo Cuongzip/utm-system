@@ -352,6 +352,26 @@ Giả lập tắt nguồn phần cứng thiết bị và ngừng phát xung keep
 
 ---
 
+### 13.3.15 Phản Ứng Lệnh Điều Khiển C2 & Mô Hình Vật Lý Viễn Trắc 6-DOF
+
+Runtime giả lập (`SimulationServiceImpl`) lắng nghe cả hai topic Kafka `utm.flight.events` (`FlightLifecycleConsumer`) và `utm.drone.commands` (`DroneCommandConsumer`), thực thi động lực học C2 và phản hồi chuỗi trạng thái ACK thực (`ACKNOWLEDGED` -> `EXECUTING` -> `COMPLETED` / `FAILED`) về `utm.drone.command.acks`:
+
+- **Tự động khởi chạy & dừng theo vòng đời chuyến bay (`utm.flight.events`)**:
+  - `FLIGHT_STARTED`: Tự động khởi tạo tối đa **một** phiên giả lập `RUNNING` cho mỗi `flightId` (đồng bộ khóa `flightBootstrapLocks` chống trùng lặp với lệnh `TAKEOFF` song song). Trước khi tự động khởi tạo, kiểm tra `TelemetryClientService.getLatestFlightTelemetry(flightId)`: nếu đã có telemetry phần cứng thực còn mới (`<= 12s`) với `source != "simulation"`, bỏ qua giả lập để bảo vệ dữ liệu Drone thật/MQTT/OEM.
+  - `FLIGHT_COMPLETED`, `FLIGHT_CANCELLED`, `FLIGHT_EMERGENCY_LANDING`: Tự động hủy lịch phát tick và cập nhật phiên giả lập sang `COMPLETED` (`flightPhase = LANDED`) hoặc `STOPPED` mà không gọi ngược lại `flight` service.
+  - Khi đua Kafka giữa `TAKEOFF` và `FLIGHT_STARTED` khiến `FlightClientService.startFlight` nhận lỗi 400 `INVALID_FLIGHT_STATE` (do `flight` service vừa chuyển sang `ACTIVE`), client ghi nhận không lỗi để tiếp tục gắn runtime và phát ACK `TAKEOFF`.
+- **Chế độ bay VTOL `TAKEOFF` & `LANDING` đồng nhất**: Khi phiên bắt đầu từ mặt đất (`alt <= 2.0m`), đảm bảo phân đoạn đầu leo thẳng đứng `4.0 m/s` với `flightMode = TAKEOFF`; ở phân đoạn hạ cánh thẳng đứng cuối cùng về bệ đáp đích (`alt <= 2.0m`), phát `flightMode = LANDING`.
+
+- **`GOTO` kèm `targetHubId` (Divert to Alternate Vertiport)**: Cập nhật `arrivalHubId`, dựng quỹ đạo tiếp cận 3D ở cao độ an toàn rồi hạ cánh thẳng đứng `3.5 m/s` xuống `0.0m AGL` (`flightMode = DIVERT`), phát gói telemetry chạm đất (`LANDED`), gửi ACK `COMPLETED` và gọi `FlightClientService.completeFlight(flightId, targetHubId)`.
+- **`GOTO` tọa độ tự do (không có `targetHubId`)**: Bay tới `[lat, lon, alt]` rồi chuyển sang giữ vị trí bay treo (`LOITER`).
+- **`SET_ALTITUDE`**: Điều chỉnh cao độ mục tiêu với vận tốc đứng `±4.0 m/s`, phát `flightMode = ALTITUDE_CHANGE` trong suốt pha leo/hạ cho tới khi đạt ngưỡng `±0.5m`.
+- **`CONFIGURE` & `SET_HOME`**: Sử dụng pipeline Kafka ACK thực (watchdog `15s` trong `drone` service):
+  - `CONFIGURE`: Cập nhật vận tốc hành trình `cruiseSpeed` (giới hạn `[2.0, 30.0]` m/s), lưu đồng bộ vào `SimulationSession.speed`, phát ACK `ACKNOWLEDGED` + `COMPLETED` và ghi sự kiện `COMMAND_EXECUTED`.
+  - `SET_HOME`: Cập nhật tọa độ bệ đáp RTH (`homePadWaypoint`) và `departureHubId` (nếu có `targetHubId`), phát ACK `ACKNOWLEDGED` + `COMPLETED` và ghi sự kiện `COMMAND_EXECUTED`.
+- **Viễn trắc 6-DOF & Pin vật lý (`TelemetryPushVm`)**: Mỗi nhịp giả lập tính toán đầy đủ góc chúi `pitch` theo tốc độ ngang/đứng, góc nghiêng `roll` theo độ biến thiên hướng bay ngắn nhất (giới hạn `[-22°, 22°]`), cao độ thực `altitudeAgl`, điện áp pin `batteryVoltage` (`43.2V - 50.4V`), nhiệt độ cell `batteryTemperature` và công suất xả tức thời `batteryDischargeRate`.
+
+---
+
 ## 13.4 Luồng Tích Hợp Giữa Các Microservice (Inter-Service Integration)
 
 ```mermaid

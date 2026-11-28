@@ -181,9 +181,7 @@ public class DroneCommandServiceImpl implements DroneCommandService {
     }
 
     private boolean isConfigOnlyCommand(CommandType commandType) {
-        return commandType == CommandType.UPDATE_MISSION
-                || commandType == CommandType.SET_HOME
-                || commandType == CommandType.CONFIGURE;
+        return commandType == CommandType.UPDATE_MISSION;
     }
 
     private void scheduleUnackedWatchdog(String commandId) {
