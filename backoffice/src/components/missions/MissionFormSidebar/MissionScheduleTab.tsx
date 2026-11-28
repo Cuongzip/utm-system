@@ -10,7 +10,7 @@ import {
     DEFAULT_MISSION_SCHEDULE_TYPE,
 } from "@/types";
 
-export interface MissionScheduleTabProps {
+interface MissionScheduleTabProps {
     formData: MissionFormPayload;
     onFormChange: <K extends keyof MissionFormPayload>(
         field: K,

@@ -24,7 +24,7 @@ import { useHubsAll, usePagination } from "@/hooks";
 import { formatNullable, formatHubName } from "@/utils";
 import { type Drone, DEFAULT_DRONE_STATUS } from "@/types";
 
-export interface DronesTableProps {
+interface DronesTableProps {
     drones: Drone[];
     loading: boolean;
     canEdit: boolean;

@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { Copy, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ChamferCard, ChamferButton, Skeleton } from "@/components/ui";
-import { useConnectivityCaCertificate } from "@/hooks";
-import { formatDateTime } from "@/utils";
+import { useConnectivityCaCertificate, useCopyFeedback } from "@/hooks";
+import { downloadTextFile, formatDateTime } from "@/utils";
 
 type SnippetLang = "curl" | "python" | "javascript";
 
@@ -84,8 +84,9 @@ console.log(await res.json());`,
 export function QuickStartTab() {
     const t = useTranslations("developer.docs");
     const [lang, setLang] = useState<SnippetLang>("curl");
-    const [copiedCode, setCopiedCode] = useState(false);
-    const [copiedCa, setCopiedCa] = useState(false);
+    const { copiedKey, copyWithFeedback } = useCopyFeedback<"code" | "ca">();
+    const copiedCode = copiedKey === "code";
+    const copiedCa = copiedKey === "ca";
     const { data: caCert, isLoading: caLoading } = useConnectivityCaCertificate();
 
     const endpoints = useMemo(
@@ -132,29 +133,21 @@ export function QuickStartTab() {
     const snippets = useMemo(() => buildSnippets(gatewayBaseUrl), [gatewayBaseUrl]);
 
     const copySnippet = async () => {
-        await navigator.clipboard.writeText(snippets[lang]);
-        setCopiedCode(true);
-        toast.success(t("snippetCopiedToast"));
-        setTimeout(() => setCopiedCode(false), 2000);
+        if (await copyWithFeedback("code", snippets[lang])) {
+            toast.success(t("snippetCopiedToast"));
+        }
     };
 
     const copyCaPem = async () => {
         if (!caCert?.caCertificatePem) return;
-        await navigator.clipboard.writeText(caCert.caCertificatePem);
-        setCopiedCa(true);
-        toast.success(t("caCopiedToast"));
-        setTimeout(() => setCopiedCa(false), 2000);
+        if (await copyWithFeedback("ca", caCert.caCertificatePem)) {
+            toast.success(t("caCopiedToast"));
+        }
     };
 
     const downloadCaPem = () => {
         if (!caCert?.caCertificatePem) return;
-        const blob = new Blob([caCert.caCertificatePem], { type: "application/x-pem-file" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "utm-root-ca.pem";
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadTextFile("utm-root-ca.pem", caCert.caCertificatePem);
     };
 
     return (

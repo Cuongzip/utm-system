@@ -26,7 +26,25 @@ const optionalNumberValueAs = (value: unknown) => {
     return Number.isNaN(num) ? undefined : num;
 };
 
-export interface AddDroneModalProps {
+function buildDroneFormValues(drone?: Drone | null): DroneFormPayload {
+    return {
+        registrationNumber: drone?.registrationNumber || drone?.id || undefined,
+        manufacturer: drone?.manufacturer || "",
+        model: drone?.model || "",
+        ownerId: drone?.ownerId || drone?.owner?.id || undefined,
+        homeHubId: drone?.homeHubId || drone?.homeHub?.id || undefined,
+        batteryCapacityWh: drone?.batteryCapacityWh ?? DRONE_PHYSICS_DEFAULTS.batteryCapacityWh,
+        maxPayload: drone?.maxPayload ?? DRONE_PHYSICS_DEFAULTS.maxPayload,
+        status: drone?.status ?? DEFAULT_DRONE_STATUS,
+        hoverPowerW: drone?.hoverPowerW ?? DRONE_PHYSICS_DEFAULTS.hoverPowerW,
+        cruisePowerW: drone?.cruisePowerW ?? DRONE_PHYSICS_DEFAULTS.cruisePowerW,
+        cruiseSpeedMs: drone?.cruiseSpeedMs ?? DRONE_PHYSICS_DEFAULTS.cruiseSpeedMs,
+        batteryHealthPct: drone?.batteryHealthPct ?? DRONE_PHYSICS_DEFAULTS.batteryHealthPct,
+        windToleranceMs: drone?.windToleranceMs ?? DRONE_PHYSICS_DEFAULTS.windToleranceMs,
+    };
+}
+
+interface AddDroneModalProps {
     isOpen: boolean;
     droneToEdit?: Drone | null;
     onClose: () => void;
@@ -55,43 +73,12 @@ export function AddDroneModal({ isOpen, droneToEdit, onClose, onSubmit }: AddDro
         resolver: zodResolver(
             droneToEdit ? updateDroneBody : createDroneBody
         ) as Resolver<DroneFormPayload>,
-        defaultValues: {
-            registrationNumber: undefined,
-            manufacturer: "",
-            model: "",
-            ownerId: undefined,
-            homeHubId: undefined,
-            batteryCapacityWh: DRONE_PHYSICS_DEFAULTS.batteryCapacityWh,
-            maxPayload: DRONE_PHYSICS_DEFAULTS.maxPayload,
-            status: DEFAULT_DRONE_STATUS,
-            hoverPowerW: DRONE_PHYSICS_DEFAULTS.hoverPowerW,
-            cruisePowerW: DRONE_PHYSICS_DEFAULTS.cruisePowerW,
-            cruiseSpeedMs: DRONE_PHYSICS_DEFAULTS.cruiseSpeedMs,
-            batteryHealthPct: DRONE_PHYSICS_DEFAULTS.batteryHealthPct,
-            windToleranceMs: DRONE_PHYSICS_DEFAULTS.windToleranceMs,
-        },
+        defaultValues: buildDroneFormValues(droneToEdit),
     });
 
     useEffect(() => {
         if (!isOpen) return;
-
-        reset({
-            registrationNumber: droneToEdit?.registrationNumber || droneToEdit?.id || undefined,
-            manufacturer: droneToEdit?.manufacturer || "",
-            model: droneToEdit?.model || "",
-            ownerId: droneToEdit?.ownerId || droneToEdit?.owner?.id || undefined,
-            homeHubId: droneToEdit?.homeHubId || droneToEdit?.homeHub?.id || undefined,
-            batteryCapacityWh:
-                droneToEdit?.batteryCapacityWh ?? DRONE_PHYSICS_DEFAULTS.batteryCapacityWh,
-            maxPayload: droneToEdit?.maxPayload ?? DRONE_PHYSICS_DEFAULTS.maxPayload,
-            status: droneToEdit?.status ?? DEFAULT_DRONE_STATUS,
-            hoverPowerW: droneToEdit?.hoverPowerW ?? DRONE_PHYSICS_DEFAULTS.hoverPowerW,
-            cruisePowerW: droneToEdit?.cruisePowerW ?? DRONE_PHYSICS_DEFAULTS.cruisePowerW,
-            cruiseSpeedMs: droneToEdit?.cruiseSpeedMs ?? DRONE_PHYSICS_DEFAULTS.cruiseSpeedMs,
-            batteryHealthPct:
-                droneToEdit?.batteryHealthPct ?? DRONE_PHYSICS_DEFAULTS.batteryHealthPct,
-            windToleranceMs: droneToEdit?.windToleranceMs ?? DRONE_PHYSICS_DEFAULTS.windToleranceMs,
-        });
+        reset(buildDroneFormValues(droneToEdit));
     }, [isOpen, droneToEdit, reset]);
 
     const currentOwnerId = useWatch({ control, name: "ownerId" });

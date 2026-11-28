@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import { CONFLICT_SEVERITY, type Conflict, type Flight } from "@/types";
 import { getConflictMarkerUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
@@ -13,7 +14,7 @@ import {
     generateGeodesicCircleRing,
 } from "../cesiumOutlineUtils";
 
-export interface ConflictsLayerProps {
+interface ConflictsLayerProps {
     conflicts: Conflict[];
     flights?: Flight[];
     selectedConflictId?: string | null;
@@ -44,9 +45,12 @@ function extractRouteMidpoint(flight?: Flight): { lat: number; lng: number; alt:
     return { lat, lng, alt };
 }
 
+const EMPTY_CONFLICTS: Conflict[] = [];
+const EMPTY_FLIGHTS: Flight[] = [];
+
 export function ConflictsLayer({
-    conflicts = [],
-    flights = [],
+    conflicts = EMPTY_CONFLICTS,
+    flights = EMPTY_FLIGHTS,
     selectedConflictId,
     autoFitBounds = true,
 }: ConflictsLayerProps) {
@@ -54,17 +58,7 @@ export function ConflictsLayer({
     const entityIdsRef = useRef<string[]>([]);
     const hasInitialFitRef = useRef(false);
     const lastFocusedIdRef = useRef<string | null>(null);
-    const [sceneRevision, setSceneRevision] = useState(0);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCesium, getCesium } from "@/components/map";
 import type { GeometryMode, GeoPoint } from "../useAirspaceGeometry";
 
-export interface AirspaceInteractionControllerProps {
+interface AirspaceInteractionControllerProps {
     geometryMode: GeometryMode;
     onCenterChange: (lat: number, lng: number) => void;
     onAddPolygonPoint: (lat: number, lng: number) => void;

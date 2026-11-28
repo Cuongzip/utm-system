@@ -14,7 +14,7 @@ export interface FlightLineStringGeometry {
     coordinates: number[][];
 }
 
-export interface UseFlightRouteOptions {
+interface UseFlightRouteOptions {
     initialWaypoints?: FlightWaypoint[];
     initialRoute?: FlightLineStringGeometry | string | null;
     departureHub?: Hub | null;

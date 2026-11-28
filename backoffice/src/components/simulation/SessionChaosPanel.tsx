@@ -15,47 +15,35 @@ import {
     type InjectScenarioType,
 } from "@/types";
 
-export interface SessionChaosPanelProps {
+interface SessionChaosPanelProps {
     session: SimulationSession;
     onScenarioInjected: () => void;
 }
 
-export interface ScenarioDefinition {
+interface ScenarioDefinition {
     type: InjectScenarioType;
-    name: string;
-    description: string;
     icon: React.ComponentType<{ className?: string }>;
 }
 
 export const CHAOS_SCENARIOS: ScenarioDefinition[] = [
     {
         type: SIMULATION_SCENARIO.GPS_FAILURE,
-        name: "GPS Failure",
-        description: "Simulates complete loss of GNSS positioning.",
         icon: Satellite,
     },
     {
         type: SIMULATION_SCENARIO.BATTERY_DRAIN,
-        name: "Battery Drain",
-        description: "Forces rapid battery level depletion.",
         icon: ZapOff,
     },
     {
         type: SIMULATION_SCENARIO.C2_LOST,
-        name: "C2 Link Lost",
-        description: "Simulates lost C2 command telemetry link.",
         icon: WifiOff,
     },
     {
         type: SIMULATION_SCENARIO.MOTOR_FAILURE,
-        name: "Motor Failure",
-        description: "Simulates propulsion motor subsystem fault.",
         icon: TriangleAlert,
     },
     {
         type: SIMULATION_SCENARIO.GEOFENCE_BREACH,
-        name: "Geofence Breach",
-        description: "Forces flight outside authorized airspace boundaries.",
         icon: ShieldAlert,
     },
 ];

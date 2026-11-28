@@ -1,121 +1,49 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useSyncExternalStore, useCallback } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Viewer } from "cesium";
-import { Check, Globe, Map as MapIcon, Maximize2, Minimize2, Layers } from "lucide-react";
+import { Globe, Map as MapIcon, Maximize2, Minimize2 } from "lucide-react";
 import { ChamferCard } from "@/components/ui";
+import { cn } from "@/lib";
 import { BaseCesiumMap } from "./BaseCesiumMap";
+import { TacticalBasemapMenu } from "./TacticalBasemapMenu";
 import { TacticalCompassControls, TacticalMapStatusBar } from "./TacticalMapHud";
 import type { ImageryType } from "./types";
-import { cn } from "@/lib";
+import {
+    BASEMAP_OPTIONS,
+    getMapLayerSnapshot,
+    getMapModeSnapshot,
+    getServerMapModeSnapshot,
+    subscribeMapLayer,
+    subscribeMapMode,
+    useTacticalMapSettings,
+} from "./useTacticalMapSettings";
 
-export interface TacticalMapContainerProps {
+export {
+    BASEMAP_OPTIONS,
+    getMapLayerSnapshot,
+    getMapModeSnapshot,
+    getServerMapModeSnapshot,
+    subscribeMapLayer,
+    subscribeMapMode,
+};
+
+interface TacticalMapContainerProps {
     initialLayerType?: ImageryType;
     onEntityClick?: (entityId: string) => void;
     onMapClick?: (coords: { latitude: number; longitude: number }) => void;
     pickMode?: boolean;
-    children?: React.ReactNode;
-    inspector?: React.ReactNode;
-    header?: React.ReactNode;
-    footer?: React.ReactNode;
-    overlay?: React.ReactNode;
-    legendSlot?: React.ReactNode;
-    statusSlot?: React.ReactNode;
+    children?: ReactNode;
+    inspector?: ReactNode;
+    header?: ReactNode;
+    footer?: ReactNode;
+    overlay?: ReactNode;
+    legendSlot?: ReactNode;
+    statusSlot?: ReactNode;
     hideBottomHud?: boolean;
     frameless?: boolean;
     className?: string;
-}
-
-export const VALID_IMAGERY_TYPES: readonly ImageryType[] = [
-    "satellite-hybrid",
-    "satellite",
-    "tactical-dark",
-    "carto",
-    "street",
-];
-
-export const BASEMAP_OPTIONS: ReadonlyArray<{
-    id: ImageryType;
-    label: string;
-    swatchClass: string;
-}> = [
-    {
-        id: "satellite-hybrid",
-        label: "Satellite Hybrid",
-        swatchClass:
-            "bg-gradient-to-br from-emerald-950 via-slate-800 to-amber-900/70 ring-1 ring-amber-300/40",
-    },
-    {
-        id: "satellite",
-        label: "Satellite Clean",
-        swatchClass:
-            "bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 ring-1 ring-emerald-400/30",
-    },
-    {
-        id: "tactical-dark",
-        label: "Tactical Dark",
-        swatchClass:
-            "bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 ring-1 ring-cyan-500/35",
-    },
-    {
-        id: "carto",
-        label: "Light Gray Canvas",
-        swatchClass:
-            "bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 ring-1 ring-slate-400/50",
-    },
-    {
-        id: "street",
-        label: "Street Map",
-        swatchClass:
-            "bg-gradient-to-br from-amber-50 via-emerald-100 to-sky-200 ring-1 ring-sky-400/50",
-    },
-];
-
-function subscribeStorageEvent(eventName: string, callback: () => void) {
-    if (typeof window === "undefined") return () => {};
-    window.addEventListener("storage", callback);
-    window.addEventListener(eventName, callback);
-    return () => {
-        window.removeEventListener("storage", callback);
-        window.removeEventListener(eventName, callback);
-    };
-}
-
-function getMapModeSnapshot(): "globe" | "2d" {
-    if (typeof window === "undefined") return "2d";
-    try {
-        const saved = localStorage.getItem("utm_map_mode");
-        if (saved === "2d" || saved === "globe") return saved;
-    } catch {
-        // ignore
-    }
-    return "2d";
-}
-
-function getMapLayerSnapshot(fallback: ImageryType): ImageryType {
-    if (typeof window === "undefined") return fallback;
-    try {
-        const saved = localStorage.getItem("utm_map_layer");
-        if (saved && (VALID_IMAGERY_TYPES as readonly string[]).includes(saved)) {
-            return saved as ImageryType;
-        }
-    } catch {
-        // ignore
-    }
-    return fallback;
-}
-
-function getBooleanSettingSnapshot(key: string, fallback: boolean): boolean {
-    if (typeof window === "undefined") return fallback;
-    try {
-        const saved = localStorage.getItem(key);
-        if (saved === "true") return true;
-        if (saved === "false") return false;
-    } catch {
-        // ignore
-    }
-    return fallback;
 }
 
 export function TacticalMapContainer({
@@ -135,26 +63,15 @@ export function TacticalMapContainer({
     className,
 }: TacticalMapContainerProps) {
     const t = useTranslations("map");
-    const mapMode = useSyncExternalStore(
-        (cb) => subscribeStorageEvent("utm_map_mode_change", cb),
-        getMapModeSnapshot,
-        () => "2d"
-    );
-    const imageryType = useSyncExternalStore(
-        (cb) => subscribeStorageEvent("utm_map_layer_change", cb),
-        () => getMapLayerSnapshot(initialLayerType),
-        () => initialLayerType
-    );
-    const enable3DBuildings = useSyncExternalStore(
-        (cb) => subscribeStorageEvent("utm_map_3d_buildings_change", cb),
-        () => getBooleanSettingSnapshot("utm_map_3d_buildings", true),
-        () => true
-    );
-    const enable3DTerrain = useSyncExternalStore(
-        (cb) => subscribeStorageEvent("utm_map_3d_terrain_change", cb),
-        () => getBooleanSettingSnapshot("utm_map_3d_terrain", true),
-        () => true
-    );
+    const {
+        mapMode,
+        imageryType,
+        enable3DBuildings,
+        enable3DTerrain,
+        handleModeChange,
+        handleLayerChange,
+        handleToggle3DSetting,
+    } = useTacticalMapSettings(initialLayerType);
 
     const [activeViewer, setActiveViewer] = useState<Viewer | null>(null);
     const [hasIonToken, setHasIonToken] = useState(false);
@@ -166,33 +83,6 @@ export function TacticalMapContainer({
         setActiveViewer(v);
         setHasIonToken(ionAvailable);
     }, []);
-
-    const handleModeChange = (newMode: "globe" | "2d") => {
-        try {
-            localStorage.setItem("utm_map_mode", newMode);
-            window.dispatchEvent(new Event("utm_map_mode_change"));
-        } catch {
-            // ignore
-        }
-    };
-
-    const handleLayerChange = (newLayer: ImageryType) => {
-        try {
-            localStorage.setItem("utm_map_layer", newLayer);
-            window.dispatchEvent(new Event("utm_map_layer_change"));
-        } catch {
-            // ignore
-        }
-    };
-
-    const handleToggle3DSetting = (storageKey: string, eventName: string, nextValue: boolean) => {
-        try {
-            localStorage.setItem(storageKey, String(nextValue));
-            window.dispatchEvent(new Event(eventName));
-        } catch {
-            // ignore
-        }
-    };
 
     useEffect(() => {
         if (!isLayersOpen && !isFullscreen) return;
@@ -270,136 +160,19 @@ export function TacticalMapContainer({
 
                     <TacticalCompassControls viewer={activeViewer} is3D={mapMode === "globe"} />
 
-                    <div className="relative pointer-events-auto" ref={layersRef}>
-                        <button
-                            type="button"
-                            onClick={() => setIsLayersOpen(!isLayersOpen)}
-                            aria-label={t("basemapLayers")}
-                            aria-expanded={isLayersOpen}
-                            aria-haspopup="menu"
-                            className={`h-8 w-8 inline-flex items-center justify-center rounded-md border text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 shadow-sm cursor-pointer ${
-                                isLayersOpen
-                                    ? "bg-slate-800 border-cyan-500/50 text-cyan-200"
-                                    : "bg-slate-950/88 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur-md"
-                            }`}
-                            title={t("basemapLayers")}
-                        >
-                            <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
-
-                        {isLayersOpen && (
-                            <div
-                                role="menu"
-                                aria-label={t("basemapOptionsAria")}
-                                className="absolute right-0 top-full mt-1.5 w-52 rounded-md border border-slate-700/85 bg-slate-950/95 p-1 text-slate-200 shadow-xl backdrop-blur-md z-50 text-xs font-mono"
-                            >
-                                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 mb-0.5">
-                                    {t("basemap")}
-                                </div>
-                                {BASEMAP_OPTIONS.map((layer) => {
-                                    const isSelected = imageryType === layer.id;
-                                    return (
-                                        <button
-                                            key={layer.id}
-                                            type="button"
-                                            role="menuitemradio"
-                                            aria-checked={isSelected}
-                                            onClick={() => {
-                                                handleLayerChange(layer.id);
-                                                setIsLayersOpen(false);
-                                            }}
-                                            className={`w-full text-left rounded-[4px] py-1.5 px-2 flex items-center justify-between gap-2 transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
-                                                isSelected
-                                                    ? "bg-slate-800 text-white font-semibold"
-                                                    : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                                            }`}
-                                        >
-                                            <span className="flex items-center gap-2 min-w-0">
-                                                <span
-                                                    aria-hidden="true"
-                                                    className={cn(
-                                                        "h-3.5 w-3.5 rounded-[3px] shrink-0",
-                                                        layer.swatchClass
-                                                    )}
-                                                />
-                                                <span className="truncate">
-                                                    {t(`basemaps.${layer.id}`)}
-                                                </span>
-                                            </span>
-                                            {isSelected && (
-                                                <Check
-                                                    className="h-3.5 w-3.5 text-cyan-400 stroke-[2.5] shrink-0"
-                                                    aria-hidden="true"
-                                                />
-                                            )}
-                                        </button>
-                                    );
-                                })}
-
-                                {mapMode === "globe" && hasIonToken && (
-                                    <div className="mt-1 pt-1 border-t border-slate-800">
-                                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                            {t("env3d")}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            role="menuitemcheckbox"
-                                            aria-checked={enable3DBuildings}
-                                            onClick={() =>
-                                                handleToggle3DSetting(
-                                                    "utm_map_3d_buildings",
-                                                    "utm_map_3d_buildings_change",
-                                                    !enable3DBuildings
-                                                )
-                                            }
-                                            className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
-                                                enable3DBuildings
-                                                    ? "text-white font-semibold hover:bg-slate-800"
-                                                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                                            }`}
-                                        >
-                                            <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                                                {enable3DBuildings && (
-                                                    <Check
-                                                        className="h-3.5 w-3.5 text-cyan-400 stroke-[2.5]"
-                                                        aria-hidden="true"
-                                                    />
-                                                )}
-                                            </span>
-                                            <span>{t("osmBuildings")}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            role="menuitemcheckbox"
-                                            aria-checked={enable3DTerrain}
-                                            onClick={() =>
-                                                handleToggle3DSetting(
-                                                    "utm_map_3d_terrain",
-                                                    "utm_map_3d_terrain_change",
-                                                    !enable3DTerrain
-                                                )
-                                            }
-                                            className={`relative w-full text-left rounded-[4px] py-1.5 pl-7 pr-2.5 flex items-center justify-between transition-colors focus-visible:bg-slate-800 focus-visible:text-white focus-visible:outline-none cursor-pointer ${
-                                                enable3DTerrain
-                                                    ? "text-white font-semibold hover:bg-slate-800"
-                                                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                                            }`}
-                                        >
-                                            <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                                                {enable3DTerrain && (
-                                                    <Check
-                                                        className="h-3.5 w-3.5 text-cyan-400 stroke-[2.5]"
-                                                        aria-hidden="true"
-                                                    />
-                                                )}
-                                            </span>
-                                            <span>{t("worldTerrain")}</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    <TacticalBasemapMenu
+                        containerRef={layersRef}
+                        isOpen={isLayersOpen}
+                        onToggleOpen={() => setIsLayersOpen((open) => !open)}
+                        onClose={() => setIsLayersOpen(false)}
+                        imageryType={imageryType}
+                        onSelectLayer={handleLayerChange}
+                        mapMode={mapMode}
+                        hasIonToken={hasIonToken}
+                        enable3DBuildings={enable3DBuildings}
+                        enable3DTerrain={enable3DTerrain}
+                        onToggle3DSetting={handleToggle3DSetting}
+                    />
 
                     <button
                         type="button"

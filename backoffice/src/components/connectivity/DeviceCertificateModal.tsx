@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ShieldCheck,
     KeyRound,
@@ -25,13 +25,12 @@ import {
     UnderlineTabs,
 } from "@/components/ui";
 import { connectivityService } from "@/services/connectivityService";
-import { ApiError } from "@/services/apiClient";
-import { QUERY_KEYS } from "@/hooks";
-import { formatDateTime } from "@/utils";
+import { QUERY_KEYS, useCopyFeedback, useDeviceCertificate } from "@/hooks";
+import { downloadTextFile, formatDateTime } from "@/utils";
 import type { DeviceRegistration, IssuedCertificateBundle } from "@/types";
 import { toast } from "sonner";
 
-export interface DeviceCertificateModalProps {
+interface DeviceCertificateModalProps {
     isOpen: boolean;
     device: DeviceRegistration | null;
     onClose: () => void;
@@ -39,31 +38,18 @@ export interface DeviceCertificateModalProps {
 
 type PemTabId = "key" | "cert" | "ca";
 
-function downloadPem(filename: string, content: string) {
-    const blob = new Blob([content], { type: "application/x-pem-file" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
-
 function PemBlock({ label, pem, filename }: { label: string; pem?: string; filename: string }) {
     const t = useTranslations("connectivity.certModal");
-    const [copied, setCopied] = useState(false);
+    const { copiedKey, copyWithFeedback } = useCopyFeedback(1800);
+    const copied = copiedKey === "pem";
 
     if (!pem) return null;
 
     const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(pem);
-            setCopied(true);
+        const ok = await copyWithFeedback("pem", pem);
+        if (ok) {
             toast.success(t("copiedToast", { label }));
-            setTimeout(() => setCopied(false), 1800);
-        } catch {
+        } else {
             toast.error(t("copyErrorToast"));
         }
     };
@@ -89,7 +75,7 @@ function PemBlock({ label, pem, filename }: { label: string; pem?: string; filen
                     </button>
                     <button
                         type="button"
-                        onClick={() => downloadPem(filename, pem)}
+                        onClick={() => downloadTextFile(filename, pem)}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-200 bg-white text-[11px] font-mono text-slate-700 hover:bg-slate-100 cursor-pointer"
                     >
                         <Download className="w-3 h-3" />
@@ -132,21 +118,7 @@ function DeviceCertificateModalBody({
 
     const shouldFetchCert = Boolean(device.certificateFingerprint) || hasFetchedAfterIssue;
 
-    const { data: cert, isLoading } = useQuery({
-        queryKey: QUERY_KEYS.connectivityDeviceCert(device.id),
-        queryFn: async () => {
-            try {
-                return await connectivityService.getDeviceCertificate(device.id);
-            } catch (err) {
-                if (err instanceof ApiError && err.status === 404) {
-                    return null;
-                }
-                throw err;
-            }
-        },
-        enabled: shouldFetchCert,
-        retry: false,
-    });
+    const { data: cert, isLoading } = useDeviceCertificate(device.id, shouldFetchCert);
 
     const issueMutation = useMutation({
         mutationFn: () => connectivityService.issueDeviceCertificate(device.id),

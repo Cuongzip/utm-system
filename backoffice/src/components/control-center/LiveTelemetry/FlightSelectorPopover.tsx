@@ -13,7 +13,7 @@ import {
     type TelemetryRecord,
 } from "@/types";
 
-export interface FlightSelectorPopoverProps {
+interface FlightSelectorPopoverProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     flight: Flight | null;

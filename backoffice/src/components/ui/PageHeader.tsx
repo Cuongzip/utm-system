@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export interface PageHeaderProps {
+interface PageHeaderProps {
     title: string | React.ReactNode;
     badges?: React.ReactNode;
     children?: React.ReactNode;

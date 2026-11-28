@@ -22,7 +22,7 @@ export type UpdateDronePayload = zod.infer<typeof updateDroneBody>;
 export type DroneQueryParams = zod.infer<typeof getDronesQueryParams>;
 
 export const DRONE_STATUSES = updateDroneBody.shape.status.unwrap().options;
-export type DroneStatus = (typeof DRONE_STATUSES)[number];
+type DroneStatus = (typeof DRONE_STATUSES)[number];
 
 export const DRONE_STATUS = {
     AVAILABLE: "available",

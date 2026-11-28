@@ -23,7 +23,7 @@ import {
     TableLoading,
 } from "@/components/ui";
 import { connectivityService } from "@/services";
-import { QUERY_KEYS, useIntegrationApiKeys } from "@/hooks";
+import { QUERY_KEYS, useCopyFeedback, useIntegrationApiKeys } from "@/hooks";
 import { createApiKeyBody } from "@/generated/connectivity";
 import {
     OEM_API_KEY_SCOPES,
@@ -55,16 +55,13 @@ export function ApiKeysTab() {
     const [createOpen, setCreateOpen] = useState(false);
     const [name, setName] = useState("");
     const [manufacturerName, setManufacturerName] = useState("");
-    const [scopes, setScopes] = useState<OemApiKeyScope[]>([
-        "telemetry:write",
-        "drone:register",
-        "status:read",
-    ]);
+    const [scopes, setScopes] = useState<OemApiKeyScope[]>(() => [...OEM_API_KEY_SCOPES]);
     const [expiresInDays, setExpiresInDays] = useState("90");
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const [createdKey, setCreatedKey] = useState<{ apiKey: string; name: string } | null>(null);
-    const [copiedNewKey, setCopiedNewKey] = useState(false);
+    const { copiedKey, copyWithFeedback } = useCopyFeedback();
+    const copiedNewKey = copiedKey === "newKey";
     const [keyToRevoke, setKeyToRevoke] = useState<ApiKeyInfo | null>(null);
 
     const createMutation = useMutation({
@@ -75,7 +72,7 @@ export function ApiKeysTab() {
             setCreateOpen(false);
             setName("");
             setManufacturerName("");
-            setScopes(["telemetry:write", "drone:register", "status:read"]);
+            setScopes([...OEM_API_KEY_SCOPES]);
             setExpiresInDays("90");
             setFieldErrors({});
             if (res.apiKey) {
@@ -126,10 +123,10 @@ export function ApiKeysTab() {
 
     const handleCopyKey = async () => {
         if (!createdKey) return;
-        await navigator.clipboard.writeText(createdKey.apiKey);
-        setCopiedNewKey(true);
-        toast.success(t("copiedToast"));
-        setTimeout(() => setCopiedNewKey(false), 2000);
+        const ok = await copyWithFeedback("newKey", createdKey.apiKey);
+        if (ok) {
+            toast.success(t("copiedToast"));
+        }
     };
 
     return (

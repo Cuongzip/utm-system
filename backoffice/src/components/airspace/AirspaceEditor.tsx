@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Save, Trash2, Loader2 } from "lucide-react";
@@ -19,7 +19,7 @@ import { useAirspaceGeometry } from "./useAirspaceGeometry";
 import { AirspaceMapEditor } from "./AirspaceMapEditor";
 import { AirspaceFormSidebar } from "./AirspaceFormSidebar";
 
-export interface AirspaceEditorProps {
+interface AirspaceEditorProps {
     mode: "create" | "edit";
     initialData?: AirspaceZone | null;
     hubs: Hub[];
@@ -46,9 +46,15 @@ export function AirspaceEditor({
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+    const [prevInitialData, setPrevInitialData] = useState(initialData);
     const [formData, setFormData] = useState<AirspaceZoneFormPayload>(() =>
         getInitialAirspaceFormPayload(initialData)
     );
+
+    if (initialData !== prevInitialData) {
+        setPrevInitialData(initialData);
+        setFormData(getInitialAirspaceFormPayload(initialData));
+    }
 
     const [activeSidebarTab, setActiveSidebarTab] = useState<"details" | "geometry">("details");
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -69,10 +75,6 @@ export function AirspaceEditor({
         clearPolygonPoints,
         computedGeoJson,
     } = useAirspaceGeometry(initialData?.geometry);
-
-    useEffect(() => {
-        setFormData(getInitialAirspaceFormPayload(initialData));
-    }, [initialData]);
 
     const handleFormChange = <K extends keyof AirspaceZoneFormPayload>(
         field: K,

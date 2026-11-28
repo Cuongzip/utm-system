@@ -7,9 +7,6 @@ import {
     type getDevicesResponse,
     type getTelemetryModesResponseItem,
     type setDeviceTelemetryModeResponse,
-    type getTelemetryStatsResponse,
-    type getProtocolStatsResponse,
-    type getCommandStatsResponse,
     type getConnectivityStatusResponse,
     type getCaCertificateResponse,
     type getDeviceCertificateResponse,
@@ -17,7 +14,6 @@ import {
     type listApiKeysResponseItem,
     type createApiKeyBody,
     type createApiKeyResponse,
-    type getStatusResponse,
 } from "@/generated/connectivity";
 
 export type DeviceConnectionStatus = NonNullable<
@@ -56,9 +52,6 @@ export type SetTelemetryModePayload = zod.infer<typeof setDeviceTelemetryModeBod
 export type SetTelemetryModeResponse = NonNullable<
     zod.infer<typeof setDeviceTelemetryModeResponse>
 >;
-export type TelemetryStats = NonNullable<zod.infer<typeof getTelemetryStatsResponse>>;
-export type ProtocolStatsResponse = NonNullable<zod.infer<typeof getProtocolStatsResponse>>;
-export type CommandStatsResponse = NonNullable<zod.infer<typeof getCommandStatsResponse>>;
 export type ConnectivityStatusResponse = NonNullable<
     zod.infer<typeof getConnectivityStatusResponse>
 >;
@@ -68,4 +61,3 @@ export type IssuedCertificateBundle = NonNullable<zod.infer<typeof issueCertific
 export type ApiKeyInfo = NonNullable<zod.infer<typeof listApiKeysResponseItem>>;
 export type CreateApiKeyPayload = zod.infer<typeof createApiKeyBody>;
 export type CreateApiKeyResponse = NonNullable<zod.infer<typeof createApiKeyResponse>>;
-export type IntegrationStatusResponse = NonNullable<zod.infer<typeof getStatusResponse>>;

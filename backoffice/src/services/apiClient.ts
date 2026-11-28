@@ -12,7 +12,7 @@ export class ApiError extends Error {
     }
 }
 
-export function buildUrl(endpoint: string, params?: Record<string, unknown>): string {
+export function buildUrl(endpoint: string, params?: object): string {
     if (!params) return endpoint;
     const searchParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -41,6 +41,17 @@ export function normalizeList<T>(res: { items?: T[]; total?: number } | T[] | nu
 
 let isRedirectingToLogin = false;
 
+function triggerSessionRedirect(redirectUrl: string, sessionExpiredMsg: string): never {
+    if (!isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+        toast.error(sessionExpiredMsg);
+        setTimeout(() => {
+            window.location.href = redirectUrl || "/";
+        }, 600);
+    }
+    throw new ApiError(401, sessionExpiredMsg);
+}
+
 export async function apiClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const locale = getCurrentLocale();
     const headers = new Headers(options.headers);
@@ -60,14 +71,7 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
 
     if ((response.type === "cors" && response.redirected) || response.status === 401) {
         if (typeof window !== "undefined") {
-            if (!isRedirectingToLogin) {
-                isRedirectingToLogin = true;
-                toast.error(sessionExpiredMsg);
-                setTimeout(() => {
-                    window.location.href = response.url || "/";
-                }, 600);
-            }
-            throw new ApiError(401, sessionExpiredMsg);
+            triggerSessionRedirect(response.url, sessionExpiredMsg);
         }
     }
 
@@ -97,16 +101,14 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
         (response.url.includes("/openid-connect/auth") || response.url.includes("/login"))
     ) {
         if (typeof window !== "undefined") {
-            if (!isRedirectingToLogin) {
-                isRedirectingToLogin = true;
-                toast.error(sessionExpiredMsg);
-                setTimeout(() => {
-                    window.location.href = response.url || "/";
-                }, 600);
-            }
-            throw new ApiError(401, sessionExpiredMsg);
+            triggerSessionRedirect(response.url, sessionExpiredMsg);
         }
     }
 
     return response.json() as Promise<T>;
+}
+
+export async function apiClientArray<T>(endpoint: string, options?: RequestInit): Promise<T[]> {
+    const res = await apiClient<T[]>(endpoint, options);
+    return Array.isArray(res) ? res : [];
 }

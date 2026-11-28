@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Clock, AlertCircle } from "lucide-react";
 import { DateTimePicker } from "@/components/ui";
 
-export interface FlightScheduleTabProps {
+interface FlightScheduleTabProps {
     scheduledDeparture: string;
     onScheduledDepartureChange: (val: string) => void;
     scheduledArrival: string;

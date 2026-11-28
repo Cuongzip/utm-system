@@ -23,7 +23,7 @@ import {
     StatusBadge,
     type SideDrawerTabItem,
 } from "@/components/ui";
-import { useLiveAlerts } from "@/hooks/useLiveAlerts";
+import { useLiveAlerts } from "@/hooks";
 import { cn } from "@/lib";
 import { formatRelativeTime } from "@/utils";
 import type { AppLocale } from "@/i18n";

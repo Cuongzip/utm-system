@@ -9,7 +9,7 @@ import { Calendar } from "./Calendar";
 import { cn } from "@/lib";
 import { getDateFnsLocale, type AppLocale } from "@/i18n";
 
-export interface DateTimePickerProps {
+interface DateTimePickerProps {
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;

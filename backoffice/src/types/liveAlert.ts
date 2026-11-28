@@ -12,7 +12,7 @@ export const LIVE_ALERT_SEVERITY = {
 
 export type LiveAlertSeverity = (typeof LIVE_ALERT_SEVERITY)[keyof typeof LIVE_ALERT_SEVERITY];
 
-export type LiveAlertSource = "alert" | "emergency";
+type LiveAlertSource = "alert" | "emergency";
 
 export interface LiveAlertItem {
     id: string;

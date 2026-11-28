@@ -11,7 +11,7 @@ import { simulationService } from "@/services/simulationService";
 import { QUERY_KEYS } from "@/hooks";
 import { SIMULATION_STATUS, type SimulationSession } from "@/types";
 
-export interface SessionControlsPanelProps {
+interface SessionControlsPanelProps {
     session: SimulationSession;
     onRefresh: () => void;
 }

@@ -24,7 +24,7 @@ import { usePagination } from "@/hooks";
 import { formatDate, formatNullable } from "@/utils";
 import { type Organization, DEFAULT_ORGANIZATION_STATUS, ORGANIZATION_STATUS } from "@/types";
 
-export interface OrganizationsTableProps {
+interface OrganizationsTableProps {
     organizations: Organization[];
     loading: boolean;
     canManage: boolean;

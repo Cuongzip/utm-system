@@ -11,7 +11,15 @@ import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { registerDeviceBody } from "@/generated";
 import type { DeviceRegistrationPayload } from "@/types";
 
-export interface AddDeviceModalProps {
+function buildDeviceFormValues(): DeviceRegistrationPayload {
+    return {
+        droneId: "",
+        deviceIdentifier: undefined,
+        certificateFingerprint: "",
+    };
+}
+
+interface AddDeviceModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (payload: DeviceRegistrationPayload) => Promise<unknown>;
@@ -33,20 +41,12 @@ export function AddDeviceModal({ isOpen, onClose, onSubmit }: AddDeviceModalProp
         formState: { errors },
     } = useForm<DeviceRegistrationPayload>({
         resolver: zodResolver(registerDeviceBody) as unknown as Resolver<DeviceRegistrationPayload>,
-        defaultValues: {
-            droneId: "",
-            deviceIdentifier: undefined,
-            certificateFingerprint: "",
-        },
+        defaultValues: buildDeviceFormValues(),
     });
 
     useEffect(() => {
         if (isOpen) {
-            reset({
-                droneId: "",
-                deviceIdentifier: undefined,
-                certificateFingerprint: "",
-            });
+            reset(buildDeviceFormValues());
         }
     }, [isOpen, reset]);
 

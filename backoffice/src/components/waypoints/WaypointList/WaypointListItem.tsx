@@ -12,7 +12,7 @@ import {
     type WaypointItem,
 } from "../types";
 
-export interface WaypointListItemProps<T extends WaypointItem> {
+interface WaypointListItemProps<T extends WaypointItem> {
     waypoint: T;
     matchedHub?: Hub | null;
     displaySequence: number;

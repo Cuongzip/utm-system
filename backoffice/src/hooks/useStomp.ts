@@ -35,7 +35,7 @@ export function useStomp(options: UseStompOptions = {}) {
     };
 }
 
-function useStompSubscription<T = unknown>(
+export function useStompSubscription<T = unknown>(
     destination: string | null,
     onMessage: (data: T, message?: IMessage) => void,
     enabled = true,

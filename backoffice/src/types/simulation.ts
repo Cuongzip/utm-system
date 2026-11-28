@@ -20,19 +20,18 @@ export type SimulationSession = SimulationSessionGenerated & {
 };
 
 export const SIMULATION_SESSION_STATUSES = getSessionsQueryParams.shape.status.unwrap().options;
+type SimulationStatus = (typeof SIMULATION_SESSION_STATUSES)[number];
 
 export const SIMULATION_STATUS = {
     RUNNING: "running",
     PAUSED: "paused",
     STOPPED: "stopped",
     COMPLETED: "completed",
-} as const;
+} as const satisfies Record<string, SimulationStatus>;
 
-export type SimulationStatus = (typeof SIMULATION_SESSION_STATUSES)[number];
 export const DEFAULT_SIMULATION_STATUS: SimulationStatus = SIMULATION_STATUS.RUNNING;
 
-export const INJECT_SCENARIO_TYPES = injectScenarioBody.shape.scenario.options;
-export type InjectScenarioType = (typeof INJECT_SCENARIO_TYPES)[number];
+export type InjectScenarioType = zod.infer<typeof injectScenarioBody>["scenario"];
 
 export const SIMULATION_SCENARIO = {
     GPS_FAILURE: "gps_failure",

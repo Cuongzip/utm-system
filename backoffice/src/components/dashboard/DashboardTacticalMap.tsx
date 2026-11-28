@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import {
     TacticalMapContainer,
@@ -16,8 +15,7 @@ import {
     fitCameraToBounds,
 } from "@/components/map";
 import { ForesightControls, AirTrafficDirectorPanel } from "@/components/foresight";
-import { useAdsbAircraft, QUERY_KEYS } from "@/hooks";
-import { intelligenceService } from "@/services";
+import { useAdsbAircraft, useForesightPrediction } from "@/hooks";
 import { cn } from "@/lib";
 import {
     AIRSPACE_ZONE_STATUS,
@@ -32,7 +30,7 @@ import {
 import { toast } from "sonner";
 import { isValidGeoPoint } from "@/utils";
 
-export interface DashboardTacticalMapProps {
+interface DashboardTacticalMapProps {
     activeFlights: Flight[];
     hubs: Hub[];
     airspaceZones: AirspaceZone[];
@@ -99,11 +97,16 @@ function PerspectiveResetHandler({
     return null;
 }
 
+const EMPTY_FLIGHTS: Flight[] = [];
+const EMPTY_HUBS: Hub[] = [];
+const EMPTY_ZONES: AirspaceZone[] = [];
+const EMPTY_TELEMETRY_MAP: Record<string, TelemetryRecord> = {};
+
 export function DashboardTacticalMap({
-    activeFlights = [],
-    hubs = [],
-    airspaceZones = [],
-    telemetryMap = {},
+    activeFlights = EMPTY_FLIGHTS,
+    hubs = EMPTY_HUBS,
+    airspaceZones = EMPTY_ZONES,
+    telemetryMap = EMPTY_TELEMETRY_MAP,
 }: DashboardTacticalMapProps) {
     const t = useTranslations("dashboard");
     const tc = useTranslations("controlCenter");
@@ -138,12 +141,7 @@ export function DashboardTacticalMap({
         data: foresightData,
         isFetching: foresightLoading,
         refetch: refetchForesight,
-    } = useQuery({
-        queryKey: QUERY_KEYS.foresightPredict(horizonSec, 10),
-        queryFn: () => intelligenceService.predictForesight(horizonSec, 10),
-        enabled: foresightOpen,
-        staleTime: 1000 * 10,
-    });
+    } = useForesightPrediction(horizonSec, 10, foresightOpen);
 
     const activeForesight = simulatedPrediction ?? foresightData ?? null;
     const totalFrames = activeForesight?.frames?.length ?? 0;

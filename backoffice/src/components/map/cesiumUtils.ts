@@ -1,13 +1,14 @@
-import * as Cesium from "cesium";
+import type * as Cesium from "cesium";
+import { getLoadedCesium } from "./cesiumLoader";
 
-export interface LatLngPoint {
+interface LatLngPoint {
     lat?: number;
     lng?: number;
     latitude?: number;
     longitude?: number;
 }
 
-export interface FitCameraOptions {
+interface FitCameraOptions {
     animate?: boolean;
     duration?: number;
     minHeight?: number;
@@ -29,7 +30,8 @@ export function fitCameraToBounds(
     points: LatLngPoint[],
     options: FitCameraOptions = {}
 ): boolean {
-    if (!viewer || viewer.isDestroyed() || !points || points.length === 0) return false;
+    const Cesium = getLoadedCesium();
+    if (!Cesium || !viewer || viewer.isDestroyed() || !points || points.length === 0) return false;
 
     const validPoints: Array<{ lat: number; lng: number }> = [];
 

@@ -27,7 +27,7 @@ import { translateStatusLabel, useAppLocale } from "@/i18n";
 import type { FlightAssessment } from "@/types";
 import { formatDateTime, localizeServerText } from "@/utils";
 
-export interface PreFlightBriefingModalProps {
+interface PreFlightBriefingModalProps {
     isOpen: boolean;
     flightId?: string | null;
     flightNumber?: string | null;

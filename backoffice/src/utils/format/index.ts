@@ -15,4 +15,8 @@ export * from "./formatHubName";
 export * from "./formatMissionSchedule";
 export * from "./createStatusOptions";
 export * from "./compareCreatedDesc";
+export * from "./resolveEntityReferences";
 export * from "./localizeServerText";
+export * from "./localizeDomainLabels";
+export * from "./formatTimelineEntryData";
+export * from "./downloadTextFile";

@@ -4,7 +4,7 @@ import { useLocale } from "next-intl";
 import { cn } from "@/lib";
 import { translateStatusLabel, type AppLocale } from "@/i18n";
 
-export type StatusType =
+type StatusType =
     | "online"
     | "offline"
     | "connecting"
@@ -25,9 +25,9 @@ export type StatusType =
     | "no_fly_zone"
     | string;
 
-export type DotShape = "diamond" | "circle";
+type DotShape = "diamond" | "circle";
 
-export interface StatusBadgeProps {
+interface StatusBadgeProps {
     status: StatusType;
     label?: string;
     showDot?: boolean;

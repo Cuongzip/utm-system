@@ -6,7 +6,7 @@ import { cn } from "@/lib";
 import { Tooltip } from "./Tooltip";
 import { Skeleton } from "./Skeleton";
 
-export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
+interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
     fixed?: boolean;
     wrapperClassName?: string;
 }
@@ -32,7 +32,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 );
 Table.displayName = "Table";
 
-export type TableHeaderProps = React.HTMLAttributes<HTMLTableSectionElement>;
+type TableHeaderProps = React.HTMLAttributes<HTMLTableSectionElement>;
 
 export const TableHeader = forwardRef<HTMLTableSectionElement, TableHeaderProps>(
     ({ className, children, ...props }, ref) => {
@@ -45,7 +45,7 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, TableHeaderProps>
 );
 TableHeader.displayName = "TableHeader";
 
-export type TableBodyProps = React.HTMLAttributes<HTMLTableSectionElement>;
+type TableBodyProps = React.HTMLAttributes<HTMLTableSectionElement>;
 
 export const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
     ({ className, children, ...props }, ref) => {
@@ -58,7 +58,7 @@ export const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
 );
 TableBody.displayName = "TableBody";
 
-export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
     selected?: boolean;
 }
 
@@ -96,7 +96,7 @@ export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
 );
 TableRow.displayName = "TableRow";
 
-export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
+interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
     width?: string | number;
     align?: "left" | "center" | "right";
 }
@@ -124,7 +124,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
 );
 TableHead.displayName = "TableHead";
 
-export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
+interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
     align?: "left" | "center" | "right";
     truncate?: boolean;
     tooltip?: string;
@@ -199,7 +199,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
 );
 TableCell.displayName = "TableCell";
 
-export interface TableLoadingProps {
+interface TableLoadingProps {
     colSpan?: number;
     rows?: number;
     message?: string;

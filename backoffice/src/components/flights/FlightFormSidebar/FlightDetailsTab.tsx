@@ -30,7 +30,7 @@ import {
     type FlightFormPayload,
 } from "@/types";
 
-export interface FlightDetailsTabProps {
+interface FlightDetailsTabProps {
     flightId?: string;
     formData: FlightFormPayload;
     onFormChange: <K extends keyof FlightFormPayload>(

@@ -2,9 +2,7 @@ import { apiClient, buildUrl } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     FleetOverview,
-    HubFleetStatus,
     FleetDroneSummary,
-    FleetAvailabilityItem,
     FleetConfig,
     CreateFleetConfigPayload,
     UpdateFleetConfigPayload,
@@ -13,9 +11,6 @@ import type {
     CreateRebalancingPayload,
     ApproveRebalancingPayload,
     CancelRebalancingPayload,
-    AssignDronePayload,
-    AssignDroneResult,
-    DroneAssignment,
 } from "@/types";
 
 export const fleetService = {
@@ -23,44 +18,8 @@ export const fleetService = {
         return apiClient<FleetOverview>(API_ENDPOINTS.FLEET.OVERVIEW);
     },
 
-    getHubStatus: async (hubId: string): Promise<HubFleetStatus> => {
-        return apiClient<HubFleetStatus>(API_ENDPOINTS.FLEET.HUB_STATUS(hubId));
-    },
-
     getDronesAtHub: async (hubId: string): Promise<FleetDroneSummary[]> => {
         return apiClient<FleetDroneSummary[]>(API_ENDPOINTS.FLEET.HUB_DRONES(hubId));
-    },
-
-    getAvailableDrones: async (hubId?: string): Promise<FleetAvailabilityItem[]> => {
-        const url = buildUrl(API_ENDPOINTS.FLEET.AVAILABLE, hubId ? { hubId } : undefined);
-        return apiClient<FleetAvailabilityItem[]>(url);
-    },
-
-    assignDrone: async (payload: AssignDronePayload): Promise<AssignDroneResult> => {
-        return apiClient<AssignDroneResult>(API_ENDPOINTS.FLEET.ASSIGN, {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
-    },
-
-    acceptAssignment: async (id: string): Promise<DroneAssignment> => {
-        return apiClient<DroneAssignment>(API_ENDPOINTS.FLEET.ACCEPT_ASSIGNMENT(id), {
-            method: "POST",
-        });
-    },
-
-    rejectAssignment: async (
-        id: string,
-        payload: { reason?: string; alternativeDroneId?: string }
-    ): Promise<DroneAssignment> => {
-        return apiClient<DroneAssignment>(API_ENDPOINTS.FLEET.REJECT_ASSIGNMENT(id), {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
-    },
-
-    getMissionAssignments: async (missionId: string): Promise<DroneAssignment[]> => {
-        return apiClient<DroneAssignment[]>(API_ENDPOINTS.FLEET.MISSION_ASSIGNMENTS(missionId));
     },
 
     analyzeRebalancing: async (): Promise<RebalancingRecommendation[]> => {
@@ -125,10 +84,6 @@ export const fleetService = {
 
     getAllConfigs: async (): Promise<FleetConfig[]> => {
         return apiClient<FleetConfig[]>(API_ENDPOINTS.FLEET.CONFIG_ALL);
-    },
-
-    getConfigById: async (id: string): Promise<FleetConfig> => {
-        return apiClient<FleetConfig>(API_ENDPOINTS.FLEET.CONFIG_BY_ID(id));
     },
 
     createConfig: async (payload: CreateFleetConfigPayload): Promise<FleetConfig> => {

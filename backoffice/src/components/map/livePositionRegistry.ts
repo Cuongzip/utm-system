@@ -1,4 +1,4 @@
-export interface LiveInterpolatedSample {
+interface LiveInterpolatedSample {
     lng: number;
     lat: number;
     alt: number;

@@ -29,7 +29,7 @@ import {
     type TelemetryRecord,
 } from "@/types";
 
-export interface CockpitTopBarProps {
+interface CockpitTopBarProps {
     flight: Flight;
     drone: Drone | null;
     departureHub: Hub | null;

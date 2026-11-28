@@ -1,4 +1,4 @@
-import { apiClient, buildUrl } from "./apiClient";
+import { apiClient, apiClientArray, buildUrl } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     EmergencyStatsVm,
@@ -22,26 +22,19 @@ import type {
 
 export const emergencyService = {
     getStats: async (params?: EmergencyStatsQueryParams): Promise<EmergencyStatsVm> => {
-        const url = buildUrl(API_ENDPOINTS.EMERGENCY.STATS, params as Record<string, unknown>);
-        return apiClient<EmergencyStatsVm>(url);
+        return apiClient<EmergencyStatsVm>(buildUrl(API_ENDPOINTS.EMERGENCY.STATS, params));
     },
 
     getTrends: async (params?: EmergencyTrendsQueryParams): Promise<EmergencyTrendVm[]> => {
-        const url = buildUrl(API_ENDPOINTS.EMERGENCY.TRENDS, params as Record<string, unknown>);
-        const res = await apiClient<EmergencyTrendVm[]>(url);
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<EmergencyTrendVm>(buildUrl(API_ENDPOINTS.EMERGENCY.TRENDS, params));
     },
 
     getActiveIncidents: async (): Promise<EmergencyIncidentVm[]> => {
-        const res = await apiClient<EmergencyIncidentVm[]>(
-            API_ENDPOINTS.EMERGENCY.ACTIVE_INCIDENTS
-        );
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<EmergencyIncidentVm>(API_ENDPOINTS.EMERGENCY.ACTIVE_INCIDENTS);
     },
 
     getIncidents: async (params?: IncidentQueryParams): Promise<IncidentPageVm> => {
-        const url = buildUrl(API_ENDPOINTS.EMERGENCY.INCIDENTS, params as Record<string, unknown>);
-        return apiClient<IncidentPageVm>(url);
+        return apiClient<IncidentPageVm>(buildUrl(API_ENDPOINTS.EMERGENCY.INCIDENTS, params));
     },
 
     getIncidentById: async (id: string): Promise<EmergencyIncidentVm> => {
@@ -80,22 +73,17 @@ export const emergencyService = {
     },
 
     getProtocols: async (): Promise<EmergencyProtocolVm[]> => {
-        const res = await apiClient<EmergencyProtocolVm[]>(API_ENDPOINTS.EMERGENCY.PROTOCOLS);
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<EmergencyProtocolVm>(API_ENDPOINTS.EMERGENCY.PROTOCOLS);
     },
 
     getPendingConfirmations: async (): Promise<PendingConfirmationVm[]> => {
-        const res = await apiClient<PendingConfirmationVm[]>(
-            API_ENDPOINTS.EMERGENCY.PENDING_CONFIRMATIONS
-        );
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<PendingConfirmationVm>(API_ENDPOINTS.EMERGENCY.PENDING_CONFIRMATIONS);
     },
 
     getIncidentBlackbox: async (incidentId: string): Promise<BlackboxEntryVm[]> => {
-        const res = await apiClient<BlackboxEntryVm[]>(
+        return apiClientArray<BlackboxEntryVm>(
             API_ENDPOINTS.EMERGENCY.INCIDENT_BLACKBOX(incidentId)
         );
-        return Array.isArray(res) ? res : [];
     },
 
     updateRootCause: async (

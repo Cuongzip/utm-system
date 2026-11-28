@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Plane, Building2, Drone, AlertTriangle } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
-export interface DashboardKpiStripProps {
+interface DashboardKpiStripProps {
     activeFlightsCount: number;
     hubsCount: number;
     totalHubsCount: number;

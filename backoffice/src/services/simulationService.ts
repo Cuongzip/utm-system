@@ -1,4 +1,4 @@
-import { apiClient, buildUrl, normalizeList } from "./apiClient";
+import { apiClient, apiClientArray, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     SimulationSession,
@@ -12,7 +12,7 @@ import type {
 
 export const simulationService = {
     getAll: async (params?: SimulationSessionFilterParams): Promise<SimulationSessionList> => {
-        const url = buildUrl(API_ENDPOINTS.SIMULATION.BASE, params as Record<string, unknown>);
+        const url = buildUrl(API_ENDPOINTS.SIMULATION.BASE, params);
         const res = await apiClient<SimulationSessionList | SimulationSession[]>(url);
         return normalizeList<SimulationSession>(res);
     },
@@ -70,8 +70,7 @@ export const simulationService = {
     },
 
     getEvents: async (sessionId: string): Promise<SimulationEvent[]> => {
-        const res = await apiClient<SimulationEvent[]>(API_ENDPOINTS.SIMULATION.EVENTS(sessionId));
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<SimulationEvent>(API_ENDPOINTS.SIMULATION.EVENTS(sessionId));
     },
 
     deleteSession: async (id: string): Promise<void> => {

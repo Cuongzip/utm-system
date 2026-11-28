@@ -2,10 +2,10 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 
-export const FLOATING_EDGE_MARGIN_PX = 12;
+const FLOATING_EDGE_MARGIN_PX = 12;
 export const FLOATING_FAB_SIZE_PX = 40;
 export const FLOATING_FAB_GAP_PX = 10;
-export const DRAG_THRESHOLD_PX = 5;
+const DRAG_THRESHOLD_PX = 5;
 
 export const COPILOT_OFFSET_STORAGE_KEY = "utm_copilot_offset";
 export const ALERT_FAB_OFFSET_STORAGE_KEY = "utm_alert_fab_offset";
@@ -93,7 +93,7 @@ function saveOffsetToStorage(storageKey: string, next: ViewportOffset) {
     }
 }
 
-export interface UseFloatingPositionOptions {
+interface UseFloatingPositionOptions {
     storageKey: string;
     defaultOffset: ViewportOffset;
     boxSize?: number;

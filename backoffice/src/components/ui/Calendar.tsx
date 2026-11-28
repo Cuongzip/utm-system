@@ -6,7 +6,7 @@ import "react-day-picker/style.css";
 import { cn } from "@/lib";
 import { getDateFnsLocale, type AppLocale } from "@/i18n";
 
-export type CalendarProps = DayPickerProps;
+type CalendarProps = DayPickerProps;
 
 export function Calendar({
     className,

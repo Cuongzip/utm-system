@@ -20,7 +20,17 @@ import {
     type OrganizationFormPayload,
 } from "@/types";
 
-export interface OrganizationModalProps {
+function buildOrganizationFormValues(org?: Organization | null): OrganizationFormPayload {
+    return {
+        registrationNumber: org?.registrationNumber || undefined,
+        name: org?.name || "",
+        type: org?.type ?? DEFAULT_ORGANIZATION_TYPE,
+        contactInfo: org?.contactInfo || "",
+        status: org?.status ?? DEFAULT_ORGANIZATION_STATUS,
+    };
+}
+
+interface OrganizationModalProps {
     isOpen: boolean;
     organizationToEdit?: Organization | null;
     onClose: () => void;
@@ -67,25 +77,12 @@ export function OrganizationModal({
         resolver: zodResolver(
             isEdit ? updateOrganizationBody : createOrganizationBody
         ) as Resolver<OrganizationFormPayload>,
-        defaultValues: {
-            registrationNumber: undefined,
-            name: "",
-            type: DEFAULT_ORGANIZATION_TYPE,
-            contactInfo: "",
-            status: DEFAULT_ORGANIZATION_STATUS,
-        },
+        defaultValues: buildOrganizationFormValues(organizationToEdit),
     });
 
     useEffect(() => {
         if (!isOpen) return;
-
-        reset({
-            registrationNumber: organizationToEdit?.registrationNumber || undefined,
-            name: organizationToEdit?.name || "",
-            type: organizationToEdit?.type ?? DEFAULT_ORGANIZATION_TYPE,
-            contactInfo: organizationToEdit?.contactInfo || "",
-            status: organizationToEdit?.status ?? DEFAULT_ORGANIZATION_STATUS,
-        });
+        reset(buildOrganizationFormValues(organizationToEdit));
     }, [isOpen, organizationToEdit, reset]);
 
     const onFormSubmit = async (data: OrganizationFormPayload) => {

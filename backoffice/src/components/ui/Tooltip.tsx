@@ -4,7 +4,7 @@ import React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { cn } from "@/lib";
 
-export interface TooltipProps {
+interface TooltipProps {
     content: React.ReactNode;
     children: React.ReactNode;
     side?: "top" | "bottom" | "left" | "right";

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { FormInput, type FormInputProps } from "./FormInput";
 import { Switch } from "./Switch";
 
-export interface AutoGenInputProps extends Omit<FormInputProps, "placeholder"> {
+interface AutoGenInputProps extends Omit<FormInputProps, "placeholder"> {
     label: string;
     showAutoGen?: boolean;
     manualPlaceholder: string;

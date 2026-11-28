@@ -19,7 +19,7 @@ export const flightService = {
     },
 
     getFlights: async (params?: FlightQueryParams): Promise<FlightListResponse> => {
-        const endpoint = buildUrl(API_ENDPOINTS.FLIGHTS.BASE, params as Record<string, unknown>);
+        const endpoint = buildUrl(API_ENDPOINTS.FLIGHTS.BASE, params);
         const res = await apiClient<FlightListResponse | Flight[]>(endpoint);
         return normalizeList<Flight>(res);
     },

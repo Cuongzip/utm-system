@@ -10,7 +10,7 @@ import {
 import type { AirspaceZoneType } from "@/types";
 import { GeometryMode, GeoPoint, generateCircleCoordinates } from "../useAirspaceGeometry";
 
-export interface ActiveAirspaceGraphicProps {
+interface ActiveAirspaceGraphicProps {
     geometryMode: GeometryMode;
     center: GeoPoint;
     radiusMeters: number;

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Undo2, Trash2 } from "lucide-react";
 
-export interface MapUndoClearProps {
+interface MapUndoClearProps {
     onUndo: () => void;
     onClear: () => void;
     disabled: boolean;

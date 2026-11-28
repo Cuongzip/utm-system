@@ -48,7 +48,7 @@ export interface MissionSaveData {
     droneId?: string;
 }
 
-export interface MissionEditorProps {
+interface MissionEditorProps {
     mode: "create" | "edit";
     initialData?: Mission | null;
     hubs: Hub[];

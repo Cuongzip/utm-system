@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { isHubWaypointItem, type WaypointItem } from "../types";
 
-export interface WaypointEditorHeaderProps {
+interface WaypointEditorHeaderProps {
     waypoint: WaypointItem;
     onClose: () => void;
 }

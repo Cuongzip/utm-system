@@ -30,7 +30,7 @@ import {
 } from "@/types";
 import { cn } from "@/lib";
 
-export interface HubsTableProps {
+interface HubsTableProps {
     hubs: Hub[];
     totalHubsCount: number;
     loading: boolean;

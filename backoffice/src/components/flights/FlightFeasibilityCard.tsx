@@ -9,7 +9,7 @@ import { formatDistance, localizeServerText } from "@/utils";
 import { FEASIBILITY_VERDICT, type Drone, type FeasibilityVerdict } from "@/types";
 import { estimateRouteFeasibility } from "./flightUtils";
 
-export interface FlightFeasibilityCardProps {
+interface FlightFeasibilityCardProps {
     flightId?: string;
     distanceM: number;
     drone: Drone | null;

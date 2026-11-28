@@ -44,7 +44,7 @@ import {
 } from "@/types";
 import { formatDateTime, formatHubName } from "@/utils";
 
-export interface FlightsTableProps {
+interface FlightsTableProps {
     flights: Flight[];
     loading: boolean;
     canAuthorize: boolean;

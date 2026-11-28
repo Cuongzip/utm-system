@@ -14,7 +14,7 @@ import {
     type Hub,
 } from "@/types";
 
-export interface DashboardFlightLogProps {
+interface DashboardFlightLogProps {
     flights: Flight[];
     hubs?: Hub[];
     isLoading: boolean;

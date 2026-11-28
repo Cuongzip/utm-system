@@ -17,7 +17,7 @@ import { FlightDetailsTab } from "./FlightDetailsTab";
 import { FlightRouteTab } from "./FlightRouteTab";
 import { FlightScheduleTab } from "./FlightScheduleTab";
 
-export interface FlightFormSidebarProps {
+interface FlightFormSidebarProps {
     flightId?: string;
     formData: FlightFormPayload;
     onFormChange: <K extends keyof FlightFormPayload>(

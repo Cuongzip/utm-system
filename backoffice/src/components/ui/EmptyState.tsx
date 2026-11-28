@@ -4,14 +4,14 @@ import React from "react";
 import { cn } from "@/lib";
 import { ChamferButton } from "./ChamferButton";
 
-export interface EmptyStateAction {
+interface EmptyStateAction {
     label: string;
     onClick: () => void;
     icon?: React.ComponentType<{ className?: string }>;
     variant?: "outline" | "chamfer";
 }
 
-export interface EmptyStateProps {
+interface EmptyStateProps {
     icon?: React.ComponentType<{ className?: string }>;
     title: string;
     description?: string;

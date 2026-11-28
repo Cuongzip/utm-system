@@ -1,126 +1,25 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import {
-    Loader2,
-    Play,
-    CheckCircle2,
-    AlertTriangle,
-    ChevronDown,
-    ChevronRight,
-    SlidersHorizontal,
-} from "lucide-react";
-import {
-    Modal,
-    ChamferButton,
-    StatusBadge,
-    FormInput,
-    CustomSelect,
-    TacticalCallout,
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-} from "@/components/ui";
+import { Loader2, Play, ChevronDown, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Modal, ChamferButton, FormInput, CustomSelect } from "@/components/ui";
 import { useHubsAll } from "@/hooks";
-import { translateStatusLabel, type AppLocale } from "@/i18n";
-import { formatCoordinates, formatAltitude, formatNullable, validateSchema } from "@/utils";
+import { formatCoordinates, formatAltitude, validateSchema } from "@/utils";
 import { airspaceService } from "@/services/airspaceService";
 import { checkPathBody } from "@/generated/airspace";
 import type { CheckPathPayload, CheckPathResult, PathPoint } from "@/types";
-import { DEFAULT_AIRSPACE_ZONE_TYPE, HUB_STATUS } from "@/types";
+import { HUB_STATUS } from "@/types";
+import { BriefingWaypointInputs } from "./briefing/BriefingWaypointInputs";
+import { BriefingCheckResultPanel } from "./briefing/BriefingCheckResultPanel";
 
 interface AirspaceBriefingModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-function WaypointInputs({
-    idPrefix,
-    title,
-    labels,
-    point,
-    onChange,
-}: {
-    idPrefix: string;
-    title: string;
-    labels: { lat: string; lon: string; alt: string };
-    point: PathPoint;
-    onChange: (field: keyof PathPoint, val: number) => void;
-}) {
-    const [latStr, setLatStr] = useState(() => String(point.lat ?? ""));
-    const [lonStr, setLonStr] = useState(() => String(point.lon ?? ""));
-    const [altStr, setAltStr] = useState(() => String(point.alt ?? ""));
-
-    const handleFieldChange =
-        (field: keyof PathPoint, setStr: (s: string) => void) =>
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            const val = e.target.value;
-            setStr(val);
-            const parsed = parseFloat(val);
-            if (!isNaN(parsed) && isFinite(parsed)) {
-                onChange(field, parsed);
-            }
-        };
-
-    const handleFieldBlur =
-        (field: keyof PathPoint, currentStr: string, setStr: (s: string) => void) => () => {
-            const parsed = parseFloat(currentStr);
-            if (isNaN(parsed) || !isFinite(parsed) || currentStr.trim() === "") {
-                setStr(String(point[field] ?? ""));
-            }
-        };
-
-    return (
-        <div className="p-3 bg-slate-50 rounded-md border border-slate-200 flex flex-col gap-2">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-600">
-                {title}
-            </span>
-            <div className="grid grid-cols-3 gap-2">
-                <FormInput
-                    id={`${idPrefix}-lat`}
-                    label={labels.lat}
-                    type="text"
-                    inputMode="decimal"
-                    value={latStr}
-                    onChange={handleFieldChange("lat", setLatStr)}
-                    onBlur={handleFieldBlur("lat", latStr, setLatStr)}
-                    placeholder="10.8185"
-                    className="font-mono text-xs"
-                />
-                <FormInput
-                    id={`${idPrefix}-lon`}
-                    label={labels.lon}
-                    type="text"
-                    inputMode="decimal"
-                    value={lonStr}
-                    onChange={handleFieldChange("lon", setLonStr)}
-                    onBlur={handleFieldBlur("lon", lonStr, setLonStr)}
-                    placeholder="106.6588"
-                    className="font-mono text-xs"
-                />
-                <FormInput
-                    id={`${idPrefix}-alt`}
-                    label={labels.alt}
-                    type="text"
-                    inputMode="decimal"
-                    value={altStr}
-                    onChange={handleFieldChange("alt", setAltStr)}
-                    onBlur={handleFieldBlur("alt", altStr, setAltStr)}
-                    placeholder="100"
-                    className="font-mono text-xs"
-                />
-            </div>
-        </div>
-    );
-}
-
 export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModalProps) {
-    const locale = useLocale() as AppLocale;
     const t = useTranslations("airspace");
     const tCommon = useTranslations("common");
     const { data: hubs = [] } = useHubsAll();
@@ -222,22 +121,11 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
         onClose();
     };
 
-    const resolveZoneTypeBadge = (zoneType?: string | null) => {
-        const effective = zoneType ?? DEFAULT_AIRSPACE_ZONE_TYPE;
-        if (translateStatusLabel(effective, locale)) return undefined;
-        if (effective === "hub_zone") return t("zoneTypeBadges.hub_zone");
-        if (effective === "temporary_restriction") return t("zoneTypeBadges.temporary_restriction");
-        return undefined;
-    };
-
     const waypointLabels = {
         lat: t("briefing.latitude"),
         lon: t("briefing.longitude"),
         alt: t("briefing.altitudeM"),
     };
-
-    const violations = checkResult?.violations || [];
-    const isSafe = checkResult?.safe === true && violations.length === 0;
 
     return (
         <Modal
@@ -367,7 +255,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
 
                 {showAdvanced && (
                     <div className="flex flex-col gap-3 pt-1">
-                        <WaypointInputs
+                        <BriefingWaypointInputs
                             key={`start-${coordVersion}`}
                             idPrefix="origin-waypoint"
                             title={t("briefing.originWaypoint")}
@@ -376,7 +264,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                             onChange={updateWaypoint(setStart)}
                         />
 
-                        <WaypointInputs
+                        <BriefingWaypointInputs
                             key={`end-${coordVersion}`}
                             idPrefix="dest-waypoint"
                             title={t("briefing.destWaypoint")}
@@ -419,85 +307,7 @@ export function AirspaceBriefingModal({ isOpen, onClose }: AirspaceBriefingModal
                     </span>
                 )}
 
-                {checkResult && (
-                    <div className="pt-2 border-t border-slate-200 flex flex-col gap-3">
-                        {isSafe ? (
-                            <TacticalCallout
-                                tone="success"
-                                icon={CheckCircle2}
-                                title={t("briefing.routeClearTitle")}
-                                description={t("briefing.routeClearDesc")}
-                                rightSlot={
-                                    <StatusBadge status="go" label={t("briefing.clearBadge")} />
-                                }
-                            />
-                        ) : (
-                            <>
-                                <TacticalCallout
-                                    tone="warning"
-                                    icon={AlertTriangle}
-                                    title={
-                                        violations.length === 1
-                                            ? t("briefing.routeCompromisedSingle")
-                                            : t("briefing.routeCompromisedPlural", {
-                                                  count: violations.length,
-                                              })
-                                    }
-                                    description={t("briefing.routeCompromisedDesc")}
-                                    rightSlot={
-                                        <StatusBadge
-                                            status="no_go"
-                                            label={t("briefing.conflictBadge")}
-                                        />
-                                    }
-                                />
-
-                                <div className="max-h-48 overflow-y-auto utm-scroll border border-slate-200 rounded-md">
-                                    <Table fixed={false}>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>{t("briefing.colZoneName")}</TableHead>
-                                                <TableHead>{t("briefing.colType")}</TableHead>
-                                                <TableHead>
-                                                    {t("briefing.colConflictCoord")}
-                                                </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {violations.map((v, i) => (
-                                                <TableRow key={`${v.zoneId || "violation"}-${i}`}>
-                                                    <TableCell bold darkText>
-                                                        {formatNullable(
-                                                            v.name ?? v.zoneId,
-                                                            undefined,
-                                                            t("briefing.unnamedZone")
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <StatusBadge
-                                                            status={
-                                                                v.zoneType ??
-                                                                DEFAULT_AIRSPACE_ZONE_TYPE
-                                                            }
-                                                            label={resolveZoneTypeBadge(v.zoneType)}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell mono>
-                                                        {formatNullable(
-                                                            v.conflictPoint,
-                                                            (pt) =>
-                                                                `${formatCoordinates({ latitude: pt.lat, longitude: pt.lon }, 4)} (${formatAltitude(pt.alt !== undefined ? Math.round(pt.alt * 10) / 10 : undefined)})`
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                )}
+                {checkResult && <BriefingCheckResultPanel checkResult={checkResult} />}
             </div>
         </Modal>
     );

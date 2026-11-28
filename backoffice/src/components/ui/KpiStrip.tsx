@@ -15,7 +15,7 @@ export interface KpiItem {
     onClick?: () => void;
 }
 
-export interface KpiStripProps {
+interface KpiStripProps {
     items: KpiItem[];
     loading?: boolean;
     columns?: 3 | 4 | 5 | 6;

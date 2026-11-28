@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export interface UseCrudListOptions<T extends { id?: string }> {
+interface UseCrudListOptions<T extends { id?: string }> {
     queryKey: readonly unknown[];
     fetchFn: () => Promise<T[] | { items?: T[] }>;
     deleteFn?: (id: string) => Promise<unknown>;
@@ -39,7 +39,7 @@ export function useCrudList<T extends { id?: string }>({
         refetchInterval,
     });
 
-    const items: T[] = data || [];
+    const items: T[] = data ?? [];
 
     const refresh = useCallback(async () => {
         await refetch();
@@ -79,12 +79,14 @@ export function useCrudList<T extends { id?: string }>({
         meta: { defaultErrorMessage: `Failed to delete ${entityName.toLowerCase()}` },
     });
 
+    const { mutateAsync: deleteMutateAsync } = deleteMutation;
+
     const handleDelete = useCallback(
         async (id: string) => {
             if (!deleteFn) return;
-            await deleteMutation.mutateAsync(id);
+            await deleteMutateAsync(id);
         },
-        [deleteFn, deleteMutation]
+        [deleteFn, deleteMutateAsync]
     );
 
     return {

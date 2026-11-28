@@ -17,7 +17,7 @@ import { AIRSPACE_ZONE_STATUS, type Waypoint, type Hub, type ProfilePoint } from
 import { MissionInteractionController, type EditorMode } from "./MissionInteractionController";
 import { MissionCameraController } from "./MissionCameraController";
 
-export interface MissionMapEditorProps {
+interface MissionMapEditorProps {
     waypoints: Waypoint[];
     selectedWaypointId: string | null;
     defaultAltitude: number;

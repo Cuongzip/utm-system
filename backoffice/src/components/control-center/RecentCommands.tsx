@@ -9,7 +9,7 @@ import { useAppLocale } from "@/i18n";
 import { formatTime, localizeResponseAction, localizeServerText } from "@/utils";
 import { COMMAND_TYPE, type DroneCommand, DEFAULT_COMMAND_STATUS } from "@/types";
 
-export interface RecentCommandsProps {
+interface RecentCommandsProps {
     droneId?: string | null;
 }
 

@@ -12,7 +12,7 @@ import { validateSchema } from "@/utils";
 import { injectScenarioBody } from "@/generated/simulation";
 import { SIMULATION_SCENARIO, type InjectScenarioPayload, type InjectScenarioType } from "@/types";
 
-export interface InjectScenarioModalProps {
+interface InjectScenarioModalProps {
     isOpen: boolean;
     onClose: () => void;
     sessionId: string;

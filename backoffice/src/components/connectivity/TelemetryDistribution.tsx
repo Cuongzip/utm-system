@@ -2,25 +2,34 @@
 
 import { useTranslations } from "next-intl";
 import { ChamferCard } from "@/components/ui";
-import type { TelemetryModeConfig } from "@/types";
+import { TELEMETRY_MODES, type TelemetryMode, type TelemetryModeConfig } from "@/types";
 
-export interface TelemetryDistributionProps {
+interface TelemetryDistributionProps {
     frequencyBand?: string;
     byMode: Record<string, number>;
     modeConfigs?: TelemetryModeConfig[];
 }
 
-const TELEMETRY_DISTRIBUTION_MODES = [
-    { id: "idle", fallbackRate: "0.033 Hz" },
-    { id: "normal", fallbackRate: "0.5 Hz" },
-    { id: "enhanced", fallbackRate: "2 Hz" },
-    { id: "emergency", fallbackRate: "10 Hz" },
-] as const;
+const FALLBACK_RATES: Record<TelemetryMode, string> = {
+    idle: "0.033 Hz",
+    normal: "0.5 Hz",
+    enhanced: "2 Hz",
+    emergency: "10 Hz",
+};
+
+const DEFAULT_BY_MODE: Record<string, number> = {
+    idle: 0,
+    normal: 0,
+    enhanced: 0,
+    emergency: 0,
+};
+
+const EMPTY_MODE_CONFIGS: TelemetryModeConfig[] = [];
 
 export function TelemetryDistribution({
     frequencyBand,
-    byMode = { idle: 0, normal: 0, enhanced: 0, emergency: 0 },
-    modeConfigs = [],
+    byMode = DEFAULT_BY_MODE,
+    modeConfigs = EMPTY_MODE_CONFIGS,
 }: TelemetryDistributionProps) {
     const t = useTranslations("connectivity.distribution");
     const tModes = useTranslations("connectivity.modes");
@@ -43,12 +52,12 @@ export function TelemetryDistribution({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-mono">
-                    {TELEMETRY_DISTRIBUTION_MODES.map((mode) => {
-                        const rate = rateByMode.get(mode.id) ?? mode.fallbackRate;
-                        const count = byMode[mode.id] ?? 0;
+                    {TELEMETRY_MODES.map((modeId) => {
+                        const rate = rateByMode.get(modeId) ?? FALLBACK_RATES[modeId];
+                        const count = byMode[modeId] ?? 0;
                         return (
-                            <div key={mode.id} className="flex items-center gap-1.5">
-                                <span className="text-slate-500">{tModes(mode.id)}</span>
+                            <div key={modeId} className="flex items-center gap-1.5">
+                                <span className="text-slate-500">{tModes(modeId)}</span>
                                 <span className="text-[10px] text-slate-400">({rate})</span>
                                 <span className="font-bold text-slate-900 tabular-nums">
                                     {count}

@@ -1,4 +1,4 @@
-import { apiClient, buildUrl } from "./apiClient";
+import { apiClient, apiClientArray, buildUrl } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     Conflict,
@@ -6,24 +6,16 @@ import type {
     ResolveConflictPayload,
     ConflictScanResult,
     ConflictResolutionAdvice,
-    StrategicTrajectoryCheckPayload,
-    StrategicTrajectoryCheckResult,
 } from "@/types";
 
 export const conflictService = {
     getAll: async (params?: ConflictQueryParams): Promise<Conflict[]> => {
-        const url = buildUrl(API_ENDPOINTS.CONFLICTS.BASE, params as Record<string, unknown>);
-        const res = await apiClient<Conflict[]>(url);
-        return Array.isArray(res) ? res : [];
+        const url = buildUrl(API_ENDPOINTS.CONFLICTS.BASE, params);
+        return apiClientArray<Conflict>(url);
     },
 
     getActive: async (): Promise<Conflict[]> => {
-        const res = await apiClient<Conflict[]>(API_ENDPOINTS.CONFLICTS.ACTIVE);
-        return Array.isArray(res) ? res : [];
-    },
-
-    getById: async (id: string): Promise<Conflict> => {
-        return apiClient<Conflict>(API_ENDPOINTS.CONFLICTS.BY_ID(id));
+        return apiClientArray<Conflict>(API_ENDPOINTS.CONFLICTS.ACTIVE);
     },
 
     getAdvice: async (id: string): Promise<ConflictResolutionAdvice> => {
@@ -46,15 +38,6 @@ export const conflictService = {
     evaluate: async (): Promise<ConflictScanResult> => {
         return apiClient<ConflictScanResult>(API_ENDPOINTS.CONFLICTS.EVALUATE, {
             method: "POST",
-        });
-    },
-
-    checkTrajectory: async (
-        payload: StrategicTrajectoryCheckPayload
-    ): Promise<StrategicTrajectoryCheckResult> => {
-        return apiClient<StrategicTrajectoryCheckResult>(API_ENDPOINTS.CONFLICTS.CHECK_TRAJECTORY, {
-            method: "POST",
-            body: JSON.stringify(payload),
         });
     },
 };

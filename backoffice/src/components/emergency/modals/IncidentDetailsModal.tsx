@@ -5,32 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Activity, AlertTriangle, ExternalLink } from "lucide-react";
-import {
-    Modal,
-    CustomSelect,
-    ChamferButton,
-    StatusBadge,
-    EmptyState,
-    UnderlineTabs,
-    TacticalCallout,
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-    TableLoading,
-    type UnderlineTabItem,
-} from "@/components/ui";
-import { translateStatusLabel, useAppLocale } from "@/i18n";
-import {
-    formatDateTime,
-    formatTime,
-    formatTimelineEntryData,
-    localizeResponseAction,
-    localizeServerText,
-} from "@/utils";
+import { ExternalLink } from "lucide-react";
+import { Modal, ChamferButton, UnderlineTabs, type UnderlineTabItem } from "@/components/ui";
 import { emergencyService } from "@/services/emergencyService";
 import {
     QUERY_KEYS,
@@ -42,17 +18,15 @@ import {
 import {
     INCIDENT_STATUS,
     CLOSED_INCIDENT_STATUSES,
-    DEFAULT_INCIDENT_STATUS,
-    EMERGENCY_SEVERITY,
-    EMERGENCY_TYPES,
-    ROOT_CAUSES,
     ROOT_CAUSE,
     type EmergencyIncidentVm,
-    type EmergencyType,
     type RootCause,
 } from "@/types";
+import { IncidentOverviewTab } from "./incident-details/IncidentOverviewTab";
+import { IncidentBlackboxTab } from "./incident-details/IncidentBlackboxTab";
+import { IncidentRootCauseTab } from "./incident-details/IncidentRootCauseTab";
 
-export interface IncidentDetailsModalProps {
+interface IncidentDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
     incident?: EmergencyIncidentVm | null;
@@ -77,7 +51,6 @@ function IncidentDetailsModalBody({
 }: IncidentDetailsModalBodyProps) {
     const t = useTranslations("emergency");
     const tCommon = useTranslations("common");
-    const locale = useAppLocale();
     const queryClient = useQueryClient();
     const { data: drones = [] } = useDronesAll();
     const { data: flights = [] } = useFlightsAll();
@@ -89,15 +62,6 @@ function IncidentDetailsModalBody({
             { id: "blackbox", label: t("modals.details.tabBlackbox") },
             { id: "root_cause", label: t("modals.details.tabRootCause") },
         ],
-        [t]
-    );
-
-    const rootCauseOptions = useMemo(
-        () =>
-            ROOT_CAUSES.map((cause) => ({
-                value: cause,
-                label: t(`rootCauses.${cause}`),
-            })),
         [t]
     );
 
@@ -242,35 +206,6 @@ function IncidentDetailsModalBody({
         </div>
     );
 
-    const calloutTone = incident.severity === EMERGENCY_SEVERITY.WARNING ? "warning" : "critical";
-    const typeLabel =
-        incident.emergencyType &&
-        (EMERGENCY_TYPES as readonly string[]).includes(incident.emergencyType)
-            ? t(`types.${incident.emergencyType as EmergencyType}`)
-            : incident.emergencyType?.replace(/_/g, " ").toUpperCase();
-
-    const detailRows = [
-        { label: t("modals.confirm.aircraft"), value: droneLabel },
-        { label: t("modals.confirm.flight"), value: flightLabel || "—" },
-        {
-            label: t("modals.details.severity"),
-            value: translateStatusLabel(incident.severity ?? "critical", locale) ?? "CRITICAL",
-        },
-        {
-            label: t("modals.details.actionRequired"),
-            value: incident.responseAction
-                ? localizeResponseAction(incident.responseAction, locale, true)
-                : t("modals.details.operatorInspection"),
-        },
-        { label: t("modals.details.detectedAt"), value: formatDateTime(incident.detectedAt) },
-        {
-            label: t("modals.details.currentStatus"),
-            value:
-                translateStatusLabel(incident.status ?? "active", locale) ??
-                (incident.status ? incident.status.replace(/_/g, " ").toUpperCase() : "ACTIVE"),
-        },
-    ];
-
     return (
         <Modal
             isOpen
@@ -288,243 +223,31 @@ function IncidentDetailsModalBody({
             />
 
             {activeTab === "overview" && (
-                <div className="flex flex-col gap-3.5">
-                    <TacticalCallout
-                        tone={calloutTone}
-                        icon={AlertTriangle}
-                        title={
-                            incident.message
-                                ? localizeServerText(incident.message, locale, { entityMap })
-                                : typeLabel
-                        }
-                        description={
-                            incident.resolutionNotes
-                                ? localizeServerText(incident.resolutionNotes, locale, {
-                                      entityMap,
-                                  })
-                                : undefined
-                        }
-                        rightSlot={
-                            <StatusBadge
-                                status={incident.status ?? DEFAULT_INCIDENT_STATUS}
-                                dotShape="circle"
-                            />
-                        }
-                    />
-
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden">
-                        {detailRows.map((item) => (
-                            <div
-                                key={item.label}
-                                className="bg-[var(--color-surface-panel)] px-3.5 py-2.5 flex flex-col gap-0.5 min-w-0"
-                            >
-                                <dt className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                                    {item.label}
-                                </dt>
-                                <dd className="text-xs font-mono font-semibold text-[var(--color-text-primary)] truncate">
-                                    {item.value}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-
-                    {incident.timeline && incident.timeline.length > 0 && (
-                        <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                                {t("modals.details.incidentTimeline")}
-                            </span>
-                            <div className="border border-[var(--color-border-default)] rounded-md divide-y divide-[var(--color-border-default)] max-h-36 overflow-y-auto bg-[var(--color-surface-panel)]">
-                                {incident.timeline.map((evt, idx) => {
-                                    const metaText = formatTimelineEntryData(evt.data, locale, {
-                                        entityMap,
-                                    });
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className="px-3 py-2 flex flex-col gap-0.5 text-xs"
-                                        >
-                                            <div className="flex justify-between items-center gap-3">
-                                                <span className="text-[var(--color-text-primary)] font-medium truncate">
-                                                    {localizeServerText(evt.event, locale, {
-                                                        entityMap,
-                                                    })}
-                                                </span>
-                                                <span className="text-[var(--color-text-muted)] text-[11px] shrink-0 font-mono tabular-nums">
-                                                    {formatTime(evt.timestamp)}
-                                                </span>
-                                            </div>
-                                            {metaText && (
-                                                <span className="text-[11px] font-mono text-[var(--color-text-muted)] truncate">
-                                                    {metaText}
-                                                </span>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <IncidentOverviewTab
+                    incident={incident}
+                    droneLabel={droneLabel}
+                    flightLabel={flightLabel}
+                    entityMap={entityMap}
+                />
             )}
 
             {activeTab === "blackbox" && (
-                <div>
-                    {!blackboxLoading && blackboxEntries.length === 0 ? (
-                        <EmptyState
-                            icon={Activity}
-                            title={t("detail.noBlackboxTitle")}
-                            description={t("detail.noBlackboxDesc")}
-                        />
-                    ) : (
-                        <div className="border border-[var(--color-border-default)] rounded-md overflow-hidden max-h-72 overflow-y-auto">
-                            <Table fixed={false}>
-                                <TableHeader className="sticky top-0 z-10">
-                                    <TableRow>
-                                        <TableHead className="px-3 py-2.5">
-                                            {t("detail.colTime")}
-                                        </TableHead>
-                                        <TableHead className="px-3 py-2.5">
-                                            {t("detail.colAlt")}
-                                        </TableHead>
-                                        <TableHead className="px-3 py-2.5">
-                                            {t("detail.colSpdMs")}
-                                        </TableHead>
-                                        <TableHead className="px-3 py-2.5">
-                                            {t("detail.colBat")}
-                                        </TableHead>
-                                        <TableHead className="px-3 py-2.5">
-                                            {t("detail.colEventCmd")}
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {blackboxLoading ? (
-                                        <TableLoading
-                                            colSpan={5}
-                                            rows={4}
-                                            message={t("detail.loadingBlackbox")}
-                                        />
-                                    ) : (
-                                        blackboxEntries.slice(0, 15).map((entry) => {
-                                            const eventText = entry.commandExecuted
-                                                ? localizeResponseAction(
-                                                      entry.commandExecuted,
-                                                      locale,
-                                                      true
-                                                  )
-                                                : entry.emergencyType &&
-                                                    (EMERGENCY_TYPES as readonly string[]).includes(
-                                                        entry.emergencyType
-                                                    )
-                                                  ? t(
-                                                        `types.${entry.emergencyType as EmergencyType}`
-                                                    )
-                                                  : entry.emergencyType
-                                                    ? localizeServerText(
-                                                          entry.emergencyType,
-                                                          locale,
-                                                          { entityMap }
-                                                      )
-                                                    : "—";
-                                            return (
-                                                <TableRow key={entry.id}>
-                                                    <TableCell
-                                                        mono
-                                                        muted
-                                                        className="px-3 py-2 text-xs"
-                                                    >
-                                                        {formatTime(entry.timestamp)}
-                                                    </TableCell>
-                                                    <TableCell
-                                                        mono
-                                                        darkText
-                                                        className="px-3 py-2 text-xs"
-                                                    >
-                                                        {entry.altitudeMsl != null
-                                                            ? entry.altitudeMsl.toFixed(1)
-                                                            : "—"}
-                                                    </TableCell>
-                                                    <TableCell
-                                                        mono
-                                                        darkText
-                                                        className="px-3 py-2 text-xs"
-                                                    >
-                                                        {entry.groundSpeed != null
-                                                            ? entry.groundSpeed.toFixed(1)
-                                                            : "—"}
-                                                    </TableCell>
-                                                    <TableCell
-                                                        mono
-                                                        darkText
-                                                        className="px-3 py-2 text-xs"
-                                                    >
-                                                        {entry.batteryLevel != null
-                                                            ? `${Math.round(entry.batteryLevel)}%`
-                                                            : "—"}
-                                                    </TableCell>
-                                                    <TableCell
-                                                        mono
-                                                        muted
-                                                        truncate
-                                                        tooltip={eventText}
-                                                        className="px-3 py-2 text-xs"
-                                                    >
-                                                        {eventText}
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </div>
+                <IncidentBlackboxTab
+                    blackboxEntries={blackboxEntries}
+                    blackboxLoading={blackboxLoading}
+                    entityMap={entityMap}
+                />
             )}
 
             {activeTab === "root_cause" && (
-                <div className="flex flex-col gap-3.5">
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="rootCauseCategory">
-                            {t("detail.rootCauseLabel")}
-                        </label>
-                        <CustomSelect
-                            id="rootCauseCategory"
-                            value={rootCause}
-                            onValueChange={(val) => setRootCause(val as RootCause)}
-                            options={rootCauseOptions}
-                            placeholder={t("detail.rootCausePlaceholder")}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="rootCauseNotes">
-                            {t("detail.notesLabel")}
-                        </label>
-                        <textarea
-                            id="rootCauseNotes"
-                            rows={3}
-                            value={rootCauseNotes}
-                            onChange={(e) => setRootCauseNotes(e.target.value)}
-                            placeholder={t("detail.notesPlaceholder")}
-                            className="form-input resize-none"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="lessonsLearned">
-                            {t("detail.lessonsLabel")}
-                        </label>
-                        <textarea
-                            id="lessonsLearned"
-                            rows={2}
-                            value={lessonsLearned}
-                            onChange={(e) => setLessonsLearned(e.target.value)}
-                            placeholder={t("detail.lessonsPlaceholder")}
-                            className="form-input resize-none"
-                        />
-                    </div>
-                </div>
+                <IncidentRootCauseTab
+                    rootCause={rootCause}
+                    onRootCauseChange={setRootCause}
+                    rootCauseNotes={rootCauseNotes}
+                    onRootCauseNotesChange={setRootCauseNotes}
+                    lessonsLearned={lessonsLearned}
+                    onLessonsLearnedChange={setLessonsLearned}
+                />
             )}
         </Modal>
     );

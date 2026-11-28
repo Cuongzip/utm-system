@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Entity } from "cesium";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import { fitCameraToBounds } from "../cesiumUtils";
 import { getDroneIconUri, getIncidentOriginIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
@@ -22,7 +23,7 @@ function computeSegmentHeadingDeg(
     return ((Math.atan2(dLng, dLat) * 180) / Math.PI + 360) % 360;
 }
 
-export interface IncidentReplayLayerProps {
+interface IncidentReplayLayerProps {
     incidentLat?: number | null;
     incidentLng?: number | null;
     incidentAlt?: number | null;
@@ -43,17 +44,7 @@ export function IncidentReplayLayer({
     const staticIdsRef = useRef<string[]>([]);
     const cursorEntityRef = useRef<Entity | null>(null);
     const hasFittedRef = useRef(false);
-    const [sceneRevision, setSceneRevision] = useState(0);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

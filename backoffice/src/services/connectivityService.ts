@@ -11,9 +11,6 @@ import type {
     TelemetryModeConfig,
     SetTelemetryModePayload,
     SetTelemetryModeResponse,
-    TelemetryStats,
-    ProtocolStatsResponse,
-    CommandStatsResponse,
     ConnectivityStatusResponse,
     ApiKeyInfo,
     CreateApiKeyPayload,
@@ -22,7 +19,7 @@ import type {
 
 export const connectivityService = {
     getDevices: async (params?: DeviceQueryParams): Promise<DeviceRegistrationListResponse> => {
-        const url = buildUrl(API_ENDPOINTS.CONNECTIVITY.BASE, params as Record<string, unknown>);
+        const url = buildUrl(API_ENDPOINTS.CONNECTIVITY.BASE, params);
         const res = await apiClient<DeviceRegistrationListResponse | DeviceRegistration[]>(url);
         return normalizeList<DeviceRegistration>(res);
     },
@@ -106,18 +103,6 @@ export const connectivityService = {
                 body: JSON.stringify(payload),
             }
         );
-    },
-
-    getTelemetryStats: async (): Promise<TelemetryStats> => {
-        return apiClient<TelemetryStats>(API_ENDPOINTS.CONNECTIVITY.TELEMETRY_STATS);
-    },
-
-    getProtocolStats: async (): Promise<ProtocolStatsResponse> => {
-        return apiClient<ProtocolStatsResponse>(API_ENDPOINTS.CONNECTIVITY.PROTOCOLS_STATS);
-    },
-
-    getCommandStats: async (): Promise<CommandStatsResponse> => {
-        return apiClient<CommandStatsResponse>(API_ENDPOINTS.CONNECTIVITY.COMMANDS_STATS);
     },
 
     getStatus: async (): Promise<ConnectivityStatusResponse> => {

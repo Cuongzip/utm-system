@@ -11,7 +11,7 @@ const SCALE_STEPS_M = [
     10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000,
 ] as const;
 
-export interface TacticalCompassControlsProps {
+interface TacticalCompassControlsProps {
     viewer: Viewer | null;
     is3D: boolean;
 }
@@ -183,7 +183,7 @@ export function TacticalCompassControls({ viewer, is3D }: TacticalCompassControl
     );
 }
 
-export interface TacticalMapStatusBarProps {
+interface TacticalMapStatusBarProps {
     viewer: Viewer | null;
     statusSlot?: React.ReactNode;
     hidden?: boolean;

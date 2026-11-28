@@ -1,10 +1,16 @@
+import { createFlightBody, updateFlightBody } from "@/generated/flight";
+import { validateSchema } from "@/utils";
 import { calculatePathDistance, isDuplicateCoord } from "@/utils/geo";
 import {
     FEASIBILITY_VERDICT,
+    WAYPOINT_ACTION_TYPE,
+    type CreateFlightPayload,
     type Drone,
     type FeasibilityVerdict,
+    type FlightFormPayload,
     type Hub,
     type ProfilePoint,
+    type UpdateFlightPayload,
     type Waypoint,
 } from "@/types";
 import { buildMissionRoutePoints } from "@/components/missions/missionUtils";
@@ -92,7 +98,7 @@ export function convertWaypointsToLineString(
     };
 }
 
-export function determineActiveTabFromFlightErrors(
+function determineActiveTabFromFlightErrors(
     errors: Record<string, string>
 ): "details" | "waypoints" | "schedule" {
     if (
@@ -117,7 +123,7 @@ export function determineActiveTabFromFlightErrors(
     return "details";
 }
 
-export interface RouteFeasibilityEstimate {
+interface RouteFeasibilityEstimate {
     distanceM: number;
     requiredWh: number;
     usableWh: number;
@@ -176,5 +182,153 @@ export function estimateRouteFeasibility(
         marginPct,
         verdict,
         estimatedDurationMin,
+    };
+}
+
+function formatIsoSafe(val?: string): string {
+    if (!val) return "";
+    try {
+        const d = new Date(val);
+        return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+    } catch {
+        return "";
+    }
+}
+
+interface BuildFlightSavePayloadParams {
+    mode: "create" | "edit";
+    formData: FlightFormPayload;
+    waypoints: FlightWaypoint[];
+    computedGeoJsonLineString: { type: string; coordinates: number[][] } | null;
+    departureHub: Hub | null;
+    arrivalHub: Hub | null;
+    feasibilityVerdict: FeasibilityVerdict;
+    labels: {
+        departureWpName: (hub: string) => string;
+        arrivalWpName: (hub: string) => string;
+        defaultWaypointName: (seq: number) => string;
+    };
+}
+
+type BuildFlightSavePayloadResult =
+    | {
+          success: true;
+          payload: CreateFlightPayload | UpdateFlightPayload;
+      }
+    | {
+          success: false;
+          errors: Record<string, string>;
+          targetTab: "details" | "waypoints" | "schedule";
+      };
+
+export function buildFlightSavePayload({
+    mode,
+    formData,
+    waypoints,
+    computedGeoJsonLineString,
+    departureHub,
+    arrivalHub,
+    feasibilityVerdict,
+    labels,
+}: BuildFlightSavePayloadParams): BuildFlightSavePayloadResult {
+    const alt = formData.cruisingAltitudeM ?? 120;
+
+    let plannedRoute = computedGeoJsonLineString;
+    if (!plannedRoute && departureHub?.location && arrivalHub?.location) {
+        plannedRoute = {
+            type: "LineString",
+            coordinates: [
+                [
+                    departureHub.location.longitude,
+                    departureHub.location.latitude,
+                    departureHub.altitudeMsl ?? 0,
+                ],
+                [
+                    arrivalHub.location.longitude,
+                    arrivalHub.location.latitude,
+                    arrivalHub.altitudeMsl ?? 0,
+                ],
+            ],
+        };
+    }
+
+    const basePayload: Record<string, unknown> = {
+        droneId: formData.droneId?.trim() || undefined,
+        departureHubId: formData.departureHubId?.trim() || undefined,
+        arrivalHubId: formData.arrivalHubId?.trim() || undefined,
+        pilotId: formData.pilotId?.trim() || undefined,
+        cruisingAltitudeM: alt,
+        notes: formData.notes?.trim() || undefined,
+        scheduledDeparture: formatIsoSafe(formData.scheduledDeparture) || undefined,
+        scheduledArrival: formatIsoSafe(formData.scheduledArrival) || undefined,
+        plannedRoute: plannedRoute ?? undefined,
+        feasibilityOverride: formData.feasibilityOverride?.trim() || undefined,
+        feasibilityVerdict,
+    };
+
+    const isCreate = mode === "create";
+    const rawPayload: Record<string, unknown> = isCreate
+        ? {
+              ...basePayload,
+              flightNumber: formData.flightNumber?.toUpperCase(),
+              executionId: formData.executionId?.trim() || undefined,
+          }
+        : basePayload;
+
+    const schema = isCreate ? createFlightBody : updateFlightBody;
+    const validation = validateSchema(schema, rawPayload);
+    if (!validation.success) {
+        return {
+            success: false,
+            errors: validation.errors,
+            targetTab: determineActiveTabFromFlightErrors(validation.errors),
+        };
+    }
+
+    const validated = validation.data as Record<string, unknown>;
+    const flightWaypoints: FlightWaypoint[] = [
+        ...(departureHub?.location
+            ? [
+                  {
+                      sequence: 1,
+                      name: labels.departureWpName(departureHub.name || departureHub.code || "Hub"),
+                      latitude: departureHub.location.latitude,
+                      longitude: departureHub.location.longitude,
+                      altitude: departureHub.altitudeMsl ?? 0,
+                      actions: { type: WAYPOINT_ACTION_TYPE.TAKEOFF },
+                  },
+              ]
+            : []),
+        ...waypoints.map((wp, idx) => ({
+            sequence: (departureHub?.location ? 2 : 1) + idx,
+            name:
+                wp.name?.trim() ||
+                labels.defaultWaypointName((departureHub?.location ? 2 : 1) + idx),
+            latitude: wp.latitude,
+            longitude: wp.longitude,
+            altitude: wp.altitude ?? alt,
+            actions: wp.actions || { type: WAYPOINT_ACTION_TYPE.FLY_THROUGH },
+            conditions: wp.conditions || undefined,
+        })),
+        ...(arrivalHub?.location
+            ? [
+                  {
+                      sequence: (departureHub?.location ? 2 : 1) + waypoints.length,
+                      name: labels.arrivalWpName(arrivalHub.name || arrivalHub.code || "Hub"),
+                      latitude: arrivalHub.location.latitude,
+                      longitude: arrivalHub.location.longitude,
+                      altitude: arrivalHub.altitudeMsl ?? 0,
+                      actions: { type: WAYPOINT_ACTION_TYPE.LAND },
+                  },
+              ]
+            : []),
+    ];
+
+    return {
+        success: true,
+        payload: {
+            ...validated,
+            waypoints: flightWaypoints,
+        } as CreateFlightPayload | UpdateFlightPayload,
     };
 }

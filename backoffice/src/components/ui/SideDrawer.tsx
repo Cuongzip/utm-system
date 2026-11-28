@@ -14,7 +14,7 @@ export interface SideDrawerTabItem {
     muted?: boolean;
 }
 
-export interface SideDrawerSearchConfig {
+interface SideDrawerSearchConfig {
     value: string;
     onChange: (value: string) => void;
     placeholder: string;
@@ -22,7 +22,7 @@ export interface SideDrawerSearchConfig {
     clearLabel: string;
 }
 
-export interface SideDrawerProps {
+interface SideDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;

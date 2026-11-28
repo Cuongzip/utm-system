@@ -8,7 +8,7 @@ import { isTelemetryFresh } from "./useLiveTelemetry";
 import { QUERY_KEYS } from "./useQueries";
 import { ACTIVE_FLIGHT_STATUSES, FLIGHT_STATUS, type Flight, type TelemetryRecord } from "@/types";
 
-export type FlightDeckStreamMode = "live" | "replay";
+type FlightDeckStreamMode = "live" | "replay";
 export type PlaybackSpeed = 0.5 | 1 | 2 | 4 | 8;
 
 const MAX_LIVE_FRAMES = 800;
@@ -90,7 +90,6 @@ export function useFlightDeckTelemetry(flight: Flight | null, enabled = true) {
         queryFn: () => telemetryService.getHistoryByFlightId(flightId),
         enabled: Boolean(flightId) && enabled,
         staleTime: isAirborne ? 4000 : 60_000,
-        refetchInterval: isAirborne && !isSocketConnected ? 2500 : false,
     });
 
     const historyBucket = useMemo<SortedTelemetryBucket>(() => {

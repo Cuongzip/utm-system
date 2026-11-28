@@ -9,13 +9,13 @@ import {
     FLOATING_FAB_GAP_PX,
     FLOATING_FAB_SIZE_PX,
     useFloatingPosition,
+    useLiveAlerts,
     type ViewportOffset,
 } from "@/hooks";
-import { useLiveAlerts } from "@/hooks/useLiveAlerts";
 import { cn } from "@/lib";
 import { IS_COCKPIT_PATH_RE, type AlertSeverityTier } from "./alertUtils";
 
-export interface AlertCenterTriggerProps {
+interface AlertCenterTriggerProps {
     variant?: "fab" | "icon";
     tone?: "light" | "dark";
     className?: string;

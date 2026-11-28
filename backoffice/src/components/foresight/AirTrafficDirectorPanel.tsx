@@ -11,7 +11,7 @@ import type {
     ForesightPrediction,
 } from "@/types";
 
-export interface AirTrafficDirectorPanelProps {
+interface AirTrafficDirectorPanelProps {
     conflict: ForesightPredictedConflict;
     horizonSec: number;
     onPreviewSimulated: (sim: ForesightPrediction) => void;

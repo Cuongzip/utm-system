@@ -9,7 +9,7 @@ export interface UnderlineTabItem<T extends string = string> {
     count?: number;
 }
 
-export interface UnderlineTabsProps<T extends string = string> {
+interface UnderlineTabsProps<T extends string = string> {
     tabs: readonly UnderlineTabItem<T>[];
     activeTab: T;
     onTabChange: (tab: T) => void;

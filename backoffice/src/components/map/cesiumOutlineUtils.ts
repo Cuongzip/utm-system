@@ -47,7 +47,7 @@ export function buildClosedRingCartesian(
     return Cesium.Cartesian3.fromDegreesArrayHeights(coordsWithHeight);
 }
 
-export interface BoundaryPolylineOptions {
+interface BoundaryPolylineOptions {
     id: string;
     degreePairs: number[];
     heightM: number;
@@ -78,7 +78,7 @@ export function addCrispBoundaryPolyline(
     return entity.id;
 }
 
-export interface AltitudeDropLineOptions {
+interface AltitudeDropLineOptions {
     id: string;
     lng: number;
     lat: number;
@@ -127,7 +127,7 @@ export function addAltitudeDropLine(
     return entity.id;
 }
 
-export interface RouteCurtainOptions {
+interface RouteCurtainOptions {
     id: string;
     points: Array<{ lng: number; lat: number; alt: number }>;
     colorCss: string;

@@ -1,5 +1,5 @@
 import type { AppLocale } from "@/i18n";
-import { localizeAlertTypeTitle, localizeServerText } from "@/utils/format/localizeServerText";
+import { localizeAlertTypeTitle, localizeServerText } from "@/utils/format";
 import {
     INCIDENT_STATUS,
     LIVE_ALERT_SEVERITY,
@@ -15,7 +15,7 @@ export interface AlertTierCounts {
     advisory: number;
 }
 
-export interface ResolvedAlertEntities {
+interface ResolvedAlertEntities {
     flightCode: string | null;
     droneCode: string | null;
 }

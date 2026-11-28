@@ -3,8 +3,9 @@
 import { useTranslations } from "next-intl";
 import { Building2, CheckCircle2, Wrench, Gauge } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
+import { HUB_STATUS } from "@/types";
 
-export interface HubsKpiStripProps {
+interface HubsKpiStripProps {
     totalHubs: number;
     activeHubs: number;
     maintenanceHubs: number;
@@ -31,7 +32,7 @@ export function HubsKpiStrip({
 }: HubsKpiStripProps) {
     const t = useTranslations("hubs.kpi");
     const offlineTotal = maintenanceHubs + inactiveHubs;
-    const offlineFilterTarget = maintenanceHubs > 0 ? "maintenance" : "inactive";
+    const offlineFilterTarget = maintenanceHubs > 0 ? HUB_STATUS.MAINTENANCE : HUB_STATUS.INACTIVE;
 
     const items: KpiItem[] = [
         {
@@ -44,7 +45,7 @@ export function HubsKpiStrip({
             onClick: () => onFilterByStatus("all"),
         },
         {
-            id: "active",
+            id: HUB_STATUS.ACTIVE,
             label: t("activeHubs"),
             value: activeHubs,
             subValue:
@@ -52,8 +53,9 @@ export function HubsKpiStrip({
                     ? t("pctOnline", { pct: Math.round((activeHubs / totalHubs) * 100) })
                     : t("standby"),
             icon: CheckCircle2,
-            active: statusFilter === "active",
-            onClick: () => onFilterByStatus(statusFilter === "active" ? "all" : "active"),
+            active: statusFilter === HUB_STATUS.ACTIVE,
+            onClick: () =>
+                onFilterByStatus(statusFilter === HUB_STATUS.ACTIVE ? "all" : HUB_STATUS.ACTIVE),
         },
         {
             id: "offline",
@@ -61,10 +63,10 @@ export function HubsKpiStrip({
             value: offlineTotal,
             subValue: t("maintOffSub", { maint: maintenanceHubs, off: inactiveHubs }),
             icon: Wrench,
-            active: statusFilter === "maintenance" || statusFilter === "inactive",
+            active: statusFilter === HUB_STATUS.MAINTENANCE || statusFilter === HUB_STATUS.INACTIVE,
             onClick: () =>
                 onFilterByStatus(
-                    statusFilter === "maintenance" || statusFilter === "inactive"
+                    statusFilter === HUB_STATUS.MAINTENANCE || statusFilter === HUB_STATUS.INACTIVE
                         ? "all"
                         : offlineFilterTarget
                 ),

@@ -8,7 +8,7 @@ import type { GeometryMode, GeoPoint } from "../useAirspaceGeometry";
 import { AirspaceDetailsTab } from "./AirspaceDetailsTab";
 import { AirspaceBoundaryTab } from "./AirspaceBoundaryTab";
 
-export interface AirspaceFormSidebarProps {
+interface AirspaceFormSidebarProps {
     formData: AirspaceZoneFormPayload;
     onFormChange: <K extends keyof AirspaceZoneFormPayload>(
         field: K,

@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import { ACTIVE_FLIGHT_STATUSES, DEFAULT_FLIGHT_STATUS, type Flight, type Hub } from "@/types";
 import { MAP_TOKENS } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
@@ -10,17 +11,17 @@ import { fitCameraToBounds } from "../cesiumUtils";
 import { addRouteCurtainWall } from "../cesiumOutlineUtils";
 import { calculateDistance, isValidGeoPoint } from "@/utils";
 
-export interface FlightHubCoord {
+interface FlightHubCoord {
     lat: number;
     lng: number;
     name?: string;
     code?: string;
 }
 
-export type RouteLabelVisibility = "all" | "focused" | "none";
-export type FlightRouteStyle = "primary" | "reference";
+type RouteLabelVisibility = "all" | "focused" | "none";
+type FlightRouteStyle = "primary" | "reference";
 
-export interface FlightsLayerProps {
+interface FlightsLayerProps {
     flights: Flight[];
     selectedFlightId?: string | null;
     highlightedFlightIds?: ReadonlySet<string>;
@@ -33,8 +34,10 @@ export interface FlightsLayerProps {
 
 const STATUS_COLOR_MAP: Record<string, string> = MAP_TOKENS.colors.flightStatus;
 
+const EMPTY_FLIGHTS: Flight[] = [];
+
 export const FlightsLayer = memo(function FlightsLayer({
-    flights = [],
+    flights = EMPTY_FLIGHTS,
     selectedFlightId,
     highlightedFlightIds,
     dimUnselected = false,
@@ -46,23 +49,13 @@ export const FlightsLayer = memo(function FlightsLayer({
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
     const lastFocusedFlightIdRef = useRef<string | null>(null);
-    const [sceneRevision, setSceneRevision] = useState(0);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!selectedFlightId) {
             lastFocusedFlightIdRef.current = null;
         }
     }, [selectedFlightId]);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

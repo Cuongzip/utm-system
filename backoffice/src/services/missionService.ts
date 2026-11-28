@@ -1,4 +1,4 @@
-import { apiClient, buildUrl, normalizeList } from "./apiClient";
+import { apiClient, apiClientArray, buildUrl, normalizeList } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type {
     Mission,
@@ -14,14 +14,13 @@ import type {
     ReorderWaypointsPayload,
     AutoPlanHubsPayload,
     AutoPlanHubsResult,
-    ReassignLegDronePayload,
     MissionQueryParams,
     Waypoint,
 } from "@/types";
 
 export const missionService = {
     getMissions: async (params?: MissionQueryParams): Promise<MissionListResponse> => {
-        const endpoint = buildUrl(API_ENDPOINTS.MISSIONS.BASE, params as Record<string, unknown>);
+        const endpoint = buildUrl(API_ENDPOINTS.MISSIONS.BASE, params);
         const res = await apiClient<MissionListResponse | Mission[]>(endpoint);
         return normalizeList<Mission>(res);
     },
@@ -79,8 +78,7 @@ export const missionService = {
     },
 
     getExecutions: async (id: string): Promise<MissionExecution[]> => {
-        const res = await apiClient<MissionExecution[]>(API_ENDPOINTS.MISSIONS.EXECUTIONS(id));
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<MissionExecution>(API_ENDPOINTS.MISSIONS.EXECUTIONS(id));
     },
 
     executeMission: async (
@@ -157,19 +155,5 @@ export const missionService = {
             method: "POST",
             body: JSON.stringify(payload ?? {}),
         });
-    },
-
-    reassignLegDrone: async (
-        executionId: string,
-        legIndex: number,
-        payload: ReassignLegDronePayload
-    ): Promise<MissionExecution> => {
-        return apiClient<MissionExecution>(
-            API_ENDPOINTS.MISSIONS.EXECUTION_REASSIGN_LEG(executionId, legIndex),
-            {
-                method: "POST",
-                body: JSON.stringify(payload),
-            }
-        );
     },
 };

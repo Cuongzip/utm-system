@@ -14,7 +14,7 @@ import { calculateDistance } from "@/utils";
 import type { Hub } from "@/types";
 import type { FlightWaypoint } from "../useFlightRoute";
 
-export interface FlightRouteRendererProps {
+interface FlightRouteRendererProps {
     departureHub: Hub | null;
     arrivalHub: Hub | null;
     waypoints: FlightWaypoint[];

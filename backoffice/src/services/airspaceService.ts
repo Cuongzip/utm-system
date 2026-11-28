@@ -12,7 +12,7 @@ import type {
 
 export const airspaceService = {
     getZones: async (params?: AirspaceQueryParams): Promise<AirspaceZoneListResponse> => {
-        const endpoint = buildUrl(API_ENDPOINTS.AIRSPACES.ZONES, params as Record<string, unknown>);
+        const endpoint = buildUrl(API_ENDPOINTS.AIRSPACES.ZONES, params);
         const res = await apiClient<AirspaceZoneListResponse | AirspaceZone[]>(endpoint);
         return normalizeList<AirspaceZone>(res);
     },

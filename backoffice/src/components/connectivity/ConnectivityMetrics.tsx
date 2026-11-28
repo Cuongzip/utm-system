@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Radio, Wifi, ShieldCheck, Send } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
-export interface ConnectivityMetricsProps {
+interface ConnectivityMetricsProps {
     totalDevices: number;
     onlineDevices: number;
     certProvisionedCount: number;

@@ -13,7 +13,7 @@ import { formatTime, localizeAlertTypeTitle, localizeServerText } from "@/utils"
 import type { AppLocale } from "@/i18n";
 import { ALERT_SEVERITY, ALERT_STATUS } from "@/types";
 
-export interface ActiveAlertsProps {
+interface ActiveAlertsProps {
     fixedHeight?: boolean;
 }
 

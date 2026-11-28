@@ -15,6 +15,7 @@ import {
 } from "@/components/map";
 import { PreFlightBriefingModal } from "../PreFlightBriefingModal";
 import { FlightDeckMapOverlay, type GotoDraftTarget } from "../FlightDeckMapOverlay";
+import { useFlightLifecycleActions } from "../useFlightLifecycleActions";
 import {
     buildFlightFitBoundsPoints,
     buildRouteDistanceNodes,
@@ -45,7 +46,7 @@ import {
     type TelemetryRecord,
 } from "@/types";
 
-export interface FlightCockpitWorkspaceProps {
+interface FlightCockpitWorkspaceProps {
     flight: Flight;
     hubs: Hub[];
     drones: Drone[];
@@ -170,13 +171,10 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
         [flight, departureHub, arrivalHub, activeRecord, drone]
     );
 
-    const invalidateFlightQueries = () => {
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightDetail(flight.id) });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flightsAll });
-    };
-
     const flightLabel = flight.flightNumber || flight.id;
+    const { authorizeFlightMutation, abortFlightMutation } = useFlightLifecycleActions({
+        onAborted: () => setConfirmAbortOpen(false),
+    });
 
     const evaluateMutation = useMutation({
         mutationFn: () => flightService.evaluateConformance(flight.id),
@@ -188,26 +186,7 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
         meta: { defaultErrorMessage: td("conformanceRefreshFailed") },
     });
 
-    const authorizeMutation = useMutation({
-        mutationFn: () => flightService.authorizeFlight(flight.id),
-        onSuccess: () => {
-            toast.success(t("toasts.authorized", { flight: flightLabel }));
-            invalidateFlightQueries();
-        },
-        meta: { defaultErrorMessage: t("toasts.authorizeFailed") },
-    });
-
-    const abortMutation = useMutation({
-        mutationFn: () => flightService.abortFlight(flight.id),
-        onSuccess: () => {
-            toast.success(t("toasts.aborted", { flight: flightLabel }));
-            setConfirmAbortOpen(false);
-            invalidateFlightQueries();
-        },
-        meta: { defaultErrorMessage: t("toasts.abortFailed") },
-    });
-
-    const isLifecycleBusy = authorizeMutation.isPending || abortMutation.isPending;
+    const isLifecycleBusy = authorizeFlightMutation.isPending || abortFlightMutation.isPending;
 
     const handlePickGotoCoordinate = useCallback(
         (latitude: number, longitude: number) => {
@@ -232,11 +211,16 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
     const handleToggleAdsb = useCallback(() => setFilterAdsb((p) => !p), []);
     const handleOpenBriefing = useCallback(() => setBriefingOpen(true), []);
     const handleOpenAbort = useCallback(() => setConfirmAbortOpen(true), []);
+    const { mutate: evaluateConformance } = evaluateMutation;
+    const { mutate: authorizeMutate } = authorizeFlightMutation;
     const handleEvaluateConformance = useCallback(
-        () => evaluateMutation.mutate(),
-        [evaluateMutation]
+        () => evaluateConformance(),
+        [evaluateConformance]
     );
-    const handleAuthorize = useCallback(() => authorizeMutation.mutate(), [authorizeMutation]);
+    const handleAuthorize = useCallback(
+        () => authorizeMutate({ flight, label: flightLabel }),
+        [authorizeMutate, flight, flightLabel]
+    );
 
     return (
         <div className="flex-1 w-full h-full min-h-0 flex flex-col overflow-hidden bg-slate-950">
@@ -380,11 +364,11 @@ export function FlightCockpitWorkspace({ flight, hubs, drones }: FlightCockpitWo
             <ConfirmDialog
                 isOpen={confirmAbortOpen}
                 onClose={() => setConfirmAbortOpen(false)}
-                onConfirm={() => abortMutation.mutate()}
+                onConfirm={() => abortFlightMutation.mutate({ flight, label: flightLabel })}
                 title={t("editor.abortActiveTitle")}
                 description={t("editor.abortActiveDesc", { flight: flightLabel })}
                 confirmText={t("abortDialog.confirm")}
-                loading={abortMutation.isPending}
+                loading={abortFlightMutation.isPending}
             />
         </div>
     );

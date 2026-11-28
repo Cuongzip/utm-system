@@ -4,9 +4,10 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
-import { ChamferCard, ChamferButton } from "@/components/ui";
+import { ChamferCard } from "./ChamferCard";
+import { ChamferButton } from "./ChamferButton";
 
-export interface ModalProps {
+interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: React.ReactNode;

@@ -41,18 +41,6 @@ export const intelligenceService = {
         });
     },
 
-    startForesightDemo: async (): Promise<{ active?: boolean }> => {
-        return apiClient<{ active?: boolean }>(API_ENDPOINTS.INTELLIGENCE.FORESIGHT_DEMO_START, {
-            method: "POST",
-        });
-    },
-
-    resetForesightDemo: async (): Promise<{ active?: boolean }> => {
-        return apiClient<{ active?: boolean }>(API_ENDPOINTS.INTELLIGENCE.FORESIGHT_DEMO_RESET, {
-            method: "POST",
-        });
-    },
-
     chatCopilot: async (messages: CopilotMessage[]): Promise<CopilotChatResponse> => {
         return apiClient<CopilotChatResponse>(API_ENDPOINTS.INTELLIGENCE.COPILOT_CHAT, {
             method: "POST",

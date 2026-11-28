@@ -17,7 +17,7 @@ import {
     type ResponseAction,
 } from "@/types";
 
-export interface EmergencyConfirmationModalProps {
+interface EmergencyConfirmationModalProps {
     isOpen: boolean;
     pendingConfirmations: PendingConfirmationVm[];
     onClose: () => void;

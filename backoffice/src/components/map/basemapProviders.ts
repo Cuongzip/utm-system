@@ -1,7 +1,7 @@
 import type * as CesiumType from "cesium";
 import type { ImageryType } from "./types";
 
-export interface ConfiguredImageryLayer {
+interface ConfiguredImageryLayer {
     provider: CesiumType.ImageryProvider;
     alpha?: number;
     brightness?: number;

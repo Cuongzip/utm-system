@@ -12,7 +12,7 @@ import { AirspaceCameraController } from "./AirspaceCameraController";
 import { AirspaceInteractionController } from "./AirspaceInteractionController";
 import { ActiveAirspaceGraphic } from "./ActiveAirspaceGraphic";
 
-export interface AirspaceMapEditorProps {
+interface AirspaceMapEditorProps {
     geometryMode: GeometryMode;
     onGeometryModeChange: (mode: GeometryMode) => void;
     center: GeoPoint;

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Play, Pause, RefreshCw, AlertTriangle, X } from "lucide-react";
 import type { ForesightPrediction, ForesightPredictedConflict } from "@/types";
 
-export interface ForesightControlsProps {
+interface ForesightControlsProps {
     prediction: ForesightPrediction | null;
     simulatedPrediction: ForesightPrediction | null;
     loading: boolean;

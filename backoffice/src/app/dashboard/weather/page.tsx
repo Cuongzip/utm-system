@@ -61,7 +61,7 @@ export default function WeatherPage() {
     );
 
     const handleRefreshAll = () => {
-        queryClient.invalidateQueries({ queryKey: ["weather"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.weatherRoot });
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hubsAll });
     };
 

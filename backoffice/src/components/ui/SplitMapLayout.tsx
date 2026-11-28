@@ -3,7 +3,7 @@
 import React from "react";
 import { PageHeader } from "./PageHeader";
 
-export interface SplitMapLayoutProps {
+interface SplitMapLayoutProps {
     title: string | React.ReactNode;
     badges: React.ReactNode;
     headerActions: React.ReactNode;

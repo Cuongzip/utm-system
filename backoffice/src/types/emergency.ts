@@ -14,7 +14,7 @@ import {
     confirmIncidentBody,
     resolveIncidentBody,
     updateRootCauseBody,
-    getFlightBlackboxResponseItem,
+    getIncidentBlackboxResponseItem,
 } from "@/generated/emergency";
 
 export const RESPONSE_ACTIONS = getIncidentResponse.shape.responseAction.unwrap().options;
@@ -38,12 +38,6 @@ export const INCIDENT_STATUS = {
     REJECTED: "rejected",
     ESCALATED: "escalated",
 } as const satisfies Record<string, IncidentStatus>;
-
-export const ACTIVE_INCIDENT_STATUSES: readonly IncidentStatus[] = [
-    INCIDENT_STATUS.ACTIVE,
-    INCIDENT_STATUS.EXECUTING,
-    INCIDENT_STATUS.ESCALATED,
-] as const;
 
 export const CLOSED_INCIDENT_STATUSES: readonly IncidentStatus[] = [
     INCIDENT_STATUS.RESOLVED,
@@ -161,16 +155,7 @@ export const ROOT_CAUSE = {
     UNKNOWN: "unknown",
 } as const satisfies Record<string, RootCause>;
 
-export const ROOT_CAUSE_LABELS: Record<RootCause, string> = {
-    equipment: "Equipment / Battery Failure",
-    weather: "Weather / Wind",
-    pilot_error: "Pilot / Operator Error",
-    software: "Software / Firmware",
-    external: "External / RF Interference",
-    unknown: "Unknown / Under Investigation",
-};
-
-export type BlackboxEntryVm = NonNullable<zod.infer<typeof getFlightBlackboxResponseItem>> & {
+export type BlackboxEntryVm = NonNullable<zod.infer<typeof getIncidentBlackboxResponseItem>> & {
     id: string;
     timestamp: string;
 };

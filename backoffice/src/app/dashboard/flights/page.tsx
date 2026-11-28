@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, RotateCw } from "lucide-react";
-import { toast } from "sonner";
 import {
     ChamferButton,
     PageHeader,
@@ -13,9 +12,9 @@ import {
     type SelectOption,
 } from "@/components/ui";
 import { FlightsTable, PreFlightBriefingModal } from "@/components/flights";
+import { useFlightLifecycleActions } from "@/components/flights/useFlightLifecycleActions";
 import { flightService } from "@/services/flightService";
 import { useCrudList, useHubsAll, useDronesAll, usePermissions, QUERY_KEYS } from "@/hooks";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppLocale } from "@/i18n";
 import { createStatusOptions, compareCreatedDesc } from "@/utils";
 import { ACTIVE_FLIGHT_STATUSES, FLIGHT_STATUSES, type Flight } from "@/types";
@@ -63,48 +62,8 @@ export default function FlightsPage() {
         [drones]
     );
 
-    const queryClient = useQueryClient();
-
-    const handleMutationSuccess = (message: string) => {
-        toast.success(message);
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.flights });
-    };
-
-    const authorizeFlightMutation = useMutation({
-        mutationFn: (flight: Flight) => flightService.authorizeFlight(flight.id),
-        onSuccess: (_data, flight) =>
-            handleMutationSuccess(
-                t("toasts.authorized", { flight: flight.flightNumber || flight.id })
-            ),
-        meta: { defaultErrorMessage: t("toasts.authorizeFailed") },
-    });
-
-    const startFlightMutation = useMutation({
-        mutationFn: (flight: Flight) => flightService.startFlight(flight.id),
-        onSuccess: (_data, flight) =>
-            handleMutationSuccess(
-                t("toasts.started", { flight: flight.flightNumber || flight.id })
-            ),
-        meta: { defaultErrorMessage: t("toasts.startFailed") },
-    });
-
-    const completeFlightMutation = useMutation({
-        mutationFn: (flight: Flight) => flightService.completeFlight(flight.id),
-        onSuccess: (_data, flight) =>
-            handleMutationSuccess(
-                t("toasts.completed", { flight: flight.flightNumber || flight.id })
-            ),
-        meta: { defaultErrorMessage: t("toasts.completeFailed") },
-    });
-
-    const abortFlightMutation = useMutation({
-        mutationFn: (flight: Flight) => flightService.abortFlight(flight.id),
-        onSuccess: (_data, flight) =>
-            handleMutationSuccess(
-                t("toasts.aborted", { flight: flight.flightNumber || flight.id })
-            ),
-        meta: { defaultErrorMessage: t("toasts.abortFailed") },
-    });
+    const { authorizeByFlight, startByFlight, completeByFlight, abortByFlight } =
+        useFlightLifecycleActions();
 
     const [searchQuery, setSearchQuery] = useState("");
     const deferredSearch = useDeferredValue(searchQuery);
@@ -199,10 +158,10 @@ export default function FlightsPage() {
                     onOpenDeck={(flight) => router.push(`/dashboard/flights/${flight.id}/cockpit`)}
                     onViewDossier={(flight) => router.push(`/dashboard/flights/${flight.id}`)}
                     onOpenBriefing={setBriefingFlight}
-                    onAuthorizeFlight={authorizeFlightMutation.mutate}
-                    onStartFlight={startFlightMutation.mutate}
-                    onCompleteFlight={completeFlightMutation.mutate}
-                    onAbortFlight={abortFlightMutation.mutate}
+                    onAuthorizeFlight={authorizeByFlight}
+                    onStartFlight={startByFlight}
+                    onCompleteFlight={completeByFlight}
+                    onAbortFlight={abortByFlight}
                     onNewFlight={() => router.push("/dashboard/flights/new")}
                     hubMap={hubMap}
                     droneMap={droneMap}

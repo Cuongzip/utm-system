@@ -19,6 +19,8 @@ export function AuthenticationInfo() {
         setIsLoggingOut(true);
         toast.success(t("loggedOutRedirect"));
         setTimeout(() => {
+            // /logout is handled by Spring Cloud Gateway BFF OAuth2 logout, not Next.js App Router
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
             window.location.href = "/logout";
         }, 600);
     };

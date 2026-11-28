@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Clock, CheckCircle2, Activity } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
-export interface EmergencyKpiMetrics {
+interface EmergencyKpiMetrics {
     activeCount: number;
     pendingCount: number;
     resolvedCount: number;

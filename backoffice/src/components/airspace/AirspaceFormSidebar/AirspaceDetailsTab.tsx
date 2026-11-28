@@ -21,7 +21,7 @@ import {
     HUB_STATUS,
 } from "@/types";
 
-export interface AirspaceDetailsTabProps {
+interface AirspaceDetailsTabProps {
     formData: AirspaceZoneFormPayload;
     onFormChange: <K extends keyof AirspaceZoneFormPayload>(
         field: K,

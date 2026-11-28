@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ChamferButton } from "./ChamferButton";
 
-export interface PaginationProps {
+interface PaginationProps {
     currentPage: number;
     totalPages: number;
     totalItems: number;

@@ -14,7 +14,7 @@ import type {
 
 export const droneService = {
     getDrones: async (params?: DroneQueryParams): Promise<DroneListResponse> => {
-        const url = buildUrl(API_ENDPOINTS.DRONES.BASE, params as Record<string, unknown>);
+        const url = buildUrl(API_ENDPOINTS.DRONES.BASE, params);
         const res = await apiClient<DroneListResponse | Drone[]>(url);
         return normalizeList<Drone>(res);
     },
@@ -48,10 +48,7 @@ export const droneService = {
         droneId: string,
         params?: DroneCommandQueryParams
     ): Promise<DroneCommandListResponse> => {
-        const url = buildUrl(
-            API_ENDPOINTS.DRONES.COMMANDS(droneId),
-            params as Record<string, unknown>
-        );
+        const url = buildUrl(API_ENDPOINTS.DRONES.COMMANDS(droneId), params);
         return apiClient<DroneCommandListResponse>(url);
     },
 

@@ -7,7 +7,7 @@ import { cn } from "@/lib";
 import { ChamferCard } from "./ChamferCard";
 import { ChamferButton } from "./ChamferButton";
 
-export interface ErrorStateProps {
+interface ErrorStateProps {
     title?: string;
     description?: string;
     onRetry?: () => void;

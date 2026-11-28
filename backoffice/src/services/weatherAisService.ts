@@ -10,10 +10,6 @@ import type {
     HubGoNoGo,
     NotamResponse,
     AdsbResponse,
-    OpenAipResponse,
-    DagrConfig,
-    DagrCheckPointsPayload,
-    DagrCheckPointsResponse,
 } from "@/types";
 
 export const weatherAisService = {
@@ -55,24 +51,5 @@ export const weatherAisService = {
 
     getAdsbAircraft: async (): Promise<AdsbResponse> => {
         return apiClient<AdsbResponse>(API_ENDPOINTS.WEATHER_AIS.ADSB_AIRCRAFT);
-    },
-
-    getOpenAipAirspaces: async (country?: string): Promise<OpenAipResponse> => {
-        const url = buildUrl(
-            API_ENDPOINTS.WEATHER_AIS.OPENAIP_AIRSPACES,
-            country ? { country } : undefined
-        );
-        return apiClient<OpenAipResponse>(url);
-    },
-
-    getDagrConfig: async (): Promise<DagrConfig> => {
-        return apiClient<DagrConfig>(API_ENDPOINTS.WEATHER_AIS.DAGR_CONFIG);
-    },
-
-    checkDagrPoints: async (payload: DagrCheckPointsPayload): Promise<DagrCheckPointsResponse> => {
-        return apiClient<DagrCheckPointsResponse>(API_ENDPOINTS.WEATHER_AIS.DAGR_CHECK_POINTS, {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
     },
 };

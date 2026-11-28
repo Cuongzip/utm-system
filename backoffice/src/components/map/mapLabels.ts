@@ -1,8 +1,8 @@
 import type * as CesiumType from "cesium";
 
-export type TacticalLabelVariant = "default" | "aircraft" | "hub" | "zone" | "alert";
+type TacticalLabelVariant = "default" | "aircraft" | "hub" | "zone" | "alert";
 
-export interface TacticalLabelOptions {
+interface TacticalLabelOptions {
     text: string;
     isSelected?: boolean;
     accentColor?: string;

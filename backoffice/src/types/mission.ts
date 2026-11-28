@@ -1,5 +1,10 @@
 import type zod from "zod";
-import { getMissionByIdResponse, createMissionBody, addWaypointBody } from "@/generated/mission";
+import {
+    getMissionByIdResponse,
+    createMissionBody,
+    addWaypointBody,
+    executeMissionBody,
+} from "@/generated/mission";
 import type {
     updateMissionBody,
     getMissionsResponse,
@@ -7,31 +12,13 @@ import type {
     updateWaypointBody,
     getWaypointsResponseItem,
     reorderWaypointsBody,
-    executeMissionBody,
     getExecutionsByMissionIdResponse,
     autoPlanHubsBody,
     autoPlanHubsResponse,
-    reassignLegDroneBody,
 } from "@/generated/mission";
 
 export type CreateMissionPayload = zod.infer<typeof createMissionBody>;
 export type UpdateMissionPayload = zod.infer<typeof updateMissionBody>;
-
-export const WAYPOINT_ACTION_TYPES = [
-    "takeoff",
-    "fly_through",
-    "hover",
-    "photo",
-    "start_video",
-    "stop_video",
-    "rotate_gimbal",
-    "winch_drop",
-    "payload_pickup",
-    "payload_drop",
-    "sound_alert",
-    "land",
-] as const;
-export type WaypointActionType = (typeof WAYPOINT_ACTION_TYPES)[number];
 
 export const WAYPOINT_ACTION_TYPE = {
     TAKEOFF: "takeoff",
@@ -46,26 +33,13 @@ export const WAYPOINT_ACTION_TYPE = {
     PAYLOAD_DROP: "payload_drop",
     SOUND_ALERT: "sound_alert",
     LAND: "land",
-} as const satisfies Record<string, WaypointActionType>;
+} as const;
+
+export type WaypointActionType = (typeof WAYPOINT_ACTION_TYPE)[keyof typeof WAYPOINT_ACTION_TYPE];
 
 export const DEFAULT_WAYPOINT_ACTION: WaypointActionType = WAYPOINT_ACTION_TYPE.FLY_THROUGH;
-export const WAYPOINT_ACTION_LABELS: Record<WaypointActionType, string> = {
-    takeoff: "Takeoff",
-    fly_through: "Fly Through",
-    hover: "Hover in Place",
-    photo: "Take Photo",
-    start_video: "Start Video Recording",
-    stop_video: "Stop Video Recording",
-    rotate_gimbal: "Rotate Camera / Gimbal",
-    winch_drop: "Winch Drop",
-    payload_pickup: "Payload Pickup",
-    payload_drop: "Drop Payload",
-    sound_alert: "Sound Alert",
-    land: "Landing",
-};
 
-export const MISSION_SCHEDULE_TYPES = createMissionBody.shape.scheduleType.unwrap().options;
-export type MissionScheduleType = (typeof MISSION_SCHEDULE_TYPES)[number];
+type MissionScheduleType = NonNullable<zod.infer<typeof createMissionBody>["scheduleType"]>;
 
 export const MISSION_SCHEDULE_TYPE = {
     IMMEDIATE: "immediate",
@@ -77,7 +51,7 @@ export const DEFAULT_MISSION_SCHEDULE_TYPE: MissionScheduleType = MISSION_SCHEDU
 export type MissionQueryParams = zod.infer<typeof getMissionsQueryParams>;
 
 export const MISSION_STATUSES = getMissionByIdResponse.shape.status.unwrap().options;
-export type MissionStatus = (typeof MISSION_STATUSES)[number];
+type MissionStatus = (typeof MISSION_STATUSES)[number];
 
 export const MISSION_STATUS = {
     DRAFT: "draft",
@@ -102,25 +76,12 @@ export const EXECUTABLE_MISSION_STATUSES: ReadonlySet<string> = new Set<MissionS
     MISSION_STATUS.FAILED,
 ]);
 
-export const WAYPOINT_TYPES = addWaypointBody.shape.waypointType.unwrap().options;
-export type WaypointType = (typeof WAYPOINT_TYPES)[number];
+type WaypointType = NonNullable<zod.infer<typeof addWaypointBody>["waypointType"]>;
 
 export const WAYPOINT_TYPE = {
     COORDINATE: "coordinate",
     HUB: "hub",
 } as const satisfies Record<string, WaypointType>;
-
-export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
-    draft: "Draft",
-    ready: "Ready",
-    scheduled: "Scheduled",
-    executing: "Executing",
-    paused: "Paused",
-    completed: "Completed",
-    aborted: "Aborted",
-    cancelled: "Cancelled",
-    failed: "Failed",
-};
 
 export type MissionFormPayload = CreateMissionPayload;
 
@@ -148,15 +109,7 @@ export type MissionListResponse = Omit<
     items?: Mission[];
 };
 
-export const STOPOVER_TYPES = [
-    "none",
-    "recharge",
-    "battery_swap",
-    "relay_handoff",
-    "payload_dropoff",
-    "payload_pickup",
-] as const;
-export type StopoverType = (typeof STOPOVER_TYPES)[number];
+export type StopoverType = NonNullable<zod.infer<typeof addWaypointBody>["stopoverType"]>;
 
 export const STOPOVER_TYPE = {
     NONE: "none",
@@ -167,15 +120,6 @@ export const STOPOVER_TYPE = {
     PAYLOAD_PICKUP: "payload_pickup",
 } as const satisfies Record<string, StopoverType>;
 
-export const STOPOVER_TYPE_LABELS: Record<StopoverType, string> = {
-    none: "None (Fly-Through)",
-    recharge: "Recharge at Hub",
-    battery_swap: "Battery Swap",
-    relay_handoff: "Relay Handoff",
-    payload_dropoff: "Payload Dropoff",
-    payload_pickup: "Payload Pickup",
-};
-
 export const STOPOVER_DEFAULT_GROUND_TIME: Record<StopoverType, number> = {
     none: 0,
     recharge: 30,
@@ -185,18 +129,13 @@ export const STOPOVER_DEFAULT_GROUND_TIME: Record<StopoverType, number> = {
     payload_pickup: 5,
 };
 
-export const EXECUTION_MODES = ["same_drone_sequential", "multi_drone_relay"] as const;
+export const EXECUTION_MODES = executeMissionBody.shape.executionMode.unwrap().options;
 export type ExecutionMode = (typeof EXECUTION_MODES)[number];
 
 export const EXECUTION_MODE = {
     SAME_DRONE_SEQUENTIAL: "same_drone_sequential",
     MULTI_DRONE_RELAY: "multi_drone_relay",
 } as const satisfies Record<string, ExecutionMode>;
-
-export const EXECUTION_MODE_LABELS: Record<ExecutionMode, string> = {
-    same_drone_sequential: "Same Drone (Sequential)",
-    multi_drone_relay: "Multi-Drone Relay",
-};
 
 export const MISSION_EXECUTION_STATUS = {
     PENDING: "pending",
@@ -207,7 +146,7 @@ export const MISSION_EXECUTION_STATUS = {
     FAILED: "failed",
 } as const;
 
-export interface WaypointStopoverFields {
+interface WaypointStopoverFields {
     waypointType?: WaypointType;
     hubId?: string;
     stopoverType?: StopoverType;
@@ -247,9 +186,8 @@ export type UpdateWaypointPayload = zod.infer<typeof updateWaypointBody> &
 export type ReorderWaypointsPayload = zod.infer<typeof reorderWaypointsBody>;
 export type AutoPlanHubsPayload = zod.infer<typeof autoPlanHubsBody>;
 export type AutoPlanHubsResult = zod.infer<typeof autoPlanHubsResponse>;
-export type ReassignLegDronePayload = zod.infer<typeof reassignLegDroneBody>;
 
-export interface LegDroneAssignment {
+interface LegDroneAssignment {
     legIndex: number;
     droneId: string;
 }
@@ -311,7 +249,7 @@ export interface MissionExecutionPlan {
     legs: PlannedLeg[];
 }
 
-export interface MissionExecutionLeg {
+interface MissionExecutionLeg {
     id: string;
     executionId?: string;
     missionId?: string;

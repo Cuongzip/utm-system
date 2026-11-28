@@ -12,7 +12,7 @@ export interface SelectOption {
     description?: string;
 }
 
-export interface CustomSelectProps {
+interface CustomSelectProps {
     id?: string;
     value: string;
     onValueChange: (value: string) => void;

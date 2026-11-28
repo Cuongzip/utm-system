@@ -6,7 +6,7 @@ import { KpiStrip } from "@/components/ui";
 import { formatAltitude, formatDistance, formatSpeed } from "@/utils";
 import { SIMULATION_SCENARIO, type SimulationSession } from "@/types";
 
-export interface SessionTelemetryCardsProps {
+interface SessionTelemetryCardsProps {
     session: SimulationSession;
 }
 

@@ -7,9 +7,9 @@ import {
 } from "@/generated/conflict";
 
 export const CONFLICT_SEVERITIES = getConflictByIdResponse.shape.severity.unwrap().options;
-export const CONFLICT_STATUSES = getConflictByIdResponse.shape.status.unwrap().options;
 export const RESOLUTION_STRATEGIES =
     getConflictByIdResponse.shape.resolutionStrategy.unwrap().options;
+type ConflictStatus = NonNullable<zod.infer<typeof getConflictByIdResponse>["status"]>;
 
 export const CONFLICT_SEVERITY = {
     EMERGENCY: "emergency",
@@ -29,7 +29,7 @@ export const CONFLICT_STATUS = {
     RESOLVING: "resolving",
     RESOLVED: "resolved",
     DISMISSED: "dismissed",
-} as const satisfies Record<string, (typeof CONFLICT_STATUSES)[number]>;
+} as const satisfies Record<string, ConflictStatus>;
 
 export const RESOLUTION_STRATEGY = {
     HOVER: "hover",
@@ -51,40 +51,6 @@ export type ResolutionStrategy = (typeof RESOLUTION_STRATEGIES)[number];
 export type Conflict = NonNullable<zod.infer<typeof getConflictByIdResponse>> & {
     id: string;
 };
-
-export interface StrategicTrajectoryPoint {
-    lat: number;
-    lon: number;
-    alt: number;
-}
-
-export interface StrategicTrajectoryCheckPayload {
-    waypoints: StrategicTrajectoryPoint[];
-    scheduledDeparture?: string;
-    scheduledArrival?: string;
-    speedMps?: number;
-    excludeFlightId?: string;
-}
-
-export interface TrajectoryConflictDetail {
-    conflictingFlightId: string;
-    conflictingFlightNumber: string | null;
-    horizontalDistanceM: number;
-    verticalDistanceM: number;
-    conflictTimestamp: string;
-    latitude: number;
-    longitude: number;
-    altitude: number;
-    severity: string;
-    reason: string;
-}
-
-export interface StrategicTrajectoryCheckResult {
-    clear: boolean;
-    evaluatedFlightsCount: number;
-    conflicts: TrajectoryConflictDetail[];
-    recommendation: string;
-}
 
 export interface ResolutionAdviceOption {
     strategy: string;

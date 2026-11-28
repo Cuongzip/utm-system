@@ -5,10 +5,7 @@ import { useTranslations } from "next-intl";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib";
 
-export interface SearchInputProps extends Omit<
-    React.InputHTMLAttributes<HTMLInputElement>,
-    "onChange"
-> {
+interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
     value: string;
     onChange: (value: string) => void;
     className?: string;

@@ -18,7 +18,7 @@ import { FlightInteractionController, type FlightEditorMode } from "./FlightInte
 import { FlightCameraController } from "./FlightCameraController";
 import { FlightRouteRenderer } from "./FlightRouteRenderer";
 
-export interface FlightMapEditorProps {
+interface FlightMapEditorProps {
     departureHub: Hub | null;
     arrivalHub: Hub | null;
     waypoints: FlightWaypoint[];

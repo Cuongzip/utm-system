@@ -30,7 +30,7 @@ import {
 } from "@/types";
 import { formatDate, formatNullable, formatHubName, formatMissionSchedule } from "@/utils";
 
-export interface MissionsTableProps {
+interface MissionsTableProps {
     missions: Mission[];
     loading: boolean;
     hasFilters?: boolean;

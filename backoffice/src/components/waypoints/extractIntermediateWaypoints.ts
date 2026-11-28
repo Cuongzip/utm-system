@@ -1,6 +1,6 @@
 import { STOPOVER_TYPE, WAYPOINT_ACTION_TYPE, WAYPOINT_TYPE, type Hub } from "@/types";
 
-export interface WaypointLocationLike {
+interface WaypointLocationLike {
     name?: string | null;
     latitude?: number | null;
     longitude?: number | null;

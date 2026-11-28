@@ -10,7 +10,7 @@ const ROLE_PRIORITY = [
     "viewer",
 ] as const;
 
-export function getOperationalRoles(roles?: string[] | null): string[] {
+function getOperationalRoles(roles?: string[] | null): string[] {
     if (!roles || roles.length === 0) return [];
     return roles
         .map((r) => r.trim().toLowerCase())

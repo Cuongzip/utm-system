@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
 import { cn } from "@/lib";
 
-export interface MapZoneActionProps {
+interface MapZoneActionProps {
     active: boolean;
     onToggle: () => void;
     count: number;

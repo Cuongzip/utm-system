@@ -7,7 +7,7 @@ import { ACTIVE_HUB_STATUS, type Waypoint, type Hub } from "@/types";
 import { ChamferButton, CustomSelect } from "@/components/ui";
 import { WaypointRouteTab } from "@/components/waypoints";
 
-export interface MissionWaypointsTabProps {
+interface MissionWaypointsTabProps {
     waypoints: Waypoint[];
     selectedWaypoint: Waypoint | null;
     onSelectWaypoint: (wp: Waypoint | null) => void;

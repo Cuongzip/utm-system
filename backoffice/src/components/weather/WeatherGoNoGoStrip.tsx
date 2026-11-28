@@ -2,11 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useQueries } from "@tanstack/react-query";
 import { CloudSun } from "lucide-react";
 import { ChamferCard, EmptyState, Skeleton, StatusBadge } from "@/components/ui";
-import { weatherAisService } from "@/services";
-import { QUERY_KEYS } from "@/hooks";
+import { useHubsWeatherGoNoGo } from "@/hooks";
 import type { AppLocale } from "@/i18n";
 import { localizeServerText } from "@/utils";
 import { HUB_STATUS, type Hub, type HubGoNoGo } from "@/types";
@@ -41,14 +39,7 @@ export function WeatherGoNoGoStrip({
         return selectedInInactive ? [...activeHubs, selectedInInactive] : activeHubs;
     }, [hubs, activeHubs, showInactive, selectedHubId]);
 
-    const results = useQueries({
-        queries: visibleHubs.map((hub) => ({
-            queryKey: QUERY_KEYS.weatherHubGoNoGo(hub.id, locale),
-            queryFn: () => weatherAisService.getHubGoNoGo(hub.id),
-            staleTime: 1000 * 60 * 2,
-            retry: false,
-        })),
-    });
+    const results = useHubsWeatherGoNoGo(visibleHubs, locale);
 
     if (loadingHubs) {
         return (

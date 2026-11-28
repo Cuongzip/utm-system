@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 
-export interface UsePaginationOptions {
+interface UsePaginationOptions {
     defaultPageSize?: number;
 }
 

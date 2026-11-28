@@ -16,7 +16,7 @@ import { WaypointPositionSubTab } from "./WaypointPositionSubTab";
 import { WaypointActionsSubTab } from "./WaypointActionsSubTab";
 import { WaypointConditionsSubTab } from "./WaypointConditionsSubTab";
 
-export interface WaypointEditorProps<T extends WaypointItem> {
+interface WaypointEditorProps<T extends WaypointItem> {
     waypoint: T;
     onUpdate: (wp: T) => void;
     onClose: () => void;

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import { WAYPOINT_TYPE, type Waypoint, type Hub } from "@/types";
 import { getHubIconUri, getWaypointIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
@@ -10,15 +11,17 @@ import { addAltitudeDropLine, addRouteCurtainWall } from "../cesiumOutlineUtils"
 import { buildMissionRoutePoints } from "@/components/missions";
 import { calculateDistance, formatAltitude } from "@/utils";
 
-export interface MissionLayerProps {
+interface MissionLayerProps {
     waypoints?: Waypoint[];
     selectedWaypointId?: string | null;
     departureHub?: Hub | null;
     arrivalHub?: Hub | null;
 }
 
+const EMPTY_WAYPOINTS: Waypoint[] = [];
+
 export function MissionLayer({
-    waypoints = [],
+    waypoints = EMPTY_WAYPOINTS,
     selectedWaypointId,
     departureHub,
     arrivalHub,
@@ -26,17 +29,7 @@ export function MissionLayer({
     const routeColor = "#00a3bf";
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
-    const [sceneRevision, setSceneRevision] = useState(0);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

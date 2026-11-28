@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Circle, Pentagon, Trash2, MapPin, AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
@@ -8,7 +8,7 @@ import { formatCoordinates } from "@/utils";
 import { FormInput } from "@/components/ui";
 import { GEOMETRY_MODE, type GeometryMode, type GeoPoint } from "../useAirspaceGeometry";
 
-export interface AirspaceBoundaryTabProps {
+interface AirspaceBoundaryTabProps {
     geometryMode: GeometryMode;
     onGeometryModeChange: (mode: GeometryMode) => void;
     center: GeoPoint;
@@ -34,13 +34,19 @@ export function AirspaceBoundaryTab({
     fieldErrors = {},
 }: AirspaceBoundaryTabProps) {
     const t = useTranslations("airspace");
+    const [prevCenter, setPrevCenter] = useState(center);
     const [latStr, setLatStr] = useState(() => String(center.lat ?? ""));
     const [lngStr, setLngStr] = useState(() => String(center.lng ?? ""));
 
-    useEffect(() => {
-        setLatStr(String(center.lat ?? ""));
-        setLngStr(String(center.lng ?? ""));
-    }, [center.lat, center.lng]);
+    if (center.lat !== prevCenter.lat || center.lng !== prevCenter.lng) {
+        setPrevCenter(center);
+        if (parseFloat(latStr) !== center.lat) {
+            setLatStr(String(center.lat ?? ""));
+        }
+        if (parseFloat(lngStr) !== center.lng) {
+            setLngStr(String(center.lng ?? ""));
+        }
+    }
 
     const handleLatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;

@@ -20,7 +20,7 @@ import { missionService } from "@/services/missionService";
 import { cn } from "@/lib";
 import { MISSION_EXECUTION_STATUS, type Flight, type MissionFormPayload } from "@/types";
 
-export interface MissionDetailsTabProps {
+interface MissionDetailsTabProps {
     missionId?: string;
     formData: MissionFormPayload;
     onFormChange: <K extends keyof MissionFormPayload>(

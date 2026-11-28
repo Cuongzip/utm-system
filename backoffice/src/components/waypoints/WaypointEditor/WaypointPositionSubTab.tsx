@@ -6,7 +6,7 @@ import { CustomSelect, FormInput } from "@/components/ui";
 import { ACTIVE_HUB_STATUS, WAYPOINT_TYPE, type Hub } from "@/types";
 import { isHubWaypointItem, type WaypointItem } from "../types";
 
-export interface WaypointPositionSubTabProps<T extends WaypointItem> {
+interface WaypointPositionSubTabProps<T extends WaypointItem> {
     waypoint: T;
     onUpdate: (wp: T) => void;
     hubs?: Hub[];

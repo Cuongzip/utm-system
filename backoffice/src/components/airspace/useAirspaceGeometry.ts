@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import type { GeoPoint } from "@/utils/geo";
 
 export const GEOMETRY_MODE = {
@@ -10,10 +10,10 @@ export type GeometryMode = (typeof GEOMETRY_MODE)[keyof typeof GEOMETRY_MODE];
 
 export type { GeoPoint };
 
-export const DEFAULT_AIRSPACE_CENTER: GeoPoint = { lat: 10.7769, lng: 106.7009 };
-export const DEFAULT_AIRSPACE_RADIUS = 1000;
+const DEFAULT_AIRSPACE_CENTER: GeoPoint = { lat: 10.7769, lng: 106.7009 };
+const DEFAULT_AIRSPACE_RADIUS = 1000;
 
-export interface GeoJsonPolygon {
+interface GeoJsonPolygon {
     type: "Polygon";
     coordinates: number[][][];
 }
@@ -42,7 +42,9 @@ export function generateCircleCoordinates(
     return coordinates;
 }
 
-export function parseExistingGeometry(geometry?: any): {
+type GeometryInput = { type?: string; coordinates?: number[][][] } | string | null | undefined;
+
+function parseExistingGeometry(geometry?: GeometryInput): {
     mode: GeometryMode;
     center: GeoPoint;
     radiusMeters: number;
@@ -51,13 +53,15 @@ export function parseExistingGeometry(geometry?: any): {
     const defaultCenter = DEFAULT_AIRSPACE_CENTER;
     const defaultRadius = DEFAULT_AIRSPACE_RADIUS;
 
-    let parsed = geometry;
-    if (typeof parsed === "string") {
+    let parsed: { type?: string; coordinates?: number[][][] } | null = null;
+    if (typeof geometry === "string") {
         try {
-            parsed = JSON.parse(parsed);
+            parsed = JSON.parse(geometry) as { type?: string; coordinates?: number[][][] };
         } catch {
             parsed = null;
         }
+    } else if (geometry && typeof geometry === "object") {
+        parsed = geometry;
     }
 
     if (!parsed || !parsed.coordinates || parsed.coordinates.length === 0) {
@@ -119,18 +123,20 @@ export function useAirspaceGeometry(initialGeometry?: {
     coordinates?: number[][][];
 }) {
     const parsed = useMemo(() => parseExistingGeometry(initialGeometry), [initialGeometry]);
+    const [prevParsed, setPrevParsed] = useState(parsed);
 
     const [geometryMode, setGeometryMode] = useState<GeometryMode>(parsed.mode);
     const [center, setCenterState] = useState<GeoPoint>(parsed.center);
     const [radiusMeters, setRadiusMetersState] = useState<number>(parsed.radiusMeters);
     const [polygonPoints, setPolygonPoints] = useState<GeoPoint[]>(parsed.polygonPoints);
 
-    useEffect(() => {
+    if (parsed !== prevParsed) {
+        setPrevParsed(parsed);
         setGeometryMode(parsed.mode);
         setCenterState(parsed.center);
         setRadiusMetersState(parsed.radiusMeters);
         setPolygonPoints(parsed.polygonPoints);
-    }, [parsed]);
+    }
 
     const setCenter = (lat: number, lng: number) =>
         setCenterState({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) });

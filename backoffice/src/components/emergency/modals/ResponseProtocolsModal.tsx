@@ -26,7 +26,7 @@ import {
     type UpdateEmergencyProtocolPayload,
 } from "@/types";
 
-export interface ResponseProtocolsModalProps {
+interface ResponseProtocolsModalProps {
     isOpen: boolean;
     onClose: () => void;
     canManageProtocols?: boolean;

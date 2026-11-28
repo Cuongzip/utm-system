@@ -1,4 +1,7 @@
 export const API_ENDPOINTS = {
+    AUTH: {
+        CURRENT_USER: "/authentication/user",
+    },
     ORGANIZATIONS: {
         BASE: "/api/api/v1/organizations",
         BY_ID: (id: string) => `/api/api/v1/organizations/${id}`,
@@ -41,12 +44,10 @@ export const API_ENDPOINTS = {
     CONFLICTS: {
         BASE: "/api/api/v1/conflicts",
         ACTIVE: "/api/api/v1/conflicts/active",
-        BY_ID: (id: string) => `/api/api/v1/conflicts/${id}`,
         ADVICE: (id: string) => `/api/api/v1/conflicts/${id}/advice`,
         RESOLVE: (id: string) => `/api/api/v1/conflicts/${id}/resolve`,
         ACKNOWLEDGE: (id: string) => `/api/api/v1/conflicts/${id}/acknowledge`,
         EVALUATE: "/api/api/v1/conflicts/evaluate",
-        CHECK_TRAJECTORY: "/api/api/v1/conflicts/check-trajectory",
     },
     CONNECTIVITY: {
         BASE: "/api/api/v1/connectivity/devices",
@@ -59,9 +60,6 @@ export const API_ENDPOINTS = {
         TELEMETRY_MODES: "/api/api/v1/connectivity/telemetry/modes",
         DEVICE_TELEMETRY_MODE: (id: string) =>
             `/api/api/v1/connectivity/devices/${id}/telemetry-mode`,
-        TELEMETRY_STATS: "/api/api/v1/connectivity/telemetry/stats",
-        PROTOCOLS_STATS: "/api/api/v1/connectivity/protocols/stats",
-        COMMANDS_STATS: "/api/api/v1/connectivity/commands/stats",
         STATUS: "/api/api/v1/connectivity/status",
     },
     INTEGRATION: {
@@ -73,14 +71,7 @@ export const API_ENDPOINTS = {
     },
     FLEET: {
         OVERVIEW: "/api/api/v1/fleet/overview",
-        HUB_STATUS: (hubId: string) => `/api/api/v1/fleet/hubs/${hubId}/status`,
         HUB_DRONES: (hubId: string) => `/api/api/v1/fleet/hubs/${hubId}/drones`,
-        AVAILABLE: "/api/api/v1/fleet/available",
-        ASSIGN: "/api/api/v1/fleet/assign",
-        ACCEPT_ASSIGNMENT: (id: string) => `/api/api/v1/fleet/assignments/${id}/accept`,
-        REJECT_ASSIGNMENT: (id: string) => `/api/api/v1/fleet/assignments/${id}/reject`,
-        MISSION_ASSIGNMENTS: (missionId: string) =>
-            `/api/api/v1/fleet/assignments/mission/${missionId}`,
         REBALANCING_ANALYZE: "/api/api/v1/fleet/rebalancing/analyze",
         REBALANCING_PENDING: "/api/api/v1/fleet/rebalancing/pending",
         REBALANCING_ACTIVE: "/api/api/v1/fleet/rebalancing/active",
@@ -105,9 +96,6 @@ export const API_ENDPOINTS = {
         GO_NO_GO: (hubId: string) => `/api/api/v1/weather/go-no-go/${hubId}`,
         NOTAM: "/api/api/v1/notam",
         ADSB_AIRCRAFT: "/api/api/v1/adsb/aircraft",
-        OPENAIP_AIRSPACES: "/api/api/v1/openaip/airspaces",
-        DAGR_CONFIG: "/api/api/v1/dagr/config",
-        DAGR_CHECK_POINTS: "/api/api/v1/dagr/check-points",
     },
     INTELLIGENCE: {
         BRIEFING_FLIGHT: (id: string) => `/api/api/v1/briefing/flight/${id}`,
@@ -115,8 +103,6 @@ export const API_ENDPOINTS = {
         FORESIGHT_PREDICT: "/api/api/v1/foresight/predict",
         FORESIGHT_ADVISE: "/api/api/v1/foresight/advise",
         FORESIGHT_SIMULATE: "/api/api/v1/foresight/simulate-resolution",
-        FORESIGHT_DEMO_START: "/api/api/v1/foresight/demo/start",
-        FORESIGHT_DEMO_RESET: "/api/api/v1/foresight/demo/reset",
         COPILOT_CHAT: "/api/api/v1/copilot/chat",
     },
     MISSIONS: {
@@ -125,12 +111,9 @@ export const API_ENDPOINTS = {
         EXECUTION_PLAN: (id: string) => `/api/api/v1/missions/${id}/execution-plan`,
         EXECUTIONS: (id: string) => `/api/api/v1/missions/${id}/executions`,
         EXECUTE: (id: string) => `/api/api/v1/missions/${id}/execute`,
-        EXECUTION_BY_ID: (id: string) => `/api/api/v1/executions/${id}`,
         EXECUTION_PAUSE: (id: string) => `/api/api/v1/executions/${id}/pause`,
         EXECUTION_RESUME: (id: string) => `/api/api/v1/executions/${id}/resume`,
         EXECUTION_ABORT: (id: string) => `/api/api/v1/executions/${id}/abort`,
-        EXECUTION_REASSIGN_LEG: (id: string, legIndex: number) =>
-            `/api/api/v1/executions/${id}/legs/${legIndex}/reassign-drone`,
         DUPLICATE: (id: string) => `/api/api/v1/missions/${id}/duplicate`,
         SCHEDULE: (id: string) => `/api/api/v1/missions/${id}/schedule`,
         UNSCHEDULE: (id: string) => `/api/api/v1/missions/${id}/unschedule`,

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { FormInput } from "@/components/ui";
 import { parseOptionalNumber, type WaypointItem } from "../types";
 
-export interface WaypointConditionsSubTabProps<T extends WaypointItem> {
+interface WaypointConditionsSubTabProps<T extends WaypointItem> {
     waypoint: T;
     onUpdate: (wp: T) => void;
     isReadOnly?: boolean;

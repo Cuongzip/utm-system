@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import type { FlightWaypoint, Hub } from "@/types";
 import { WaypointRouteTab } from "@/components/waypoints";
 
-export interface FlightRouteTabProps {
+interface FlightRouteTabProps {
     waypoints: FlightWaypoint[];
     selectedWaypoint: FlightWaypoint | null;
     onSelectWaypoint: (wp: FlightWaypoint | null) => void;

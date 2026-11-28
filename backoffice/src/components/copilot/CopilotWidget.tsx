@@ -4,20 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import {
-    Bot,
-    X,
-    Send,
-    Trash2,
-    ChevronDown,
-    ChevronRight,
-    CheckCircle2,
-    Loader2,
-    Terminal,
-    ShieldAlert,
-} from "lucide-react";
+import { Bot, X, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ChamferButton, ChamferCard, TacticalCallout } from "@/components/ui";
+import { ChamferButton, ChamferCard } from "@/components/ui";
 import {
     clampFloatingOffset,
     COPILOT_OFFSET_STORAGE_KEY,
@@ -26,29 +15,17 @@ import {
     type ViewportOffset,
 } from "@/hooks";
 import { intelligenceService } from "@/services";
-import type { CopilotToolTraceItem, CopilotProposedAction } from "@/types";
+import type { CopilotProposedAction } from "@/types";
+import { CopilotFabLauncher } from "./CopilotFabLauncher";
+import { CopilotEmptyPrompts } from "./CopilotEmptyPrompts";
+import { CopilotMessageBubble, type CopilotChatEntry } from "./CopilotMessageBubble";
 
-export const COPILOT_TOGGLE_EVENT = "utm:copilot-toggle";
+const COPILOT_TOGGLE_EVENT = "utm:copilot-toggle";
 
 const PANEL_WIDTH_PX = 400;
 const PANEL_HEIGHT_PX = 520;
 const DEFAULT_OFFSET: ViewportOffset = { right: 20, bottom: 20 };
 const IS_COCKPIT_PATH_RE = /^\/dashboard\/flights\/[^/]+\/cockpit(?:\/|$)/;
-
-export function toggleCopilot() {
-    if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent(COPILOT_TOGGLE_EVENT));
-    }
-}
-
-interface ChatEntry {
-    id: string;
-    role: "user" | "assistant";
-    content: string;
-    toolTrace?: CopilotToolTraceItem[];
-    proposedActions?: CopilotProposedAction[];
-    model?: string;
-}
 
 export function CopilotWidget() {
     const pathname = usePathname();
@@ -61,7 +38,7 @@ export function CopilotWidget() {
             boxSize: FLOATING_FAB_SIZE_PX,
         });
     const [input, setInput] = useState("");
-    const [entries, setEntries] = useState<ChatEntry[]>([]);
+    const [entries, setEntries] = useState<CopilotChatEntry[]>([]);
     const [expandedTraces, setExpandedTraces] = useState<Record<string, boolean>>({});
     const [executedActions, setExecutedActions] = useState<Record<string, boolean>>({});
     const [executingActionKey, setExecutingActionKey] = useState<string | null>(null);
@@ -95,7 +72,7 @@ export function CopilotWidget() {
     }, [open]);
 
     const chatMutation = useMutation({
-        mutationFn: async (nextEntries: ChatEntry[]) => {
+        mutationFn: async (nextEntries: CopilotChatEntry[]) => {
             const messages = nextEntries.map((e) => ({ role: e.role, content: e.content }));
             return intelligenceService.chatCopilot(messages);
         },
@@ -113,7 +90,6 @@ export function CopilotWidget() {
                     content: replyText,
                     toolTrace: res.toolTrace,
                     proposedActions: res.proposedActions,
-                    model: res.model,
                 },
             ]);
         },
@@ -123,7 +99,7 @@ export function CopilotWidget() {
         const trimmed = text.trim();
         if (!trimmed || chatMutation.isPending) return;
         nextIdRef.current += 1;
-        const userEntry: ChatEntry = {
+        const userEntry: CopilotChatEntry = {
             id: `usr-${nextIdRef.current}`,
             role: "user",
             content: trimmed,
@@ -164,31 +140,15 @@ export function CopilotWidget() {
 
     if (!open) {
         return (
-            <button
-                type="button"
-                aria-label={t("openLabel")}
-                title={t("launcherTooltip")}
-                style={{ right: `${activeOffset.right}px`, bottom: `${activeOffset.bottom}px` }}
-                onPointerDown={(e) =>
-                    startDrag(e, activeOffset, FLOATING_FAB_SIZE_PX, FLOATING_FAB_SIZE_PX)
-                }
-                onPointerMove={moveDrag}
-                onPointerUp={(e) => endDrag(e, () => setOpen(true))}
-                onPointerCancel={cancelDrag}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setOpen(true);
-                    }
-                }}
-                className={`group fixed z-40 h-10 w-10 p-[1.5px] chamfer-sm bg-slate-400/90 hover:bg-slate-300 drop-shadow-[0_8px_20px_rgba(15,23,42,0.28)] flex items-center justify-center touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
-                    isDragging ? "cursor-grabbing scale-105" : "cursor-grab transition-transform"
-                }`}
-            >
-                <span className="w-full h-full chamfer-sm bg-slate-800 group-hover:bg-slate-700 text-white flex items-center justify-center transition-colors pointer-events-none">
-                    <Bot className="w-[18px] h-[18px] text-white" aria-hidden="true" />
-                </span>
-            </button>
+            <CopilotFabLauncher
+                activeOffset={activeOffset}
+                isDragging={isDragging}
+                startDrag={startDrag}
+                moveDrag={moveDrag}
+                endDrag={endDrag}
+                cancelDrag={cancelDrag}
+                onOpen={() => setOpen(true)}
+            />
         );
     }
 
@@ -264,163 +224,27 @@ export function CopilotWidget() {
                     className="flex-1 overflow-y-auto utm-scroll p-3.5 flex flex-col gap-3 bg-slate-50/80"
                 >
                     {entries.length === 0 ? (
-                        <div className="my-auto flex flex-col gap-3 px-1">
-                            <div className="flex flex-col items-center gap-2 text-center">
-                                <div className="w-9 h-9 p-[1px] chamfer-xs bg-slate-300">
-                                    <div className="w-full h-full chamfer-xs bg-white flex items-center justify-center text-slate-700">
-                                        <Bot className="w-4 h-4" aria-hidden="true" />
-                                    </div>
-                                </div>
-                                <p className="px-2 text-xs font-medium text-slate-600 leading-relaxed">
-                                    {t("emptyHeading")}
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                {quickPrompts.map((prompt) => (
-                                    <button
-                                        key={prompt}
-                                        type="button"
-                                        onClick={() => sendPrompt(prompt)}
-                                        className="group flex items-center justify-between gap-2 text-left px-3 py-2.5 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-xs text-slate-700 hover:text-slate-900 shadow-2xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                    >
-                                        <span className="leading-snug">{prompt}</span>
-                                        <ChevronRight
-                                            className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        <CopilotEmptyPrompts
+                            quickPrompts={quickPrompts}
+                            onSelectPrompt={sendPrompt}
+                        />
                     ) : (
-                        entries.map((entry) => {
-                            const isUser = entry.role === "user";
-                            const hasTrace = Boolean(entry.toolTrace && entry.toolTrace.length > 0);
-                            const traceOpen = Boolean(expandedTraces[entry.id]);
-
-                            return (
-                                <div
-                                    key={entry.id}
-                                    className={`flex flex-col gap-1.5 ${
-                                        isUser ? "items-end" : "items-start"
-                                    }`}
-                                >
-                                    <div
-                                        className={`rounded-md text-xs leading-relaxed whitespace-pre-wrap break-words shadow-2xs ${
-                                            isUser
-                                                ? "max-w-[88%] px-3 py-2 bg-slate-800 text-white"
-                                                : "max-w-[92%] px-3.5 py-2.5 bg-white border border-slate-200/90 text-slate-800"
-                                        }`}
-                                    >
-                                        {entry.content}
-                                    </div>
-
-                                    {hasTrace && (
-                                        <div className="max-w-[92%] w-full">
-                                            <button
-                                                type="button"
-                                                aria-expanded={traceOpen}
-                                                onClick={() =>
-                                                    setExpandedTraces((prev) => ({
-                                                        ...prev,
-                                                        [entry.id]: !prev[entry.id],
-                                                    }))
-                                                }
-                                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-mono font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                            >
-                                                <Terminal
-                                                    className="w-3 h-3 text-slate-500 shrink-0"
-                                                    aria-hidden="true"
-                                                />
-                                                <span>
-                                                    {t("toolTrace", {
-                                                        count: entry.toolTrace?.length ?? 0,
-                                                    })}
-                                                </span>
-                                                <ChevronDown
-                                                    className={`w-3 h-3 text-slate-400 transition-transform ${
-                                                        traceOpen ? "rotate-180" : ""
-                                                    }`}
-                                                    aria-hidden="true"
-                                                />
-                                            </button>
-                                            {traceOpen && (
-                                                <div className="mt-1.5 rounded-md border border-slate-700 bg-slate-900 text-slate-200 p-2.5 text-[10px] font-mono flex flex-col gap-1.5 max-h-40 overflow-y-auto utm-scroll">
-                                                    {entry.toolTrace?.map((tr, idx) => (
-                                                        <div key={idx}>
-                                                            <div className="font-bold text-slate-100">
-                                                                {tr.tool || "tool"}
-                                                            </div>
-                                                            {tr.summary !== undefined && (
-                                                                <div className="text-slate-400 break-words">
-                                                                    {typeof tr.summary === "string"
-                                                                        ? tr.summary
-                                                                        : JSON.stringify(
-                                                                              tr.summary
-                                                                          )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {entry.proposedActions && entry.proposedActions.length > 0 && (
-                                        <div className="max-w-[92%] w-full flex flex-col gap-2">
-                                            {entry.proposedActions.map((action, idx) => {
-                                                const actionKey = `${entry.id}-${idx}`;
-                                                const isDone = Boolean(executedActions[actionKey]);
-                                                const isRunning = executingActionKey === actionKey;
-
-                                                return (
-                                                    <TacticalCallout
-                                                        key={actionKey}
-                                                        tone="warning"
-                                                        icon={ShieldAlert}
-                                                        title={action.label || t("proposedAction")}
-                                                        description={action.rationale}
-                                                    >
-                                                        <div className="flex items-center justify-between gap-2 pt-0.5">
-                                                            <span className="text-[10px] font-mono text-slate-500 truncate">
-                                                                {action.method} {action.path}
-                                                            </span>
-                                                            {isDone ? (
-                                                                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-700 shrink-0">
-                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                    {t("executed")}
-                                                                </span>
-                                                            ) : (
-                                                                <ChamferButton
-                                                                    variant="dark"
-                                                                    size="xs"
-                                                                    disabled={isRunning}
-                                                                    onClick={() =>
-                                                                        handleExecuteAction(
-                                                                            entry.id,
-                                                                            idx,
-                                                                            action
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {isRunning ? (
-                                                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                                                    ) : null}
-                                                                    <span>
-                                                                        {t("confirmExecute")}
-                                                                    </span>
-                                                                </ChamferButton>
-                                                            )}
-                                                        </div>
-                                                    </TacticalCallout>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })
+                        entries.map((entry) => (
+                            <CopilotMessageBubble
+                                key={entry.id}
+                                entry={entry}
+                                traceOpen={Boolean(expandedTraces[entry.id])}
+                                onToggleTrace={() =>
+                                    setExpandedTraces((prev) => ({
+                                        ...prev,
+                                        [entry.id]: !prev[entry.id],
+                                    }))
+                                }
+                                executedActions={executedActions}
+                                executingActionKey={executingActionKey}
+                                onExecuteAction={handleExecuteAction}
+                            />
+                        ))
                     )}
 
                     {chatMutation.isPending && (

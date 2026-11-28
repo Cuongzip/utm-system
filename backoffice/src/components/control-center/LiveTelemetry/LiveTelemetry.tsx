@@ -19,7 +19,7 @@ import {
     type TelemetryRecord,
 } from "@/types";
 
-export interface LiveTelemetryProps {
+interface LiveTelemetryProps {
     telemetry: TelemetryRecord | null;
     flight: Flight | null;
     flights: Flight[];

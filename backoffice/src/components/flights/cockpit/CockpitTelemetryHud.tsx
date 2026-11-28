@@ -1,37 +1,17 @@
 "use client";
 
-import { memo, useState, useMemo, useEffect } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Compass, CloudSun, ChevronDown, ChevronUp, Navigation } from "lucide-react";
-import { toast } from "sonner";
+import { memo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ChevronDown, ChevronUp, Navigation } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
-import { connectivityService } from "@/services";
-import {
-    QUERY_KEYS,
-    useConnectivityDevices,
-    useDeviceTelemetryMode,
-    useHubWeatherGoNoGo,
-} from "@/hooks";
-import { translateStatusLabel, type AppLocale } from "@/i18n";
-import { cn } from "@/lib";
-import { formatAltitude, formatCoordinates, formatDistance, localizeServerText } from "@/utils";
-import { getCardinalDirectionLabel, type LegEtaProgress } from "../routeProgressUtils";
-import {
-    ACTIVE_FLIGHT_STATUSES,
-    CONFORMANCE_STATUS,
-    DEFAULT_FLIGHT_STATUS,
-    DRONE_PHYSICS_DEFAULTS,
-    TELEMETRY_MODES,
-    type Drone,
-    type Flight,
-    type FlightConformance,
-    type Hub,
-    type TelemetryMode,
-    type TelemetryRecord,
-} from "@/types";
+import { formatDistance } from "@/utils";
+import type { LegEtaProgress } from "../routeProgressUtils";
+import type { Drone, Flight, FlightConformance, Hub, TelemetryRecord } from "@/types";
+import { formatElapsedClock, useCockpitHudMetrics } from "./useCockpitHudMetrics";
+import { CockpitPrimaryInstrumentsGrid } from "./CockpitPrimaryInstrumentsGrid";
+import { CockpitPowerLinkSection } from "./CockpitPowerLinkSection";
 
-export interface CockpitTelemetryHudProps {
+interface CockpitTelemetryHudProps {
     flight: Flight;
     drone: Drone | null;
     departureHub: Hub | null;
@@ -39,24 +19,6 @@ export interface CockpitTelemetryHudProps {
     telemetry: TelemetryRecord | null;
     conformance?: FlightConformance | null;
     legProgress: LegEtaProgress | null;
-}
-
-const MODE_HZ_LABELS: Record<TelemetryMode, string> = {
-    idle: "0.2 Hz",
-    normal: "1 Hz",
-    enhanced: "5 Hz",
-    emergency: "10 Hz",
-};
-
-function formatElapsedClock(sec: number): string {
-    const clamped = Math.max(0, Math.floor(sec));
-    const h = Math.floor(clamped / 3600);
-    const m = Math.floor((clamped % 3600) / 60);
-    const s = clamped % 60;
-    if (h > 0) {
-        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export const CockpitTelemetryHud = memo(function CockpitTelemetryHud({
@@ -69,127 +31,43 @@ export const CockpitTelemetryHud = memo(function CockpitTelemetryHud({
     legProgress,
 }: CockpitTelemetryHudProps) {
     const t = useTranslations("flights.deck");
-    const tCtrl = useTranslations("controlCenter");
-    const locale = useLocale() as AppLocale;
-    const queryClient = useQueryClient();
     const [collapsed, setCollapsed] = useState(false);
 
-    const isAirborneStatus = Boolean(
-        flight.status && ACTIVE_FLIGHT_STATUSES.includes(flight.status)
-    );
-
-    const [nowMs, setNowMs] = useState<number>(() => Date.now());
-    useEffect(() => {
-        if (!isAirborneStatus || !flight.actualDeparture) return;
-        const timer = setInterval(() => setNowMs(Date.now()), 1000);
-        return () => clearInterval(timer);
-    }, [isAirborneStatus, flight.actualDeparture]);
-
-    const elapsedSeconds = useMemo(() => {
-        if (!flight.actualDeparture) return null;
-        const startMs = Date.parse(flight.actualDeparture);
-        if (Number.isNaN(startMs)) return null;
-        const endMs = flight.actualArrival ? Date.parse(flight.actualArrival) : nowMs;
-        if (Number.isNaN(endMs)) return null;
-        return Math.max(0, Math.floor((endMs - startMs) / 1000));
-    }, [flight.actualDeparture, flight.actualArrival, nowMs]);
-
-    const { data: devices = [] } = useConnectivityDevices();
-    const { data: arrivalGoNoGo } = useHubWeatherGoNoGo(
-        flight.arrivalHubId,
-        Boolean(flight.arrivalHubId)
-    );
-
-    const linkedDevice = useMemo(() => {
-        if (drone?.deviceRegistration?.id) {
-            return {
-                id: drone.deviceRegistration.id,
-                deviceIdentifier: drone.deviceRegistration.deviceIdentifier,
-            };
-        }
-        if (!flight.droneId) return null;
-        return devices.find((d) => d.droneId === flight.droneId) ?? null;
-    }, [drone, devices, flight.droneId]);
-
-    const { data: deviceModeData } = useDeviceTelemetryMode(
-        linkedDevice?.id ?? null,
-        Boolean(linkedDevice?.id)
-    );
-
-    const setRateMutation = useMutation({
-        mutationFn: (mode: TelemetryMode) => {
-            if (!linkedDevice?.id) throw new Error(t("noDeviceLinked"));
-            return connectivityService.setDeviceTelemetryMode(linkedDevice.id, { mode });
-        },
-        onSuccess: (_res, mode) => {
-            if (linkedDevice?.id) {
-                queryClient.invalidateQueries({
-                    queryKey: QUERY_KEYS.connectivityDeviceMode(linkedDevice.id),
-                });
-            }
-            toast.success(t("rateUpdatedToast", { rate: MODE_HZ_LABELS[mode] }));
-        },
-        meta: { defaultErrorMessage: t("rateUpdateFailed") },
+    const {
+        elapsedSeconds,
+        arrivalGoNoGo,
+        linkedDevice,
+        setRateMutation,
+        altMsl,
+        altAgl,
+        speedMs,
+        speedKmh,
+        vertSpeed,
+        heading,
+        pitch,
+        roll,
+        batteryPct,
+        batteryVoltage,
+        batteryTemp,
+        powerDrawW,
+        remainingMinutes,
+        phaseLabel,
+        activeTelemetryMode,
+        conformanceStatus,
+        xteM,
+        corridorM,
+        vertErrM,
+        vertBufM,
+        depCode,
+        arrCode,
+    } = useCockpitHudMetrics({
+        flight,
+        drone,
+        departureHub,
+        arrivalHub,
+        telemetry,
+        conformance,
     });
-
-    const altMsl = telemetry?.altitude ?? null;
-    const altAgl = telemetry?.altitudeAgl ?? altMsl;
-    const speedMs = telemetry?.speed ?? null;
-    const speedKmh = speedMs != null ? Math.round(speedMs * 3.6) : null;
-    const vertSpeed = telemetry?.verticalSpeed ?? null;
-    const heading = telemetry?.heading != null ? Math.round(telemetry.heading) : null;
-    const pitch = telemetry?.pitch ?? null;
-    const roll = telemetry?.roll ?? null;
-
-    const batteryPct = telemetry?.batteryPercentage ?? drone?.currentBatteryPct ?? null;
-    const batteryVoltage = telemetry?.batteryVoltage ?? null;
-    const batteryTemp = telemetry?.batteryTemperature ?? null;
-    const powerDrawW =
-        telemetry?.batteryDischargeRate ??
-        (speedMs != null && speedMs > 1
-            ? (drone?.cruisePowerW ?? DRONE_PHYSICS_DEFAULTS.cruisePowerW)
-            : altMsl != null && altMsl > 1
-              ? (drone?.hoverPowerW ?? DRONE_PHYSICS_DEFAULTS.hoverPowerW)
-              : null);
-
-    const remainingMinutes = useMemo(() => {
-        if (!isAirborneStatus && powerDrawW == null) return null;
-        if (batteryPct == null || batteryPct <= 0) return null;
-        const capWh = drone?.batteryCapacityWh ?? DRONE_PHYSICS_DEFAULTS.batteryCapacityWh;
-        const health = (drone?.batteryHealthPct ?? 100) / 100;
-        const usableWh = capWh * health * (Math.max(0, batteryPct - 10) / 100);
-        const drawW =
-            powerDrawW && powerDrawW > 20
-                ? powerDrawW
-                : (drone?.cruisePowerW ?? DRONE_PHYSICS_DEFAULTS.cruisePowerW);
-        if (drawW <= 0) return null;
-        return Math.max(0, Math.round((usableWh / drawW) * 60));
-    }, [isAirborneStatus, batteryPct, drone, powerDrawW]);
-
-    const rawFlightStatus = flight.status ?? DEFAULT_FLIGHT_STATUS;
-    const rawModeUpper = (telemetry?.flightMode ?? "").toUpperCase();
-    const phaseLabel = useMemo(() => {
-        if (rawModeUpper === "TAKEOFF") return t("phaseTakeoff");
-        if (rawModeUpper === "LANDING" || rawModeUpper === "LANDED") return t("phaseLanding");
-        if (rawModeUpper === "LOITER") return t("phaseLoiter");
-        if (rawModeUpper === "RTL" || rawModeUpper === "DIVERT") return t("phaseRtl");
-        if (rawModeUpper === "AUTONOMOUS" || rawModeUpper === "ALTITUDE_CHANGE") {
-            return t("phaseCruise");
-        }
-        if (!isAirborneStatus) return t("phasePreflight");
-        return translateStatusLabel(rawFlightStatus, locale) ?? rawFlightStatus.toUpperCase();
-    }, [rawModeUpper, isAirborneStatus, rawFlightStatus, locale, t]);
-
-    const activeTelemetryMode = (deviceModeData?.telemetryMode ?? "normal") as TelemetryMode;
-    const conformanceStatus =
-        conformance?.status ?? flight.conformanceStatus ?? CONFORMANCE_STATUS.UNKNOWN;
-    const xteM = conformance?.crossTrackErrorM ?? 0;
-    const corridorM = conformance?.corridorRadiusM ?? 15;
-    const vertErrM = conformance?.verticalErrorM ?? 0;
-    const vertBufM = conformance?.altitudeBufferM ?? 10;
-
-    const depCode = departureHub?.code || departureHub?.name;
-    const arrCode = arrivalHub?.code || arrivalHub?.name;
 
     return (
         <aside
@@ -244,91 +122,18 @@ export const CockpitTelemetryHud = memo(function CockpitTelemetryHud({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-px bg-slate-700/75">
-                        <div className="bg-slate-900/95 p-2.5 flex flex-col justify-between min-h-[70px]">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
-                                {t("altShortLabel")}
-                            </span>
-                            <div>
-                                <div className="font-mono text-base font-bold text-white tabular-nums">
-                                    {altMsl != null ? formatAltitude(Math.round(altMsl)) : "—"}
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-400 tabular-nums truncate">
-                                    {altAgl != null
-                                        ? `AGL ${Math.round(altAgl)}m · ${t("planAlt", { alt: Math.round(flight.cruisingAltitudeM ?? 120) })}`
-                                        : t("planAlt", {
-                                              alt: Math.round(flight.cruisingAltitudeM ?? 120),
-                                          })}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-900/95 p-2.5 flex flex-col justify-between min-h-[70px]">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
-                                {tCtrl("groundSpeed")}
-                            </span>
-                            <div>
-                                <div className="font-mono text-base font-bold text-white tabular-nums">
-                                    {speedKmh != null ? `${speedKmh} km/h` : "—"}
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-400 tabular-nums">
-                                    {speedMs != null ? `${speedMs.toFixed(1)} m/s` : "—"}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-900/95 p-2.5 flex flex-col justify-between min-h-[70px]">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
-                                {t("verticalSpeed")}
-                            </span>
-                            <div>
-                                <div
-                                    className={cn(
-                                        "font-mono text-base font-bold tabular-nums",
-                                        vertSpeed != null && vertSpeed <= -5
-                                            ? "text-red-400"
-                                            : "text-white"
-                                    )}
-                                >
-                                    {vertSpeed != null
-                                        ? `${vertSpeed > 0 ? "+" : ""}${vertSpeed.toFixed(1)} m/s`
-                                        : "—"}
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-400 truncate">
-                                    {telemetry?.flightMode
-                                        ? telemetry.flightMode.replace(/_/g, " ")
-                                        : "—"}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-900/95 p-2.5 flex flex-col justify-between min-h-[70px]">
-                            <div className="flex items-center justify-between gap-1">
-                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
-                                    {t("headingShortLabel")}
-                                </span>
-                                {heading != null && (
-                                    <Compass
-                                        className="w-3.5 h-3.5 text-slate-400 transition-transform duration-300 shrink-0"
-                                        style={{ transform: `rotate(${heading}deg)` }}
-                                        aria-hidden="true"
-                                    />
-                                )}
-                            </div>
-                            <div>
-                                <div className="font-mono text-base font-bold text-white tabular-nums">
-                                    {heading != null
-                                        ? `${String(heading).padStart(3, "0")}° ${getCardinalDirectionLabel(heading)}`
-                                        : "—"}
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-400 tabular-nums truncate">
-                                    {pitch != null || roll != null
-                                        ? `P ${pitch != null ? `${pitch.toFixed(1)}°` : "0°"} · R ${roll != null ? `${roll.toFixed(1)}°` : "0°"}`
-                                        : "P — · R —"}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <CockpitPrimaryInstrumentsGrid
+                        altMsl={altMsl}
+                        altAgl={altAgl}
+                        cruisingAltitudeM={flight.cruisingAltitudeM}
+                        speedKmh={speedKmh}
+                        speedMs={speedMs}
+                        vertSpeed={vertSpeed}
+                        flightMode={telemetry?.flightMode}
+                        heading={heading}
+                        pitch={pitch}
+                        roll={roll}
+                    />
 
                     {legProgress && (
                         <div className="px-3 py-2 space-y-1.5 font-mono text-[10px]">
@@ -366,132 +171,21 @@ export const CockpitTelemetryHud = memo(function CockpitTelemetryHud({
                         </span>
                     </div>
 
-                    <div className="p-2.5 space-y-2">
-                        <div className="flex items-center justify-between gap-2 font-mono text-[11px]">
-                            <span className="font-bold uppercase text-slate-300">
-                                {t("powerPropulsion")}
-                            </span>
-                            {remainingMinutes != null && (
-                                <span className="text-slate-400 tabular-nums">
-                                    ~{remainingMinutes} {t("minRemaining")}
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-4 divide-x divide-slate-700/80 text-center bg-slate-800/70 rounded py-1.5 border border-slate-700/80 font-mono">
-                            <div className="px-1">
-                                <div className="text-[9px] text-slate-400 uppercase">
-                                    {t("soc")}
-                                </div>
-                                <div
-                                    className={cn(
-                                        "text-xs font-bold tabular-nums mt-0.5",
-                                        batteryPct != null && batteryPct < 20
-                                            ? "text-red-400"
-                                            : batteryPct != null && batteryPct <= 35
-                                              ? "text-amber-400"
-                                              : "text-white"
-                                    )}
-                                >
-                                    {batteryPct != null ? `${Math.round(batteryPct)}%` : "—"}
-                                </div>
-                            </div>
-                            <div className="px-1">
-                                <div className="text-[9px] text-slate-400 uppercase">
-                                    {t("voltage")}
-                                </div>
-                                <div className="text-xs font-bold text-white tabular-nums mt-0.5">
-                                    {batteryVoltage != null ? `${batteryVoltage.toFixed(1)}V` : "—"}
-                                </div>
-                            </div>
-                            <div className="px-1">
-                                <div className="text-[9px] text-slate-400 uppercase">
-                                    {t("temp")}
-                                </div>
-                                <div className="text-xs font-bold text-white tabular-nums mt-0.5">
-                                    {batteryTemp != null ? `${batteryTemp.toFixed(0)}°C` : "—"}
-                                </div>
-                            </div>
-                            <div className="px-1">
-                                <div className="text-[9px] text-slate-400 uppercase">
-                                    {t("load")}
-                                </div>
-                                <div className="text-xs font-bold text-white tabular-nums mt-0.5">
-                                    {powerDrawW != null ? `${Math.round(powerDrawW)}W` : "—"}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                                <span>{t("telemetryRate")}</span>
-                                <span className="truncate max-w-[135px] tabular-nums">
-                                    {telemetry?.latitude != null && telemetry?.longitude != null
-                                        ? formatCoordinates({
-                                              latitude: telemetry.latitude,
-                                              longitude: telemetry.longitude,
-                                          })
-                                        : (linkedDevice?.deviceIdentifier ?? t("simulatedLink"))}
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-4 gap-1">
-                                {TELEMETRY_MODES.map((m) => {
-                                    const selected = activeTelemetryMode === m;
-                                    const disabled = !linkedDevice?.id || setRateMutation.isPending;
-                                    return (
-                                        <button
-                                            key={m}
-                                            type="button"
-                                            disabled={disabled}
-                                            onClick={() => setRateMutation.mutate(m)}
-                                            title={!linkedDevice?.id ? t("noDeviceLinked") : m}
-                                            className={cn(
-                                                "h-6 rounded text-[10px] font-mono font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
-                                                selected
-                                                    ? "bg-slate-200 text-slate-900"
-                                                    : "border border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                            )}
-                                        >
-                                            {MODE_HZ_LABELS[m]}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {arrivalHub && (
-                        <div className="px-2.5 py-2 flex items-center justify-between gap-2 font-mono text-[11px]">
-                            <span className="inline-flex items-center gap-1.5 text-slate-300 truncate">
-                                <CloudSun
-                                    className="w-3.5 h-3.5 text-slate-400 shrink-0"
-                                    aria-hidden="true"
-                                />
-                                <span className="truncate">
-                                    {arrivalHub.code || arrivalHub.name}
-                                    {arrivalGoNoGo?.windSpeedMs != null
-                                        ? ` · ${arrivalGoNoGo.windSpeedMs.toFixed(1)}m/s`
-                                        : ""}
-                                </span>
-                            </span>
-                            {arrivalGoNoGo?.verdict ? (
-                                <span
-                                    title={
-                                        arrivalGoNoGo.reasons?.[0]
-                                            ? localizeServerText(arrivalGoNoGo.reasons[0], locale)
-                                            : undefined
-                                    }
-                                >
-                                    <StatusBadge
-                                        status={arrivalGoNoGo.verdict.toLowerCase()}
-                                        tone="dark"
-                                    />
-                                </span>
-                            ) : (
-                                <span className="text-[10px] text-slate-500">METAR —</span>
-                            )}
-                        </div>
-                    )}
+                    <CockpitPowerLinkSection
+                        batteryPct={batteryPct}
+                        batteryVoltage={batteryVoltage}
+                        batteryTemp={batteryTemp}
+                        powerDrawW={powerDrawW}
+                        remainingMinutes={remainingMinutes}
+                        telemetry={telemetry}
+                        linkedDeviceIdentifier={linkedDevice?.deviceIdentifier}
+                        hasLinkedDevice={Boolean(linkedDevice?.id)}
+                        activeTelemetryMode={activeTelemetryMode}
+                        isSettingRate={setRateMutation.isPending}
+                        onSelectRate={(mode) => setRateMutation.mutate(mode)}
+                        arrivalHub={arrivalHub}
+                        arrivalGoNoGo={arrivalGoNoGo}
+                    />
                 </div>
             )}
         </aside>

@@ -1,12 +1,9 @@
-import type { SelectOption } from "@/components/ui";
 import {
+    DEFAULT_WAYPOINT_ACTION,
     STOPOVER_DEFAULT_GROUND_TIME,
     STOPOVER_TYPE,
     WAYPOINT_ACTION_TYPE,
-    WAYPOINT_ACTION_TYPES,
-    WAYPOINT_ACTION_LABELS,
     WAYPOINT_TYPE,
-    DEFAULT_WAYPOINT_ACTION,
     type StopoverType,
     type WaypointActionType,
 } from "@/types";
@@ -78,11 +75,6 @@ export function isHubWaypointItem(waypoint: WaypointItem): boolean {
     );
 }
 
-export const WAYPOINT_ACTION_OPTIONS: SelectOption[] = WAYPOINT_ACTION_TYPES.map((action) => ({
-    value: action,
-    label: WAYPOINT_ACTION_LABELS[action] || action,
-}));
-
 export function parseOptionalNumber(val: string): number | undefined {
     if (!val.trim()) return undefined;
     const num = Number.parseFloat(val);
@@ -93,10 +85,10 @@ const PASSIVE_ACTION_TYPES = new Set<string>([
     WAYPOINT_ACTION_TYPE.FLY_THROUGH,
     WAYPOINT_ACTION_TYPE.TAKEOFF,
     WAYPOINT_ACTION_TYPE.LAND,
-    "recharge",
-    "battery_swap",
-    "relay_handoff",
-    "payload_dropoff",
+    STOPOVER_TYPE.RECHARGE,
+    STOPOVER_TYPE.BATTERY_SWAP,
+    STOPOVER_TYPE.RELAY_HANDOFF,
+    STOPOVER_TYPE.PAYLOAD_DROPOFF,
 ]);
 
 export function parseWaypointActionItems(waypoint: WaypointItem): WaypointActionEntry[] {
@@ -303,5 +295,3 @@ export function serializeHubActionItems(
         actions: nextActions,
     };
 }
-
-export { DEFAULT_WAYPOINT_ACTION };

@@ -1,11 +1,10 @@
-import { apiClient } from "./apiClient";
+import { apiClient, apiClientArray } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type { AlertVm } from "@/types";
 
 export const alertService = {
     getActiveAlerts: async (): Promise<AlertVm[]> => {
-        const res = await apiClient<AlertVm[]>(API_ENDPOINTS.ALERTS.ACTIVE);
-        return Array.isArray(res) ? res : [];
+        return apiClientArray<AlertVm>(API_ENDPOINTS.ALERTS.ACTIVE);
     },
 
     acknowledgeAlert: async (id: string): Promise<AlertVm> => {

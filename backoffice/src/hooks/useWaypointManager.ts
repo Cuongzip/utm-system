@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useMemo } from "react";
 
-export interface BaseWaypointItem {
+interface BaseWaypointItem {
     id?: string;
     tempId?: string;
     sequence?: number;
 }
 
-export interface UseWaypointManagerOptions<T extends BaseWaypointItem> {
+interface UseWaypointManagerOptions<T extends BaseWaypointItem> {
     initialWaypoints?: T[];
     isReadOnly?: boolean;
     onClearErrors?: () => void;

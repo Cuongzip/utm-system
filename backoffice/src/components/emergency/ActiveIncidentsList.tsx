@@ -21,7 +21,7 @@ import {
     type PendingConfirmationVm,
 } from "@/types";
 
-export interface ActiveIncidentsListProps {
+interface ActiveIncidentsListProps {
     incidents: EmergencyIncidentVm[];
     pendingConfirmations?: PendingConfirmationVm[];
     onSelectIncident: (incident: EmergencyIncidentVm) => void;

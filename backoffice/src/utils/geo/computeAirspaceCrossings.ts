@@ -1,6 +1,6 @@
-import type { AirspaceZone } from "@/types";
+import { AIRSPACE_ZONE_TYPE, type AirspaceZone } from "@/types";
 
-export interface RouteDistanceSegment {
+interface RouteDistanceSegment {
     point: {
         latitude: number;
         longitude: number;
@@ -9,7 +9,7 @@ export interface RouteDistanceSegment {
     distance: number;
 }
 
-export interface AirspaceCrossingBand {
+interface AirspaceCrossingBand {
     zoneId: string;
     zoneName: string;
     zoneType: string;
@@ -130,7 +130,7 @@ export function computeAirspaceCrossings(
             zone.altitudeCeiling !== undefined && zone.altitudeCeiling > floorM
                 ? zone.altitudeCeiling
                 : floorM + 150;
-        const zoneType = zone.zoneType ?? "warning";
+        const zoneType = zone.zoneType ?? AIRSPACE_ZONE_TYPE.WARNING;
         const zoneName = (zone.name || zone.code || "Airspace Zone").trim();
 
         let openBand: AirspaceCrossingBand | null = null;
@@ -175,13 +175,13 @@ export function computeAirspaceCrossings(
                     const alt1 = prev.alt + (curr.alt - prev.alt) * t1;
                     const normalizedType = zoneType.toLowerCase();
                     const isPermissiveZone =
-                        normalizedType === "hub_corridor" ||
-                        normalizedType === "hub_zone" ||
-                        normalizedType === "controlled";
+                        normalizedType === AIRSPACE_ZONE_TYPE.HUB_CORRIDOR ||
+                        normalizedType === AIRSPACE_ZONE_TYPE.HUB_ZONE ||
+                        normalizedType === AIRSPACE_ZONE_TYPE.CONTROLLED;
                     const maxSegAlt = Math.max(alt0, alt1);
                     const minSegAlt = Math.min(alt0, alt1);
                     const isMidCorridorBelowFloor =
-                        normalizedType === "hub_corridor" &&
+                        normalizedType === AIRSPACE_ZONE_TYPE.HUB_CORRIDOR &&
                         floorM > 0 &&
                         minSegAlt < floorM &&
                         startD > 120 &&

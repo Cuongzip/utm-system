@@ -13,7 +13,7 @@ import {
     type HubOperationalMetrics,
 } from "@/types";
 
-export interface HubsMapProps {
+interface HubsMapProps {
     hubs: Hub[];
     selectedHubId: string | null;
     hubMetricsMap: Record<string, HubOperationalMetrics>;

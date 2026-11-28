@@ -1,16 +1,17 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import type { AirspaceZone } from "@/types";
 import { getAirspaceZoneColor } from "../mapTokens";
 import { createTacticalLabel } from "../mapLabels";
 import { addCrispBoundaryPolyline, buildClosedRingCartesian } from "../cesiumOutlineUtils";
 
-export type AirspaceLabelFilter = "all" | "hazards" | "none";
+type AirspaceLabelFilter = "all" | "hazards" | "none";
 
-export interface AirspaceLayerProps {
+interface AirspaceLayerProps {
     zones: AirspaceZone[];
     labelMaxDistance?: number;
     labelFilter?: AirspaceLabelFilter;
@@ -23,24 +24,16 @@ function formatCompactZoneName(zone: AirspaceZone): string {
     return raw.length > 22 ? `${raw.slice(0, 20)}…` : raw;
 }
 
+const EMPTY_ZONES: AirspaceZone[] = [];
+
 export const AirspaceLayer = memo(function AirspaceLayer({
-    zones = [],
+    zones = EMPTY_ZONES,
     labelMaxDistance = 11000,
     labelFilter = "hazards",
 }: AirspaceLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
-    const [sceneRevision, setSceneRevision] = useState(0);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

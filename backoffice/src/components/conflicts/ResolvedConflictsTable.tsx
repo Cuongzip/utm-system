@@ -25,7 +25,7 @@ import {
 } from "@/utils";
 import { CONFLICT_SEVERITIES, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
-export interface ResolvedConflictsTableProps {
+interface ResolvedConflictsTableProps {
     conflicts: Conflict[];
     isLoading: boolean;
 }

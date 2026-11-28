@@ -9,7 +9,7 @@ import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
 import type { ForesightPrediction } from "@/types";
 
-export interface ForesightLayerProps {
+interface ForesightLayerProps {
     prediction: ForesightPrediction | null;
     simulatedPrediction: ForesightPrediction | null;
     frameIndex: number;

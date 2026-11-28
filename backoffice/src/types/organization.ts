@@ -12,9 +12,9 @@ export type UpdateOrganizationPayload = zod.infer<typeof updateOrganizationBody>
 export type OrganizationQueryParams = zod.infer<typeof getOrganizationsQueryParams>;
 
 export const ORGANIZATION_TYPES = createOrganizationBody.shape.type.options;
-export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
+type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
-export const ORGANIZATION_TYPE = {
+const ORGANIZATION_TYPE = {
     OPERATOR: "operator",
     PARTNER: "partner",
     REGULATORY: "regulatory",
@@ -25,17 +25,8 @@ export const ORGANIZATION_TYPE = {
 
 export const DEFAULT_ORGANIZATION_TYPE: OrganizationType = ORGANIZATION_TYPE.OPERATOR;
 
-export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> = {
-    operator: "Drone Operator",
-    partner: "Partner",
-    regulatory: "Regulatory Body",
-    service_provider: "Service Provider",
-    authority: "Aviation Authority",
-    enterprise: "Enterprise Client",
-};
-
 export const ORGANIZATION_STATUSES = updateOrganizationBody.shape.status.unwrap().options;
-export type OrganizationStatus = (typeof ORGANIZATION_STATUSES)[number];
+type OrganizationStatus = (typeof ORGANIZATION_STATUSES)[number];
 
 export const ORGANIZATION_STATUS = {
     ACTIVE: "active",

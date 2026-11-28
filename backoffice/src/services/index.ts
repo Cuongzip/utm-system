@@ -1,4 +1,5 @@
 export * from "./apiClient";
+export * from "./authService";
 export * from "./organizationService";
 export * from "./droneService";
 export * from "./flightService";

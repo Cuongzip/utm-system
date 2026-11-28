@@ -1,8 +1,8 @@
-import { apiClient, buildUrl } from "./apiClient";
+import { apiClient, apiClientArray, buildUrl } from "./apiClient";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type { TelemetryRecord } from "@/types";
 
-export interface TelemetryHistoryQueryParams {
+interface TelemetryHistoryQueryParams {
     from?: string;
     to?: string;
 }
@@ -16,12 +16,8 @@ export const telemetryService = {
         flightId: string,
         params?: TelemetryHistoryQueryParams
     ): Promise<TelemetryRecord[]> => {
-        const url = buildUrl(
-            API_ENDPOINTS.TELEMETRY.HISTORY_BY_FLIGHT(flightId),
-            params as Record<string, unknown>
-        );
-        const res = await apiClient<TelemetryRecord[]>(url);
-        return Array.isArray(res) ? res : [];
+        const url = buildUrl(API_ENDPOINTS.TELEMETRY.HISTORY_BY_FLIGHT(flightId), params);
+        return apiClientArray<TelemetryRecord>(url);
     },
 
     getLatestByDroneId: async (droneId: string): Promise<TelemetryRecord> => {

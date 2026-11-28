@@ -15,7 +15,7 @@ import { MissionDetailsTab } from "./MissionDetailsTab";
 import { MissionWaypointsTab } from "./MissionWaypointsTab";
 import { MissionScheduleTab } from "./MissionScheduleTab";
 
-export interface MissionFormSidebarProps {
+interface MissionFormSidebarProps {
     missionId?: string;
     formData: MissionFormPayload;
     onFormChange: <K extends keyof MissionFormPayload>(

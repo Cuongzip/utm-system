@@ -1,6 +1,6 @@
 import { humanizeValidationMessage } from "./humanizeValidationMessage";
 
-export type ValidationResult<T = unknown> =
+type ValidationResult<T = unknown> =
     { success: true; data: T } | { success: false; errors: Record<string, string> };
 
 interface SafeParseIssue {

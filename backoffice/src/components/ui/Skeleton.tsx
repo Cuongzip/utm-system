@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib";
 
-export interface SkeletonProps {
+interface SkeletonProps {
     className?: string;
 }
 

@@ -17,7 +17,7 @@ import {
     type ResolutionStrategy,
 } from "@/types";
 
-export interface ResolveConflictModalProps {
+interface ResolveConflictModalProps {
     isOpen: boolean;
     conflict: Conflict | null;
     onClose: () => void;

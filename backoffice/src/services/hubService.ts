@@ -10,7 +10,7 @@ import type {
 
 export const hubService = {
     getHubs: async (params?: HubQueryParams): Promise<HubListResponse> => {
-        const url = buildUrl(API_ENDPOINTS.HUBS.BASE, params as Record<string, unknown>);
+        const url = buildUrl(API_ENDPOINTS.HUBS.BASE, params);
         const res = await apiClient<HubListResponse | Hub[]>(url);
         return normalizeList<Hub>(res);
     },

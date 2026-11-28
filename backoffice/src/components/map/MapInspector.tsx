@@ -6,13 +6,13 @@ import { X } from "lucide-react";
 import { Tooltip } from "@/components/ui";
 import { cn } from "@/lib";
 
-export interface MapInspectorMetaItem {
+interface MapInspectorMetaItem {
     label: string;
     value: React.ReactNode;
     subValue?: React.ReactNode;
 }
 
-export interface MapInspectorProps {
+interface MapInspectorProps {
     code?: string;
     title?: React.ReactNode;
     badge?: React.ReactNode;

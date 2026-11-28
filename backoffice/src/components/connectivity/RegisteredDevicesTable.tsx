@@ -46,7 +46,7 @@ function isKnownMode(val: string): val is TelemetryMode {
     return (TELEMETRY_MODES as readonly string[]).includes(val);
 }
 
-export interface RegisteredDevicesTableProps {
+interface RegisteredDevicesTableProps {
     devices: DeviceRegistration[];
     modeConfigs?: TelemetryModeConfig[];
     loading: boolean;

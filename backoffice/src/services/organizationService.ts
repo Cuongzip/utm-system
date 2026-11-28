@@ -12,10 +12,7 @@ export const organizationService = {
     getOrganizations: async (
         params?: OrganizationQueryParams
     ): Promise<OrganizationListResponse> => {
-        const endpoint = buildUrl(
-            API_ENDPOINTS.ORGANIZATIONS.BASE,
-            params as Record<string, unknown>
-        );
+        const endpoint = buildUrl(API_ENDPOINTS.ORGANIZATIONS.BASE, params);
         const res = await apiClient<OrganizationListResponse | Organization[]>(endpoint);
         return normalizeList<Organization>(res);
     },

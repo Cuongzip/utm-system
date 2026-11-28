@@ -2,9 +2,9 @@
 
 import { cn } from "@/lib";
 
-export type ChamferSize = "sm" | "md" | "lg";
+type ChamferSize = "sm" | "md" | "lg";
 
-export interface ChamferCardProps {
+interface ChamferCardProps {
     size?: ChamferSize;
     className?: string;
     innerClassName?: string;

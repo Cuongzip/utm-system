@@ -5,7 +5,7 @@ import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import type { Hub } from "@/types";
 import { formatAltitude, formatCoordinates } from "@/utils";
 
-export interface PinnedHubWaypointItemProps {
+interface PinnedHubWaypointItemProps {
     type: "departure" | "arrival";
     hub: Hub;
     sequence: number;

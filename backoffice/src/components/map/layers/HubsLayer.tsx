@@ -1,15 +1,16 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import { HUB_STATUS, type Hub, type HubDraftPreview, type HubStatus } from "@/types";
 import { getHubIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { fitCameraToBounds } from "../cesiumUtils";
 import { buildClosedRingCartesian, generateGeodesicCircleRing } from "../cesiumOutlineUtils";
 
-export interface HubsLayerProps {
+interface HubsLayerProps {
     hubs: Hub[];
     selectedHubId?: string | null;
     autoFitBounds?: boolean;
@@ -49,8 +50,10 @@ function getHubStatusPalette(status: HubStatus | undefined, isSelected: boolean)
     }
 }
 
+const EMPTY_HUBS: Hub[] = [];
+
 export const HubsLayer = memo(function HubsLayer({
-    hubs = [],
+    hubs = EMPTY_HUBS,
     selectedHubId,
     autoFitBounds = true,
     draftPreview = null,
@@ -59,17 +62,7 @@ export const HubsLayer = memo(function HubsLayer({
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
     const hasAutoFittedRef = useRef(false);
-    const [sceneRevision, setSceneRevision] = useState(0);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

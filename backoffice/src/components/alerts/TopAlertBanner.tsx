@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, ChevronLeft, ChevronRight, ChevronUp, Loader2 } from "lucide-react";
 import { ChamferCard, StatusBadge } from "@/components/ui";
-import { useLiveAlerts } from "@/hooks/useLiveAlerts";
+import { useLiveAlerts } from "@/hooks";
 import { cn } from "@/lib";
 import { formatRelativeTime } from "@/utils";
 import { getAlertSeverityStatus, getAlertSeverityTier, IS_COCKPIT_PATH_RE } from "./alertUtils";

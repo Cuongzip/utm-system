@@ -9,9 +9,15 @@ import { useFlightsAll, useDronesAll } from "@/hooks";
 import { parseApiError } from "@/utils";
 import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { createSessionBody } from "@/generated";
-import type { CreateSimulationSessionPayload, SimulationSession } from "@/types";
+import {
+    DRONE_STATUS,
+    FLIGHT_STATUS,
+    SIMULATION_STATUS,
+    type CreateSimulationSessionPayload,
+    type SimulationSession,
+} from "@/types";
 
-export interface AddSimulationModalProps {
+interface AddSimulationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (payload: CreateSimulationSessionPayload) => Promise<void>;
@@ -25,13 +31,17 @@ const DEFAULT_FORM_VALUES: CreateSimulationSessionPayload = {
     startBattery: 100.0,
 };
 
-const SIMULATABLE_FLIGHT_STATUSES = new Set(["authorized", "active"]);
+const SIMULATABLE_FLIGHT_STATUSES = new Set<string>([
+    FLIGHT_STATUS.AUTHORIZED,
+    FLIGHT_STATUS.ACTIVE,
+]);
+const EMPTY_SESSIONS: SimulationSession[] = [];
 
 export function AddSimulationModal({
     isOpen,
     onClose,
     onSubmit,
-    activeSessions = [],
+    activeSessions = EMPTY_SESSIONS,
 }: AddSimulationModalProps) {
     const t = useTranslations("simulation.launchModal");
     const tSim = useTranslations("simulation");
@@ -49,7 +59,11 @@ export function AddSimulationModal({
         () =>
             new Set(
                 activeSessions
-                    .filter((s) => s.status === "running" || s.status === "paused")
+                    .filter(
+                        (s) =>
+                            s.status === SIMULATION_STATUS.RUNNING ||
+                            s.status === SIMULATION_STATUS.PAUSED
+                    )
                     .map((s) => s.flightId)
                     .filter((id): id is string => Boolean(id))
             ),
@@ -60,7 +74,11 @@ export function AddSimulationModal({
         () =>
             new Set(
                 activeSessions
-                    .filter((s) => s.status === "running" || s.status === "paused")
+                    .filter(
+                        (s) =>
+                            s.status === SIMULATION_STATUS.RUNNING ||
+                            s.status === SIMULATION_STATUS.PAUSED
+                    )
                     .map((s) => s.droneId)
                     .filter((id): id is string => Boolean(id))
             ),
@@ -96,9 +114,9 @@ export function AddSimulationModal({
                           `DRN-${flight.droneId.slice(0, 8).toUpperCase()}`
                         : null;
                     const droneStateHint =
-                        flight.status?.toLowerCase() === "authorized" &&
+                        flight.status?.toLowerCase() === FLIGHT_STATUS.AUTHORIZED &&
                         drone?.status &&
-                        !["available", "idle"].includes(drone.status.toLowerCase())
+                        ![DRONE_STATUS.AVAILABLE, "idle"].includes(drone.status.toLowerCase())
                             ? ` [${translateStatusLabel(drone.status, locale) ?? drone.status}]`
                             : "";
                     const droneLabel = droneReg ? `· ${droneReg}${droneStateHint}` : "";

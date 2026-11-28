@@ -10,7 +10,7 @@ import { formatDateTime, formatDistance, formatAltitude, localizeServerText } fr
 import { useEntityCodeMap, useFlightsAll } from "@/hooks";
 import { CONFLICT_STATUS, DEFAULT_CONFLICT_SEVERITY, type Conflict } from "@/types";
 
-export interface ActiveConflictsListProps {
+interface ActiveConflictsListProps {
     conflicts: Conflict[];
     selectedConflictId?: string | null;
     onSelectConflict?: (conflict: Conflict) => void;

@@ -74,13 +74,6 @@ export function connectServiceStomp(service: StompServiceName, token?: string): 
     }
 }
 
-export function disconnectServiceStomp(service: StompServiceName): void {
-    const client = serviceClients.get(service);
-    if (client && client.active) {
-        client.deactivate();
-    }
-}
-
 export function subscribeServiceStomp<T = unknown>(
     service: StompServiceName,
     destination: string,

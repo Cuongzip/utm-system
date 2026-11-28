@@ -5,7 +5,7 @@ import { useCesium } from "@/components/map";
 import { fitCameraToBounds } from "@/components/map/cesiumUtils";
 import type { GeometryMode, GeoPoint } from "../useAirspaceGeometry";
 
-export interface AirspaceCameraControllerProps {
+interface AirspaceCameraControllerProps {
     geometryMode: GeometryMode;
     center: GeoPoint;
     radiusMeters: number;

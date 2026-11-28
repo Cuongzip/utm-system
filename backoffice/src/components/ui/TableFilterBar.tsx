@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { SearchInput } from "./SearchInput";
 import { CustomSelect, type SelectOption } from "./CustomSelect";
 
-export interface TableFilterBarProps {
+interface TableFilterBarProps {
     searchQuery: string;
     onSearchChange: (value: string) => void;
     searchPlaceholder: string;

@@ -1,31 +1,24 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useCesium } from "../CesiumContext";
 import { getCesium } from "../cesiumLoader";
+import { useSceneMorphRevision } from "../useSceneMorphRevision";
 import { getAircraftIconUri } from "../mapIcons";
 import { createTacticalLabel } from "../mapLabels";
 import { addAltitudeDropLine } from "../cesiumOutlineUtils";
 import type { AdsbAircraft } from "@/types";
 
-export interface AdsbLayerProps {
+interface AdsbLayerProps {
     aircraft: AdsbAircraft[];
 }
 
-export const AdsbLayer = memo(function AdsbLayer({ aircraft = [] }: AdsbLayerProps) {
+const EMPTY_AIRCRAFT: AdsbAircraft[] = [];
+
+export const AdsbLayer = memo(function AdsbLayer({ aircraft = EMPTY_AIRCRAFT }: AdsbLayerProps) {
     const { viewer, isLoaded } = useCesium();
     const entityIdsRef = useRef<string[]>([]);
-    const [sceneRevision, setSceneRevision] = useState(0);
-
-    useEffect(() => {
-        if (!viewer || !isLoaded || viewer.isDestroyed()) return;
-        const removeListener = viewer.scene.morphComplete.addEventListener(() => {
-            setSceneRevision((rev) => rev + 1);
-        });
-        return () => {
-            removeListener();
-        };
-    }, [viewer, isLoaded]);
+    const sceneRevision = useSceneMorphRevision(viewer, isLoaded);
 
     useEffect(() => {
         if (!viewer || !isLoaded || viewer.isDestroyed()) return;

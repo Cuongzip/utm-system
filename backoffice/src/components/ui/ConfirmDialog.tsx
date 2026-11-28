@@ -4,9 +4,10 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { ChamferCard, ChamferButton } from "@/components/ui";
+import { ChamferCard } from "./ChamferCard";
+import { ChamferButton } from "./ChamferButton";
 
-export interface ConfirmDialogProps {
+interface ConfirmDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void | Promise<void>;

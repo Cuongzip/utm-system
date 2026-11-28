@@ -1,10 +1,10 @@
 const iconUriCache = new Map<string, string>();
 
 export type DroneIconVariant = "live" | "selected" | "alert" | "replay" | "ghost";
-export type HubIconRole = "default" | "departure" | "arrival" | "stop" | "draft";
-export type ConflictMarkerSeverity = "high" | "medium";
+type HubIconRole = "default" | "departure" | "arrival" | "stop" | "draft";
+type ConflictMarkerSeverity = "high" | "medium";
 
-export interface DroneIconOptions {
+interface DroneIconOptions {
     variant?: DroneIconVariant;
 }
 

@@ -3,9 +3,9 @@
 import React from "react";
 import { cn } from "@/lib";
 
-export type TacticalCalloutTone = "info" | "warning" | "critical" | "success";
+type TacticalCalloutTone = "info" | "warning" | "critical" | "success";
 
-export interface TacticalCalloutProps {
+interface TacticalCalloutProps {
     tone?: TacticalCalloutTone;
     icon?: React.ComponentType<{ className?: string }>;
     title?: React.ReactNode;

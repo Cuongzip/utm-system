@@ -15,7 +15,7 @@ import {
 import { useWaypointManager } from "@/hooks/useWaypointManager";
 import { extractIntermediateWaypoints } from "@/components/waypoints";
 
-export interface UseMissionWaypointsOptions {
+interface UseMissionWaypointsOptions {
     initialWaypoints?: Waypoint[];
     initialAltitude?: number;
     isReadOnly?: boolean;

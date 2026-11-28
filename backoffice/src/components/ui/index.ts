@@ -1,5 +1,4 @@
 export * from "./ChamferCard";
-export * from "./MetricCard";
 export * from "./KpiStrip";
 export * from "./UnderlineTabs";
 export * from "./TacticalCallout";

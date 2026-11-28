@@ -9,7 +9,7 @@ import { WaypointEditor } from "./WaypointEditor/WaypointEditor";
 import { PinnedHubWaypointItem } from "./WaypointList/PinnedHubWaypointItem";
 import { WaypointListItem } from "./WaypointList/WaypointListItem";
 
-export interface WaypointRouteTabProps<T extends WaypointItem> {
+interface WaypointRouteTabProps<T extends WaypointItem> {
     title: string;
     waypoints: T[];
     selectedWaypoint: T | null;

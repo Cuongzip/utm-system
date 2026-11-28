@@ -4,11 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib";
 
-export type ChamferButtonVariant = "dark" | "outline";
-export type ChamferButtonSize = "xs" | "sm" | "md";
-export type ChamferButtonClip = "xs" | "sm";
+type ChamferButtonVariant = "dark" | "outline";
+type ChamferButtonSize = "xs" | "sm" | "md";
+type ChamferButtonClip = "xs" | "sm";
 
-export interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ChamferButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ChamferButtonVariant;
     size?: ChamferButtonSize;
     clip?: ChamferButtonClip;

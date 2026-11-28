@@ -21,12 +21,13 @@ export function isTelemetryFresh(
 export function useLiveTelemetry(flights: Flight[]) {
     const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryRecord>>({});
     const isPollingRef = useRef(false);
-    const { isConnected: isSocketConnected } = useStomp();
 
     const airborneFlights = useMemo(
         () => flights.filter((f) => f.status && ACTIVE_FLIGHT_STATUSES.includes(f.status)),
         [flights]
     );
+    const hasAirborneFlights = airborneFlights.length > 0;
+    const { isConnected: isSocketConnected } = useStomp({ autoConnect: hasAirborneFlights });
 
     const handleIncomingTelemetry = useCallback(
         (record: TelemetryRecord) => {
@@ -50,7 +51,7 @@ export function useLiveTelemetry(flights: Flight[]) {
         [airborneFlights]
     );
 
-    useTelemetryStream(handleIncomingTelemetry);
+    useTelemetryStream(handleIncomingTelemetry, undefined, hasAirborneFlights);
 
     useEffect(() => {
         if (airborneFlights.length === 0) return;
