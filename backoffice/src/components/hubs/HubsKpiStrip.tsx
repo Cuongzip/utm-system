@@ -31,8 +31,6 @@ export function HubsKpiStrip({
 }: HubsKpiStripProps) {
     const t = useTranslations("hubs.kpi");
     const offlineTotal = maintenanceHubs + inactiveHubs;
-    const loadPct = totalCapacity > 0 ? Math.round((activeFlightsTotal / totalCapacity) * 100) : 0;
-    const isHighLoad = loadPct >= 80;
     const offlineFilterTarget = maintenanceHubs > 0 ? "maintenance" : "inactive";
 
     const items: KpiItem[] = [
@@ -54,7 +52,6 @@ export function HubsKpiStrip({
                     ? t("pctOnline", { pct: Math.round((activeHubs / totalHubs) * 100) })
                     : t("standby"),
             icon: CheckCircle2,
-            iconClassName: activeHubs > 0 ? "text-emerald-600" : undefined,
             active: statusFilter === "active",
             onClick: () => onFilterByStatus(statusFilter === "active" ? "all" : "active"),
         },
@@ -64,7 +61,6 @@ export function HubsKpiStrip({
             value: offlineTotal,
             subValue: t("maintOffSub", { maint: maintenanceHubs, off: inactiveHubs }),
             icon: Wrench,
-            iconClassName: maintenanceHubs > 0 ? "text-amber-500" : undefined,
             active: statusFilter === "maintenance" || statusFilter === "inactive",
             onClick: () =>
                 onFilterByStatus(
@@ -79,7 +75,6 @@ export function HubsKpiStrip({
             value: `${activeFlightsTotal}/${totalCapacity}`,
             subValue: t("dronesBased", { count: stationedDronesTotal }),
             icon: Gauge,
-            iconClassName: isHighLoad ? "text-amber-600" : undefined,
         },
     ];
 

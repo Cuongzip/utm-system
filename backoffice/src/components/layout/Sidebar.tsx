@@ -7,11 +7,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
-    Sliders,
+    Radar,
     Radio,
     Compass,
     PlaneTakeoff,
-    Bot,
+    Drone,
     Building2,
     Landmark,
     Shield,
@@ -72,7 +72,7 @@ const NAV_SECTIONS: NavSectionConfig[] = [
         sectionKey: "operations",
         items: [
             { id: "dashboard", href: "/dashboard", icon: LayoutDashboard },
-            { id: "controlCenter", href: "/dashboard/control-center", icon: Sliders },
+            { id: "controlCenter", href: "/dashboard/control-center", icon: Radar },
             { id: "connectivity", href: "/dashboard/connectivity", icon: Radio },
             { id: "simulation", href: "/dashboard/simulation", icon: PlayCircle },
         ],
@@ -88,7 +88,7 @@ const NAV_SECTIONS: NavSectionConfig[] = [
                 icon: Layers,
                 isVisible: (p) => p.canManageFleet,
             },
-            { id: "drones", href: "/dashboard/drones", icon: Bot },
+            { id: "drones", href: "/dashboard/drones", icon: Drone },
             { id: "hubs", href: "/dashboard/hubs", icon: Building2 },
             { id: "organizations", href: "/dashboard/organizations", icon: Landmark },
         ],
@@ -117,7 +117,7 @@ const NAV_SECTIONS: NavSectionConfig[] = [
 ];
 
 function formatNavCount(count: number): string {
-    return count > 99 ? "99+" : String(count).padStart(2, "0");
+    return count > 99 ? "99+" : String(count);
 }
 
 export function Sidebar() {

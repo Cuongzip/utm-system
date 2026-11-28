@@ -200,7 +200,10 @@ html[lang="vi"] .uppercase {
     background-color: var(--color-surface-panel);
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .btn-icon:hover {
@@ -220,7 +223,10 @@ html[lang="vi"] .uppercase {
     background-color: #fff1f2;
     color: var(--color-tech-red);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .btn-icon-danger:hover {

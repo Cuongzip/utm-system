@@ -187,7 +187,7 @@ export function LiveTelemetry({
                                 <div className="text-[10px] font-mono text-slate-400 mt-1">
                                     {telemetry?.speed != null
                                         ? `${telemetry.speed.toFixed(1)} m/s`
-                                        : t("horizontalVector")}
+                                        : "—"}
                                 </div>
                             </div>
                         </div>
@@ -204,7 +204,7 @@ export function LiveTelemetry({
                                 </div>
                                 <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mt-2">
                                     <div
-                                        className={`h-full transition-all duration-300 ${batteryBarClass}`}
+                                        className={`h-full transition-[width] duration-300 ${batteryBarClass}`}
                                         style={{
                                             width: `${Math.min(100, Math.max(0, batteryPercent ?? 0))}%`,
                                         }}
@@ -218,15 +218,13 @@ export function LiveTelemetry({
                                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
                                     {t("heading")}
                                 </span>
-                                <Compass
-                                    className="w-3.5 h-3.5 text-slate-400 transition-transform duration-300"
-                                    style={
-                                        headingDegrees != null
-                                            ? { transform: `rotate(${headingDegrees}deg)` }
-                                            : undefined
-                                    }
-                                    aria-hidden="true"
-                                />
+                                {headingDegrees != null && (
+                                    <Compass
+                                        className="w-3.5 h-3.5 text-slate-400 transition-transform duration-300"
+                                        style={{ transform: `rotate(${headingDegrees}deg)` }}
+                                        aria-hidden="true"
+                                    />
+                                )}
                             </div>
                             <div>
                                 <div className="font-mono text-2xl font-bold text-slate-900 tabular-nums leading-tight">
@@ -237,7 +235,7 @@ export function LiveTelemetry({
                                         ? t("courseDir", {
                                               dir: getCardinalDirection(headingDegrees),
                                           })
-                                        : t("magneticTrack")}
+                                        : "—"}
                                 </div>
                             </div>
                         </div>

@@ -25,7 +25,7 @@ import {
 import { emergencyService } from "@/services/emergencyService";
 import {
     INCIDENT_STATUS,
-    ACTIVE_INCIDENT_STATUSES,
+    CLOSED_INCIDENT_STATUSES,
     OPERATION_MODE,
     DEFAULT_OPERATION_MODE,
     type EmergencyIncidentVm,
@@ -131,7 +131,7 @@ export default function EmergencyResponsePage() {
     };
 
     const activeCount = activeIncidents.filter(
-        (i) => i.status && ACTIVE_INCIDENT_STATUSES.includes(i.status)
+        (i) => !i.status || !CLOSED_INCIDENT_STATUSES.includes(i.status)
     ).length;
     const pendingCount = activeIncidents.filter(
         (i) => i.status === INCIDENT_STATUS.PENDING_CONFIRMATION

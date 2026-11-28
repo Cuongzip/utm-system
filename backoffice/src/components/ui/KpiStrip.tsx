@@ -4,7 +4,6 @@ import React from "react";
 import { cn } from "@/lib";
 import { ChamferCard } from "./ChamferCard";
 import { Skeleton } from "./Skeleton";
-import { StatusBadge, type StatusType } from "./StatusBadge";
 
 export interface KpiItem {
     id: string;
@@ -12,8 +11,6 @@ export interface KpiItem {
     value: string | number;
     subValue?: React.ReactNode;
     icon?: React.ComponentType<{ className?: string }>;
-    iconClassName?: string;
-    statusDot?: StatusType;
     active?: boolean;
     onClick?: () => void;
 }
@@ -58,16 +55,12 @@ export function KpiStrip({ items, loading = false, columns, footerBar, className
                                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-text-secondary)] truncate">
                                     {item.label}
                                 </span>
-                                {item.statusDot ? (
-                                    <StatusBadge status={item.statusDot} label="" showDot />
-                                ) : Icon ? (
+                                {Icon && (
                                     <Icon
-                                        className={cn(
-                                            "w-3.5 h-3.5 shrink-0 text-[var(--color-text-muted)]",
-                                            item.iconClassName
-                                        )}
+                                        className="w-3.5 h-3.5 shrink-0 text-slate-400"
+                                        aria-hidden="true"
                                     />
-                                ) : null}
+                                )}
                             </div>
 
                             {loading ? (

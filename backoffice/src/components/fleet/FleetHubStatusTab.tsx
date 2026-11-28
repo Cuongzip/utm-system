@@ -2,13 +2,19 @@
 
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, Search, X } from "lucide-react";
-import { ChamferCard, EmptyState, Skeleton, StatusBadge } from "@/components/ui";
+import { ArrowRight, Building2, Drone as DroneIcon } from "lucide-react";
+import {
+    ChamferCard,
+    EmptyState,
+    SideDrawer,
+    Skeleton,
+    StatusBadge,
+    type SideDrawerTabItem,
+} from "@/components/ui";
 import { fleetService } from "@/services";
 import { QUERY_KEYS, useHubsAll } from "@/hooks";
-import { HUB_STATUS, type HubFleetStatus } from "@/types";
+import { DRONE_STATUS, HUB_STATUS, type HubFleetStatus } from "@/types";
 
 interface FleetHubStatusTabProps {
     hubStatuses: HubFleetStatus[];
@@ -17,14 +23,24 @@ interface FleetHubStatusTabProps {
 
 function HubAircraftSlideOver({
     hub,
+    hubCode,
     onClose,
 }: {
     hub: HubFleetStatus | null;
+    hubCode?: string;
     onClose: () => void;
 }) {
     const t = useTranslations("fleet.hubStatus");
-    const [searchQuery, setSearchQuery] = useState("");
     const hubId = hub?.hubId ?? "";
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [prevHubId, setPrevHubId] = useState(hubId);
+
+    if (prevHubId !== hubId) {
+        setPrevHubId(hubId);
+        setSearchQuery("");
+        setStatusFilter(null);
+    }
 
     const { data: drones = [], isLoading } = useQuery({
         queryKey: [...QUERY_KEYS.fleetOverview, "hub-drones", hubId],
@@ -35,187 +51,196 @@ function HubAircraftSlideOver({
 
     const filteredDrones = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
-        if (!q) return drones;
-        return drones.filter(
-            (d) =>
+        return drones.filter((d) => {
+            if (statusFilter && (d.status || "").toLowerCase() !== statusFilter) {
+                return false;
+            }
+            if (!q) return true;
+            return (
                 (d.registrationNumber || "").toLowerCase().includes(q) ||
                 (d.manufacturer || "").toLowerCase().includes(q) ||
                 (d.model || "").toLowerCase().includes(q) ||
                 (d.status || "").toLowerCase().includes(q)
-        );
-    }, [drones, searchQuery]);
+            );
+        });
+    }, [drones, searchQuery, statusFilter]);
 
+    const total = hub?.totalDrones ?? 0;
     const available = hub?.availableDrones ?? 0;
     const busy = hub?.busyDrones ?? 0;
     const charging = hub?.chargingDrones ?? 0;
     const maintenance = hub?.maintenanceDrones ?? 0;
+    const isFiltering = Boolean(statusFilter) || searchQuery.trim().length > 0;
+
+    const statusTabs: ReadonlyArray<SideDrawerTabItem> = [
+        {
+            key: DRONE_STATUS.AVAILABLE,
+            label: t("availShort"),
+            count: available,
+            dotClass: "bg-emerald-600",
+            disabled: available === 0 && statusFilter !== DRONE_STATUS.AVAILABLE,
+            muted: available === 0 && statusFilter !== DRONE_STATUS.AVAILABLE,
+        },
+        {
+            key: DRONE_STATUS.IN_FLIGHT,
+            label: t("flightShort"),
+            count: busy,
+            dotClass: "bg-sky-600",
+            disabled: busy === 0 && statusFilter !== DRONE_STATUS.IN_FLIGHT,
+            muted: busy === 0 && statusFilter !== DRONE_STATUS.IN_FLIGHT,
+        },
+        {
+            key: DRONE_STATUS.CHARGING,
+            label: t("chargeShort"),
+            count: charging,
+            dotClass: "bg-indigo-500",
+            disabled: charging === 0 && statusFilter !== DRONE_STATUS.CHARGING,
+            muted: charging === 0 && statusFilter !== DRONE_STATUS.CHARGING,
+        },
+        {
+            key: DRONE_STATUS.MAINTENANCE,
+            label: t("maintShort"),
+            count: maintenance,
+            dotClass: "bg-amber-500",
+            disabled: maintenance === 0 && statusFilter !== DRONE_STATUS.MAINTENANCE,
+            muted: maintenance === 0 && statusFilter !== DRONE_STATUS.MAINTENANCE,
+        },
+    ];
+
+    const clearFilters = () => {
+        setSearchQuery("");
+        setStatusFilter(null);
+    };
 
     return (
-        <DialogPrimitive.Root open={Boolean(hub)} onOpenChange={(open) => !open && onClose()}>
-            <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-[1px]" />
-                <DialogPrimitive.Content
-                    aria-describedby={undefined}
-                    className="fixed inset-y-0 right-0 z-50 w-full max-w-[420px] bg-[var(--color-surface-panel)] border-l border-[var(--color-border-strong)] shadow-2xl flex flex-col focus:outline-none"
-                >
-                    <div className="px-5 py-4 border-b border-[var(--color-border-default)] flex items-start justify-between gap-3 shrink-0">
-                        <div className="min-w-0">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 block">
-                                {t("stationedRoster")}
-                            </span>
-                            <DialogPrimitive.Title className="text-base font-bold text-slate-900 truncate mt-0.5">
-                                {hub?.hubName || t("vertiportHubFallback")}
-                            </DialogPrimitive.Title>
-                        </div>
-                        <DialogPrimitive.Close asChild>
-                            <button
-                                type="button"
-                                aria-label={t("closeDrawerAria")}
-                                className="w-7 h-7 rounded border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] hover:bg-[var(--color-surface-card)] text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                            >
-                                <X className="w-4 h-4" aria-hidden="true" />
-                            </button>
-                        </DialogPrimitive.Close>
-                    </div>
-
-                    <div className="grid grid-cols-4 divide-x divide-[var(--color-border-default)] border-b border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] py-2.5 text-center shrink-0">
-                        <div>
-                            <div className="font-mono text-sm font-bold tabular-nums text-slate-900">
-                                {available}
-                            </div>
-                            <div className="text-[10px] font-mono uppercase text-slate-500">
-                                {t("availShort")}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="font-mono text-sm font-bold tabular-nums text-slate-900">
-                                {busy}
-                            </div>
-                            <div className="text-[10px] font-mono uppercase text-slate-500">
-                                {t("flightShort")}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="font-mono text-sm font-bold tabular-nums text-slate-900">
-                                {charging}
-                            </div>
-                            <div className="text-[10px] font-mono uppercase text-slate-500">
-                                {t("chargeShort")}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="font-mono text-sm font-bold tabular-nums text-slate-900">
-                                {maintenance}
-                            </div>
-                            <div className="text-[10px] font-mono uppercase text-slate-500">
-                                {t("maintShort")}
-                            </div>
-                        </div>
-                    </div>
-
-                    {drones.length > 3 && (
-                        <div className="px-5 py-2.5 border-b border-[var(--color-border-default)] shrink-0">
-                            <div className="relative flex items-center">
-                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={t("filterPlaceholder")}
-                                    aria-label={t("filterAria")}
-                                    className="w-full h-8 pl-8 pr-7 text-xs rounded border border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[var(--color-border-dark)] focus:bg-white"
-                                />
-                                {searchQuery && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSearchQuery("")}
-                                        aria-label={t("clearFilterAria")}
-                                        className="absolute right-2 text-slate-400 hover:text-slate-700 cursor-pointer"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+        <SideDrawer
+            open={Boolean(hub)}
+            onOpenChange={(open) => !open && onClose()}
+            title={hub?.hubName || t("vertiportHubFallback")}
+            subtitle={
+                <>
+                    {hubCode && (
+                        <>
+                            <span className="font-semibold text-slate-600 shrink-0">{hubCode}</span>
+                            <span aria-hidden="true">·</span>
+                        </>
                     )}
-
-                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5">
-                        {isLoading ? (
-                            <div
-                                role="status"
-                                aria-busy="true"
-                                aria-label={t("loadingAria")}
-                                className="divide-y divide-slate-100 py-2"
-                            >
-                                {Array.from({ length: 5 }).map((_, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="py-3 flex items-center justify-between gap-3"
-                                    >
-                                        <div className="space-y-1.5">
-                                            <Skeleton className="h-3.5 w-32" />
-                                            <Skeleton className="h-3 w-24" />
-                                        </div>
-                                        <Skeleton className="h-5 w-20" />
-                                    </div>
-                                ))}
-                                <span className="sr-only">{t("loadingSr")}</span>
-                            </div>
-                        ) : filteredDrones.length === 0 ? (
-                            <EmptyState
-                                compact
-                                title={
-                                    searchQuery ? t("noMatchingAircraft") : t("noStationedAtHub")
-                                }
-                                className="py-10"
-                            />
-                        ) : (
-                            <div className="divide-y divide-[var(--color-border-subtle)]">
-                                {filteredDrones.map((drone, index) => (
-                                    <div
-                                        key={drone.id ?? drone.registrationNumber ?? index}
-                                        className="py-3 flex items-center justify-between gap-3 text-xs"
-                                    >
-                                        <div className="min-w-0">
-                                            <div className="font-mono font-bold text-slate-900 truncate">
-                                                {drone.registrationNumber || t("unnamedDrone")}
-                                            </div>
-                                            <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                                                {[drone.manufacturer, drone.model]
-                                                    .filter(Boolean)
-                                                    .join(" ") || "—"}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2.5 shrink-0">
-                                            {drone.batteryHealthPct != null && (
-                                                <span className="font-mono text-[11px] font-semibold tabular-nums text-slate-600">
-                                                    {Math.round(drone.batteryHealthPct)}%
-                                                </span>
-                                            )}
-                                            <StatusBadge status={drone.status ?? "unknown"} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="px-5 py-3 border-t border-[var(--color-border-default)] bg-[var(--color-surface-subtle)] flex items-center justify-between text-[11px] font-mono text-slate-500 shrink-0">
-                        <span>
+                    <span className="tabular-nums truncate text-slate-500">
+                        {t("dronesAvailableCount", { available, total })}
+                    </span>
+                </>
+            }
+            icon={Building2}
+            closeLabel={t("closeDrawerAria")}
+            tabs={statusTabs}
+            activeTab={statusFilter}
+            onTabChange={(key) => setStatusFilter((prev) => (prev === key ? null : key))}
+            tabsMode="toggle"
+            tabsAriaLabel={t("stationedRoster")}
+            tabIdPrefix="fleet-hub-tab"
+            search={
+                drones.length > 0
+                    ? {
+                          value: searchQuery,
+                          onChange: setSearchQuery,
+                          placeholder: t("filterPlaceholder"),
+                          ariaLabel: t("filterAria"),
+                          clearLabel: t("clearFilterAria"),
+                      }
+                    : undefined
+            }
+            footer={
+                <>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="tabular-nums truncate">
                             {t("showingAircraft", {
                                 shown: filteredDrones.length,
                                 total: drones.length,
                             })}
                         </span>
-                        <span>
-                            {t("padUtilizationPct", {
-                                pct: Math.round(hub?.capacityUtilization ?? 0),
-                            })}
-                        </span>
+                        {isFiltering && (
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="text-slate-700 hover:text-slate-950 font-semibold underline underline-offset-2 cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+                            >
+                                {t("clearFilterAria")}
+                            </button>
+                        )}
                     </div>
-                </DialogPrimitive.Content>
-            </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
+                    <span className="tabular-nums shrink-0">
+                        {t("padUtilizationPct", {
+                            pct: Math.round(hub?.capacityUtilization ?? 0),
+                        })}
+                    </span>
+                </>
+            }
+        >
+            {isLoading ? (
+                <div
+                    role="status"
+                    aria-busy="true"
+                    aria-label={t("loadingAria")}
+                    className="p-3 sm:p-3.5 space-y-2.5"
+                >
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                        <div
+                            key={idx}
+                            className="rounded-md border border-slate-200/95 bg-white px-3.5 py-3 flex items-center justify-between gap-3"
+                        >
+                            <div className="space-y-1.5">
+                                <Skeleton className="h-3.5 w-32" />
+                                <Skeleton className="h-3 w-24" />
+                            </div>
+                            <Skeleton className="h-5 w-20" />
+                        </div>
+                    ))}
+                    <span className="sr-only">{t("loadingSr")}</span>
+                </div>
+            ) : filteredDrones.length === 0 ? (
+                <EmptyState
+                    compact
+                    icon={DroneIcon}
+                    title={isFiltering ? t("noMatchingAircraft") : t("noStationedAtHub")}
+                    action={
+                        isFiltering
+                            ? {
+                                  label: t("clearFilterAria"),
+                                  onClick: clearFilters,
+                              }
+                            : undefined
+                    }
+                    className="py-12 px-5"
+                />
+            ) : (
+                <div className="p-3 sm:p-3.5 space-y-2.5">
+                    {filteredDrones.map((drone, index) => (
+                        <div
+                            key={drone.id ?? drone.registrationNumber ?? index}
+                            className="rounded-md border border-slate-200/95 bg-white px-3.5 py-3 shadow-2xs flex items-center justify-between gap-3 text-xs transition-colors hover:border-slate-300"
+                        >
+                            <div className="min-w-0">
+                                <div className="font-mono font-bold text-slate-900 truncate">
+                                    {drone.registrationNumber || t("unnamedDrone")}
+                                </div>
+                                <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                                    {[drone.manufacturer, drone.model].filter(Boolean).join(" ") ||
+                                        "—"}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2.5 shrink-0">
+                                {drone.batteryHealthPct != null && (
+                                    <span className="font-mono text-[11px] font-semibold tabular-nums text-slate-600">
+                                        {Math.round(drone.batteryHealthPct)}%
+                                    </span>
+                                )}
+                                <StatusBadge status={drone.status ?? "unknown"} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </SideDrawer>
     );
 }
 
@@ -233,6 +258,18 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
         }
         return set;
     }, [allHubs]);
+
+    const hubCodeMap = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const h of allHubs) {
+            if (h.id && h.code) {
+                map.set(h.id, h.code);
+            }
+        }
+        return map;
+    }, [allHubs]);
+
+    const selectedHubCode = selectedHub?.hubId ? hubCodeMap.get(selectedHub.hubId) : undefined;
 
     const visibleStatuses = useMemo(() => {
         const filtered =
@@ -308,9 +345,9 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                             <div className="p-4 flex flex-col gap-3">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                        <h3 className="text-sm font-bold text-slate-900 truncate">
+                                        <h2 className="text-sm font-bold text-slate-900 truncate">
                                             {hub.hubName || t("vertiportHubFallback")}
-                                        </h3>
+                                        </h2>
                                         <p className="text-[11px] font-mono text-slate-500">
                                             {t("dronesAvailableCount", { available, total })}
                                         </p>
@@ -336,7 +373,7 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                     </div>
                                     <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                                         <div
-                                            className={`h-full transition-all ${
+                                            className={`h-full transition-[width] duration-300 ${
                                                 utilizationPct >= 85
                                                     ? "bg-amber-500"
                                                     : "bg-slate-700"
@@ -388,7 +425,10 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
                                         className="pt-2.5 border-t border-slate-200 inline-flex items-center justify-between w-full text-xs font-mono font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded group"
                                     >
                                         <span>{t("viewStationedAircraft", { total })}</span>
-                                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-800 group-hover:translate-x-0.5 transition-all" />
+                                        <ArrowRight
+                                            className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-800 group-hover:translate-x-0.5 transition-[color,transform]"
+                                            aria-hidden="true"
+                                        />
                                     </button>
                                 ) : (
                                     <div className="pt-2.5 border-t border-slate-100 text-xs font-mono text-slate-400">
@@ -404,6 +444,7 @@ export function FleetHubStatusTab({ hubStatuses, loading }: FleetHubStatusTabPro
             <HubAircraftSlideOver
                 key={selectedHub?.hubId ?? "closed"}
                 hub={selectedHub}
+                hubCode={selectedHubCode}
                 onClose={() => setSelectedHub(null)}
             />
         </>

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import {
-    Bot,
+    Drone,
     CheckCircle2,
     PlaneTakeoff,
     BatteryCharging,
@@ -42,7 +42,7 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
             subValue: overview?.activeMissions
                 ? t("activeMissions", { count: overview.activeMissions })
                 : t("fleetWide"),
-            icon: Bot,
+            icon: Drone,
         },
         {
             id: "available",
@@ -50,7 +50,6 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
             value: available,
             subValue: total > 0 ? t("pctReady", { pct: availablePct }) : t("standby"),
             icon: CheckCircle2,
-            iconClassName: "text-emerald-600",
         },
         {
             id: "in-flight",
@@ -65,7 +64,6 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
             value: charging,
             subValue: t("maintOffSub", { maint: maintenance, off: offline }),
             icon: BatteryCharging,
-            iconClassName: charging > 0 ? "text-amber-500" : undefined,
         },
         {
             id: "hubs",
@@ -83,12 +81,6 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
                     ? t("avgHours", { hours: overview.averageFlightHours.toFixed(1) })
                     : t("operational"),
             icon: Activity,
-            iconClassName:
-                healthPct >= 80
-                    ? "text-emerald-600"
-                    : healthPct >= 50
-                      ? "text-amber-500"
-                      : "text-red-600",
         },
     ];
 
@@ -97,22 +89,22 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
             <div className="px-4 py-2 flex flex-col gap-1.5">
                 <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden flex">
                     <div
-                        className="bg-emerald-600 transition-all"
+                        className="bg-emerald-600 transition-[width] duration-300"
                         style={{ width: `${availablePct}%` }}
                         title={t("barAvailableTooltip", { pct: availablePct })}
                     />
                     <div
-                        className="bg-slate-800 transition-all"
+                        className="bg-sky-600 transition-[width] duration-300"
                         style={{ width: `${busyPct}%` }}
                         title={t("barInFlightTooltip", { pct: busyPct })}
                     />
                     <div
-                        className="bg-amber-500 transition-all"
+                        className="bg-indigo-500 transition-[width] duration-300"
                         style={{ width: `${chargingPct}%` }}
                         title={t("barChargingTooltip", { pct: chargingPct })}
                     />
                     <div
-                        className="bg-slate-300 transition-all"
+                        className="bg-amber-500 transition-[width] duration-300"
                         style={{ width: `${otherPct}%` }}
                         title={t("barMaintTooltip", { pct: otherPct })}
                     />
@@ -123,15 +115,15 @@ export function FleetKpiStrip({ overview, loading }: FleetKpiStripProps) {
                         {t("barAvailableLegend", { pct: availablePct })}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-xs bg-slate-800" />
+                        <span className="w-2 h-2 rounded-xs bg-sky-600" />
                         {t("barInFlightLegend", { pct: busyPct })}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-xs bg-amber-500" />
+                        <span className="w-2 h-2 rounded-xs bg-indigo-500" />
                         {t("barChargingLegend", { pct: chargingPct })}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-xs bg-slate-300" />
+                        <span className="w-2 h-2 rounded-xs bg-amber-500" />
                         {t("barMaintLegend", { pct: otherPct })}
                     </span>
                 </div>

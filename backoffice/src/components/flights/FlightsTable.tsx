@@ -282,7 +282,7 @@ export function FlightsTable({
                                         <TableCell
                                             muted
                                             truncate
-                                            className="max-w-[165px]"
+                                            className="max-w-[205px]"
                                             tooltip={depName}
                                         >
                                             {depName}
@@ -290,7 +290,7 @@ export function FlightsTable({
                                         <TableCell
                                             muted
                                             truncate
-                                            className="max-w-[165px]"
+                                            className="max-w-[205px]"
                                             tooltip={arrName}
                                         >
                                             {arrName}

@@ -17,20 +17,20 @@ export function MapUndoClear({ onUndo, onClear, disabled }: MapUndoClearProps) {
                 type="button"
                 onClick={onUndo}
                 disabled={disabled}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 title={t("undoTitle")}
             >
-                <Undo2 className="w-3.5 h-3.5" />
+                <Undo2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t("undo")}</span>
             </button>
             <button
                 type="button"
                 onClick={onClear}
                 disabled={disabled}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded text-red-600 hover:bg-red-50 disabled:text-slate-400 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 title={t("clearTitle")}
             >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t("clear")}</span>
             </button>
         </div>

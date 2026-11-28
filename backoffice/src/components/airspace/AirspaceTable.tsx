@@ -25,9 +25,23 @@ import { translateStatusLabel, type AppLocale } from "@/i18n";
 import { formatNullable, formatHubName } from "@/utils";
 import {
     type AirspaceZone,
+    type AirspaceZoneType,
+    AIRSPACE_ZONE_TYPE,
     DEFAULT_AIRSPACE_ZONE_STATUS,
     DEFAULT_AIRSPACE_ZONE_TYPE,
 } from "@/types";
+
+const DANGER_ZONE_TYPES = new Set<AirspaceZoneType>([
+    AIRSPACE_ZONE_TYPE.NO_FLY_ZONE,
+    AIRSPACE_ZONE_TYPE.PROHIBITED,
+    AIRSPACE_ZONE_TYPE.EMERGENCY_EXCLUSION,
+]);
+
+const CAUTION_ZONE_TYPES = new Set<AirspaceZoneType>([
+    AIRSPACE_ZONE_TYPE.RESTRICTED,
+    AIRSPACE_ZONE_TYPE.TEMPORARY_RESTRICTION,
+    AIRSPACE_ZONE_TYPE.WARNING,
+]);
 
 interface AirspaceTableProps {
     zones: AirspaceZone[];
@@ -59,12 +73,26 @@ export function AirspaceTable({
     const { currentPage, totalPages, totalItems, paginatedItems, setCurrentPage } =
         usePagination(zones);
 
-    const resolveZoneTypeBadge = (zoneType?: string | null) => {
+    const resolveZoneTypeLabel = (zoneType?: AirspaceZoneType | null) => {
         const effective = zoneType ?? DEFAULT_AIRSPACE_ZONE_TYPE;
-        if (translateStatusLabel(effective, locale)) return undefined;
-        if (effective === "hub_zone") return t("zoneTypeBadges.hub_zone");
-        if (effective === "temporary_restriction") return t("zoneTypeBadges.temporary_restriction");
-        return undefined;
+        const translated = translateStatusLabel(effective, locale);
+        if (translated) return translated;
+        if (effective === AIRSPACE_ZONE_TYPE.HUB_ZONE) return t("zoneTypeBadges.hub_zone");
+        if (effective === AIRSPACE_ZONE_TYPE.TEMPORARY_RESTRICTION) {
+            return t("zoneTypeBadges.temporary_restriction");
+        }
+        return effective.replace(/_/g, " ").toUpperCase();
+    };
+
+    const getZoneTypeTagClass = (zoneType?: AirspaceZoneType | null) => {
+        const effective = zoneType ?? DEFAULT_AIRSPACE_ZONE_TYPE;
+        if (DANGER_ZONE_TYPES.has(effective)) {
+            return "bg-red-50 border-red-200/90 text-red-700";
+        }
+        if (CAUTION_ZONE_TYPES.has(effective)) {
+            return "bg-amber-50 border-amber-200/90 text-amber-800";
+        }
+        return "bg-slate-100 border-slate-200 text-slate-700";
     };
 
     const getActions = (zone: AirspaceZone): ActionMenuItem[] => {
@@ -156,7 +184,7 @@ export function AirspaceTable({
                                         <TableCell
                                             truncate
                                             bold
-                                            className="max-w-[220px]"
+                                            className="max-w-[260px]"
                                             tooltip={zoneName}
                                         >
                                             <span className="font-semibold text-slate-900">
@@ -164,11 +192,11 @@ export function AirspaceTable({
                                             </span>
                                         </TableCell>
                                         <TableCell>
-                                            <StatusBadge
-                                                status={zone.zoneType ?? DEFAULT_AIRSPACE_ZONE_TYPE}
-                                                label={resolveZoneTypeBadge(zone.zoneType)}
-                                                showDot={true}
-                                            />
+                                            <span
+                                                className={`inline-flex items-center px-2 py-0.5 rounded border font-mono text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${getZoneTypeTagClass(zone.zoneType)}`}
+                                            >
+                                                {resolveZoneTypeLabel(zone.zoneType)}
+                                            </span>
                                         </TableCell>
                                         <TableCell
                                             truncate

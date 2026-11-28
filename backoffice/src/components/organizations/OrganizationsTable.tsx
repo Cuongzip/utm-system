@@ -121,6 +121,12 @@ export function OrganizationsTable({
                                 const regText = formatNullable(org.registrationNumber);
                                 const typeLabel = org.type ? tOrg(`types.${org.type}`) : "—";
                                 const contactText = formatNullable(org.contactInfo);
+                                const contactParts = org.contactInfo
+                                    ? org.contactInfo
+                                          .split("|")
+                                          .map((part) => part.trim())
+                                          .filter(Boolean)
+                                    : [];
                                 const currentStatus = org.status ?? DEFAULT_ORGANIZATION_STATUS;
 
                                 return (
@@ -133,9 +139,7 @@ export function OrganizationsTable({
                                         <TableCell
                                             mono
                                             bold
-                                            truncate
-                                            className="max-w-[140px]"
-                                            tooltip={regText}
+                                            className="min-w-[140px] whitespace-nowrap"
                                         >
                                             {regText}
                                         </TableCell>
@@ -143,7 +147,7 @@ export function OrganizationsTable({
                                             darkText
                                             bold
                                             truncate
-                                            className="max-w-[200px]"
+                                            className="max-w-[215px]"
                                             tooltip={org.name}
                                         >
                                             {org.name}
@@ -163,12 +167,24 @@ export function OrganizationsTable({
                                             />
                                         </TableCell>
                                         <TableCell
-                                            muted
                                             truncate
                                             tooltip={contactText}
-                                            className="max-w-[210px]"
+                                            className="max-w-[195px]"
                                         >
-                                            {contactText}
+                                            {contactParts.length > 1 ? (
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-xs font-medium text-slate-700 truncate">
+                                                        {contactParts[0]}
+                                                    </span>
+                                                    <span className="text-[11px] font-mono text-slate-400 truncate">
+                                                        {contactParts.slice(1).join(" · ")}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[var(--color-text-secondary)] font-medium truncate block">
+                                                    {contactText}
+                                                </span>
+                                            )}
                                         </TableCell>
                                         <TableCell mono muted className="whitespace-nowrap">
                                             {formatDate(org.createdOn)}

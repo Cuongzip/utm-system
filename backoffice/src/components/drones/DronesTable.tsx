@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bot, Edit, PowerOff } from "lucide-react";
+import { Drone as DroneIcon, Edit, PowerOff } from "lucide-react";
 import {
     ChamferCard,
     ChamferButton,
@@ -103,7 +103,7 @@ export function DronesTable({
                             <TableRow>
                                 <TableCell colSpan={colSpan} className="py-10 text-center">
                                     <EmptyState
-                                        icon={Bot}
+                                        icon={DroneIcon}
                                         title={
                                             hasFilters ? t("emptyFilteredTitle") : t("emptyTitle")
                                         }
@@ -195,7 +195,7 @@ export function DronesTable({
                                         <TableCell
                                             darkText
                                             truncate
-                                            className="max-w-[130px]"
+                                            className="max-w-[110px]"
                                             tooltip={mfgText}
                                         >
                                             {mfgText}
@@ -203,7 +203,7 @@ export function DronesTable({
                                         <TableCell
                                             muted
                                             truncate
-                                            className="max-w-[150px]"
+                                            className="max-w-[215px]"
                                             tooltip={modelText}
                                         >
                                             {modelText}

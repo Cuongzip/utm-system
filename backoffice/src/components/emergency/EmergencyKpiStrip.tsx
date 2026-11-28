@@ -27,8 +27,6 @@ export function EmergencyKpiStrip({
             value: activeCount,
             subValue: activeCount > 0 ? t("actionRequired") : t("allClear"),
             icon: AlertTriangle,
-            iconClassName: activeCount > 0 ? "text-red-600" : undefined,
-            statusDot: activeCount > 0 ? "critical" : undefined,
         },
         {
             id: "pending-confirmation",
@@ -36,7 +34,6 @@ export function EmergencyKpiStrip({
             value: pendingCount,
             subValue: pendingCount > 0 ? t("awaitingOperator") : t("none"),
             icon: Clock,
-            iconClassName: pendingCount > 0 ? "text-amber-600" : undefined,
         },
         {
             id: "resolved",

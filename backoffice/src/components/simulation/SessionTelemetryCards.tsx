@@ -20,14 +20,6 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
     const heading = session.currentHeading ?? 0;
     const progress = Math.min(100, Math.max(0, session.progress ?? 0));
 
-    const batteryColor = isC2Lost
-        ? "text-amber-500"
-        : battery > 50
-          ? "text-emerald-600"
-          : battery > 20
-            ? "text-amber-500"
-            : "text-red-600";
-
     const batterySubValue = isC2Lost
         ? t("linkLost")
         : battery > 50
@@ -47,7 +39,6 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
                     value: `${battery.toFixed(1)}%`,
                     subValue: batterySubValue,
                     icon: BatteryCharging,
-                    iconClassName: batteryColor,
                 },
                 {
                     id: "speed",
@@ -74,7 +65,7 @@ export function SessionTelemetryCards({ session }: SessionTelemetryCardsProps) {
             footerBar={
                 <div className="h-1.5 w-full bg-slate-200 overflow-hidden">
                     <div
-                        className="h-full bg-slate-800 transition-all duration-300"
+                        className="h-full bg-slate-800 transition-[width] duration-300"
                         style={{ width: `${progress}%` }}
                     />
                 </div>

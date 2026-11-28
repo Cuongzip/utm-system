@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertOctagon, AlertTriangle, Check, Clock, ShieldAlert, X } from "lucide-react";
+import { AlertOctagon, AlertTriangle, Check, Clock, ShieldAlert } from "lucide-react";
 import { Modal, ChamferButton, StatusBadge, TacticalCallout } from "@/components/ui";
 import { useAppLocale } from "@/i18n";
 import { useDronesAll, useEntityCodeMap, useFlightsAll } from "@/hooks";
-import { localizeResponseAction, localizeServerText } from "@/utils";
+import { formatDuration, localizeResponseAction, localizeServerText } from "@/utils";
 import {
     EMERGENCY_SEVERITY,
     EMERGENCY_TYPES,
@@ -135,7 +135,6 @@ export function EmergencyConfirmationModal({
                     disabled={submitting}
                     onClick={() => onConfirmAction(current.incidentId, false)}
                 >
-                    <X className="w-3.5 h-3.5" />
                     <span>{t("activeList.reject")}</span>
                 </ChamferButton>
                 <ChamferButton
@@ -146,7 +145,7 @@ export function EmergencyConfirmationModal({
                     disabled={submitting}
                     onClick={() => onConfirmAction(current.incidentId, true)}
                 >
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>{t("activeList.confirmAction")}</span>
                 </ChamferButton>
             </div>
@@ -171,7 +170,7 @@ export function EmergencyConfirmationModal({
                             : typeLabel
                     }
                     description={t("modals.confirm.supervisedDesc")}
-                    rightSlot={<StatusBadge status={severity} dotShape="circle" />}
+                    rightSlot={<StatusBadge status={severity} />}
                 />
 
                 <dl className="grid grid-cols-2 gap-px bg-[var(--color-border-default)] border border-[var(--color-border-default)] rounded-md overflow-hidden text-xs font-mono">
@@ -203,7 +202,7 @@ export function EmergencyConfirmationModal({
                         <dt className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
                             {t("modals.confirm.protocol")}
                         </dt>
-                        <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 truncate">
+                        <dd className="font-semibold text-[var(--color-text-primary)] mt-0.5 break-words leading-snug">
                             {protocol?.name
                                 ? localizeServerText(protocol.name, locale, { entityMap })
                                 : t("modals.confirm.standardFailsafe")}
@@ -230,6 +229,7 @@ export function EmergencyConfirmationModal({
                         <span className="inline-flex items-center gap-1.5 text-slate-600">
                             <Clock
                                 className={`w-3.5 h-3.5 ${isUrgent ? "text-red-600" : "text-amber-600"}`}
+                                aria-hidden="true"
                             />
                             <span>
                                 {protocol?.autoExecuteOnTimeout === false
@@ -242,12 +242,12 @@ export function EmergencyConfirmationModal({
                                 isUrgent ? "text-red-600" : "text-amber-700"
                             }`}
                         >
-                            {remainingSec}s
+                            {formatDuration(remainingSec)}
                         </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
                         <div
-                            className={`h-full transition-all duration-500 rounded-full ${
+                            className={`h-full transition-[width] duration-500 rounded-full ${
                                 isUrgent ? "bg-red-600" : "bg-amber-500"
                             }`}
                             style={{ width: `${progressPct}%` }}

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Filter, RefreshCw, ShieldCheck, ChevronRight, X } from "lucide-react";
+import { RefreshCw, ShieldCheck, ChevronRight, X } from "lucide-react";
 import {
     PageHeader,
     ChamferCard,
@@ -167,69 +167,69 @@ export default function EmergencyIncidentsPage() {
 
             <EmergencyNavTabs />
 
-            <ChamferCard size="md" className="w-full">
-                <div className="p-3.5 flex flex-wrap items-center gap-2.5">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-600 mr-1">
-                        <Filter className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{t("incidentsPage.filters")}</span>
-                    </div>
-
-                    <div className="w-full sm:w-44">
-                        <CustomSelect
-                            id="filter-incident-status"
-                            ariaLabel={t("incidentsPage.filterStatusAria")}
-                            value={statusFilter}
-                            onValueChange={(v) => {
-                                setStatusFilter(v);
-                                setPage(1);
-                            }}
-                            options={statusOptions}
-                            placeholder={tCommon("status")}
-                        />
-                    </div>
-
-                    <div className="w-full sm:w-40">
-                        <CustomSelect
-                            id="filter-incident-severity"
-                            ariaLabel={t("incidentsPage.filterSeverityAria")}
-                            value={severityFilter}
-                            onValueChange={(v) => {
-                                setSeverityFilter(v);
-                                setPage(1);
-                            }}
-                            options={severityOptions}
-                            placeholder={t("incidentsPage.severityPlaceholder")}
-                        />
-                    </div>
-
-                    <div className="w-full sm:w-52">
-                        <CustomSelect
-                            id="filter-incident-type"
-                            ariaLabel={t("incidentsPage.filterTypeAria")}
-                            value={typeFilter}
-                            onValueChange={(v) => {
-                                setTypeFilter(v);
-                                setPage(1);
-                            }}
-                            options={typeOptions}
-                            placeholder={t("incidentsPage.typePlaceholder")}
-                        />
-                    </div>
-
-                    {hasActiveFilters && (
-                        <ChamferButton variant="outline" size="xs" onClick={handleResetFilters}>
-                            <X className="w-3.5 h-3.5" />
-                            <span>{tCommon("clear")}</span>
-                        </ChamferButton>
-                    )}
-
-                    <div className="sm:ml-auto text-xs font-mono text-slate-500 tabular-nums">
-                        {totalItems === 1
-                            ? t("incidentsPage.countSingle")
-                            : t("incidentsPage.countPlural", { count: totalItems })}
-                    </div>
+            <div className="flex flex-wrap items-center gap-2.5 w-full">
+                <div className="w-full sm:w-44">
+                    <CustomSelect
+                        id="filter-incident-status"
+                        ariaLabel={t("incidentsPage.filterStatusAria")}
+                        value={statusFilter}
+                        onValueChange={(v) => {
+                            setStatusFilter(v);
+                            setPage(1);
+                        }}
+                        options={statusOptions}
+                        placeholder={tCommon("status")}
+                        className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
+                    />
                 </div>
-            </ChamferCard>
+
+                <div className="w-full sm:w-40">
+                    <CustomSelect
+                        id="filter-incident-severity"
+                        ariaLabel={t("incidentsPage.filterSeverityAria")}
+                        value={severityFilter}
+                        onValueChange={(v) => {
+                            setSeverityFilter(v);
+                            setPage(1);
+                        }}
+                        options={severityOptions}
+                        placeholder={t("incidentsPage.severityPlaceholder")}
+                        className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
+                    />
+                </div>
+
+                <div className="w-full sm:w-52">
+                    <CustomSelect
+                        id="filter-incident-type"
+                        ariaLabel={t("incidentsPage.filterTypeAria")}
+                        value={typeFilter}
+                        onValueChange={(v) => {
+                            setTypeFilter(v);
+                            setPage(1);
+                        }}
+                        options={typeOptions}
+                        placeholder={t("incidentsPage.typePlaceholder")}
+                        className="h-[34px] text-xs font-medium border-[var(--color-border-strong)] bg-[var(--color-surface-panel)] rounded-md"
+                    />
+                </div>
+
+                {hasActiveFilters && (
+                    <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="inline-flex items-center gap-1 h-[34px] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-surface-panel)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-surface-subtle)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    >
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>{tCommon("clear")}</span>
+                    </button>
+                )}
+
+                <div className="sm:ml-auto text-xs font-mono text-slate-500 tabular-nums">
+                    {totalItems === 1
+                        ? t("incidentsPage.countSingle")
+                        : t("incidentsPage.countPlural", { count: totalItems })}
+                </div>
+            </div>
 
             <ChamferCard size="lg" className="w-full">
                 {isError && incidents.length === 0 ? (
@@ -291,7 +291,9 @@ export default function EmergencyIncidentsPage() {
                                     <TableHead className="px-3">
                                         {t("incidentsPage.colDetected")}
                                     </TableHead>
-                                    <TableHead className="px-3 text-right"> </TableHead>
+                                    <TableHead className="px-3" align="right">
+                                        {tCommon("actions")}
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>

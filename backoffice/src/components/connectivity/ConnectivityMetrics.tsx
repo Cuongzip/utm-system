@@ -36,7 +36,6 @@ export function ConnectivityMetrics({
             value: onlineDevices,
             subValue: totalDevices > 0 ? t("pctConnected", { pct: onlinePct }) : t("standby"),
             icon: Wifi,
-            statusDot: onlineDevices > 0 ? "online" : undefined,
         },
         {
             id: "mtls-certs",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Plane, Building2, Bot, AlertTriangle } from "lucide-react";
+import { Plane, Building2, Drone, AlertTriangle } from "lucide-react";
 import { KpiStrip, type KpiItem } from "@/components/ui";
 
 export interface DashboardKpiStripProps {
@@ -50,7 +50,7 @@ export function DashboardKpiStrip({
             label: t("registeredFleet"),
             value: fleetCount,
             subValue: t("uavUnits"),
-            icon: Bot,
+            icon: Drone,
         },
         {
             id: "conflicts",
@@ -58,8 +58,6 @@ export function DashboardKpiStrip({
             value: conflictsCount,
             subValue: conflictsCount > 0 ? t("actionRequired") : t("clear"),
             icon: AlertTriangle,
-            iconClassName: conflictsCount > 0 ? "text-red-600" : undefined,
-            statusDot: conflictsCount > 0 ? "critical" : undefined,
         },
     ];
 

@@ -226,10 +226,10 @@ export function FlightControl({
                                     }
                                     onClick={() => handleTriggerCommand(action)}
                                     className={cn(
-                                        "h-[62px] px-1 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400",
+                                        "h-[62px] px-1 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400",
                                         isCommandActive
                                             ? "bg-slate-900 text-white hover:bg-slate-800"
-                                            : "bg-[var(--color-surface-panel)] hover:bg-slate-100 active:bg-slate-200/70 text-slate-800 disabled:hover:bg-[var(--color-surface-panel)]"
+                                            : "bg-[var(--color-surface-panel)] hover:bg-slate-100 active:bg-slate-200/70 text-slate-900 disabled:hover:bg-slate-50"
                                     )}
                                 >
                                     {isDispatching || isCommandActive ? (
@@ -238,9 +238,16 @@ export function FlightControl({
                                                 "h-4 w-4 animate-spin",
                                                 isCommandActive ? "text-white" : "text-slate-600"
                                             )}
+                                            aria-hidden="true"
                                         />
                                     ) : (
-                                        <Icon className="h-4 w-4 text-slate-600" />
+                                        <Icon
+                                            className={cn(
+                                                "h-4 w-4",
+                                                isDisabled ? "text-slate-400" : "text-slate-700"
+                                            )}
+                                            aria-hidden="true"
+                                        />
                                     )}
                                     <span className="text-[11px] font-bold font-mono tracking-wide leading-tight truncate max-w-full">
                                         {action.label}
@@ -257,9 +264,9 @@ export function FlightControl({
                         className="chamfer-sm w-full h-9 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 text-xs font-bold font-mono tracking-wider transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                     >
                         {isEstopExecuting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                         ) : (
-                            <OctagonAlert className="h-4 w-4" />
+                            <OctagonAlert className="h-4 w-4" aria-hidden="true" />
                         )}
                         <span>{emergencyStopConfig.label}</span>
                     </button>

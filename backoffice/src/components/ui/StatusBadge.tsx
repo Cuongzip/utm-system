@@ -108,13 +108,13 @@ const DOT_COLOR_MAP: Record<string, string> = {
     pending_confirmation: "bg-amber-500 animate-pulse",
 
     connecting: "bg-amber-500",
-    charging: "bg-amber-500",
+    charging: "bg-indigo-500",
     maintenance: "bg-amber-500",
     syncing: "bg-amber-500",
 
-    in_flight: "bg-emerald-600 animate-pulse",
-    "in flight": "bg-emerald-600 animate-pulse",
-    airborne: "bg-emerald-600 animate-pulse",
+    in_flight: "bg-sky-600 animate-pulse",
+    "in flight": "bg-sky-600 animate-pulse",
+    airborne: "bg-sky-600 animate-pulse",
     executing: "bg-emerald-600 animate-pulse",
     in_progress: "bg-emerald-600 animate-pulse",
 
@@ -122,7 +122,8 @@ const DOT_COLOR_MAP: Record<string, string> = {
     planned: "bg-slate-500",
     pending: "bg-slate-400",
     standby: "bg-slate-500",
-    authorized: "bg-slate-500",
+    authorized: "bg-sky-600",
+    ready: "bg-sky-600",
     corridor_transit: "bg-slate-500",
     acknowledged: "bg-slate-500",
     hub_corridor: "bg-slate-600",

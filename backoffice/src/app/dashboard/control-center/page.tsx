@@ -168,7 +168,7 @@ function ControlCenterContent() {
                                         aria-pressed={filterAirspace}
                                         onClick={() => setFilterAirspace((prev) => !prev)}
                                         className={cn(
-                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                             filterAirspace
                                                 ? "bg-slate-800 text-white shadow-2xs"
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
@@ -181,7 +181,7 @@ function ControlCenterContent() {
                                         aria-pressed={filterHubs}
                                         onClick={() => setFilterHubs((prev) => !prev)}
                                         className={cn(
-                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                             filterHubs
                                                 ? "bg-slate-800 text-white shadow-2xs"
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
@@ -194,7 +194,7 @@ function ControlCenterContent() {
                                         aria-pressed={filterAdsb}
                                         onClick={() => setFilterAdsb((prev) => !prev)}
                                         className={cn(
-                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                                            "px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                             filterAdsb
                                                 ? "bg-slate-800 text-white shadow-2xs"
                                                 : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"

@@ -126,14 +126,14 @@ export function FlightMapEditor({
                                 aria-pressed={mode === "select"}
                                 onClick={() => setMode("select")}
                                 className={cn(
-                                    "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
+                                    "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                     mode === "select"
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
                                 title={t("selectTooltip")}
                             >
-                                <MousePointer className="w-3.5 h-3.5" />
+                                <MousePointer className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{t("select")}</span>
                             </button>
 
@@ -142,14 +142,14 @@ export function FlightMapEditor({
                                 aria-pressed={mode === "add"}
                                 onClick={() => setMode("add")}
                                 className={cn(
-                                    "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer",
+                                    "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                     mode === "add"
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
                                 title={t("addPointTooltip")}
                             >
-                                <Plus className="w-3.5 h-3.5" />
+                                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{t("addPoint")}</span>
                             </button>
                         </div>
@@ -176,7 +176,7 @@ export function FlightMapEditor({
                                         value={altDraft ?? String(cruisingAltitude)}
                                         onChange={(e) => handleAltChange(e.target.value)}
                                         onBlur={() => setAltDraft(null)}
-                                        className="w-14 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
+                                        className="w-14 h-6 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:border-[var(--color-border-dark)] focus-visible:ring-2 focus-visible:ring-slate-300"
                                     />
                                     <span className="font-mono text-slate-400 text-[11px]">m</span>
                                 </div>

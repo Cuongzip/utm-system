@@ -2,6 +2,7 @@ export * from "./toValidDate";
 export * from "./formatDate";
 export * from "./formatDateTime";
 export * from "./formatTime";
+export * from "./formatDuration";
 export * from "./formatRelativeTime";
 export * from "./formatSpeed";
 export * from "./formatDistance";

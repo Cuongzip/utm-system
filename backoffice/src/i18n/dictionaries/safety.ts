@@ -61,9 +61,9 @@ export const enSafety = {
             hubLabel: "Associated Vertiport Hub",
             floorLabel: "Floor (m)",
             ceilingLabel: "Ceiling (m)",
-            startLabel: "Effective Start (Optional)",
+            startLabel: "Effective Start",
             startPlaceholder: "Select start date & time...",
-            endLabel: "Effective End (Optional)",
+            endLabel: "Effective End",
             endPlaceholder: "Select end date & time...",
             descLabel: "Description / Operational Notes",
             descPlaceholder:
@@ -623,9 +623,10 @@ export const enSafety = {
                 "Incident frequency increased {pct}% compared to earlier in this period.",
             insightDecreased:
                 "Incident frequency decreased {pct}% compared to earlier in this period.",
-            insightTopType: "Most frequent incident category: {category} ({count} incidents).",
+            insightTopType:
+                "Most frequent incident category: {category} ({count, plural, one {# incident} other {# incidents}}).",
             insightTopDrone:
-                "Aircraft {label} logged {count} incidents in this window — inspect maintenance status.",
+                "Aircraft {label} logged {count, plural, one {# incident} other {# incidents}} in this window — inspect maintenance status.",
             insightHighLatency:
                 "Average response latency is {sec}s — review Autonomous Failsafe thresholds.",
             insightGoodLatency:
@@ -651,7 +652,7 @@ export const enSafety = {
             topUnits: "Top {count} units",
             noAircraftTitle: "No Aircraft Breakdown",
             noAircraftDesc: "No aircraft-specific incidents recorded for the selected period.",
-            incidentsUnit: "incidents",
+            incidentsUnit: "{count, plural, one {incident} other {incidents}}",
         },
     },
     map: {
@@ -690,8 +691,8 @@ export const enSafety = {
         toggleZonesTitle: "Toggle background airspace sectors",
         altitudeProfile: "ALTITUDE PROFILE",
         altitudeProfileEmpty: "Add waypoints or hubs to inspect vertical trajectory profile",
-        zonePenetration: "{count} ZONE PENETRATION",
-        airspaceSector: "{count} AIRSPACE SECTOR",
+        zonePenetration: "{count, plural, one {# ZONE PENETRATION} other {# ZONE PENETRATIONS}}",
+        airspaceSector: "{count, plural, one {# AIRSPACE SECTOR} other {# AIRSPACE SECTORS}}",
         distance: "DISTANCE:",
         ceiling: "CEILING:",
         verticalPenetration: " — VERTICAL PENETRATION",
@@ -764,9 +765,9 @@ export const viSafety: typeof enSafety = {
             hubLabel: "Trạm Hub liên kết",
             floorLabel: "Đáy vùng (m)",
             ceilingLabel: "Trần vùng (m)",
-            startLabel: "Hiệu lực từ (Tùy chọn)",
+            startLabel: "Hiệu lực từ",
             startPlaceholder: "Chọn thời điểm bắt đầu...",
-            endLabel: "Hiệu lực đến (Tùy chọn)",
+            endLabel: "Hiệu lực đến",
             endPlaceholder: "Chọn thời điểm kết thúc...",
             descLabel: "Mô tả / Ghi chú vận hành",
             descPlaceholder: "Nhập căn cứ pháp lý, điều kiện hạn chế hoặc lịch kích hoạt...",

@@ -245,7 +245,6 @@ export default function EmergencyTrendsPage() {
             value: totals.warnings,
             subValue: t("trends.kpiAdvisory"),
             icon: AlertTriangle,
-            iconClassName: totals.warnings > 0 ? "text-amber-500" : undefined,
         },
         {
             id: "critical",
@@ -253,7 +252,6 @@ export default function EmergencyTrendsPage() {
             value: totals.critical,
             subValue: t("trends.kpiHighPriority"),
             icon: ShieldAlert,
-            iconClassName: totals.critical > 0 ? "text-amber-600" : undefined,
         },
         {
             id: "emergencies",
@@ -261,7 +259,6 @@ export default function EmergencyTrendsPage() {
             value: totals.emergencies,
             subValue: t("trends.kpiFailsafe"),
             icon: AlertOctagon,
-            iconClassName: totals.emergencies > 0 ? "text-red-600" : undefined,
         },
         {
             id: "avg-response",
@@ -285,10 +282,6 @@ export default function EmergencyTrendsPage() {
                       })
                     : t("trends.kpiNoActions"),
             icon: CheckCircle2,
-            iconClassName:
-                resolutionSummary.rate !== null && resolutionSummary.rate >= 90
-                    ? "text-emerald-600"
-                    : undefined,
         },
     ];
 
@@ -451,7 +444,7 @@ export default function EmergencyTrendsPage() {
                                                         <div className="w-full max-w-[32px] flex flex-col justify-end rounded-t overflow-hidden">
                                                             {emergencies > 0 && (
                                                                 <div
-                                                                    className="w-full bg-red-600 transition-all"
+                                                                    className="w-full bg-red-600 transition-[height]"
                                                                     style={{
                                                                         height: `${Math.max(emergencyPx, 4)}px`,
                                                                     }}
@@ -459,7 +452,7 @@ export default function EmergencyTrendsPage() {
                                                             )}
                                                             {critical > 0 && (
                                                                 <div
-                                                                    className="w-full bg-amber-600 transition-all"
+                                                                    className="w-full bg-amber-600 transition-[height]"
                                                                     style={{
                                                                         height: `${Math.max(criticalPx, 4)}px`,
                                                                     }}
@@ -467,7 +460,7 @@ export default function EmergencyTrendsPage() {
                                                             )}
                                                             {warnings > 0 && (
                                                                 <div
-                                                                    className="w-full bg-amber-400 transition-all"
+                                                                    className="w-full bg-amber-400 transition-[height]"
                                                                     style={{
                                                                         height: `${Math.max(warningPx, 4)}px`,
                                                                     }}
@@ -560,7 +553,7 @@ export default function EmergencyTrendsPage() {
                                                     </div>
                                                     <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                                                         <div
-                                                            className="h-full rounded-full bg-slate-800 transition-all"
+                                                            className="h-full rounded-full bg-slate-800 transition-[width]"
                                                             style={{ width: `${pct}%` }}
                                                         />
                                                     </div>
@@ -593,7 +586,7 @@ export default function EmergencyTrendsPage() {
                                 description={t("trends.noAircraftDesc")}
                             />
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--color-border-default)]">
+                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {sortedDrones.slice(0, 8).map((entry) => {
                                     const info = droneMap.get(entry.droneId);
                                     const reg =
@@ -601,10 +594,11 @@ export default function EmergencyTrendsPage() {
                                         (entry.droneId.length > 12
                                             ? `DRN-${entry.droneId.slice(0, 8).toUpperCase()}`
                                             : entry.droneId);
+                                    const incidentCount = Number(entry.count ?? 0);
                                     return (
                                         <div
                                             key={entry.droneId}
-                                            className="p-4 bg-[var(--color-surface-panel)] flex flex-col gap-1"
+                                            className="p-3.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] flex flex-col gap-1"
                                         >
                                             <span className="font-mono text-xs font-bold text-slate-900 truncate">
                                                 {reg}
@@ -616,10 +610,12 @@ export default function EmergencyTrendsPage() {
                                             )}
                                             <div className="flex items-baseline gap-1.5 mt-1.5">
                                                 <span className="text-2xl font-mono font-bold text-slate-900 tabular-nums">
-                                                    {entry.count}
+                                                    {incidentCount}
                                                 </span>
                                                 <span className="text-[11px] font-mono text-slate-500 uppercase">
-                                                    {t("trends.incidentsUnit")}
+                                                    {t("trends.incidentsUnit", {
+                                                        count: incidentCount,
+                                                    })}
                                                 </span>
                                             </div>
                                         </div>

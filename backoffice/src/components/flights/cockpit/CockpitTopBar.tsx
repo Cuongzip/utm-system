@@ -123,9 +123,9 @@ export function CockpitTopBar({
                     <span className="hidden sm:inline">{td("exitToDossier")}</span>
                 </Link>
 
-                <span className="font-mono text-sm font-bold text-white tracking-wide whitespace-nowrap">
+                <h1 className="font-mono text-sm font-bold text-white tracking-wide whitespace-nowrap">
                     {flight.flightNumber || flight.id}
-                </span>
+                </h1>
 
                 <StatusBadge status={flightStatus} tone="dark" showDot />
 
@@ -153,10 +153,13 @@ export function CockpitTopBar({
             </div>
 
             <div className="hidden lg:flex items-center gap-1.5 font-mono text-[11px] shrink-0">
-                <div className="h-7 px-2 rounded border border-slate-700/90 bg-slate-800/75 inline-flex items-center gap-1.5 whitespace-nowrap">
+                <div
+                    className="h-7 px-2 rounded border border-slate-700/90 bg-slate-800/75 inline-flex items-center gap-1.5 whitespace-nowrap"
+                    title={`XTE ${xteM.toFixed(1)}/${Math.round(corridorM)}m · ΔAlt ${vertErrM.toFixed(1)}/${Math.round(vertBufM)}m`}
+                >
                     <span className="text-[10px] font-bold uppercase text-slate-400">4D</span>
                     <StatusBadge status={conformanceStatus} tone="dark" />
-                    <span className="text-slate-300 tabular-nums">
+                    <span className="hidden 2xl:inline text-slate-300 tabular-nums">
                         {xteM.toFixed(1)}/{Math.round(corridorM)}m · Δ{vertErrM.toFixed(1)}/
                         {Math.round(vertBufM)}m
                     </span>
@@ -170,18 +173,19 @@ export function CockpitTopBar({
                     >
                         <RefreshCw
                             className={cn("w-3 h-3", isEvaluatingConformance && "animate-spin")}
+                            aria-hidden="true"
                         />
                     </button>
                 </div>
 
                 <div className="h-7 px-2 rounded border border-slate-700/90 bg-slate-800/75 inline-flex items-center gap-1.5 tabular-nums whitespace-nowrap">
                     <StatusBadge status={linkStatus} tone="dark" />
-                    <span className="text-slate-300">
+                    <span className="hidden xl:inline text-slate-300">
                         {telemetry?.signalStrength != null
                             ? `${Math.round(telemetry.signalStrength)}%`
                             : "—"}
                     </span>
-                    <span className="text-slate-400">
+                    <span className="hidden 2xl:inline text-slate-400">
                         ·{" "}
                         {telemetry?.gpsSatellites != null
                             ? `${telemetry.gpsSatellites} SAT`

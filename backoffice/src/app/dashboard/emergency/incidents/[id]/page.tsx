@@ -18,7 +18,6 @@ import {
     MapPin,
     CheckCircle2,
     AlertTriangle,
-    FileText,
     Save,
     Activity,
     Check,
@@ -124,9 +123,8 @@ function RootCauseInvestigationCard({ incident }: RootCauseFormProps) {
     return (
         <ChamferCard size="lg" className="w-full">
             <div className="p-5 flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
-                    <FileText className="w-4 h-4 text-slate-600" />
-                    <span>{t("detail.investigationHeading")}</span>
+                <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
+                    {t("detail.investigationHeading")}
                 </div>
 
                 <div className="form-group">
@@ -386,13 +384,13 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                 title={incidentCode}
                 badges={
                     <div className="flex items-center gap-2">
-                        <StatusBadge status={incident.severity} dotShape="circle" />
-                        <StatusBadge status={incident.status} dotShape="circle" />
+                        <StatusBadge status={incident.severity} />
+                        <StatusBadge status={incident.status} />
                     </div>
                 }
             >
                 <ChamferButton href="/dashboard/emergency/incidents" variant="outline" size="sm">
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>{t("nav.incidents")}</span>
                 </ChamferButton>
 
@@ -404,7 +402,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             disabled={confirmMutation.isPending}
                             onClick={() => confirmMutation.mutate(false)}
                         >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5" aria-hidden="true" />
                             <span>{t("activeList.reject")}</span>
                         </ChamferButton>
                         <ChamferButton
@@ -413,7 +411,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             disabled={confirmMutation.isPending}
                             onClick={() => confirmMutation.mutate(true)}
                         >
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="w-3.5 h-3.5" aria-hidden="true" />
                             <span>{t("activeList.confirmAction")}</span>
                         </ChamferButton>
                     </>
@@ -426,7 +424,7 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                         disabled={resolveMutation.isPending}
                         onClick={() => resolveMutation.mutate()}
                     >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>{t("activeList.resolveIncident")}</span>
                     </ChamferButton>
                 )}
@@ -471,12 +469,6 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                             translateStatusLabel(incident.status, locale) ??
                             incident.status.replace(/_/g, " ").toUpperCase(),
                         icon: incident.actionSuccess ? CheckCircle2 : AlertTriangle,
-                        iconClassName:
-                            incident.actionSuccess === true
-                                ? "text-emerald-600"
-                                : incident.actionSuccess === false
-                                  ? "text-red-600"
-                                  : "text-amber-500",
                     },
                 ]}
             />
@@ -486,10 +478,9 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                     <ChamferCard size="lg" className="w-full">
                         <div className="p-5 flex flex-col gap-4">
                             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                                <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
-                                    <MapPin className="w-4 h-4 text-slate-600" />
-                                    <span>{t("detail.replayHeading")}</span>
-                                </div>
+                                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
+                                    {t("detail.replayHeading")}
+                                </span>
                                 {frameCount > 0 && (
                                     <span className="text-xs font-mono text-slate-500 tabular-nums">
                                         {t("detail.frameProgress", {
@@ -619,10 +610,6 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                             ? `${Math.round(currentFrame.batteryLevel)}%`
                                             : "—",
                                     icon: Battery,
-                                    iconClassName:
-                                        (currentFrame.batteryLevel ?? 100) < 20
-                                            ? "text-red-600"
-                                            : undefined,
                                 },
                                 {
                                     id: "frame-signal",
@@ -632,10 +619,6 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                                             ? `${Math.round(currentFrame.signalStrength)}%`
                                             : "—",
                                     icon: Wifi,
-                                    iconClassName:
-                                        (currentFrame.signalStrength ?? 100) < 30
-                                            ? "text-red-600"
-                                            : undefined,
                                 },
                                 {
                                     id: "frame-altitude",
@@ -658,10 +641,9 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
 
                     <ChamferCard size="lg" className="w-full">
                         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
-                                <Activity className="w-4 h-4 text-slate-600" />
-                                <span>{t("detail.blackboxHeading")}</span>
-                            </div>
+                            <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
+                                {t("detail.blackboxHeading")}
+                            </span>
                             <span className="text-xs font-mono text-slate-400">
                                 {frameCount === 1
                                     ? t("detail.frameSingle")
@@ -770,9 +752,8 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
                 <div className="xl:col-span-5 flex flex-col gap-6">
                     <ChamferCard size="lg" className="w-full">
                         <div className="p-5 flex flex-col gap-3.5">
-                            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
-                                <AlertTriangle className="w-4 h-4 text-slate-600" />
-                                <span>{t("detail.briefingHeading")}</span>
+                            <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
+                                {t("detail.briefingHeading")}
                             </div>
 
                             <p className="text-sm font-semibold text-slate-900 leading-snug">
@@ -837,9 +818,8 @@ export default function EmergencyIncidentDetailPage({ params }: IncidentDetailPa
 
                     <ChamferCard size="lg" className="w-full">
                         <div className="p-5 flex flex-col gap-4">
-                            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
-                                <Clock className="w-4 h-4 text-slate-600" />
-                                <span>{t("detail.timelineHeading")}</span>
+                            <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2.5">
+                                {t("detail.timelineHeading")}
                             </div>
 
                             {!incident.timeline || incident.timeline.length === 0 ? (

@@ -99,40 +99,41 @@ export function RecentCommands({ droneId }: RecentCommandsProps) {
                         className="py-8"
                     />
                 ) : (
-                    commands.map((cmd) => (
-                        <div
-                            key={cmd.id}
-                            className="px-4 py-2 flex items-center justify-between gap-2"
-                        >
-                            <div className="flex items-center gap-2 text-[var(--color-text-secondary)] truncate min-w-0">
-                                <span className="text-[var(--color-text-muted)] shrink-0 font-mono tabular-nums">
-                                    {cmd.issuedAt || cmd.createdOn
-                                        ? formatTime(cmd.issuedAt || cmd.createdOn)
-                                        : "--:--:--"}
-                                </span>
-                                <span className="font-bold text-[var(--color-text-primary)] uppercase shrink-0 font-mono">
-                                    {getCommandDisplayName(cmd.commandType)}
-                                </span>
-                                {cmd.errorMessage && (
-                                    <span
-                                        className="text-[10px] text-red-600 truncate font-mono"
-                                        title={localizeServerText(cmd.errorMessage, locale, {
-                                            entityMap,
-                                        })}
-                                    >
-                                        (
-                                        {localizeServerText(cmd.errorMessage, locale, {
-                                            entityMap,
-                                        })}
-                                        )
-                                    </span>
-                                )}
+                    commands.map((cmd) => {
+                        const localizedError = cmd.errorMessage
+                            ? localizeServerText(cmd.errorMessage, locale, { entityMap })
+                            : null;
+                        return (
+                            <div
+                                key={cmd.id}
+                                className="px-4 py-2 flex items-start justify-between gap-2"
+                            >
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 text-[var(--color-text-secondary)] min-w-0">
+                                        <span className="text-[var(--color-text-muted)] shrink-0 font-mono tabular-nums">
+                                            {cmd.issuedAt || cmd.createdOn
+                                                ? formatTime(cmd.issuedAt || cmd.createdOn)
+                                                : "--:--:--"}
+                                        </span>
+                                        <span className="font-bold text-[var(--color-text-primary)] uppercase shrink-0 font-mono">
+                                            {getCommandDisplayName(cmd.commandType)}
+                                        </span>
+                                    </div>
+                                    {localizedError && (
+                                        <span
+                                            className="mt-0.5 text-[10px] text-slate-500 truncate font-sans"
+                                            title={localizedError}
+                                        >
+                                            {localizedError}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="shrink-0 pt-0.5">
+                                    <StatusBadge status={cmd.status ?? DEFAULT_COMMAND_STATUS} />
+                                </div>
                             </div>
-                            <div className="shrink-0">
-                                <StatusBadge status={cmd.status ?? DEFAULT_COMMAND_STATUS} />
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </ChamferCard>

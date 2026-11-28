@@ -7,6 +7,7 @@ export * from "./ChamferButton";
 export * from "./StatusBadge";
 export * from "./PageHeader";
 export * from "./Modal";
+export * from "./SideDrawer";
 export * from "./ActionMenu";
 export * from "./EmptyState";
 export * from "./ErrorState";

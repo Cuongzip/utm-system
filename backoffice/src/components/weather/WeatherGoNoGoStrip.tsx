@@ -52,8 +52,8 @@ export function WeatherGoNoGoStrip({
 
     if (loadingHubs) {
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
-                {Array.from({ length: 5 }).map((_, idx) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {Array.from({ length: 6 }).map((_, idx) => (
                     <ChamferCard key={idx} size="sm">
                         <div className="px-3.5 py-2.5 flex flex-col gap-2">
                             <div className="flex items-center justify-between gap-2">
@@ -100,7 +100,7 @@ export function WeatherGoNoGoStrip({
                 )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {visibleHubs.map((hub, idx) => {
                     const query = results[idx];
                     const data: HubGoNoGo | undefined = query?.data;
@@ -111,10 +111,15 @@ export function WeatherGoNoGoStrip({
                         data?.visibilityM != null
                             ? (data.visibilityM / 1000).toFixed(1)
                             : undefined;
-                    const alertReason =
+                    const rawReason =
                         verdict !== "GO" && data?.reasons && data.reasons.length > 0
-                            ? localizeServerText(data.reasons[0], locale)
+                            ? data.reasons.find(
+                                  (r) => !/^aerodrome flight category is\b/i.test(r.trim())
+                              )
                             : undefined;
+                    const alertReason = rawReason
+                        ? localizeServerText(rawReason, locale)
+                        : undefined;
 
                     return (
                         <ChamferCard

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Radio, Layers, ShieldAlert, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { PageHeader, ChamferButton, ErrorState } from "@/components/ui";
 import {
     TacticalMapContainer,
@@ -124,6 +124,7 @@ export default function ConflictsPage() {
                         className={`w-3.5 h-3.5 text-[#334155] ${
                             evaluateMutation.isPending ? "animate-spin" : ""
                         }`}
+                        aria-hidden="true"
                     />
                     <span>{evaluateMutation.isPending ? t("scanning") : t("runScan")}</span>
                 </ChamferButton>
@@ -141,41 +142,36 @@ export default function ConflictsPage() {
                         }
                     }}
                     header={
-                        <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
-                            <div className="flex items-center gap-2">
-                                <ShieldAlert className="w-4 h-4 text-slate-600" />
-                                <span className="text-xs font-bold font-mono tracking-wider text-slate-900 uppercase">
-                                    {t("radarHeader")}
-                                </span>
-                            </div>
+                        <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-panel)]">
+                            <span className="text-xs font-bold font-mono tracking-wider text-[var(--color-text-primary)] uppercase">
+                                {t("radarHeader")}
+                            </span>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 <button
                                     type="button"
                                     aria-pressed={showLiveTraffic}
                                     onClick={() => setShowLiveTraffic((prev) => !prev)}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                    className={`px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         showLiveTraffic
-                                            ? "bg-slate-800 text-white shadow-xs"
-                                            : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                            ? "bg-slate-800 text-white shadow-2xs"
+                                            : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                     }`}
                                 >
-                                    <Radio className="w-3.5 h-3.5" />
-                                    <span>{t("liveTraffic")}</span>
+                                    {t("liveTraffic")}
                                 </button>
 
                                 <button
                                     type="button"
                                     aria-pressed={showAirspace}
                                     onClick={() => setShowAirspace((prev) => !prev)}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer rounded ${
+                                    className={`px-2.5 py-1 text-xs font-mono font-semibold transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         showAirspace
-                                            ? "bg-slate-800 text-white shadow-xs"
-                                            : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                            ? "bg-slate-800 text-white shadow-2xs"
+                                            : "border border-[var(--color-border-default)] bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                     }`}
                                 >
-                                    <Layers className="w-3.5 h-3.5" />
-                                    <span>{t("airspaceLayer")}</span>
+                                    {t("airspaceLayer")}
                                 </button>
                             </div>
                         </div>

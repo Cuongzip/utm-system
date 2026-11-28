@@ -31,7 +31,13 @@ import {
     type CreateApiKeyPayload,
     type OemApiKeyScope,
 } from "@/types";
-import { formatDateTime, validateSchema, clearFieldError, compareCreatedDesc } from "@/utils";
+import {
+    formatDate,
+    formatDateTime,
+    validateSchema,
+    clearFieldError,
+    compareCreatedDesc,
+} from "@/utils";
 
 const SCOPE_DESC_KEY: Record<OemApiKeyScope, "telemetryWrite" | "droneRegister" | "statusRead"> = {
     "telemetry:write": "telemetryWrite",
@@ -208,19 +214,28 @@ export function ApiKeysTab() {
                                     const isActive = k.isActive !== false && !k.revokedAt;
                                     return (
                                         <TableRow key={k.id}>
-                                            <TableCell bold darkText>
-                                                <div>{k.name || "—"}</div>
+                                            <TableCell
+                                                bold
+                                                darkText
+                                                className="max-w-[220px]"
+                                                tooltip={k.name ?? undefined}
+                                            >
+                                                <div className="truncate">{k.name || "—"}</div>
                                                 {k.lastUsedAt && (
-                                                    <div className="text-[10px] font-mono text-slate-400 font-normal">
+                                                    <div className="text-[10px] font-mono text-slate-400 font-normal truncate">
                                                         {t("lastUsed", {
                                                             time: formatDateTime(k.lastUsedAt),
                                                         })}
                                                     </div>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{k.manufacturerName || "—"}</TableCell>
-                                            <TableCell mono>{k.keyPrefix || "—"}…</TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-nowrap">
+                                                {k.manufacturerName || "—"}
+                                            </TableCell>
+                                            <TableCell mono className="whitespace-nowrap">
+                                                {k.keyPrefix || "—"}…
+                                            </TableCell>
+                                            <TableCell className="min-w-[175px]">
                                                 <div className="flex flex-wrap gap-1">
                                                     {(k.scopes ?? []).map((scope) => (
                                                         <span
@@ -237,9 +252,17 @@ export function ApiKeysTab() {
                                                     status={isActive ? "active" : "revoked"}
                                                 />
                                             </TableCell>
-                                            <TableCell mono>
+                                            <TableCell
+                                                mono
+                                                className="whitespace-nowrap"
+                                                tooltip={
+                                                    k.expiresAt
+                                                        ? formatDateTime(k.expiresAt)
+                                                        : undefined
+                                                }
+                                            >
                                                 {k.expiresAt
-                                                    ? formatDateTime(k.expiresAt)
+                                                    ? formatDate(k.expiresAt)
                                                     : tCommon("never")}
                                             </TableCell>
                                             <TableCell align="right">
@@ -249,7 +272,10 @@ export function ApiKeysTab() {
                                                         size="xs"
                                                         onClick={() => setKeyToRevoke(k)}
                                                     >
-                                                        <ShieldOff className="w-3 h-3 text-red-600" />
+                                                        <ShieldOff
+                                                            className="w-3 h-3 text-red-600"
+                                                            aria-hidden="true"
+                                                        />
                                                         <span>{t("revoke")}</span>
                                                     </ChamferButton>
                                                 ) : (

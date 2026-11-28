@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Compass, MapPin, Play, Copy, Trash2, CalendarClock, CalendarOff } from "lucide-react";
+import { Compass, Play, Copy, Trash2, CalendarClock, CalendarOff } from "lucide-react";
 import {
     ChamferCard,
     ChamferButton,
@@ -203,8 +203,7 @@ export function MissionsTable({
                                             mono
                                             bold
                                             darkText
-                                            truncate
-                                            className="max-w-[120px]"
+                                            className="min-w-[160px] whitespace-nowrap"
                                         >
                                             {formatNullable(mission.code)}
                                         </TableCell>
@@ -212,7 +211,7 @@ export function MissionsTable({
                                         <TableCell
                                             truncate
                                             bold
-                                            className="max-w-[175px]"
+                                            className="max-w-[210px]"
                                             tooltip={mission.name || mission.id}
                                         >
                                             <span className="font-semibold text-slate-900">
@@ -228,7 +227,7 @@ export function MissionsTable({
 
                                         <TableCell
                                             truncate
-                                            className="max-w-[175px]"
+                                            className="max-w-[195px]"
                                             tooltip={`${depName} → ${arrName}`}
                                         >
                                             <div className="flex flex-col text-xs min-w-0">
@@ -248,10 +247,7 @@ export function MissionsTable({
                                         </TableCell>
 
                                         <TableCell mono darkText>
-                                            <div className="inline-flex items-center gap-1 text-xs font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 tabular-nums">
-                                                <MapPin className="w-3 h-3 text-slate-500" />
-                                                <span>{waypointCount}</span>
-                                            </div>
+                                            {waypointCount}
                                         </TableCell>
 
                                         <TableCell mono darkText className="whitespace-nowrap">

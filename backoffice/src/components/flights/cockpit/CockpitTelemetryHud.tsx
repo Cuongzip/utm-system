@@ -3,15 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-    Compass,
-    BatteryCharging,
-    CloudSun,
-    ChevronDown,
-    ChevronUp,
-    Gauge,
-    Navigation,
-} from "lucide-react";
+import { Compass, CloudSun, ChevronDown, ChevronUp, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui";
 import { connectivityService } from "@/services";
@@ -286,15 +278,9 @@ export function CockpitTelemetryHud({
                         </div>
 
                         <div className="bg-slate-900/95 p-2.5 flex flex-col justify-between min-h-[70px]">
-                            <div className="flex items-center justify-between gap-1">
-                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
-                                    {t("verticalSpeed")}
-                                </span>
-                                <Gauge
-                                    className="w-3 h-3 text-slate-500 shrink-0"
-                                    aria-hidden="true"
-                                />
-                            </div>
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
+                                {t("verticalSpeed")}
+                            </span>
                             <div>
                                 <div
                                     className={cn(
@@ -321,15 +307,13 @@ export function CockpitTelemetryHud({
                                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
                                     {t("headingShortLabel")}
                                 </span>
-                                <Compass
-                                    className="w-3.5 h-3.5 text-slate-400 transition-transform duration-300 shrink-0"
-                                    style={
-                                        heading != null
-                                            ? { transform: `rotate(${heading}deg)` }
-                                            : undefined
-                                    }
-                                    aria-hidden="true"
-                                />
+                                {heading != null && (
+                                    <Compass
+                                        className="w-3.5 h-3.5 text-slate-400 transition-transform duration-300 shrink-0"
+                                        style={{ transform: `rotate(${heading}deg)` }}
+                                        aria-hidden="true"
+                                    />
+                                )}
                             </div>
                             <div>
                                 <div className="font-mono text-base font-bold text-white tabular-nums">
@@ -367,7 +351,7 @@ export function CockpitTelemetryHud({
                             </div>
                             <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
                                 <div
-                                    className="h-full bg-emerald-500 transition-all duration-500"
+                                    className="h-full bg-emerald-500 transition-[width] duration-500"
                                     style={{ width: `${legProgress.progressPct}%` }}
                                 />
                             </div>
@@ -384,12 +368,8 @@ export function CockpitTelemetryHud({
 
                     <div className="p-2.5 space-y-2">
                         <div className="flex items-center justify-between gap-2 font-mono text-[11px]">
-                            <span className="inline-flex items-center gap-1.5 font-bold uppercase text-slate-300">
-                                <BatteryCharging
-                                    className="w-3.5 h-3.5 text-slate-400"
-                                    aria-hidden="true"
-                                />
-                                <span>{t("powerPropulsion")}</span>
+                            <span className="font-bold uppercase text-slate-300">
+                                {t("powerPropulsion")}
                             </span>
                             {remainingMinutes != null && (
                                 <span className="text-slate-400 tabular-nums">

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Globe, Map as MapIcon, ExternalLink, LogOut, Languages } from "lucide-react";
+import { Globe, Map as MapIcon, ExternalLink, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, ChamferCard, ChamferButton, StatusBadge } from "@/components/ui";
 import { BASEMAP_OPTIONS, VALID_IMAGERY_TYPES, type ImageryType } from "@/components/map";
@@ -139,8 +139,8 @@ export default function SettingsPage() {
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 shrink-0">
             <PageHeader title={t("title")} />
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-                <ChamferCard size="md">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+                <ChamferCard size="md" className="h-full" innerClassName="h-full">
                     <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
                             {t("operatorProfile")}
@@ -148,7 +148,7 @@ export default function SettingsPage() {
                         <StatusBadge status="online" label={displayRole} />
                     </div>
 
-                    <div className="p-5 flex flex-col gap-4">
+                    <div className="p-5 flex flex-col gap-4 flex-1">
                         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-xs">
                             <div>
                                 <dt className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
@@ -176,30 +176,26 @@ export default function SettingsPage() {
                             </div>
                         </dl>
 
-                        <div className="flex items-center justify-end pt-3 border-t border-slate-200">
+                        <div className="flex items-center justify-end pt-3 mt-auto border-t border-slate-200">
                             <ChamferButton href="/logout" nativeAnchor variant="outline" size="xs">
-                                <LogOut className="w-3.5 h-3.5 text-red-600" />
+                                <LogOut className="w-3.5 h-3.5 text-red-600" aria-hidden="true" />
                                 <span>{t("signOut")}</span>
                             </ChamferButton>
                         </div>
                     </div>
                 </ChamferCard>
 
-                <ChamferCard size="md">
+                <ChamferCard size="md" className="h-full" innerClassName="h-full">
                     <div className="px-5 py-3.5 border-b border-slate-200">
                         <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
                             {t("preferencesTitle")}
                         </span>
                     </div>
 
-                    <div className="p-5 flex flex-col gap-5">
+                    <div className="p-5 flex flex-col gap-5 flex-1">
                         <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                                <Languages
-                                    className="w-3.5 h-3.5 text-slate-500"
-                                    aria-hidden="true"
-                                />
-                                <span>{t("displayLanguage")}</span>
+                            <div className="text-xs font-semibold text-slate-800">
+                                {t("displayLanguage")}
                             </div>
                             <div
                                 className="grid grid-cols-2 gap-2.5"
@@ -210,7 +206,7 @@ export default function SettingsPage() {
                                     type="button"
                                     aria-pressed={locale === "en"}
                                     onClick={() => handleLanguageChange("en")}
-                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer ${
+                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         locale === "en"
                                             ? "bg-slate-800 text-white border-slate-800"
                                             : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
@@ -231,7 +227,7 @@ export default function SettingsPage() {
                                     type="button"
                                     aria-pressed={locale === "vi"}
                                     onClick={() => handleLanguageChange("vi")}
-                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer ${
+                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         locale === "vi"
                                             ? "bg-slate-800 text-white border-slate-800"
                                             : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
@@ -260,26 +256,26 @@ export default function SettingsPage() {
                                     type="button"
                                     aria-pressed={mapMode === "2d"}
                                     onClick={() => setMapMode("2d")}
-                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer ${
+                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         mapMode === "2d"
                                             ? "bg-slate-800 text-white border-slate-800"
                                             : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
                                     }`}
                                 >
-                                    <MapIcon className="w-4 h-4" />
+                                    <MapIcon className="w-4 h-4" aria-hidden="true" />
                                     <span>{t("flat2d")}</span>
                                 </button>
                                 <button
                                     type="button"
                                     aria-pressed={mapMode === "globe"}
                                     onClick={() => setMapMode("globe")}
-                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer ${
+                                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                         mapMode === "globe"
                                             ? "bg-slate-800 text-white border-slate-800"
                                             : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
                                     }`}
                                 >
-                                    <Globe className="w-4 h-4" />
+                                    <Globe className="w-4 h-4" aria-hidden="true" />
                                     <span>{t("globe3d")}</span>
                                 </button>
                             </div>
@@ -296,7 +292,7 @@ export default function SettingsPage() {
                                         type="button"
                                         aria-pressed={mapLayer === opt.id}
                                         onClick={() => setMapLayer(opt.id)}
-                                        className={`px-3 py-2 rounded border text-xs font-semibold transition-colors cursor-pointer truncate ${
+                                        className={`px-3 py-2 rounded border text-xs font-semibold transition-colors cursor-pointer truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                             mapLayer === opt.id
                                                 ? "bg-slate-800 text-white border-slate-800"
                                                 : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
@@ -330,18 +326,13 @@ export default function SettingsPage() {
                                 className="py-2.5 border-b border-slate-100 flex items-center justify-between gap-2"
                             >
                                 <span className="text-xs text-slate-700">{item.label}</span>
-                                <span
-                                    className={`inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider shrink-0 ${
-                                        item.allowed ? "text-emerald-700" : "text-slate-400"
-                                    }`}
-                                >
-                                    <span
-                                        className={`w-1.5 h-1.5 rounded-full ${
-                                            item.allowed ? "bg-emerald-500" : "bg-slate-300"
-                                        }`}
-                                    />
-                                    {item.allowed ? t("granted") : t("denied")}
-                                </span>
+                                <StatusBadge
+                                    status={item.allowed ? "online" : "offline"}
+                                    label={item.allowed ? t("granted") : t("denied")}
+                                    className={
+                                        item.allowed ? "text-[10px]" : "text-[10px] text-slate-400"
+                                    }
+                                />
                             </div>
                         ))}
                     </div>
@@ -362,9 +353,9 @@ export default function SettingsPage() {
                                     <span>{t("developerPortal")}</span>
                                 </ChamferButton>
                             )}
-                            <ChamferButton href={swaggerUrl} external variant="dark" size="xs">
+                            <ChamferButton href={swaggerUrl} external variant="outline" size="xs">
                                 <span>{t("swaggerUi")}</span>
-                                <ExternalLink className="w-3 h-3" />
+                                <ExternalLink className="w-3 h-3" aria-hidden="true" />
                             </ChamferButton>
                         </div>
                     </div>

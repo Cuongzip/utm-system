@@ -166,16 +166,12 @@ export function HubsTable({
                                 </TableHead>
                                 <TableHead
                                     className={cn(
-                                        compact ? "w-[56px]" : "w-[64px]",
+                                        compact ? "w-[72px]" : "w-[76px]",
                                         compactCellClass
                                     )}
                                     align="right"
                                 >
-                                    {compact ? (
-                                        <span className="sr-only">{t("actionsSr")}</span>
-                                    ) : (
-                                        t("colActions")
-                                    )}
+                                    {t("colActions")}
                                 </TableHead>
                             </TableRow>
                         </TableHeader>

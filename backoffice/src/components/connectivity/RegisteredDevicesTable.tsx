@@ -249,6 +249,10 @@ export function RegisteredDevicesTable({
                                         .filter(Boolean)
                                         .join(" • ") || undefined;
 
+                                const socketDisplay = device.socketId
+                                    ? device.socketId.replace(/^wss?:\/\//i, "")
+                                    : "—";
+
                                 return (
                                     <TableRow key={device.id}>
                                         <TableCell
@@ -290,10 +294,10 @@ export function RegisteredDevicesTable({
                                             mono
                                             subtle
                                             truncate
-                                            className="max-w-[130px]"
+                                            className="max-w-[160px]"
                                             tooltip={device.socketId || undefined}
                                         >
-                                            {device.socketId || "—"}
+                                            {socketDisplay}
                                         </TableCell>
                                         <TableCell
                                             mono

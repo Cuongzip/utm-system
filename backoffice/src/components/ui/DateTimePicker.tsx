@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
-import { Calendar as CalendarIcon, Clock, X, Check } from "lucide-react";
+import { CalendarClock, Clock, X, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./Popover";
 import { Calendar } from "./Calendar";
 import { cn } from "@/lib";
@@ -119,11 +119,7 @@ export function DateTimePicker({
                         !displayText && "text-slate-400 font-sans"
                     )}
                 >
-                    <div className="flex items-center gap-2 overflow-hidden truncate">
-                        <CalendarIcon
-                            className="h-4 w-4 shrink-0 text-slate-500"
-                            aria-hidden="true"
-                        />
+                    <div className="flex items-center overflow-hidden truncate">
                         <span className="truncate">{displayText || resolvedPlaceholder}</span>
                     </div>
 
@@ -146,7 +142,7 @@ export function DateTimePicker({
                                 <X className="h-3.5 w-3.5" aria-hidden="true" />
                             </span>
                         )}
-                        <Clock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                        <CalendarClock className="h-4 w-4 text-slate-400" aria-hidden="true" />
                     </div>
                 </button>
             </PopoverTrigger>

@@ -129,14 +129,14 @@ export function MissionMapEditor({
                                 aria-pressed={mode === "select"}
                                 onClick={() => setMode("select")}
                                 className={cn(
-                                    "inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition-colors cursor-pointer",
+                                    "inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                     mode === "select"
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
                                 title={t("map.selectTooltip")}
                             >
-                                <MousePointer className="w-3.5 h-3.5" />
+                                <MousePointer className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{t("map.select")}</span>
                             </button>
 
@@ -145,14 +145,14 @@ export function MissionMapEditor({
                                 aria-pressed={mode === "add"}
                                 onClick={() => setMode("add")}
                                 className={cn(
-                                    "inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition-colors cursor-pointer",
+                                    "inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                     mode === "add"
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
                                 title={t("map.addTooltip")}
                             >
-                                <Plus className="w-3.5 h-3.5" />
+                                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{t("map.add")}</span>
                             </button>
 
@@ -161,24 +161,24 @@ export function MissionMapEditor({
                                 aria-pressed={mode === "draw"}
                                 onClick={() => setMode("draw")}
                                 className={cn(
-                                    "inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition-colors cursor-pointer",
+                                    "inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                                     mode === "draw"
                                         ? "bg-[var(--color-border-dark)] text-white shadow-2xs"
                                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)]"
                                 )}
                                 title={t("map.drawTooltip")}
                             >
-                                <Pencil className="w-3.5 h-3.5" />
+                                <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{t("map.draw")}</span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={onGenerateHubToHub}
-                                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-base)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                                 title={t("map.hubToHubTooltip")}
                             >
-                                <Route className="w-3.5 h-3.5 text-slate-500" />
+                                <Route className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
                                 <span>{t("map.hubToHub")}</span>
                             </button>
                         </div>
@@ -205,7 +205,7 @@ export function MissionMapEditor({
                                         value={altDraft ?? String(defaultAltitude)}
                                         onChange={(e) => handleAltChange(e.target.value)}
                                         onBlur={() => setAltDraft(null)}
-                                        className="w-11 h-5.5 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-border-dark)]"
+                                        className="w-11 h-5.5 px-1 border border-[var(--color-border-default)] rounded text-center font-mono text-xs bg-[var(--color-surface-panel)] text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:border-[var(--color-border-dark)] focus-visible:ring-2 focus-visible:ring-slate-300"
                                     />
                                     <span className="font-mono text-slate-400 text-[11px]">m</span>
                                 </div>

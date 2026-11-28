@@ -5,7 +5,12 @@ import { useTranslations } from "next-intl";
 import { ChevronRight, ShieldCheck, Check, X, Clock } from "lucide-react";
 import { ChamferCard, ChamferButton, StatusBadge, EmptyState } from "@/components/ui";
 import { useAppLocale } from "@/i18n";
-import { formatRelativeTime, localizeResponseAction, localizeServerText } from "@/utils";
+import {
+    formatDuration,
+    formatRelativeTime,
+    localizeResponseAction,
+    localizeServerText,
+} from "@/utils";
 import { useDronesAll, useEntityCodeMap, useFlightsAll } from "@/hooks";
 import {
     INCIDENT_STATUS,
@@ -142,15 +147,11 @@ export function ActiveIncidentsList({
                         return (
                             <div
                                 key={incident.id}
-                                onClick={() => onSelectIncident(incident)}
-                                className="group px-4 py-3.5 hover:bg-slate-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors cursor-pointer"
+                                className="group px-4 py-3.5 hover:bg-slate-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors"
                             >
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectIncident(incident);
-                                    }}
+                                    onClick={() => onSelectIncident(incident)}
                                     className="flex flex-col min-w-0 flex-1 text-left cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                                 >
                                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
@@ -195,23 +196,23 @@ export function ActiveIncidentsList({
 
                                     {secondsLeft !== null && (
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-mono font-bold rounded bg-slate-100 text-slate-800 border border-slate-300 tabular-nums">
-                                            <Clock className="w-3 h-3 text-slate-600" />
-                                            <span>{secondsLeft}s</span>
+                                            <Clock
+                                                className="w-3 h-3 text-slate-600"
+                                                aria-hidden="true"
+                                            />
+                                            <span>{formatDuration(secondsLeft)}</span>
                                         </span>
                                     )}
 
                                     {isAwaiting ? (
-                                        <div
-                                            className="flex items-center gap-1.5"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
+                                        <div className="flex items-center gap-1.5">
                                             <ChamferButton
                                                 size="xs"
                                                 variant="dark"
                                                 onClick={() => onConfirmAction(incident.id, true)}
                                                 title={t("activeList.approveTitle")}
                                             >
-                                                <Check className="w-3.5 h-3.5" />
+                                                <Check className="w-3.5 h-3.5" aria-hidden="true" />
                                                 <span>{tCommon("confirm")}</span>
                                             </ChamferButton>
                                             <ChamferButton
@@ -220,7 +221,7 @@ export function ActiveIncidentsList({
                                                 onClick={() => onConfirmAction(incident.id, false)}
                                                 title={t("activeList.rejectTitle")}
                                             >
-                                                <X className="w-3.5 h-3.5" />
+                                                <X className="w-3.5 h-3.5" aria-hidden="true" />
                                                 <span>{t("activeList.reject")}</span>
                                             </ChamferButton>
                                         </div>
@@ -230,7 +231,14 @@ export function ActiveIncidentsList({
                                         </span>
                                     )}
 
-                                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors shrink-0" />
+                                    <button
+                                        type="button"
+                                        onClick={() => onSelectIncident(incident)}
+                                        aria-label={typeTitle}
+                                        className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                    >
+                                        <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                                    </button>
                                 </div>
                             </div>
                         );
